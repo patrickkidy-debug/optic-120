@@ -31,8 +31,12 @@ class ConsoleMailer implements Mailer {
  */
 class SmtpMailer implements Mailer {
   async send(msg: MailMessage): Promise<void> {
-    const { createTransport } = await import('nodemailer');
-    const transport = createTransport({
+    // Import indirect : `nodemailer` reste une dépendance optionnelle (prod uniquement).
+    const moduleName = 'nodemailer';
+    const nodemailer = (await import(moduleName)) as {
+      createTransport: (opts: unknown) => { sendMail: (m: unknown) => Promise<unknown> };
+    };
+    const transport = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       secure: env.SMTP_PORT === 465,

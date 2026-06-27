@@ -30,6 +30,7 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     const input = customerCreateSchema.parse(req.body);
     const customer = await req.db!.customer.create({
       data: {
+        tenantId: req.auth!.tenantId,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,

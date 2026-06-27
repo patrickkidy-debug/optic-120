@@ -139,7 +139,7 @@ export async function cancelSale(tenantId: string, saleId: string, userId: strin
 
     const wasStockMoved =
       sale.type === SaleType.SALE &&
-      [SaleStatus.CONFIRMED, SaleStatus.PARTIALLY_PAID, SaleStatus.PAID].includes(
+      ([SaleStatus.CONFIRMED, SaleStatus.PARTIALLY_PAID, SaleStatus.PAID] as SaleStatus[]).includes(
         sale.status as SaleStatus,
       );
 

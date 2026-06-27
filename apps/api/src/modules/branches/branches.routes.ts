@@ -17,7 +17,7 @@ export async function branchesRoutes(app: FastifyInstance): Promise<void> {
   app.post('/', { preHandler: requirePermission('settings.branches.create') }, async (req, reply) => {
     const input = branchCreateSchema.parse(req.body);
     const branch = await req.db!.branch.create({
-      data: { name: input.name, city: input.city ?? '' },
+      data: { tenantId: req.auth!.tenantId, name: input.name, city: input.city ?? '' },
     });
     return reply.status(201).send({ branch });
   });

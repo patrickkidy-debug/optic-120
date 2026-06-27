@@ -29,6 +29,7 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
 
     const register = await req.db!.cashRegister.create({
       data: {
+        tenantId: req.auth!.tenantId,
         branchId: input.branchId,
         openedById: req.auth!.userId,
         openingAmount: input.openingAmount,

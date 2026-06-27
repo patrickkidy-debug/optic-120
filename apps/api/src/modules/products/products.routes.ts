@@ -49,6 +49,7 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     const input = productCreateSchema.parse(req.body);
     const product = await req.db!.product.create({
       data: {
+        tenantId: req.auth!.tenantId,
         sku: input.sku,
         category: input.category,
         brand: input.brand,
