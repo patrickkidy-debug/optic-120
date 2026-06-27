@@ -1,0 +1,72 @@
+/* ============================================================
+ * OculoSaaS — Tokens de thème
+ * Thème SOMBRE premium par défaut (bleu marine + cyan + orange,
+ * inspiration Linear / Stripe / Vercel). Thème CLAIR médical en option.
+ * ============================================================ */
+
+:root,
+.dark {
+  --bg: #080c16;
+  --bg-subtle: #0b1120;
+  --surface: #111a2e;
+  --surface-2: #16203a;
+  --surface-3: #1d2949;
+  --border: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.22);
+
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-soft: rgba(59, 130, 246, 0.14);
+
+  --accent-cyan: #22d3ee;
+
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --accent-soft: rgba(249, 115, 22, 0.14);
+
+  --text: #e8edf7;
+  --text-muted: #94a3b8;
+  --text-faint: #5b6b85;
+
+  --success: #20c997;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --ring: rgba(59, 130, 246, 0.5);
+  --gradient-hero: linear-gradient(135deg, #0b1120 0%, #111a2e 55%, #0e2440 100%);
+  --gradient-brand: linear-gradient(120deg, #2563eb 0%, #22d3ee 100%);
+  color-scheme: dark;
+}
+
+.light {
+  --bg: #f5f7fa;
+  --bg-subtle: #eef2f7;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f1f5fb;
+  --border: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.16);
+
+  --primary: #0d6efd;
+  --primary-hover: #0b5ed7;
+  --primary-soft: #eaf4ff;
+
+  --accent-cyan: #0aa2c0;
+
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --accent-soft: rgba(249, 115, 22, 0.12);
+
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+
+  --ring: rgba(13, 110, 253, 0.4);
+  --gradient-hero: linear-gradient(135deg, #eaf4ff 0%, #ffffff 60%, #e6fbf4 100%);
+  --gradient-brand: linear-gradient(120deg, #0d6efd 0%, #20c997 100%);
+  color-scheme: light;
+}

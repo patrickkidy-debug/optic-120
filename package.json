@@ -1,0 +1,26 @@
+{
+  "name": "oculosaas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OculoSaaS — SaaS multi-tenant de gestion d'optique et d'ophtalmologie pour l'Afrique de l'Ouest",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "npm run dev --workspace @oculo/api",
+    "dev:web": "npm run dev --workspace @oculo/web",
+    "build": "npm run build --workspace @oculo/shared-types && npm run build --workspace @oculo/api && npm run build --workspace @oculo/web",
+    "db:migrate": "npm run db:migrate --workspace @oculo/api",
+    "db:seed": "npm run db:seed --workspace @oculo/api",
+    "db:studio": "npm run db:studio --workspace @oculo/api",
+    "test": "npm run test --workspace @oculo/api"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

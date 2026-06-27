@@ -1,0 +1,2001 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OculoSaaS - Suite Ophtalmologie & Optique</title>
+
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- ==================== AUTHENTICATION SCREEN ==================== -->
+  <div class="auth-overlay" id="authScreen" style="display: flex;">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo-icon-lg"></div>
+        <h2>Oculo<span class="text-accent-blue">SaaS</span></h2>
+        <p data-i18n="auth.subtitle">Gestion Clinique & Optique - Afrique de l'Ouest & Centrale</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form">
+        <div class="form-group mb-4">
+          <label class="form-label" for="authLoginInput" data-i18n="auth.usernameEmail">Email ou Nom
+            d'utilisateur</label>
+          <div class="auth-input-wrapper">
+            <i data-lucide="user"></i>
+            <input type="text" id="authLoginInput" required placeholder="ex: diallo@oculo.africa"
+              value="diallo@oculo.africa">
+          </div>
+        </div>
+
+        <div class="form-group mb-2">
+          <label class="form-label" for="authPasswordInput" data-i18n="auth.password">Mot de passe</label>
+          <div class="auth-input-wrapper">
+            <i data-lucide="lock"></i>
+            <input type="password" id="authPasswordInput" required placeholder="••••••••" value="password123">
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+          <label class="flex items-center gap-1 text-xs text-muted cursor-pointer">
+            <input type="checkbox" checked>
+            <span data-i18n="auth.remember">Se souvenir de moi</span>
+          </label>
+          <button type="button" class="btn-text text-accent-blue text-xs" id="forgotPasswordBtn"
+            data-i18n="auth.forgot">Mot de passe oublié ?</button>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" data-i18n="auth.submit">Se connecter</button>
+      </form>
+
+      <!-- Forgot Password Mode -->
+      <div id="forgotPasswordBlock" style="display: none;" class="w-full text-center">
+        <h4 class="mb-2" data-i18n="auth.resetTitle">Réinitialisation du mot de passe</h4>
+        <p class="text-xs text-muted mb-4" data-i18n="auth.resetDesc">Saisissez votre e-mail pour recevoir un lien de
+          récupération sécurisé.</p>
+        <div class="form-group mb-4">
+          <input type="email" id="resetEmailInput" class="form-input" placeholder="ex: diallo@oculo.africa">
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-outline flex-grow" id="backToLoginBtn" data-i18n="auth.back">Retour</button>
+          <button class="btn btn-primary flex-grow" id="sendResetBtn" data-i18n="auth.sendReset">Envoyer</button>
+        </div>
+      </div>
+
+      <div class="auth-footer">
+        <span>Conforme normes UEMOA, RGPD & Données de Santé</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SESSION LOCK SCREEN (INACTIVITY) ==================== -->
+  <div class="auth-overlay" id="lockScreen" style="display: none; z-index: 2000;">
+    <div class="auth-card text-center">
+      <div class="user-avatar-lg mx-auto mb-3" id="lockAvatar">D</div>
+      <h3 id="lockUserName">Dr. Diallo</h3>
+      <span class="badge badge-cyan mb-4" data-i18n="lock.sessionLocked">Session Verrouillée</span>
+      <p class="text-xs text-muted mb-4" data-i18n="lock.enterPassword">Saisissez votre mot de passe pour déverrouiller
+        l'écran.</p>
+
+      <form id="lockForm" class="w-full">
+        <div class="form-group mb-4">
+          <input type="password" id="lockPasswordInput" class="form-input text-center" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" data-i18n="lock.unlock">Déverrouiller</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN SAAS LAYOUT (HIDDEN UNTIL LOGIN) ==================== -->
+  <div class="app-container" id="mainAppLayout" style="display: none;">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon"></div>
+          <span class="logo-text">Oculo<span class="text-accent-blue">SaaS</span></span>
+        </div>
+        <button class="mobile-close-btn" id="mobileCloseBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-location">
+        <div class="location-badge">
+          <i data-lucide="map-pin" class="text-accent-orange"></i>
+          <span id="currentLocationText">Dakar - Plateau</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="#" class="nav-link active" data-tab="dashboard">
+              <i data-lucide="layout-dashboard"></i>
+              <span data-i18n="nav.dashboard">Tableau de bord</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-tab="patients">
+              <i data-lucide="users"></i>
+              <span data-i18n="nav.patients">Patients</span>
+            </a>
+          </li>
+          <li class="perm-clinique">
+            <a href="#" class="nav-link" data-tab="consultations">
+              <i data-lucide="eye"></i>
+              <span data-i18n="nav.consultations">Consultations</span>
+            </a>
+          </li>
+          <li class="perm-optique">
+            <a href="#" class="nav-link" data-tab="optics">
+              <i data-lucide="glasses"></i>
+              <span data-i18n="nav.optics">Stock Optique</span>
+            </a>
+          </li>
+          <li class="perm-atelier">
+            <a href="#" class="nav-link" data-tab="atelier">
+              <i data-lucide="hammer"></i>
+              <span data-i18n="nav.atelier">Atelier de Montage</span>
+            </a>
+          </li>
+          <li class="perm-caisse">
+            <a href="#" class="nav-link" data-tab="caisse">
+              <i data-lucide="shopping-cart"></i>
+              <span data-i18n="nav.caisse">Caisse & Ventes</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-tab="rendezvous">
+              <i data-lucide="calendar"></i>
+              <span data-i18n="nav.rendezvous">Rendez-vous</span>
+            </a>
+          </li>
+          <li class="perm-clinique">
+            <a href="#" class="nav-link" data-tab="chirurgies">
+              <i data-lucide="activity"></i>
+              <span data-i18n="nav.chirurgies">Chirurgies & Suivi</span>
+            </a>
+          </li>
+          <li class="perm-rh">
+            <a href="#" class="nav-link" data-tab="rh">
+              <i data-lucide="contact"></i>
+              <span data-i18n="nav.rh">Ressources Humaines</span>
+            </a>
+          </li>
+          <li class="perm-finance">
+            <a href="#" class="nav-link" data-tab="finance">
+              <i data-lucide="trending-up"></i>
+              <span data-i18n="nav.finance">Finance & Comptabilité</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-tab="parametres">
+              <i data-lucide="settings"></i>
+              <span data-i18n="nav.settings">Paramètres</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-summary">
+          <div class="user-avatar" id="avatarLetter">A</div>
+          <div class="user-info flex-grow">
+            <span class="user-name" id="userNameLabel">Dr. Diallo</span>
+            <span class="user-role-badge" id="userRoleLabel">Ophtalmologue</span>
+          </div>
+          <button class="btn-text text-red" id="logoutBtn" title="Déconnexion"><i data-lucide="log-out"
+              style="width:16px;"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Top Navbar -->
+      <header class="top-navbar">
+        <div class="navbar-left">
+          <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="search-bar">
+            <i data-lucide="search"></i>
+            <input type="text" id="globalSearchInput" placeholder="Rechercher patient, ordonnance..."
+              data-i18n-placeholder="search.placeholder">
+          </div>
+        </div>
+
+        <div class="navbar-right">
+          <!-- Connection Sync Switch -->
+          <div class="sync-badge-wrapper" id="syncStatusBadge">
+            <span class="status-dot green"></span>
+            <span class="text-xs font-semibold mr-1" data-i18n="sync.online">En ligne</span>
+            <button class="btn-text" id="toggleNetworkBtn" title="Basculer Connexion"><i
+                data-lucide="wifi"></i></button>
+          </div>
+
+          <!-- Currency Selector -->
+          <div class="navbar-selector-wrapper">
+            <i data-lucide="coins" class="selector-icon"></i>
+            <select id="currencySelector" class="navbar-select-sm">
+              <option value="XOF" selected>FCFA (XOF)</option>
+              <option value="XAF">FCFA (XAF)</option>
+            </select>
+          </div>
+
+          <!-- Multi-Site / Multi-Clinique Selector -->
+          <div class="navbar-selector-wrapper">
+            <i data-lucide="building-2" class="selector-icon"></i>
+            <select id="clinicSelector" class="navbar-select">
+              <option value="dakar_plateau" selected>Clinique Dakar - Plateau</option>
+              <option value="abidjan_cocody">Clinique Abidjan - Cocody</option>
+              <option value="optique_bamako">Optique Bamako - Centre</option>
+              <option value="lom_boutique">Optic-Lomé - Face Marché</option>
+            </select>
+          </div>
+
+          <!-- Multi-User / Rôle Selector -->
+          <div class="navbar-selector-wrapper">
+            <i data-lucide="shield-check" class="selector-icon text-accent-blue"></i>
+            <select id="roleSelector" class="navbar-select">
+              <!-- Loaded dynamically to match the customizable roles -->
+            </select>
+          </div>
+
+          <!-- Theme Selector -->
+          <div class="navbar-selector-wrapper select-lang">
+            <i data-lucide="sun" class="selector-icon" id="themeIcon"></i>
+            <select id="themeSelector" class="navbar-select-sm">
+              <option value="light" selected data-i18n="theme.light">Clair</option>
+              <option value="dark" data-i18n="theme.dark">Sombre</option>
+              <option value="auto" data-i18n="theme.auto">Auto</option>
+            </select>
+          </div>
+
+          <!-- Language Selector -->
+          <div class="navbar-selector-wrapper select-lang">
+            <i data-lucide="languages" class="selector-icon"></i>
+            <select id="langSelector" class="navbar-select-sm">
+              <option value="fr" selected>FR</option>
+              <option value="en">EN</option>
+              <option value="pt">PT</option>
+            </select>
+          </div>
+
+          <!-- Notifications Ring -->
+          <div class="notification-trigger" id="notificationTrigger">
+            <i data-lucide="bell"></i>
+            <span class="notification-badge" id="unreadNotifCount">2</span>
+            <!-- Dropdown -->
+            <div class="notif-dropdown" id="notifDropdown">
+              <div class="notif-dropdown-header">
+                <span data-i18n="notif.title">Alertes & Notifications</span>
+                <button id="markAllReadBtn" class="text-btn text-accent-blue" data-i18n="notif.markRead">Tout marquer
+                  lu</button>
+              </div>
+              <ul class="notif-dropdown-list" id="notifDropdownList">
+                <!-- Injected via JavaScript -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dynamic Views Container -->
+      <div class="content-body">
+
+        <!-- ==================== VIEW: DASHBOARD ==================== -->
+        <section id="view-dashboard" class="content-view active-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="dash.title">Tableau de bord intelligent</h1>
+              <p class="view-subtitle" data-i18n="dash.subtitle">Aperçu en temps réel et prévisions de votre
+                clinique/boutique</p>
+            </div>
+            <div class="date-badge">
+              <i data-lucide="calendar-days"></i>
+              <span id="currentDateLabel">27 Juin 2026</span>
+            </div>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card card-glow-blue">
+              <div class="metric-header">
+                <span data-i18n="dash.revenue">Chiffre d'Affaires</span>
+                <div class="metric-icon bg-blue-alpha"><i data-lucide="banknote" class="text-accent-blue"></i></div>
+              </div>
+              <div class="metric-value" id="dashboardRevenue">8 450 000 XOF</div>
+              <div class="metric-footer">
+                <span class="text-trend-up"><i data-lucide="arrow-up-right"></i> +12.4%</span>
+                <span data-i18n="dash.vsMonth">vs mois dernier</span>
+              </div>
+            </div>
+
+            <div class="metric-card card-glow-orange">
+              <div class="metric-header">
+                <span data-i18n="dash.consultations">Consultations (Mois)</span>
+                <div class="metric-icon bg-orange-alpha"><i data-lucide="eye" class="text-accent-orange"></i></div>
+              </div>
+              <div class="metric-value" id="dashboardConsultations">342</div>
+              <div class="metric-footer">
+                <span class="text-trend-up"><i data-lucide="arrow-up-right"></i> +8.2%</span>
+                <span data-i18n="dash.vsMonth">vs mois dernier</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span data-i18n="dash.stockAlert">Alertes de Stock</span>
+                <div class="metric-icon bg-red-alpha"><i data-lucide="package-x" class="text-red"></i></div>
+              </div>
+              <div class="metric-value text-red" id="dashboardStockAlerts">14</div>
+              <div class="metric-footer">
+                <span class="text-red" data-i18n="dash.needReorder">Articles sous le seuil critique</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span data-i18n="dash.satisfaction">Bénéfice Net Reconstitué</span>
+                <div class="metric-icon bg-green-alpha"><i data-lucide="trending-up" class="text-green"></i></div>
+              </div>
+              <div class="metric-value text-green" id="dashboardBenefits">3 250 000 XOF</div>
+              <div class="metric-footer">
+                <span class="text-green" data-i18n="dash.npsExcellent">Marge d'exploitation saine</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts and AI Section -->
+          <div class="dashboard-grid">
+            <!-- Main Chart Card -->
+            <div class="grid-card col-span-2">
+              <div class="card-header">
+                <h3 class="card-title" data-i18n="dash.chartTitle">Analyse des revenus & Consultations</h3>
+                <div class="card-actions">
+                  <span class="badge" data-i18n="dash.realtime">Temps Réel</span>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+              </div>
+            </div>
+
+            <!-- AI Engine Panel -->
+            <div class="grid-card ai-glow">
+              <div class="card-header">
+                <h3 class="card-title text-accent-blue flex-center">
+                  <i data-lucide="sparkles" class="text-accent-blue mr-2"></i>
+                  <span data-i18n="dash.aiTitle">Moteur IA Prédictif</span>
+                </h3>
+                <span class="badge badge-cyan" data-i18n="dash.active">Actif</span>
+              </div>
+              <div class="ai-body">
+                <div class="ai-insight-box">
+                  <div class="insight-title" data-i18n="dash.aiForecastTitle">Prévision de Stock Optique (30j)</div>
+                  <p class="insight-desc" data-i18n="dash.aiForecastText">Les modèles prévoient une augmentation de 25%
+                    de la demande sur les verres progressifs antireflets de marque Seiko au Sénégal et en Côte d'Ivoire
+                    en raison de la rentrée universitaire.</p>
+                  <div class="insight-action">
+                    <span data-i18n="dash.aiRecommendation">Recommandation : Commander +15 unités de verres
+                      Seiko.</span>
+                  </div>
+                </div>
+
+                <div class="ai-insight-box">
+                  <div class="insight-title" data-i18n="dash.aiDiagnosticsTitle">Dépistage IA d'aide au diagnostic</div>
+                  <p class="insight-desc">Le module d'analyse OCT autonome a identifié 14 anomalies suspectes de
+                    glaucome ce mois-ci, permettant une prise en charge accélérée.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Dashboard Row -->
+          <div class="dashboard-grid mt-6">
+            <!-- Recent Appointments -->
+            <div class="grid-card">
+              <div class="card-header">
+                <h3 class="card-title" data-i18n="dash.recentAppts">Rendez-vous du jour</h3>
+                <button class="btn-text text-accent-blue" data-tab-go="rendezvous" data-i18n="dash.viewAll">Voir
+                  tout</button>
+              </div>
+              <ul class="list-items" id="dashboardAppointmentsList">
+                <!-- Loaded via JS -->
+              </ul>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="grid-card col-span-2">
+              <div class="card-header">
+                <h3 class="card-title">Activités Récentes de Sécurité / Journal de Connexions</h3>
+                <button class="btn-text text-accent-orange" data-tab-go="parametres">Paramètres</button>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Utilisateur</th>
+                      <th>Action</th>
+                      <th>IP</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboardActivityLogTable">
+                    <!-- Injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: PATIENTS ==================== -->
+        <section id="view-patients" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="patients.title">Gestion des Patients</h1>
+              <p class="view-subtitle" data-i18n="patients.subtitle">Dossiers médicaux, ordonnances, antécédents et
+                imagerie</p>
+            </div>
+            <button class="btn btn-primary" id="openAddPatientModalBtn">
+              <i data-lucide="plus"></i>
+              <span data-i18n="patients.addBtn">Nouveau Patient</span>
+            </button>
+          </div>
+
+          <!-- Search and Filter Panel -->
+          <div class="filter-panel">
+            <div class="search-input-wrapper flex-grow">
+              <i data-lucide="search"></i>
+              <input type="text" id="patientSearchInput" placeholder="Rechercher par nom, téléphone, NID..."
+                data-i18n-placeholder="patients.searchPlaceholder">
+            </div>
+            <div class="filter-actions">
+              <select id="patientFilterGender" class="form-select">
+                <option value="all" data-i18n="filter.allGenders">Tous les genres</option>
+                <option value="M" data-i18n="filter.male">Homme</option>
+                <option value="F" data-i18n="filter.female">Femme</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <!-- Left Side: Patient List -->
+            <div class="split-left-panel grid-card">
+              <div class="table-responsive">
+                <table class="data-table selectable-rows">
+                  <thead>
+                    <tr>
+                      <th data-i18n="patients.tblId">Code</th>
+                      <th data-i18n="patients.tblName">Nom & Prénoms</th>
+                      <th data-i18n="patients.tblAge">Âge / Genre</th>
+                      <th data-i18n="patients.tblPhone">Téléphone</th>
+                      <th data-i18n="patients.tblLastVisit">Dernière visite</th>
+                    </tr>
+                  </thead>
+                  <tbody id="patientListTableBody">
+                    <!-- Injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Right Side: Patient Dossier Detail -->
+            <div class="split-right-panel grid-card" id="patientDetailPanel">
+              <div class="panel-empty-state" id="patientDetailEmptyState">
+                <i data-lucide="user" class="empty-icon text-muted"></i>
+                <h4 data-i18n="patients.selectTitle">Aucun patient sélectionné</h4>
+                <p data-i18n="patients.selectDesc">Sélectionnez un patient de la liste de gauche pour afficher son
+                  dossier médical complet.</p>
+              </div>
+
+              <!-- Filled state -->
+              <div class="patient-dossier" id="patientDossierContainer" style="display: none;">
+                <!-- Dossier Header -->
+                <div class="dossier-header">
+                  <div class="dossier-avatar" id="dossierAvatar">KM</div>
+                  <div class="dossier-identity">
+                    <h3 class="dossier-name" id="dossierName">Koffi Mensah</h3>
+                    <div class="dossier-meta">
+                      <span id="dossierAgeGender">42 ans • M</span>
+                      <span class="dossier-id-badge" id="dossierId">N° PAT-2026-004</span>
+                    </div>
+                  </div>
+                  <div class="dossier-actions">
+                    <button class="btn btn-outline btn-sm btn-icon-only" id="dossierEditBtn"
+                      title="Modifier la fiche"><i data-lucide="edit"></i></button>
+                    <button class="btn btn-primary btn-sm flex-center ophtalmo-only" id="dossierNewConsultationBtn">
+                      <i data-lucide="plus-circle" class="mr-1"></i>
+                      <span data-i18n="patients.consultBtn">Consulter</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dossier Tabs -->
+                <div class="tabs-navigation">
+                  <button class="tab-btn active" data-dossier-tab="fiche" data-i18n="patients.tabFiche">Fiche &
+                    Antécédents</button>
+                  <button class="tab-btn" data-dossier-tab="consultations"
+                    data-i18n="patients.tabConsultations">Consultations & Réfraction</button>
+                  <button class="tab-btn" data-dossier-tab="examens" data-i18n="patients.tabExamens">Imagerie &
+                    Examens</button>
+                  <button class="tab-btn" data-dossier-tab="ordonnances" data-i18n="patients.tabOrdonnances">Ordonnances
+                    & Factures</button>
+                </div>
+
+                <!-- Dossier Tab Content -->
+                <div class="dossier-tab-content">
+
+                  <!-- Tab: Fiche -->
+                  <div class="dossier-pane active" id="pane-fiche">
+                    <div class="dossier-grid-2">
+                      <div class="dossier-section">
+                        <h4 data-i18n="patients.contactInfo">Coordonnées</h4>
+                        <ul class="dossier-list-info">
+                          <li><strong>Téléphone:</strong> <span id="dossierPhone">+225 07 45 89 65 12</span></li>
+                          <li><strong>Email:</strong> <span id="dossierEmail">koffi.mensah@gmail.com</span></li>
+                          <li><strong>Adresse:</strong> <span id="dossierAddress">Cocody, Abidjan</span></li>
+                          <li><strong>Profession:</strong> <span id="dossierProfession">Comptable</span></li>
+                        </ul>
+                      </div>
+
+                      <div class="dossier-section">
+                        <h4 data-i18n="patients.medicalInfo">Informations Médicales</h4>
+                        <ul class="dossier-list-info">
+                          <li><strong>Groupe Sanguin:</strong> <span id="dossierBloodGroup">O+</span></li>
+                          <li><strong>Assurance:</strong> <span id="dossierInsurance">SOGEHAB (80%)</span></li>
+                          <li><strong>NID / CNI:</strong> <span id="dossierNationalId">109827364-CI</span></li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div class="dossier-section mt-4">
+                      <h4 class="text-accent-orange" data-i18n="patients.antecedents">Antécédents Systémiques &
+                        Oculaires</h4>
+                      <div class="badge-container" id="dossierAntecedents"></div>
+                    </div>
+
+                    <div class="dossier-section mt-4">
+                      <h4 data-i18n="patients.notes">Notes Générales & Allergies</h4>
+                      <p class="notes-block" id="dossierNotes"></p>
+                    </div>
+                  </div>
+
+                  <!-- Tab: Consultations -->
+                  <div class="dossier-pane" id="pane-consultations">
+                    <div class="dossier-list-scrollable" id="dossierConsultationsList"></div>
+                  </div>
+
+                  <!-- Tab: Examens -->
+                  <div class="dossier-pane" id="pane-examens">
+                    <div class="dossier-grid-2" id="dossierExamensGrid"></div>
+                  </div>
+
+                  <!-- Tab: Ordonnances -->
+                  <div class="dossier-pane" id="pane-ordonnances">
+                    <div class="dossier-list-scrollable" id="dossierOrdonnancesList"></div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: CONSULTATIONS ==================== -->
+        <section id="view-consultations" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="consult.title">Consultations Ophtalmologiques</h1>
+              <p class="view-subtitle" data-i18n="consult.subtitle">Examens cliniques, réfractions, biomicroscopie et
+                diagnostics</p>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="card-header">
+              <h3 class="card-title" data-i18n="consult.recentTitle">Toutes les consultations récentes</h3>
+              <div class="card-actions">
+                <input type="text" id="consultationSearchInput" class="form-input-sm"
+                  placeholder="Rechercher patient ou docteur...">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="consult.tblDate">Date</th>
+                    <th data-i18n="consult.tblPatient">Patient</th>
+                    <th data-i18n="consult.tblDoctor">Docteur</th>
+                    <th data-i18n="consult.tblRefraction">Réfraction Prescrite</th>
+                    <th data-i18n="consult.tblDiagnostic">Diagnostic</th>
+                    <th data-i18n="consult.tblActions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="consultationsTableBody">
+                  <!-- Loaded via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: OPTICS (STOCK) ==================== -->
+        <section id="view-optics" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="optics.title">Gestion du Magasin d'Optique & Stocks</h1>
+              <p class="view-subtitle" data-i18n="optics.subtitle">Suivi du catalogue des montures, des verres et des
+                commandes</p>
+            </div>
+            <button class="btn btn-primary" id="openAddStockModalBtn">
+              <i data-lucide="plus"></i>
+              <span data-i18n="optics.addBtn">Ajouter un article</span>
+            </button>
+          </div>
+
+          <!-- Stock tabs -->
+          <div class="tabs-navigation mb-4">
+            <button class="tab-btn active" data-stock-tab="montures" data-i18n="optics.tabFrames">Montures</button>
+            <button class="tab-btn" data-stock-tab="verres" data-i18n="optics.tabLenses">Verres correcteurs</button>
+            <button class="tab-btn" data-stock-tab="fournisseurs" data-i18n="optics.tabSuppliers">Fournisseurs &
+              Commandes</button>
+          </div>
+
+          <div class="grid-card">
+            <div class="filter-panel no-bg">
+              <div class="search-input-wrapper flex-grow">
+                <i data-lucide="search"></i>
+                <input type="text" id="stockSearchInput" placeholder="Rechercher par marque, référence, type...">
+              </div>
+              <div class="filter-actions">
+                <select id="stockFilterAlerts" class="form-select">
+                  <option value="all">Tous les articles</option>
+                  <option value="alert">En alerte de stock</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Montures -->
+            <div class="stock-pane active" id="stock-pane-montures">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Réf</th>
+                      <th>Marque</th>
+                      <th>Modèle / Couleur</th>
+                      <th>Prix Achat</th>
+                      <th>Prix Vente</th>
+                      <th>Stock Actuel</th>
+                      <th>Alerte Min</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monturesStockTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Verres -->
+            <div class="stock-pane" id="stock-pane-verres">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Indice</th>
+                      <th>Correction (Sph/Cyl)</th>
+                      <th>Traitement</th>
+                      <th>Prix Vente</th>
+                      <th>Stock</th>
+                      <th>Alerte Min</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="verresStockTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Fournisseurs -->
+            <div class="stock-pane" id="stock-pane-fournisseurs">
+              <div class="dossier-grid-2">
+                <div>
+                  <h3 class="view-section-title">Fournisseurs de la région</h3>
+                  <div class="table-responsive">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Nom</th>
+                          <th>Contact</th>
+                          <th>Localisation</th>
+                          <th>Délai Moyen</th>
+                        </tr>
+                      </thead>
+                      <tbody id="suppliersTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 class="view-section-title">Commandes d'approvisionnement en cours</h3>
+                  <div class="table-responsive">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>N° Commande</th>
+                          <th>Fournisseur</th>
+                          <th>Articles</th>
+                          <th>Date</th>
+                          <th>Statut</th>
+                        </tr>
+                      </thead>
+                      <tbody id="ordersTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: ATELIER DE MONTAGE [NEW] ==================== -->
+        <section id="view-atelier" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Atelier de Montage & Réparations</h1>
+              <p class="view-subtitle">Suivi de la fabrication des verres correcteurs, taillage et ajustement des
+                montures</p>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>N° Job</th>
+                    <th>Patient</th>
+                    <th>Monture</th>
+                    <th>Verres correcteurs</th>
+                    <th>Opticien</th>
+                    <th>Statut de fabrication</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="atelierJobsTableBody">
+                  <!-- Loaded via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: CAISSE & VENTES ==================== -->
+        <section id="view-caisse" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="caisse.title">Ventes, Caisse & Devis</h1>
+              <p class="view-subtitle" data-i18n="caisse.subtitle">Vente de montures, verres, examens et facturation
+                client</p>
+            </div>
+
+            <div class="flex gap-2 items-center">
+              <div class="caisse-status-badge">
+                <span class="status-dot green" id="cashDrawerDot"></span>
+                <span id="cashDrawerLabel">Caisse ouverte</span>
+              </div>
+              <button class="btn btn-outline btn-sm" id="btnOpenCloseDrawer">Ouverture/Fermeture Caisse</button>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <!-- Left Side: POS Catalog -->
+            <div class="split-left-panel flex flex-col gap-4">
+              <div class="grid-card">
+                <h4 class="card-title mb-2" data-i18n="caisse.assocPatient">Associer un Patient</h4>
+                <div class="flex gap-2">
+                  <select id="caissePatientSelect" class="form-select flex-grow">
+                    <option value="">-- Patient anonyme / Vente directe --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Catalog Grid and Search -->
+              <div class="grid-card flex-grow">
+                <div class="flex-center justify-between mb-4">
+                  <h4 class="card-title" data-i18n="caisse.catalog">Catalogue Caisse</h4>
+                  <div class="flex gap-2">
+                    <button class="badge active" data-pos-filter="all">Tous</button>
+                    <button class="badge" data-pos-filter="frames">Montures</button>
+                    <button class="badge" data-pos-filter="lenses">Verres</button>
+                    <button class="badge" data-pos-filter="consult">Actes Médicaux</button>
+                  </div>
+                </div>
+                <div class="pos-catalog-grid" id="posCatalogGrid"></div>
+              </div>
+            </div>
+
+            <!-- Right Side: Basket and Total -->
+            <div class="split-right-panel grid-card flex flex-col justify-between">
+              <div>
+                <div class="card-header border-b">
+                  <h3 class="card-title" data-i18n="caisse.basket">Panier de Vente</h3>
+                  <button class="btn btn-outline btn-sm text-red" id="clearBasketBtn">
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                </div>
+
+                <div class="basket-items-list" id="basketItemsList"></div>
+              </div>
+
+              <div class="basket-total-summary">
+                <div class="summary-row">
+                  <span data-i18n="caisse.subtotal">Sous-total</span>
+                  <span id="basketSubtotal">0 XOF</span>
+                </div>
+                <div class="summary-row">
+                  <span>Prise en charge Assurance (Tiers Payant)</span>
+                  <span class="text-accent-blue" id="basketInsurancePart">- 0 XOF</span>
+                </div>
+                <div class="summary-row">
+                  <span>Taxes locales (TVA 18% UEMOA)</span>
+                  <span id="basketTaxes">0 XOF</span>
+                </div>
+                <div class="summary-row total-row mt-2">
+                  <span data-i18n="caisse.total">Net à Payer (Patient)</span>
+                  <span class="text-accent-orange" id="basketTotal">0 XOF</span>
+                </div>
+
+                <!-- Custom Mobile Money CinetPay payment methods -->
+                <div class="basket-payment-methods mt-4">
+                  <h4 class="text-sm font-semibold mb-2" data-i18n="caisse.paymentMethod">Moyen de paiement (CinetPay
+                    intégré)</h4>
+                  <div class="payment-methods-grid">
+                    <label class="pay-method-card active">
+                      <input type="radio" name="paymentMethod" value="cash" checked>
+                      <i data-lucide="coins"></i>
+                      <span>Espèces</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="wave">
+                      <span class="pay-brand brand-wave">Wave</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="orange">
+                      <span class="pay-brand brand-orange">Orange</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="mtn">
+                      <span class="pay-brand brand-mtn">MTN MoMo</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="moov">
+                      <span class="pay-brand brand-moov">Moov</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="free">
+                      <span class="pay-brand text-accent-blue">Free Money</span>
+                    </label>
+                    <label class="pay-method-card">
+                      <input type="radio" name="paymentMethod" value="card">
+                      <i data-lucide="credit-card"></i>
+                      <span>Visa/MC</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Partial or Deferred Payment Options -->
+                <div class="flex gap-4 mt-3">
+                  <label class="text-xs flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" id="caissePartialPayCheckbox">
+                    <span>Acompte (Paiement Partiel)</span>
+                  </label>
+                  <input type="number" id="caissePartialPayAmount" class="form-input-sm w-24" style="display: none;"
+                    placeholder="Montant">
+                </div>
+
+                <div class="flex gap-2 mt-4">
+                  <button class="btn btn-outline flex-grow" id="btnSaveQuote" data-i18n="caisse.quoteBtn">Devis
+                    Optique</button>
+                  <button class="btn btn-primary flex-grow" id="btnProcessPayment" data-i18n="caisse.payBtn">Valider
+                    l'Encaissement</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: RENDEZ-VOUS ==================== -->
+        <section id="view-rendezvous" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="appt.title">Calendrier Interactif & Rendez-vous</h1>
+              <p class="view-subtitle" data-i18n="appt.subtitle">Planifiez les consultations d'optique et les blocs
+                opératoires</p>
+            </div>
+            <button class="btn btn-primary" id="openAddApptModalBtn">
+              <i data-lucide="plus"></i>
+              <span data-i18n="appt.addBtn">Nouveau Rendez-vous</span>
+            </button>
+          </div>
+
+          <div class="calendar-layout grid-card">
+            <div class="calendar-header-nav">
+              <div class="flex-center gap-4">
+                <button class="btn btn-outline btn-icon-only" id="prevMonthBtn"><i
+                    data-lucide="chevron-left"></i></button>
+                <h3 class="calendar-month-year" id="calendarMonthYearLabel">Juin 2026</h3>
+                <button class="btn btn-outline btn-icon-only" id="nextMonthBtn"><i
+                    data-lucide="chevron-right"></i></button>
+              </div>
+              <div class="calendar-view-toggles">
+                <button class="badge active" data-cal-view="month" data-i18n="appt.viewMonth">Mois</button>
+                <button class="badge" data-cal-view="week" data-i18n="appt.viewWeek">Semaine</button>
+              </div>
+            </div>
+
+            <div class="calendar-grid-wrapper">
+              <div class="calendar-weekdays" id="calendarWeekdays"></div>
+              <div class="calendar-days" id="calendarDaysGrid"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: CHIRURGIES ==================== -->
+        <section id="view-chirurgies" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="surgery.title">Chirurgies & Suivi Postopératoire</h1>
+              <p class="view-subtitle" data-i18n="surgery.subtitle">Planification opératoire (cataracte, glaucome,
+                laser) et contrôles postopératoires</p>
+            </div>
+            <button class="btn btn-primary ophtalmo-only" id="openAddSurgeryModalBtn">
+              <i data-lucide="plus"></i>
+              <span data-i18n="surgery.addBtn">Planifier Chirurgie</span>
+            </button>
+          </div>
+
+          <div class="grid-card">
+            <div class="card-header">
+              <h3 class="card-title" data-i18n="surgery.tblTitle">Liste des chirurgies planifiées et suivis</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date Chirurgie</th>
+                    <th>Patient</th>
+                    <th>Chirurgien</th>
+                    <th>Type de Chirurgie</th>
+                    <th>Œil</th>
+                    <th>Suivis Planifiés</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="surgeriesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: PERSONNEL & RH [NEW] ==================== -->
+        <section id="view-rh" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Ressources Humaines & Personnel</h1>
+              <p class="view-subtitle">Suivi du personnel, fiches de paie, demandes de congés et présences quotidiennes
+              </p>
+            </div>
+            <button class="btn btn-primary" id="openAddEmployeeModalBtn">
+              <i data-lucide="plus"></i>
+              <span>Ajouter un Employé</span>
+            </button>
+          </div>
+
+          <!-- RH Navigation Sub-Tabs -->
+          <div class="tabs-navigation mb-4">
+            <button class="tab-btn active" data-rh-tab="employes">Employés</button>
+            <button class="tab-btn" data-rh-tab="presences">Présences & Congés</button>
+          </div>
+
+          <!-- Tab Pane: Employés -->
+          <div class="rh-pane active" id="rh-pane-employes">
+            <div class="grid-card">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employé</th>
+                      <th>Contact</th>
+                      <th>Poste / Rôle</th>
+                      <th>Succursale</th>
+                      <th>Salaire de base</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhEmployeesTableBody">
+                    <!-- Loaded via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane: Présences & Congés -->
+          <div class="rh-pane" id="rh-pane-presences">
+            <div class="dossier-grid-2">
+              <div class="grid-card">
+                <h3 class="view-section-title mb-3">Demandes de Congés en attente</h3>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Employé</th>
+                        <th>Dates</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rhLeaveRequestsTableBody">
+                      <!-- Loaded via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="grid-card">
+                <h3 class="view-section-title mb-3">Rapport des Présences d'Aujourd'hui</h3>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Employé</th>
+                        <th>Heure d'arrivée</th>
+                        <th>Statut de présence</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rhAttendanceTableBody">
+                      <!-- Loaded via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: FINANCE [EXPANDED] ==================== -->
+        <section id="view-finance" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="finance.title">Finance, Comptabilité & Rapports</h1>
+              <p class="view-subtitle" data-i18n="finance.subtitle">Analyse détaillée du chiffre d'affaires, des
+                dépenses et répartition des règlements</p>
+            </div>
+            <button class="btn btn-outline" id="exportFinanceDataBtn">
+              <i data-lucide="download"></i>
+              <span data-i18n="finance.export">Exporter les rapports (CSV)</span>
+            </button>
+          </div>
+
+          <!-- Finance Navigation Sub-Tabs -->
+          <div class="tabs-navigation mb-4">
+            <button class="tab-btn active" data-fin-tab="bilan">Bilan Financier</button>
+            <button class="tab-btn" data-fin-tab="depenses">Gestion des Dépenses</button>
+            <button class="tab-btn" data-fin-tab="livre">Livre de Caisse (Journal)</button>
+            <button class="tab-btn" data-fin-tab="cinetpay">Configuration CinetPay</button>
+          </div>
+
+          <!-- Tab Pane: Bilan Financier -->
+          <div class="fin-pane active" id="fin-pane-bilan">
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-header"><span>Ventes Directes Optique</span><i data-lucide="glasses"
+                    class="text-accent-orange"></i></div>
+                <div class="metric-value" id="finOpticRevenue">5 850 000 XOF</div>
+                <div class="metric-footer">Montures & Verres vendus</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header"><span>Honoraires Clinique / Consultations</span><i data-lucide="eye"
+                    class="text-accent-blue"></i></div>
+                <div class="metric-value" id="finClinicRevenue">2 600 000 XOF</div>
+                <div class="metric-footer">Actes et chirurgies facturés</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header"><span>Règlements Mobiles CinetPay (Wave/OM/MTN)</span><i
+                    data-lucide="smartphone" class="text-green"></i></div>
+                <div class="metric-value text-green" id="finMobilePayment">6 150 000 XOF</div>
+                <div class="metric-footer">72% de la totalité des règlements</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header"><span>Dépenses Opérationnelles (Mois)</span><i data-lucide="trending-down"
+                    class="text-red"></i></div>
+                <div class="metric-value text-red" id="finExpenses">1 200 000 XOF</div>
+                <div class="metric-footer">Stocks, charges et RH</div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid mt-6">
+              <div class="grid-card">
+                <div class="card-header">
+                  <h3 class="card-title">Répartition des modes de règlement</h3>
+                </div>
+                <div class="chart-container"><canvas id="paymentMethodsChart"></canvas></div>
+              </div>
+              <div class="grid-card col-span-2">
+                <div class="card-header">
+                  <h3 class="card-title">Encaissements récents</h3>
+                </div>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Réf Transaction</th>
+                        <th>Date</th>
+                        <th>Patient</th>
+                        <th>Moyen</th>
+                        <th>Montant Payé</th>
+                        <th>Reste Dû</th>
+                      </tr>
+                    </thead>
+                    <tbody id="financeReceiptsTableBody">
+                      <!-- Loaded via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane: Gestion des Dépenses -->
+          <div class="fin-pane" id="fin-pane-depenses">
+            <div class="grid-card">
+              <div class="card-header">
+                <h3 class="card-title">Registre des Dépenses d'Exploitation</h3>
+                <button class="btn btn-primary btn-sm" id="openAddExpenseBtn">Ajouter une Dépense</button>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Catégorie</th>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Montant</th>
+                      <th>Justificatif</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financeExpensesTableBody">
+                    <!-- Loaded via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane: Livre de Caisse -->
+          <div class="fin-pane" id="fin-pane-livre">
+            <div class="grid-card">
+              <div class="card-header">
+                <h3 class="card-title">Journal Général des Mouvements (Livre de Caisse)</h3>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>N° Écrit</th>
+                      <th>Date</th>
+                      <th>Libellé</th>
+                      <th>Débit (Recette)</th>
+                      <th>Crédit (Dépense)</th>
+                      <th>Solde Progressif</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financeLedgerTableBody">
+                    <!-- Loaded via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane: Configuration CinetPay -->
+          <div class="fin-pane" id="fin-pane-cinetpay">
+            <div class="grid-card col-span-2">
+              <h3 class="view-section-title mb-4">Paramétrage de la passerelle de paiement CinetPay</h3>
+              <form id="cinetpayConfigForm" class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="cpApiKey">Clé API Marchand CinetPay</label>
+                  <input type="password" id="cpApiKey" class="form-input" value="cp_prod_728912903809182309">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="cpSiteId">Site ID Marchand</label>
+                  <input type="text" id="cpSiteId" class="form-input" value="site_90291">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="cpEnv">Environnement CinetPay</label>
+                  <select id="cpEnv" class="form-select">
+                    <option value="sandbox" selected>Sandbox (Test simulé)</option>
+                    <option value="production">Production (Réel)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="cpWebhook">Webhook de notification URL</label>
+                  <input type="text" id="cpWebhook" class="form-input"
+                    value="https://api.oculo.africa/v1/webhooks/cinetpay" readonly>
+                </div>
+                <div class="form-group col-span-2">
+                  <button type="submit" class="btn btn-primary">Enregistrer la configuration CinetPay</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VIEW: PARAMETRES & ROLES ==================== -->
+        <section id="view-parametres" class="content-view">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title" data-i18n="settings.title">Paramètres Généraux</h1>
+              <p class="view-subtitle" data-i18n="settings.subtitle">Sécurité médicale, RGPD, sauvegardes cloud et
+                configuration clinique</p>
+            </div>
+          </div>
+
+          <!-- Paramètres Tabs -->
+          <div class="tabs-navigation mb-4">
+            <button class="tab-btn active" data-settings-tab="securite">Sécurité & Sauvegardes</button>
+            <button class="tab-btn" data-settings-tab="permissions">Rôles & Permissions</button>
+          </div>
+
+          <!-- Tab: Securite -->
+          <div class="settings-pane active" id="settings-pane-securite">
+            <div class="dashboard-grid">
+              <div class="grid-card">
+                <div class="card-header border-b">
+                  <h3 class="card-title text-accent-blue flex-center"><i data-lucide="shield-alert"
+                      class="mr-2"></i><span>Sécurité Médicale & RGPD</span></h3>
+                </div>
+                <div class="card-body p-4 flex flex-col gap-4">
+                  <p class="text-sm text-muted">Toutes les données de santé des patients sont cryptées localement
+                    (AES-256) avant d'être synchronisées avec les serveurs cloud.</p>
+                  <div class="setting-toggle">
+                    <div>
+                      <span class="block font-semibold">Chiffrement AES-256 de bout en bout</span>
+                      <span class="text-xs text-muted block">Sécurise les clichés OCT et les fiches réfractives</span>
+                    </div>
+                    <label class="toggle-switch"><input type="checkbox" checked disabled><span
+                        class="slider"></span></label>
+                  </div>
+                  <div class="setting-toggle mt-2">
+                    <div>
+                      <span class="block font-semibold">Double Facteur d'Authentification (2FA)</span>
+                      <span class="text-xs text-muted block">Obligatoire pour les comptes d'ophtalmologues</span>
+                    </div>
+                    <label class="toggle-switch"><input type="checkbox" id="settings2FA" checked><span
+                        class="slider"></span></label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cloud Sync -->
+              <div class="grid-card">
+                <div class="card-header border-b">
+                  <h3 class="card-title text-accent-orange flex-center"><i data-lucide="cloud-lightning"
+                      class="mr-2"></i><span>Sauvegardes Cloud Automatiques</span></h3>
+                </div>
+                <div class="card-body p-4 flex flex-col gap-4">
+                  <div class="flex justify-between items-center text-sm">
+                    <span>Dernière sauvegarde cloud :</span>
+                    <strong id="lastBackupLabel" class="text-green">Il y a 5 minutes</strong>
+                  </div>
+                  <button class="btn btn-outline w-full flex-center justify-center" id="triggerBackupBtn">
+                    <i data-lucide="refresh-cw" class="mr-2 animate-spin-hover"></i>
+                    <span>Lancer une sauvegarde manuelle</span>
+                  </button>
+                  <p class="text-xs text-muted">Sauvegarde chiffrée et synchronisée avec le serveur cloud répliqué à
+                    Dakar (Sénégal) et Abidjan (Côte d'Ivoire).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Rôles & Permissions -->
+          <div class="settings-pane" id="settings-pane-permissions">
+            <div class="grid-card">
+              <div class="card-header">
+                <h3 class="card-title">Matrice de Gestion des Permissions par Rôle</h3>
+                <button class="btn btn-primary btn-sm" id="openAddRoleModalBtn">Créer un Rôle personnalisé</button>
+              </div>
+
+              <div class="table-responsive mt-4">
+                <table class="data-table text-center" style="font-size:0.8rem;">
+                  <thead>
+                    <tr>
+                      <th class="text-left">Rôle / Module</th>
+                      <th>Dossier Clinique</th>
+                      <th>Optique Stock</th>
+                      <th>Atelier Montage</th>
+                      <th>Caisse POS</th>
+                      <th>Ressources Humaines</th>
+                      <th>Comptabilité & Finance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="settingsRoleMatrixTableBody">
+                    <!-- Injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL: ADD/EDIT PATIENT -->
+  <div class="modal-overlay" id="addPatientModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="patientModalTitle">Nouveau Patient</h3>
+        <button class="modal-close" id="closeAddPatientModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addPatientForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="patName">Nom & Prénoms *</label>
+              <input type="text" id="patName" class="form-input" required placeholder="ex: Koffi Mensah">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patPhone">Téléphone *</label>
+              <input type="text" id="patPhone" class="form-input" required placeholder="ex: +225 07 45 89 65 12">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patBirth">Date de Naissance *</label>
+              <input type="date" id="patBirth" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patGender">Genre *</label>
+              <select id="patGender" class="form-select" required>
+                <option value="M">Homme</option>
+                <option value="F">Femme</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patEmail">Email</label>
+              <input type="email" id="patEmail" class="form-input" placeholder="ex: pat@gmail.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patProfession">Profession</label>
+              <input type="text" id="patProfession" class="form-input" placeholder="ex: Comptable">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="patAddress">Adresse Complète</label>
+              <input type="text" id="patAddress" class="form-input" placeholder="ex: Cocody Mermoz, Abidjan">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patInsurance">Assurance / Tiers Payant</label>
+              <input type="text" id="patInsurance" class="form-input" placeholder="ex: SOGEHAB (80%)">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="patNationalId">Numéro CNI / NID</label>
+              <input type="text" id="patNationalId" class="form-input" placeholder="ex: 109827364-CI">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="patAntecedents">Antécédents Médicaux (séparés par des virgules)</label>
+              <input type="text" id="patAntecedents" class="form-input"
+                placeholder="ex: Diabète, Glaucome familial, Allergie pénicilline">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="patNotes">Notes cliniques additionnelles</label>
+              <textarea id="patNotes" class="form-textarea" rows="2" placeholder="Saisir des notes ici..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelPatientBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer le patient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CLINICAL EXAMINATION & EYE EXAM (NEW CONSULTATION) -->
+  <div class="modal-overlay modal-lg-size" id="consultationModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Nouvelle Consultation Ophtalmologique</h3>
+        <button class="modal-close" id="closeConsultationModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="consultationForm">
+        <input type="hidden" id="consultationPatientId">
+        <div class="modal-body-scroll">
+
+          <div class="exam-section-card">
+            <h4 class="exam-section-title text-accent-blue"><i data-lucide="glasses" class="mr-2"></i>Mesure de la
+              Réfraction & Acuité Visuelle</h4>
+            <div class="refraction-grid">
+
+              <!-- OD -->
+              <div class="eye-block">
+                <div class="eye-block-header color-od">ŒIL DROIT (OD)</div>
+                <div class="form-grid p-3">
+                  <div class="form-group">
+                    <label class="form-label-sm">Sphère</label>
+                    <input type="text" id="refSphOD" class="form-input-sm" placeholder="ex: -1.50">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Cylindre</label>
+                    <input type="text" id="refCylOD" class="form-input-sm" placeholder="ex: +0.25">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Axe</label>
+                    <input type="number" id="refAxeOD" class="form-input-sm" placeholder="ex: 90" min="0" max="180">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Addition</label>
+                    <input type="text" id="refAddOD" class="form-input-sm" placeholder="ex: +2.00">
+                  </div>
+                  <div class="form-group col-span-2">
+                    <label class="form-label-sm">Acuité Visuelle (Loin Snellen / Près Parinaud)</label>
+                    <input type="text" id="refAvOD" class="form-input-sm" placeholder="ex: 10/10 Loin • Parinaud 2">
+                  </div>
+                </div>
+              </div>
+
+              <!-- OG -->
+              <div class="eye-block">
+                <div class="eye-block-header color-og">ŒIL GAUCHE (OG)</div>
+                <div class="form-grid p-3">
+                  <div class="form-group">
+                    <label class="form-label-sm">Sphère</label>
+                    <input type="text" id="refSphOG" class="form-input-sm" placeholder="ex: -1.75">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Cylindre</label>
+                    <input type="text" id="refCylOG" class="form-input-sm" placeholder="ex: +0.50">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Axe</label>
+                    <input type="number" id="refAxeOG" class="form-input-sm" placeholder="ex: 85" min="0" max="180">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-sm">Addition</label>
+                    <input type="text" id="refAddOG" class="form-input-sm" placeholder="ex: +2.00">
+                  </div>
+                  <div class="form-group col-span-2">
+                    <label class="form-label-sm">Acuité Visuelle (Loin Snellen / Près Parinaud)</label>
+                    <input type="text" id="refAvOG" class="form-input-sm" placeholder="ex: 9/10 Loin • Parinaud 2">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="exam-section-card mt-4">
+            <h4 class="exam-section-title"><i data-lucide="eye" class="mr-2 text-accent-blue"></i>Biomicroscopie & Fond
+              d'œil & Tonométrie & Champ visuel</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Tonométrie (PIO) - OD</label>
+                <input type="text" id="tonometrieOD" class="form-input" placeholder="ex: 14 mmHg">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tonométrie (PIO) - OG</label>
+                <input type="text" id="tonometrieOG" class="form-input" placeholder="ex: 15 mmHg">
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label">Examen Biomicroscopique (Cristallin, Cornée)</label>
+                <input type="text" id="biomicroscopie" class="form-input"
+                  placeholder="ex: Cornée saine, pas de cataracte détectable.">
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label">Examen Fond d'œil & Champ Visuel</label>
+                <input type="text" id="fondOeil" class="form-input"
+                  placeholder="ex: Papilles excavées, pas d'anomalie maculaire.">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: IA Diagnostic -->
+          <div class="exam-section-card mt-4 exam-ia-card">
+            <div class="flex-center justify-between border-b pb-2 mb-3">
+              <h4 class="exam-section-title text-accent-blue flex-center m-0">
+                <i data-lucide="sparkles" class="mr-2"></i>Assistant d'Analyse Imagerie OCT & Rétinographie (IA)
+              </h4>
+              <span class="badge badge-cyan">Module IA Clinique v3.5</span>
+            </div>
+
+            <div class="ia-clinical-simulator">
+              <div class="ia-upload-sim" id="iaUploadTrigger">
+                <i data-lucide="upload-cloud" class="upload-icon"></i>
+                <span>Simuler le téléversement d'un cliché (OCT ou Rétinographie)</span>
+                <span class="text-xs text-muted">Formats supportés : JPEG, PNG, DICOM.</span>
+              </div>
+              <div class="ia-scan-visualizer" id="iaScanVisualizer" style="display: none;">
+                <div class="flex gap-4 items-center">
+                  <div class="scanned-image-preview" id="scannedImagePreview"></div>
+                  <div class="scan-analysis-results">
+                    <div class="flex-center gap-2">
+                      <i data-lucide="shield-check" class="text-green"></i>
+                      <strong>Résultats de la prédiction IA :</strong>
+                    </div>
+                    <ul class="ia-analysis-bullets">
+                      <li>Glaucome suspecté: <span class="text-accent-orange" id="iaGlaucomaProb">Probabilité 12%</span>
+                      </li>
+                      <li>Rétinopathie Diabétique: <span class="text-red" id="iaDiabeticProb">Probabilité 89%</span>
+                      </li>
+                      <li>Œdème Maculaire: <span class="text-green" id="iaOedemaProb">Probabilité 4%</span></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="exam-section-card mt-4">
+            <h4 class="exam-section-title"><i data-lucide="file-text" class="mr-2 text-accent-orange"></i>Diagnostic
+              Clinique & Prescription</h4>
+            <div class="form-grid">
+              <div class="form-group col-span-2">
+                <label class="form-label" for="diagFinal">Diagnostic Clinique Final *</label>
+                <input type="text" id="diagFinal" class="form-input" required
+                  placeholder="ex: Myopie simple avec astigmatisme léger">
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label" for="prescMedical">Prescription Médicale (Collyres, Traitements)</label>
+                <textarea id="prescMedical" class="form-textarea" rows="2"
+                  placeholder="ex: Collyre hydratant 1 goutte 3x/jour."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Prescription Optique (Verres Recommandés)</label>
+                <select id="prescVerreType" class="form-select">
+                  <option value="aucun">Aucun</option>
+                  <option value="unifocal" selected>Verres Unifocaux</option>
+                  <option value="progressif">Verres Progressifs</option>
+                  <option value="lentilles">Lentilles de Contact</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Traitement Verre Préconisé</label>
+                <select id="prescVerreTreatment" class="form-select">
+                  <option value="antireflet">Antireflet standard</option>
+                  <option value="bleu" selected>Filtre lumière bleue</option>
+                  <option value="photocromique">Photochromique</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelConsultationBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer la consultation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT APPOINTMENT -->
+  <div class="modal-overlay" id="addApptModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Nouveau Rendez-vous</h3>
+        <button class="modal-close" id="closeAddApptModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addApptForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group col-span-2">
+              <label class="form-label" for="apptPatient">Patient *</label>
+              <select id="apptPatient" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="apptDate">Date *</label>
+              <input type="date" id="apptDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="apptTime">Heure *</label>
+              <input type="time" id="apptTime" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="apptType">Type d'acte *</label>
+              <select id="apptType" class="form-select" required>
+                <option value="consultation" selected>Consultation Simple</option>
+                <option value="refraction">Examen de Réfraction</option>
+                <option value="oct">OCT / Imagerie</option>
+                <option value="chirurgie">Chirurgie (Bloc)</option>
+                <option value="postop">Suivi Postopératoire</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="apptDoctor">Praticien / Spécialiste *</label>
+              <select id="apptDoctor" class="form-select" required>
+                <option value="Dr. Diallo">Dr. Diallo (Ophtalmologue)</option>
+                <option value="M. Traoré">M. Traoré (Opticien)</option>
+              </select>
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="apptNotes">Notes pour le rendez-vous</label>
+              <input type="text" id="apptNotes" class="form-input" placeholder="ex: Apporter les anciennes lunettes">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelApptBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Planifier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD STOCK ITEM -->
+  <div class="modal-overlay" id="addStockModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Ajouter un article en stock</h3>
+        <button class="modal-close" id="closeAddStockModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addStockForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="stType">Type d'article *</label>
+              <select id="stType" class="form-select" required>
+                <option value="monture" selected>Monture</option>
+                <option value="verre">Verre Correcteur</option>
+                <option value="lentilles">Lentilles</option>
+                <option value="accessoire">Accessoire / Entretien</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stRef">Référence unique *</label>
+              <input type="text" id="stRef" class="form-input" required placeholder="ex: MT-RAY-2026">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stBrand">Marque / Fabricant *</label>
+              <input type="text" id="stBrand" class="form-input" required placeholder="ex: Ray-Ban">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stModel">Modèle / Spécificité *</label>
+              <input type="text" id="stModel" class="form-input" required placeholder="ex: Aviator Or">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stPriceBuy">Prix d'Achat (XOF/XAF) *</label>
+              <input type="number" id="stPriceBuy" class="form-input" required placeholder="ex: 25000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stPriceSell">Prix de Vente (XOF/XAF) *</label>
+              <input type="number" id="stPriceSell" class="form-input" required placeholder="ex: 45000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stQty">Quantité Initiale *</label>
+              <input type="number" id="stQty" class="form-input" required placeholder="ex: 10" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stMinAlert">Seuil d'alerte critique *</label>
+              <input type="number" id="stMinAlert" class="form-input" required placeholder="ex: 2" min="1">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelStockBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Ajouter au stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD SURGERY -->
+  <div class="modal-overlay" id="addSurgeryModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Planifier une intervention chirurgicale</h3>
+        <button class="modal-close" id="closeAddSurgeryModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addSurgeryForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group col-span-2">
+              <label class="form-label" for="surgPatient">Patient *</label>
+              <select id="surgPatient" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="surgDoctor">Chirurgien Principal *</label>
+              <select id="surgDoctor" class="form-select" required>
+                <option value="Dr. Diallo">Dr. Diallo (Ophtalmologue)</option>
+                <option value="Dr. Koné">Dr. Koné (Rétinologue)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="surgType">Type de Chirurgie *</label>
+              <select id="surgType" class="form-select" required>
+                <option value="Cataracte (Phacoémulsification)" selected>Cataracte (Phacoémulsification)</option>
+                <option value="Trabéculoplastie (Glaucome)">Trabéculoplastie (Glaucome)</option>
+                <option value="Chirurgie Réfractive Laser">Chirurgie Réfractive Laser</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="surgEye">Œil Opéré *</label>
+              <select id="surgEye" class="form-select" required>
+                <option value="OD">Œil Droit (OD)</option>
+                <option value="OG">Œil Gauche (OG)</option>
+                <option value="Bilatéral">Bilatéral</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="surgDate">Date Prévue *</label>
+              <input type="date" id="surgDate" class="form-input" required>
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="surgNotes">Remarques, implants ou consommables</label>
+              <input type="text" id="surgNotes" class="form-input" placeholder="ex: Implant monofocal Alcon">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelSurgeryBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Planifier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT EMPLOYEE [NEW] -->
+  <div class="modal-overlay" id="addEmployeeModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Ajouter un nouvel employé</h3>
+        <button class="modal-close" id="closeAddEmployeeModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addEmployeeForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="empName">Nom & Prénoms *</label>
+              <input type="text" id="empName" class="form-input" required placeholder="ex: Marie Ndiaye">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="empPhone">Téléphone *</label>
+              <input type="text" id="empPhone" class="form-input" required placeholder="ex: +221 77 000 00 00">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="empEmail">Email *</label>
+              <input type="email" id="empEmail" class="form-input" required placeholder="ex: marie@oculo.africa">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="empRole">Poste / Rôle *</label>
+              <select id="empRole" class="form-select" required>
+                <option value="opticien">Opticien</option>
+                <option value="ophtalmo">Ophtalmologue</option>
+                <option value="receptionniste">Réceptionniste</option>
+                <option value="comptable">Comptable</option>
+                <option value="caissier">Caissier</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="empSalary">Salaire de base *</label>
+              <input type="number" id="empSalary" class="form-input" required placeholder="ex: 450000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="empBranch">Succursale *</label>
+              <select id="empBranch" class="form-select" required>
+                <option value="dakar_plateau">Dakar Plateau</option>
+                <option value="abidjan_cocody">Abidjan Cocody</option>
+                <option value="optique_bamako">Bamako Centre</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelEmployeeBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Embaucher</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD EXPENSE [NEW] -->
+  <div class="modal-overlay" id="addExpenseModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Enregistrer une dépense d'exploitation</h3>
+        <button class="modal-close" id="closeAddExpenseModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addExpenseForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="expCat">Catégorie *</label>
+              <select id="expCat" class="form-select" required>
+                <option value="Loyer">Loyer</option>
+                <option value="Salaires">Salaires</option>
+                <option value="Électricité">Électricité</option>
+                <option value="Eau">Eau</option>
+                <option value="Internet">Internet</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Taxes">Impôts / Taxes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="expAmount">Montant *</label>
+              <input type="number" id="expAmount" class="form-input" required placeholder="ex: 150000">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label" for="expDesc">Description / Bénéficiaire *</label>
+              <input type="text" id="expDesc" class="form-input" required placeholder="ex: Facture SENELEC Juin 2026">
+            </div>
+            <div class="form-group col-span-2">
+              <label class="form-label">Pièce justificative (Reçu / Facture)</label>
+              <div class="ia-upload-sim">
+                <i data-lucide="file" style="width:24px;height:24px;"></i>
+                <span class="text-xs">Uploader le reçu scanné</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelExpenseBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer la Dépense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CASH REGISTER DRAWER (OPEN/CLOSE) [NEW] -->
+  <div class="modal-overlay" id="cashDrawerModal">
+    <div class="modal-container modal-sm-size">
+      <div class="modal-header">
+        <h3 id="cashDrawerModalTitle">Clôture / Ouverture de Caisse</h3>
+        <button class="modal-close" id="closeCashDrawerModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="cashDrawerForm">
+        <div class="modal-body">
+          <div class="form-group mb-4">
+            <label class="form-label" id="cashDrawerFieldLabel">Fond de caisse déclaré *</label>
+            <input type="number" id="cashDrawerAmount" class="form-input text-center font-bold" required
+              placeholder="ex: 150000">
+          </div>
+          <div class="text-xs text-muted" id="cashDrawerInfoText"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelCashDrawerBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="confirmCashDrawerBtn">Confirmer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CUSTOM ROLE [NEW] -->
+  <div class="modal-overlay" id="addRoleModal">
+    <div class="modal-container modal-sm-size">
+      <div class="modal-header">
+        <h3>Créer un Rôle personnalisé</h3>
+        <button class="modal-close" id="closeAddRoleModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <form id="addRoleForm">
+        <div class="modal-body">
+          <div class="form-group mb-4">
+            <label class="form-label" for="customRoleName">Nom du Rôle *</label>
+            <input type="text" id="customRoleName" class="form-input" required placeholder="ex: Stagiaire Optométrie">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelRoleBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Créer le Rôle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CINETPAY GATEWAY MOBILE MONEY SIMULATOR -->
+  <div class="modal-overlay" id="mobilePaymentModal">
+    <div class="modal-container modal-sm-size text-center">
+      <div class="modal-header">
+        <h3 id="mobilePaymentTitle">CinetPay Marchand</h3>
+        <button class="modal-close" id="closeMobilePaymentModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body p-6 flex flex-col items-center gap-4">
+        <p class="text-xs text-muted" data-i18n="caisse.cinetpaySecure">Transactions cryptées et sécurisées par
+          CinetPay.</p>
+
+        <!-- Live status spinner -->
+        <div class="qr-code-wrapper" id="qrCodeWrapper"></div>
+
+        <div class="payment-instructions" id="paymentInstructions"></div>
+
+        <div class="amount-badge-large" id="paymentAmountBadge">0 XOF</div>
+
+        <div class="form-group w-full">
+          <label class="form-label text-left text-xs" for="mobileValidationCode">Code d'autorisation CinetPay
+            (Sandbox)</label>
+          <input type="text" id="mobileValidationCode" class="form-input text-center font-bold tracking-widest text-lg"
+            placeholder="ex: 123456" maxlength="6">
+          <span class="text-xs text-muted block mt-1">Saisir un code à 6 chiffres pour simuler la réussite du
+            paiement.</span>
+        </div>
+      </div>
+      <div class="modal-footer justify-center">
+        <button class="btn btn-outline" id="cancelMobilePaymentBtn">Annuler</button>
+        <button class="btn btn-primary" id="confirmMobilePaymentBtn">Confirmer le paiement</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INVOICE / PRESCRIPTION VIEWER (FOR PRINT & EXPORT) -->
+  <div class="modal-overlay modal-lg-size" id="invoiceViewerModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="invoiceViewerTitle">Document Officiel</h3>
+        <button class="modal-close" id="closeInvoiceViewerModalBtn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body-scroll">
+        <div class="printable-document" id="printableInvoiceArea"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="closeInvoiceViewerBtn">Fermer</button>
+        <button class="btn btn-primary" id="printDocumentBtn">
+          <i data-lucide="printer" class="mr-2"></i>
+          <span>Imprimer / Sauvegarder PDF</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script logic -->
+  <script src="app.js"></script>
+
+
+
+  <!-- Service Worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('PWA Service Worker registered!', reg.scope))
+          .catch(err => console.log('Service Worker registration failed', err));
+      });
+    }
+  </script>
+</body>
+
+</html>

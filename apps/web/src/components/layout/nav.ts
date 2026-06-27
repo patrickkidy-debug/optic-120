@@ -1,0 +1,80 @@
+import {
+  LayoutDashboard,
+  Users,
+  Stethoscope,
+  CalendarDays,
+  Scissors,
+  Package,
+  Boxes,
+  ShoppingCart,
+  ReceiptText,
+  FileText,
+  UserCog,
+  Wallet,
+  Truck,
+  ShieldCheck,
+  ShieldHalf,
+  Store,
+  CreditCard,
+  ScrollText,
+  type LucideIcon,
+} from 'lucide-react';
+
+export interface NavItem {
+  to: string;
+  labelKey: string;
+  icon: LucideIcon;
+  permission?: string;
+  soon?: boolean;
+  badge?: 'lowStock';
+}
+
+export interface NavGroup {
+  titleKey: string;
+  items: NavItem[];
+}
+
+export const NAV: NavGroup[] = [
+  {
+    titleKey: 'nav.main',
+    items: [{ to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, permission: 'dashboard.view' }],
+  },
+  {
+    titleKey: 'nav.optics',
+    items: [
+      { to: '/optique/produits', labelKey: 'nav.products', icon: Package, permission: 'optique.products.view' },
+      { to: '/optique/stock', labelKey: 'nav.stock', icon: Boxes, permission: 'optique.stock.view', badge: 'lowStock' },
+      { to: '/optique/caisse', labelKey: 'nav.pos', icon: ShoppingCart, permission: 'optique.sales.create' },
+      { to: '/optique/ventes', labelKey: 'nav.sales', icon: ReceiptText, permission: 'optique.sales.view' },
+      { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
+    ],
+  },
+  {
+    titleKey: 'nav.clinic',
+    items: [
+      { to: '/clinique/patients', labelKey: 'nav.patients', icon: Users, soon: true },
+      { to: '/clinique/consultations', labelKey: 'nav.consultations', icon: Stethoscope, soon: true },
+      { to: '/clinique/rendez-vous', labelKey: 'nav.appointments', icon: CalendarDays, soon: true },
+      { to: '/clinique/chirurgies', labelKey: 'nav.surgeries', icon: Scissors, soon: true },
+    ],
+  },
+  {
+    titleKey: 'nav.management',
+    items: [
+      { to: '/gestion/personnel', labelKey: 'nav.hr', icon: UserCog, soon: true },
+      { to: '/gestion/finance', labelKey: 'nav.finance', icon: Wallet, soon: true },
+      { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, soon: true },
+      { to: '/gestion/assurances', labelKey: 'nav.insurance', icon: ShieldCheck, soon: true },
+    ],
+  },
+  {
+    titleKey: 'nav.settings',
+    items: [
+      { to: '/parametres/roles', labelKey: 'nav.roles', icon: ShieldHalf, permission: 'rbac.roles.view' },
+      { to: '/parametres/utilisateurs', labelKey: 'nav.users', icon: Users, permission: 'rbac.users.view' },
+      { to: '/parametres/magasins', labelKey: 'nav.branches', icon: Store, permission: 'settings.branches.view' },
+      { to: '/parametres/paiements', labelKey: 'nav.payments', icon: CreditCard, permission: 'settings.payments.view' },
+      { to: '/parametres/journal', labelKey: 'nav.audit', icon: ScrollText, permission: 'audit.logs.view' },
+    ],
+  },
+];

@@ -1,0 +1,106 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--primary-soft);
+  }
+  /* Scrollbar premium */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-faint);
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border bg-surface shadow-card;
+  }
+  .input {
+    @apply w-full rounded-xl border bg-surface-2 px-3.5 py-2.5 text-sm text-content
+      placeholder:text-content-faint outline-none transition
+      focus:border-primary focus:ring-4 focus:ring-[var(--ring)];
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-content-muted;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm
+      font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-hover shadow-card;
+  }
+  .btn-accent {
+    @apply btn bg-accent text-white hover:bg-accent-hover shadow-card;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-content-muted hover:bg-surface-2 hover:text-content;
+  }
+  .btn-outline {
+    @apply btn border bg-transparent text-content hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content-muted
+      transition hover:bg-surface-2 hover:text-content;
+  }
+  .nav-link-active {
+    @apply bg-primary-soft text-content;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .bg-hero {
+    background: var(--gradient-hero);
+  }
+  .bg-brand {
+    background: var(--gradient-brand);
+  }
+}

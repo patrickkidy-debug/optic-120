@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment & secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Prisma
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Vite / frontend caches
+.vite/
+apps/web/.vite/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# Misc
+.cache/
+tmp/
+temp/
