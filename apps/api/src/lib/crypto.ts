@@ -1,11 +1,18 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { env } from '../config/env.js';
 
 /**
  * Chiffrement symétrique AES-256-GCM pour les secrets stockés au repos
  * (ex : clé API CinetPay). Format de sortie : iv:authTag:ciphertext (hex).
  */
-const KEY = Buffer.from(env.ENCRYPTION_KEY, 'hex'); // 32 octets
+// Une vraie clé AES-256 fait 32 octets. Si ENCRYPTION_KEY est fournie sous la
+// forme de 64 caractères hexadécimaux, on l'utilise telle quelle ; sinon on en
+// dérive 32 octets déterministes via SHA-256. Ainsi n'importe quelle valeur de
+// secret suffisamment longue produit une clé valide (pas de format imposé).
+const HEX_64 = /^[0-9a-fA-F]{64}$/;
+const KEY = HEX_64.test(env.ENCRYPTION_KEY)
+  ? Buffer.from(env.ENCRYPTION_KEY, 'hex')
+  : createHash('sha256').update(env.ENCRYPTION_KEY).digest(); // 32 octets
 const ALGO = 'aes-256-gcm';
 
 export function encryptSecret(plain: string): string {

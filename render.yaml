@@ -50,7 +50,7 @@ services:
       - key: REFRESH_TOKEN_TTL_DAYS
         value: "30"
       - key: ENCRYPTION_KEY
-        sync: false # = 64 caractères hexadécimaux (32 octets). Génère avec: openssl rand -hex 32
+        generateValue: true # Render génère une valeur ; le code en dérive une clé AES-256 (lib/crypto.ts)
       - key: MAIL_DRIVER
         value: console
       - key: MAIL_FROM

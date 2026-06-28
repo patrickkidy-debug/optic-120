@@ -24,9 +24,12 @@ const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
 
+  // Idéalement 64 caractères hexadécimaux (32 octets). À défaut, toute valeur
+  // d'au moins 16 caractères est acceptée : une clé AES-256 valide en est
+  // dérivée via SHA-256 (voir lib/crypto.ts).
   ENCRYPTION_KEY: z
     .string()
-    .length(64, 'ENCRYPTION_KEY doit faire 64 caractères hexadécimaux (32 octets)'),
+    .min(16, 'ENCRYPTION_KEY doit faire au moins 16 caractères'),
 
   MAIL_DRIVER: z.enum(['console', 'smtp']).default('console'),
   MAIL_FROM: z.string().default('OculoSaaS <no-reply@oculosaas.africa>'),
