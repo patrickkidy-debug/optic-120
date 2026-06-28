@@ -63,3 +63,14 @@ if (!parsed.success) {
 export const env = parsed.data;
 export const isProd = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';
+
+/**
+ * Origines autorisées par CORS. CORS_ORIGIN peut contenir plusieurs URLs
+ * séparées par des virgules (ex. front Vercel + front Netlify).
+ */
+export const corsOrigins = env.CORS_ORIGIN.split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+/** URL principale du frontend (1re origine) — utilisée pour les liens email. */
+export const appOrigin = corsOrigins[0] ?? 'http://localhost:5173';

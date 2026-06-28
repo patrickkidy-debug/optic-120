@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
-import { env } from './config/env.js';
+import { corsOrigins } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
 
 import { authRoutes } from './modules/auth/auth.routes.js';
@@ -30,7 +30,7 @@ export async function buildApp() {
   app.setErrorHandler(errorHandler);
 
   await app.register(helmet, { contentSecurityPolicy: false });
-  await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
+  await app.register(cors, { origin: corsOrigins, credentials: true });
   await app.register(cookie);
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
 

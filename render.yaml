@@ -39,7 +39,8 @@ services:
           property: connectionString
       # --- À renseigner dans le dashboard Render ---
       - key: CORS_ORIGIN
-        sync: false # = URL Vercel du frontend, ex. https://optic-120.vercel.app
+        sync: false # URL(s) du frontend, séparées par des virgules si plusieurs.
+        # ex. https://ton-site.netlify.app  ou  https://optic-120.vercel.app,https://ton-site.netlify.app
       - key: COOKIE_DOMAIN
         value: "" # vide en cross-domaine : la cookie reste rattachée au domaine de l'API
       - key: COOKIE_SAMESITE

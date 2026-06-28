@@ -1,0 +1,32 @@
+# ============================================================
+# OculoSaaS — Déploiement du frontend (apps/web) sur Netlify.
+# L'API + la base PostgreSQL restent sur Render.
+# Sur netlify.com : Add new site > Import from Git > sélectionne ce repo.
+# ============================================================
+
+[build]
+  # Base = racine du monorepo pour que les workspaces npm se résolvent.
+  base = "."
+  # On build d'abord les types partagés, puis le front.
+  command = "npm install && npm run build --workspace @oculo/shared-types && npm run build --workspace @oculo/web"
+  # Dossier statique généré par Vite.
+  publish = "apps/web/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Évite que NODE_ENV=production fasse sauter l'installation des devDeps de build.
+  NPM_FLAGS = "--include=dev"
+
+# SPA : toutes les routes inconnues renvoient index.html (React Router gère ensuite).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Sécurité de base sur les en-têtes.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

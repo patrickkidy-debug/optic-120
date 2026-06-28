@@ -11,7 +11,7 @@ import {
 import { recordAudit } from '../../lib/audit.js';
 import { mailer } from '../../lib/mailer.js';
 import { ensureTrialSubscription } from '../billing/billing.service.js';
-import { env } from '../../config/env.js';
+import { env, appOrigin } from '../../config/env.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
 
 interface RequestMeta {
@@ -323,7 +323,7 @@ export async function forgotPassword(email: string, meta: RequestMeta): Promise<
     },
   });
 
-  const link = `${env.CORS_ORIGIN}/reset-password?token=${token}`;
+  const link = `${appOrigin}/reset-password?token=${token}`;
   await mailer.send({
     to: email,
     subject: 'Réinitialisation de votre mot de passe OculoSaaS',
