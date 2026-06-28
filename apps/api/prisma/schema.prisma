@@ -40,6 +40,14 @@ model Tenant {
   payments      Payment[]
   cashRegisters CashRegister[]
   auditLogs     AuditLog[]
+  patients      Patient[]
+  consultations Consultation[]
+  appointments  Appointment[]
+  surgeries     Surgery[]
+  employees     Employee[]
+  expenses      Expense[]
+  suppliers     Supplier[]
+  insurers      Insurer[]
 }
 
 model Branch {
@@ -411,4 +419,225 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, userId])
+}
+
+/* ---------------- CLINIQUE (Phase 2) ---------------- */
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Eye {
+  OD
+  OG
+  OU
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SurgeryStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
+model Patient {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  gender         Gender?
+  dateOfBirth    DateTime?
+  phone          String?
+  email          String?
+  address        String?
+  bloodGroup     String?
+  allergies      String?
+  medicalHistory String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  consultations Consultation[]
+  appointments  Appointment[]
+  surgeries     Surgery[]
+
+  @@index([tenantId])
+}
+
+model Consultation {
+  id                String   @id @default(uuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  practitionerName  String?
+  date              DateTime @default(now())
+  visualAcuityRight String?
+  visualAcuityLeft  String?
+  refractionRight   String?
+  refractionLeft    String?
+  tonometryRight    String?
+  tonometryLeft     String?
+  biomicroscopy     String?
+  fundus            String?
+  oct               String?
+  visualField       String?
+  diagnosis         String?
+  prescription      String?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId, patientId])
+  @@index([tenantId])
+}
+
+model Appointment {
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId        String
+  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  practitionerName String?
+  scheduledAt      DateTime
+  reason           String?
+  status           AppointmentStatus @default(SCHEDULED)
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([tenantId, scheduledAt])
+  @@index([tenantId])
+}
+
+model Surgery {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type          String
+  eye           Eye           @default(OU)
+  surgeonName   String?
+  scheduledAt   DateTime?
+  status        SurgeryStatus @default(PLANNED)
+  outcome       String?
+  followUpNotes String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([tenantId])
+}
+
+/* ---------------- GESTION (Phase 2) ---------------- */
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum ExpenseCategory {
+  RENT
+  SALARIES
+  ELECTRICITY
+  WATER
+  INTERNET
+  MARKETING
+  TRANSPORT
+  SUPPLIES
+  MAINTENANCE
+  TAXES
+  OTHER
+}
+
+enum SupplierType {
+  LOCAL
+  INTERNATIONAL
+}
+
+enum InsurerType {
+  HEALTH_INSURANCE
+  MUTUAL
+  PRIVATE
+  THIRD_PARTY
+}
+
+model Employee {
+  id        String         @id @default(uuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  phone     String?
+  email     String?
+  position  String
+  salary    Decimal?       @db.Decimal(12, 2)
+  hireDate  DateTime?
+  status    EmployeeStatus @default(ACTIVE)
+  branchId  String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([tenantId])
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  label       String
+  amount      Decimal         @db.Decimal(12, 2)
+  date        DateTime        @default(now())
+  branchId    String?
+  notes       String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  @@index([tenantId, date])
+  @@index([tenantId])
+}
+
+model Supplier {
+  id          String       @id @default(uuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  type        SupplierType @default(LOCAL)
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([tenantId])
+}
+
+model Insurer {
+  id              String      @id @default(uuid())
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  type            InsurerType @default(HEALTH_INSURANCE)
+  coveragePercent Int         @default(0)
+  phone           String?
+  email           String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([tenantId])
 }

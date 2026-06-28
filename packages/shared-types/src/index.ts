@@ -79,6 +79,63 @@ export const CashRegisterStatus = {
 } as const;
 export type CashRegisterStatus = (typeof CashRegisterStatus)[keyof typeof CashRegisterStatus];
 
+/* --- Clinique & gestion (Phase 2) --- */
+
+export const Gender = { MALE: 'MALE', FEMALE: 'FEMALE', OTHER: 'OTHER' } as const;
+export type Gender = (typeof Gender)[keyof typeof Gender];
+
+export const Eye = { OD: 'OD', OG: 'OG', OU: 'OU' } as const;
+export type Eye = (typeof Eye)[keyof typeof Eye];
+
+export const AppointmentStatus = {
+  SCHEDULED: 'SCHEDULED',
+  CONFIRMED: 'CONFIRMED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  NO_SHOW: 'NO_SHOW',
+} as const;
+export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
+
+export const SurgeryStatus = {
+  PLANNED: 'PLANNED',
+  DONE: 'DONE',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type SurgeryStatus = (typeof SurgeryStatus)[keyof typeof SurgeryStatus];
+
+export const EmployeeStatus = {
+  ACTIVE: 'ACTIVE',
+  ON_LEAVE: 'ON_LEAVE',
+  TERMINATED: 'TERMINATED',
+} as const;
+export type EmployeeStatus = (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
+
+export const ExpenseCategory = {
+  RENT: 'RENT',
+  SALARIES: 'SALARIES',
+  ELECTRICITY: 'ELECTRICITY',
+  WATER: 'WATER',
+  INTERNET: 'INTERNET',
+  MARKETING: 'MARKETING',
+  TRANSPORT: 'TRANSPORT',
+  SUPPLIES: 'SUPPLIES',
+  MAINTENANCE: 'MAINTENANCE',
+  TAXES: 'TAXES',
+  OTHER: 'OTHER',
+} as const;
+export type ExpenseCategory = (typeof ExpenseCategory)[keyof typeof ExpenseCategory];
+
+export const SupplierType = { LOCAL: 'LOCAL', INTERNATIONAL: 'INTERNATIONAL' } as const;
+export type SupplierType = (typeof SupplierType)[keyof typeof SupplierType];
+
+export const InsurerType = {
+  HEALTH_INSURANCE: 'HEALTH_INSURANCE',
+  MUTUAL: 'MUTUAL',
+  PRIVATE: 'PRIVATE',
+  THIRD_PARTY: 'THIRD_PARTY',
+} as const;
+export type InsurerType = (typeof InsurerType)[keyof typeof InsurerType];
+
 /* ============================================================
  * RÔLES SYSTÈME (12) — seedés comme templates globaux (tenantId = null)
  * ============================================================ */
@@ -165,6 +222,42 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'settings.payments', action: 'update', label: 'Modifier la configuration des paiements' },
 
   { module: 'audit.logs', action: 'view', label: "Voir le journal d'activité" },
+
+  // --- Clinique ---
+  { module: 'clinic.patients', action: 'view', label: 'Voir les patients' },
+  { module: 'clinic.patients', action: 'create', label: 'Créer des patients' },
+  { module: 'clinic.patients', action: 'update', label: 'Modifier des patients' },
+  { module: 'clinic.patients', action: 'delete', label: 'Supprimer des patients' },
+
+  { module: 'clinic.consultations', action: 'view', label: 'Voir les consultations' },
+  { module: 'clinic.consultations', action: 'create', label: 'Créer des consultations' },
+
+  { module: 'clinic.appointments', action: 'view', label: 'Voir les rendez-vous' },
+  { module: 'clinic.appointments', action: 'create', label: 'Créer des rendez-vous' },
+  { module: 'clinic.appointments', action: 'update', label: 'Modifier des rendez-vous' },
+
+  { module: 'clinic.surgeries', action: 'view', label: 'Voir les chirurgies' },
+  { module: 'clinic.surgeries', action: 'create', label: 'Planifier des chirurgies' },
+  { module: 'clinic.surgeries', action: 'update', label: 'Modifier des chirurgies' },
+
+  // --- Gestion ---
+  { module: 'hr.employees', action: 'view', label: 'Voir le personnel' },
+  { module: 'hr.employees', action: 'create', label: 'Ajouter du personnel' },
+  { module: 'hr.employees', action: 'update', label: 'Modifier le personnel' },
+
+  { module: 'finance.expenses', action: 'view', label: 'Voir les dépenses' },
+  { module: 'finance.expenses', action: 'create', label: 'Créer des dépenses' },
+  { module: 'finance.expenses', action: 'update', label: 'Modifier des dépenses' },
+  { module: 'finance.expenses', action: 'delete', label: 'Supprimer des dépenses' },
+  { module: 'finance.reports', action: 'view', label: 'Voir les rapports financiers' },
+
+  { module: 'suppliers', action: 'view', label: 'Voir les fournisseurs' },
+  { module: 'suppliers', action: 'create', label: 'Créer des fournisseurs' },
+  { module: 'suppliers', action: 'update', label: 'Modifier des fournisseurs' },
+
+  { module: 'insurance', action: 'view', label: 'Voir les assurances' },
+  { module: 'insurance', action: 'create', label: 'Créer des assurances' },
+  { module: 'insurance', action: 'update', label: 'Modifier des assurances' },
 ];
 
 /** Clé canonique d'une permission : "module.action". */
@@ -195,6 +288,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'rbac.users.view',
     'settings.branches.view', 'settings.branches.create', 'settings.branches.update',
     'audit.logs.view',
+    'clinic.patients.view', 'clinic.appointments.view',
+    'hr.employees.view', 'hr.employees.create', 'hr.employees.update',
+    'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
+    'suppliers.view', 'suppliers.create', 'suppliers.update',
+    'insurance.view', 'insurance.create', 'insurance.update',
   ],
 
   opticien: [
@@ -207,19 +305,34 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
   ],
 
-  ophtalmologue: ['dashboard.view', 'optique.customers.view'],
-  orthoptiste: ['dashboard.view', 'optique.customers.view'],
+  ophtalmologue: [
+    'dashboard.view', 'optique.customers.view',
+    'clinic.patients.view', 'clinic.patients.create', 'clinic.patients.update',
+    'clinic.consultations.view', 'clinic.consultations.create',
+    'clinic.appointments.view', 'clinic.appointments.create', 'clinic.appointments.update',
+    'clinic.surgeries.view', 'clinic.surgeries.create', 'clinic.surgeries.update',
+  ],
+  orthoptiste: [
+    'dashboard.view', 'optique.customers.view',
+    'clinic.patients.view',
+    'clinic.consultations.view', 'clinic.consultations.create',
+    'clinic.appointments.view',
+  ],
 
   secretaire: [
     'dashboard.view',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
     'optique.quotes.view',
+    'clinic.patients.view', 'clinic.patients.create', 'clinic.patients.update',
+    'clinic.appointments.view', 'clinic.appointments.create', 'clinic.appointments.update',
   ],
 
   receptionniste: [
     'dashboard.view',
     'optique.customers.view', 'optique.customers.create',
     'optique.sales.view',
+    'clinic.patients.view', 'clinic.patients.create',
+    'clinic.appointments.view', 'clinic.appointments.create', 'clinic.appointments.update',
   ],
 
   caissier: [
@@ -234,6 +347,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard.view',
     'optique.products.view', 'optique.products.create', 'optique.products.update', 'optique.products.delete',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
+    'suppliers.view', 'suppliers.create', 'suppliers.update',
   ],
 
   comptable: [
@@ -241,6 +355,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.sales.view',
     'settings.payments.view',
     'audit.logs.view',
+    'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
+    'suppliers.view',
+    'insurance.view',
   ],
 
   commercial: [
@@ -249,6 +366,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
     'optique.quotes.view', 'optique.quotes.create',
     'optique.sales.view', 'optique.sales.create',
+    'suppliers.view',
+    'insurance.view',
   ],
 };
 
@@ -431,6 +550,155 @@ export const paymentConfigSchema = z.object({
   simulationMode: z.boolean().default(true),
 });
 export type PaymentConfigInput = z.infer<typeof paymentConfigSchema>;
+
+/* --- Clinique --- */
+
+export const patientCreateSchema = z.object({
+  firstName: z.string().min(1).max(80),
+  lastName: z.string().min(1).max(80),
+  gender: z.enum([Gender.MALE, Gender.FEMALE, Gender.OTHER]).optional(),
+  dateOfBirth: z.string().optional().or(z.literal('')),
+  phone: z.string().max(40).optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  address: z.string().max(200).optional().or(z.literal('')),
+  bloodGroup: z.string().max(8).optional().or(z.literal('')),
+  allergies: z.string().max(500).optional().or(z.literal('')),
+  medicalHistory: z.string().max(2000).optional().or(z.literal('')),
+});
+export type PatientCreateInput = z.infer<typeof patientCreateSchema>;
+
+export const consultationCreateSchema = z.object({
+  patientId: z.string().uuid(),
+  date: z.string().optional().or(z.literal('')),
+  visualAcuityRight: z.string().max(40).optional().or(z.literal('')),
+  visualAcuityLeft: z.string().max(40).optional().or(z.literal('')),
+  refractionRight: z.string().max(80).optional().or(z.literal('')),
+  refractionLeft: z.string().max(80).optional().or(z.literal('')),
+  tonometryRight: z.string().max(40).optional().or(z.literal('')),
+  tonometryLeft: z.string().max(40).optional().or(z.literal('')),
+  biomicroscopy: z.string().max(1000).optional().or(z.literal('')),
+  fundus: z.string().max(1000).optional().or(z.literal('')),
+  oct: z.string().max(1000).optional().or(z.literal('')),
+  visualField: z.string().max(1000).optional().or(z.literal('')),
+  diagnosis: z.string().max(1000).optional().or(z.literal('')),
+  prescription: z.string().max(1000).optional().or(z.literal('')),
+  notes: z.string().max(2000).optional().or(z.literal('')),
+});
+export type ConsultationCreateInput = z.infer<typeof consultationCreateSchema>;
+
+export const appointmentCreateSchema = z.object({
+  patientId: z.string().uuid(),
+  scheduledAt: z.string().min(1, 'Date requise'),
+  reason: z.string().max(200).optional().or(z.literal('')),
+  practitionerName: z.string().max(120).optional().or(z.literal('')),
+  status: z
+    .enum([
+      AppointmentStatus.SCHEDULED,
+      AppointmentStatus.CONFIRMED,
+      AppointmentStatus.COMPLETED,
+      AppointmentStatus.CANCELLED,
+      AppointmentStatus.NO_SHOW,
+    ])
+    .default(AppointmentStatus.SCHEDULED),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type AppointmentCreateInput = z.infer<typeof appointmentCreateSchema>;
+
+export const appointmentUpdateSchema = appointmentCreateSchema.partial().omit({ patientId: true });
+export type AppointmentUpdateInput = z.infer<typeof appointmentUpdateSchema>;
+
+export const surgeryCreateSchema = z.object({
+  patientId: z.string().uuid(),
+  type: z.string().min(1).max(160),
+  eye: z.enum([Eye.OD, Eye.OG, Eye.OU]).default(Eye.OU),
+  scheduledAt: z.string().optional().or(z.literal('')),
+  surgeonName: z.string().max(120).optional().or(z.literal('')),
+  status: z
+    .enum([SurgeryStatus.PLANNED, SurgeryStatus.DONE, SurgeryStatus.CANCELLED])
+    .default(SurgeryStatus.PLANNED),
+  outcome: z.string().max(1000).optional().or(z.literal('')),
+  followUpNotes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type SurgeryCreateInput = z.infer<typeof surgeryCreateSchema>;
+export const surgeryUpdateSchema = surgeryCreateSchema.partial().omit({ patientId: true });
+export type SurgeryUpdateInput = z.infer<typeof surgeryUpdateSchema>;
+
+/* --- Gestion --- */
+
+export const employeeCreateSchema = z.object({
+  firstName: z.string().min(1).max(80),
+  lastName: z.string().min(1).max(80),
+  phone: z.string().max(40).optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  position: z.string().min(1).max(120),
+  salary: z.number().nonnegative().optional(),
+  hireDate: z.string().optional().or(z.literal('')),
+  status: z
+    .enum([EmployeeStatus.ACTIVE, EmployeeStatus.ON_LEAVE, EmployeeStatus.TERMINATED])
+    .default(EmployeeStatus.ACTIVE),
+  branchId: z.string().uuid().optional(),
+});
+export type EmployeeCreateInput = z.infer<typeof employeeCreateSchema>;
+export const employeeUpdateSchema = employeeCreateSchema.partial();
+export type EmployeeUpdateInput = z.infer<typeof employeeUpdateSchema>;
+
+export const expenseCategoryEnum = z.enum([
+  ExpenseCategory.RENT,
+  ExpenseCategory.SALARIES,
+  ExpenseCategory.ELECTRICITY,
+  ExpenseCategory.WATER,
+  ExpenseCategory.INTERNET,
+  ExpenseCategory.MARKETING,
+  ExpenseCategory.TRANSPORT,
+  ExpenseCategory.SUPPLIES,
+  ExpenseCategory.MAINTENANCE,
+  ExpenseCategory.TAXES,
+  ExpenseCategory.OTHER,
+]);
+
+export const expenseCreateSchema = z.object({
+  category: expenseCategoryEnum,
+  label: z.string().min(1).max(160),
+  amount: z.number().positive(),
+  date: z.string().optional().or(z.literal('')),
+  branchId: z.string().uuid().optional(),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
+export const expenseUpdateSchema = expenseCreateSchema.partial();
+export type ExpenseUpdateInput = z.infer<typeof expenseUpdateSchema>;
+
+export const supplierCreateSchema = z.object({
+  name: z.string().min(1).max(160),
+  type: z.enum([SupplierType.LOCAL, SupplierType.INTERNATIONAL]).default(SupplierType.LOCAL),
+  contactName: z.string().max(120).optional().or(z.literal('')),
+  phone: z.string().max(40).optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  address: z.string().max(200).optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type SupplierCreateInput = z.infer<typeof supplierCreateSchema>;
+export const supplierUpdateSchema = supplierCreateSchema.partial();
+export type SupplierUpdateInput = z.infer<typeof supplierUpdateSchema>;
+
+export const insurerCreateSchema = z.object({
+  name: z.string().min(1).max(160),
+  type: z
+    .enum([
+      InsurerType.HEALTH_INSURANCE,
+      InsurerType.MUTUAL,
+      InsurerType.PRIVATE,
+      InsurerType.THIRD_PARTY,
+    ])
+    .default(InsurerType.HEALTH_INSURANCE),
+  coveragePercent: z.number().int().min(0).max(100).default(0),
+  phone: z.string().max(40).optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type InsurerCreateInput = z.infer<typeof insurerCreateSchema>;
+export const insurerUpdateSchema = insurerCreateSchema.partial();
+export type InsurerUpdateInput = z.infer<typeof insurerUpdateSchema>;
 
 /* ============================================================
  * TYPES DE RÉPONSE PARTAGÉS

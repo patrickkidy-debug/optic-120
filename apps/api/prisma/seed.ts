@@ -55,10 +55,40 @@ async function seedSystemRoles() {
   console.log(`✔ ${SYSTEM_ROLES.length} rôles système (templates) seedés`);
 }
 
+/**
+ * Resynchronise les rôles SYSTÈME déjà clonés dans les tenants existants avec
+ * la matrice de permissions à jour. Idempotent : permet de propager de
+ * nouvelles permissions (ex : modules Phase 2) aux tenants créés avant l'ajout.
+ */
+async function resyncTenantSystemRoles() {
+  const perms = await prisma.permission.findMany();
+  const idByKey = new Map(perms.map((p) => [`${p.module}.${p.action}`, p.id]));
+
+  const roles = await prisma.role.findMany({
+    where: { tenantId: { not: null }, isSystem: true },
+  });
+  let updated = 0;
+  for (const role of roles) {
+    const keys = DEFAULT_ROLE_PERMISSIONS[role.code];
+    if (!keys) continue;
+    const data = keys
+      .map((k) => idByKey.get(k))
+      .filter((id): id is string => Boolean(id))
+      .map((permissionId) => ({ roleId: role.id, permissionId }));
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    if (data.length > 0) {
+      await prisma.rolePermission.createMany({ data, skipDuplicates: true });
+    }
+    updated++;
+  }
+  console.log(`✔ ${updated} rôle(s) système de tenants existants resynchronisés`);
+}
+
 async function main() {
   console.log('🌱 Seed OculoSaaS…');
   await seedPermissions();
   await seedSystemRoles();
+  await resyncTenantSystemRoles();
   console.log('✅ Seed terminé.');
 }
 

@@ -15,13 +15,26 @@ import { PageHeader, Button, Modal, Field, Badge, PageLoader } from '../../compo
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: 'Tableau de bord',
-  optique: 'Optique',
-  clinic: 'Clinique',
-  rbac: 'Utilisateurs & rôles',
-  hr: 'Personnel',
-  finance: 'Finance',
-  settings: 'Paramètres',
-  audit: 'Audit',
+  'optique.products': 'Optique — Produits',
+  'optique.stock': 'Optique — Stock',
+  'optique.sales': 'Optique — Ventes',
+  'optique.quotes': 'Optique — Devis',
+  'optique.cashregister': 'Optique — Caisses',
+  'optique.customers': 'Optique — Clients',
+  'clinic.patients': 'Clinique — Patients',
+  'clinic.consultations': 'Clinique — Consultations',
+  'clinic.appointments': 'Clinique — Rendez-vous',
+  'clinic.surgeries': 'Clinique — Chirurgies',
+  'hr.employees': 'Personnel',
+  'finance.expenses': 'Finance — Dépenses',
+  'finance.reports': 'Finance — Rapports',
+  suppliers: 'Fournisseurs',
+  insurance: 'Assurances',
+  'rbac.roles': 'Rôles',
+  'rbac.users': 'Utilisateurs',
+  'settings.branches': 'Magasins',
+  'settings.payments': 'Paiements',
+  'audit.logs': 'Audit',
 };
 const PROTECTED = ['admin', 'super_admin'];
 

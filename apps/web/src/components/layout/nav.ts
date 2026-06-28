@@ -52,19 +52,19 @@ export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.clinic',
     items: [
-      { to: '/clinique/patients', labelKey: 'nav.patients', icon: Users, soon: true },
-      { to: '/clinique/consultations', labelKey: 'nav.consultations', icon: Stethoscope, soon: true },
-      { to: '/clinique/rendez-vous', labelKey: 'nav.appointments', icon: CalendarDays, soon: true },
-      { to: '/clinique/chirurgies', labelKey: 'nav.surgeries', icon: Scissors, soon: true },
+      { to: '/clinique/patients', labelKey: 'nav.patients', icon: Users, permission: 'clinic.patients.view' },
+      { to: '/clinique/consultations', labelKey: 'nav.consultations', icon: Stethoscope, permission: 'clinic.consultations.view' },
+      { to: '/clinique/rendez-vous', labelKey: 'nav.appointments', icon: CalendarDays, permission: 'clinic.appointments.view' },
+      { to: '/clinique/chirurgies', labelKey: 'nav.surgeries', icon: Scissors, permission: 'clinic.surgeries.view' },
     ],
   },
   {
     titleKey: 'nav.management',
     items: [
-      { to: '/gestion/personnel', labelKey: 'nav.hr', icon: UserCog, soon: true },
-      { to: '/gestion/finance', labelKey: 'nav.finance', icon: Wallet, soon: true },
-      { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, soon: true },
-      { to: '/gestion/assurances', labelKey: 'nav.insurance', icon: ShieldCheck, soon: true },
+      { to: '/gestion/personnel', labelKey: 'nav.hr', icon: UserCog, permission: 'hr.employees.view' },
+      { to: '/gestion/finance', labelKey: 'nav.finance', icon: Wallet, permission: 'finance.expenses.view' },
+      { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, permission: 'suppliers.view' },
+      { to: '/gestion/assurances', labelKey: 'nav.insurance', icon: ShieldCheck, permission: 'insurance.view' },
     ],
   },
   {

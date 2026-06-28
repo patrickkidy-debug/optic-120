@@ -18,6 +18,8 @@ import { cashRegisterRoutes } from './modules/cashregister/cashregister.routes.j
 import { paymentsRoutes, paymentWebhookRoutes } from './modules/payments/payments.routes.js';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
 import { auditRoutes } from './modules/audit/audit.routes.js';
+import { clinicRoutes } from './modules/clinic/clinic.routes.js';
+import { managementRoutes } from './modules/management/management.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: false, trustProxy: true });
@@ -44,6 +46,8 @@ export async function buildApp() {
   await app.register(paymentWebhookRoutes, { prefix: '/webhooks' });
   await app.register(dashboardRoutes, { prefix: '/dashboard' });
   await app.register(auditRoutes, { prefix: '/audit' });
+  await app.register(clinicRoutes);
+  await app.register(managementRoutes);
 
   return app;
 }

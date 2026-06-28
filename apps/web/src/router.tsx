@@ -19,8 +19,15 @@ import { BranchesPage } from './pages/settings/BranchesPage';
 import { PaymentsPage } from './pages/settings/PaymentsPage';
 import { AuditPage } from './pages/settings/AuditPage';
 import { ProfilePage } from './pages/settings/ProfilePage';
-import { ComingSoon } from './pages/ComingSoon';
 import { NotFound } from './pages/NotFound';
+import { PatientsPage } from './pages/clinic/PatientsPage';
+import { ConsultationsPage } from './pages/clinic/ConsultationsPage';
+import { AppointmentsPage } from './pages/clinic/AppointmentsPage';
+import { SurgeriesPage } from './pages/clinic/SurgeriesPage';
+import { EmployeesPage } from './pages/management/EmployeesPage';
+import { FinancePage } from './pages/management/FinancePage';
+import { SuppliersPage } from './pages/management/SuppliersPage';
+import { InsurancePage } from './pages/management/InsurancePage';
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const status = useAuthStore((s) => s.status);
@@ -56,8 +63,17 @@ export const router = createBrowserRouter([
           { path: '/parametres/paiements', element: perm('settings.payments.view', <PaymentsPage />) },
           { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
           { path: '/parametres/profil', element: <ProfilePage /> },
-          { path: '/clinique/*', element: <ComingSoon /> },
-          { path: '/gestion/*', element: <ComingSoon /> },
+
+          { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },
+          { path: '/clinique/consultations', element: perm('clinic.consultations.view', <ConsultationsPage />) },
+          { path: '/clinique/rendez-vous', element: perm('clinic.appointments.view', <AppointmentsPage />) },
+          { path: '/clinique/chirurgies', element: perm('clinic.surgeries.view', <SurgeriesPage />) },
+
+          { path: '/gestion/personnel', element: perm('hr.employees.view', <EmployeesPage />) },
+          { path: '/gestion/finance', element: perm('finance.expenses.view', <FinancePage />) },
+          { path: '/gestion/fournisseurs', element: perm('suppliers.view', <SuppliersPage />) },
+          { path: '/gestion/assurances', element: perm('insurance.view', <InsurancePage />) },
+
           { path: '*', element: <NotFound /> },
         ],
       },

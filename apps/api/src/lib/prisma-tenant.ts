@@ -18,6 +18,14 @@ const TENANT_MODELS = new Set<string>([
   'Payment',
   'CashRegister',
   'AuditLog',
+  'Patient',
+  'Consultation',
+  'Appointment',
+  'Surgery',
+  'Employee',
+  'Expense',
+  'Supplier',
+  'Insurer',
 ]);
 
 /**
