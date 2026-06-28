@@ -52,16 +52,13 @@ export class CinetPayProvider implements PaymentProvider {
   constructor(private readonly config: CinetPayConfig) {}
 
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentResult> {
-    let data: {
-      code?: string;
-      message?: string;
-      description?: string;
-      data?: { payment_token?: string; payment_url?: string };
-    };
+    const url = `${this.config.baseUrl}/payment`;
+    let res: Response;
+    let bodyText: string;
     try {
-      const res = await fetch(`${this.config.baseUrl}/payment`, {
+      res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           apikey: this.config.apiKey,
           site_id: this.config.siteId,
@@ -76,16 +73,33 @@ export class CinetPayProvider implements PaymentProvider {
           channels: 'ALL',
         }),
       });
-      data = (await res.json()) as typeof data;
+      bodyText = await res.text();
     } catch (err) {
-      logger.error({ err }, 'CinetPay : appel /payment échoué');
-      throw badRequest('Connexion à CinetPay impossible. Vérifiez votre connexion et réessayez.');
+      // Échec réseau réel (DNS, TLS, timeout) — la requête n'a pas abouti.
+      logger.error({ err, url }, 'CinetPay : appel réseau /payment échoué');
+      const reason = err instanceof Error ? err.message : 'inconnue';
+      throw badRequest(`Connexion à CinetPay impossible (${reason}). Réessayez.`);
+    }
+
+    let data: {
+      code?: string;
+      message?: string;
+      description?: string;
+      data?: { payment_token?: string; payment_url?: string };
+    };
+    try {
+      data = JSON.parse(bodyText);
+    } catch {
+      // CinetPay a répondu mais pas en JSON (page d'erreur, WAF, mauvaise URL…).
+      const snippet = bodyText.slice(0, 200).replace(/\s+/g, ' ').trim();
+      logger.error({ status: res.status, body: snippet, url }, 'CinetPay : réponse non-JSON');
+      throw badRequest(`CinetPay a renvoyé une réponse inattendue (HTTP ${res.status}) : ${snippet || 'corps vide'}`);
     }
 
     // CinetPay renvoie le code '201' (CREATED) + une payment_url en cas de succès.
     if (!data.data?.payment_url) {
-      logger.error({ cinetpay: data }, 'CinetPay : transaction refusée');
-      const reason = data.description || data.message || data.code || 'réponse inattendue';
+      logger.error({ cinetpay: data, status: res.status }, 'CinetPay : transaction refusée');
+      const reason = data.description || data.message || data.code || `HTTP ${res.status}`;
       throw badRequest(`CinetPay a refusé la transaction : ${reason}`);
     }
 
