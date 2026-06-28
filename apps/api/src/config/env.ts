@@ -10,11 +10,15 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL est requis'),
 
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  // Laisser vide en cross-domaine (frontend et API sur des domaines différents) :
+  // la cookie devient « host-only » et reste rattachée au domaine de l'API.
   COOKIE_DOMAIN: z.string().default('localhost'),
   COOKIE_SECURE: z
     .string()
     .default('false')
     .transform((v) => v === 'true'),
+  // 'strict' en local ; 'none' obligatoire en cross-domaine (exige COOKIE_SECURE=true).
+  COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
 
   JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET doit faire au moins 16 caractères'),
   JWT_ACCESS_TTL: z.string().default('15m'),

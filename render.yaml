@@ -37,9 +37,11 @@ services:
       - key: CORS_ORIGIN
         sync: false # = URL Vercel du frontend, ex. https://optic-120.vercel.app
       - key: COOKIE_DOMAIN
-        sync: false # = domaine du frontend, ex. optic-120.vercel.app
+        value: "" # vide en cross-domaine : la cookie reste rattachée au domaine de l'API
+      - key: COOKIE_SAMESITE
+        value: none # obligatoire pour des cookies cross-site (frontend Vercel ↔ API Render)
       - key: COOKIE_SECURE
-        value: "true"
+        value: "true" # requis quand SameSite=None
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_ACCESS_TTL
