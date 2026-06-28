@@ -11,6 +11,7 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/optique/ProductsPage';
 import { StockPage } from './pages/optique/StockPage';
+import { ClientsPage } from './pages/optique/ClientsPage';
 import { PosPage } from './pages/optique/PosPage';
 import { SalesPage } from './pages/optique/SalesPage';
 import { RolesPage } from './pages/settings/RolesPage';
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
           { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },
           { path: '/optique/stock', element: perm('optique.stock.view', <StockPage />) },
+          { path: '/optique/clients', element: perm('optique.customers.view', <ClientsPage />) },
           { path: '/optique/caisse', element: perm('optique.sales.create', <PosPage />) },
           { path: '/optique/ventes', element: perm('optique.sales.view', <SalesPage kind="SALE" />) },
           { path: '/optique/devis', element: perm('optique.quotes.view', <SalesPage kind="QUOTE" />) },

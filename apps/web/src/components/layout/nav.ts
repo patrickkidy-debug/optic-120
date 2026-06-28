@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   ReceiptText,
   FileText,
+  Contact,
   UserCog,
   Wallet,
   Truck,
@@ -44,6 +45,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/optique/produits', labelKey: 'nav.products', icon: Package, permission: 'optique.products.view' },
       { to: '/optique/stock', labelKey: 'nav.stock', icon: Boxes, permission: 'optique.stock.view', badge: 'lowStock' },
+      { to: '/optique/clients', labelKey: 'nav.clients', icon: Contact, permission: 'optique.customers.view' },
       { to: '/optique/caisse', labelKey: 'nav.pos', icon: ShoppingCart, permission: 'optique.sales.create' },
       { to: '/optique/ventes', labelKey: 'nav.sales', icon: ReceiptText, permission: 'optique.sales.view' },
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },

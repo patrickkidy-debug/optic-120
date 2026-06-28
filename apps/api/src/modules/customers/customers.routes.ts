@@ -1,8 +1,19 @@
 import type { FastifyInstance } from 'fastify';
-import { customerCreateSchema } from '@oculo/shared-types';
+import { customerCreateSchema, prescriptionCreateSchema } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
+
+function toDate(v?: string | null): Date | null {
+  return v ? new Date(v) : null;
+}
+function clean<T extends Record<string, unknown>>(obj: T): T {
+  const out = { ...obj };
+  for (const k of Object.keys(out)) {
+    if (out[k] === '') (out as Record<string, unknown>)[k] = null;
+  }
+  return out;
+}
 
 export async function customersRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -48,4 +59,54 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     const customer = await req.db!.customer.findFirst({ where: { id } });
     return reply.send({ customer });
   });
+
+  // Fiche client + historique des ventes et ordonnances.
+  app.get('/:id', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const customer = await req.db!.customer.findFirst({
+      where: { id },
+      include: {
+        prescriptions: { orderBy: { date: 'desc' } },
+        sales: { orderBy: { createdAt: 'desc' }, take: 20 },
+      },
+    });
+    if (!customer) throw notFound('Client introuvable');
+    return reply.send({ customer });
+  });
+
+  // Ordonnances optiques d'un client.
+  app.get(
+    '/:id/prescriptions',
+    { preHandler: requirePermission('optique.prescriptions.view') },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const prescriptions = await req.db!.opticalPrescription.findMany({
+        where: { customerId: id },
+        orderBy: { date: 'desc' },
+      });
+      return reply.send({ prescriptions });
+    },
+  );
+
+  app.post(
+    '/:id/prescriptions',
+    { preHandler: requirePermission('optique.prescriptions.create') },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const customer = await req.db!.customer.findFirst({ where: { id } });
+      if (!customer) throw notFound('Client introuvable');
+      const input = clean(prescriptionCreateSchema.parse(req.body));
+      const { date, ...rest } = input;
+      const prescription = await req.db!.opticalPrescription.create({
+        data: {
+          tenantId: req.auth!.tenantId,
+          customerId: id,
+          date: toDate(date) ?? new Date(),
+          createdById: req.auth!.userId,
+          ...rest,
+        },
+      });
+      return reply.status(201).send({ prescription });
+    },
+  );
 }

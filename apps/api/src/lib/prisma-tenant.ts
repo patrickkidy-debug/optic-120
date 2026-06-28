@@ -14,6 +14,7 @@ const TENANT_MODELS = new Set<string>([
   'StockItem',
   'StockMovement',
   'Customer',
+  'OpticalPrescription',
   'Sale',
   'Payment',
   'CashRegister',

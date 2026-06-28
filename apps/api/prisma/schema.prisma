@@ -36,6 +36,7 @@ model Tenant {
   stockItems    StockItem[]
   stockMovements StockMovement[]
   customers     Customer[]
+  prescriptions OpticalPrescription[]
   sales         Sale[]
   payments      Payment[]
   cashRegisters CashRegister[]
@@ -259,8 +260,35 @@ model Customer {
   email     String?
   createdAt DateTime @default(now())
 
-  sales Sale[]
+  sales         Sale[]
+  prescriptions OpticalPrescription[]
 
+  @@index([tenantId])
+}
+
+model OpticalPrescription {
+  id                String   @id @default(uuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId        String
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  date              DateTime @default(now())
+  prescriberName    String?
+  odSphere          String?
+  odCylinder        String?
+  odAxis            String?
+  odAddition        String?
+  ogSphere          String?
+  ogCylinder        String?
+  ogAxis            String?
+  ogAddition        String?
+  pupillaryDistance String?
+  lensType          String?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId, customerId])
   @@index([tenantId])
 }
 

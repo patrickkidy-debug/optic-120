@@ -3,6 +3,7 @@ import type {
   ProductCreateInput,
   ProductUpdateInput,
   CustomerCreateInput,
+  PrescriptionCreateInput,
   SaleCreateInput,
   PaymentMethod,
 } from '@oculo/shared-types';
@@ -106,6 +107,47 @@ export async function listCustomers(search?: string): Promise<Customer[]> {
 export async function createCustomer(input: CustomerCreateInput) {
   const { data } = await api.post('/customers', input);
   return data.customer;
+}
+
+export async function updateCustomer(id: string, input: Partial<CustomerCreateInput>) {
+  const { data } = await api.patch(`/customers/${id}`, input);
+  return data.customer as Customer;
+}
+
+export interface Prescription {
+  id: string;
+  customerId: string;
+  date: string;
+  prescriberName: string | null;
+  odSphere: string | null;
+  odCylinder: string | null;
+  odAxis: string | null;
+  odAddition: string | null;
+  ogSphere: string | null;
+  ogCylinder: string | null;
+  ogAxis: string | null;
+  ogAddition: string | null;
+  pupillaryDistance: string | null;
+  lensType: string | null;
+  notes: string | null;
+}
+
+export async function getCustomer(id: string) {
+  const { data } = await api.get(`/customers/${id}`);
+  return data.customer as Customer & {
+    prescriptions: Prescription[];
+    sales: { id: string; number: string; totalAmount: string; status: string; createdAt: string }[];
+  };
+}
+
+export async function listPrescriptions(customerId: string): Promise<Prescription[]> {
+  const { data } = await api.get<{ prescriptions: Prescription[] }>(`/customers/${customerId}/prescriptions`);
+  return data.prescriptions;
+}
+
+export async function createPrescription(customerId: string, input: PrescriptionCreateInput) {
+  const { data } = await api.post(`/customers/${customerId}/prescriptions`, input);
+  return data.prescription as Prescription;
 }
 
 export async function createSale(input: SaleCreateInput) {

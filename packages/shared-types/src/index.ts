@@ -204,6 +204,9 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'optique.customers', action: 'create', label: 'Créer des clients' },
   { module: 'optique.customers', action: 'update', label: 'Modifier des clients' },
 
+  { module: 'optique.prescriptions', action: 'view', label: 'Voir les ordonnances' },
+  { module: 'optique.prescriptions', action: 'create', label: 'Créer des ordonnances' },
+
   { module: 'rbac.roles', action: 'view', label: 'Voir les rôles' },
   { module: 'rbac.roles', action: 'create', label: 'Créer des rôles' },
   { module: 'rbac.roles', action: 'update', label: 'Modifier des rôles' },
@@ -288,6 +291,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'rbac.users.view',
     'settings.branches.view', 'settings.branches.create', 'settings.branches.update',
     'audit.logs.view',
+    'optique.prescriptions.view',
     'clinic.patients.view', 'clinic.appointments.view',
     'hr.employees.view', 'hr.employees.create', 'hr.employees.update',
     'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
@@ -303,10 +307,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.quotes.view', 'optique.quotes.create', 'optique.quotes.convert',
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
+    'optique.prescriptions.view', 'optique.prescriptions.create',
   ],
 
   ophtalmologue: [
     'dashboard.view', 'optique.customers.view',
+    'optique.prescriptions.view', 'optique.prescriptions.create',
     'clinic.patients.view', 'clinic.patients.create', 'clinic.patients.update',
     'clinic.consultations.view', 'clinic.consultations.create',
     'clinic.appointments.view', 'clinic.appointments.create', 'clinic.appointments.update',
@@ -322,6 +328,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   secretaire: [
     'dashboard.view',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
+    'optique.prescriptions.view',
     'optique.quotes.view',
     'clinic.patients.view', 'clinic.patients.create', 'clinic.patients.update',
     'clinic.appointments.view', 'clinic.appointments.create', 'clinic.appointments.update',
@@ -364,6 +371,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard.view',
     'optique.products.view',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
+    'optique.prescriptions.view', 'optique.prescriptions.create',
     'optique.quotes.view', 'optique.quotes.create',
     'optique.sales.view', 'optique.sales.create',
     'suppliers.view',
@@ -469,6 +477,25 @@ export const customerCreateSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
 });
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
+
+/** Ordonnance optique (prescription de verres : sphère/cylindre/axe/addition). */
+const opt = z.string().max(20).optional().or(z.literal(''));
+export const prescriptionCreateSchema = z.object({
+  date: z.string().optional().or(z.literal('')),
+  prescriberName: z.string().max(120).optional().or(z.literal('')),
+  odSphere: opt,
+  odCylinder: opt,
+  odAxis: opt,
+  odAddition: opt,
+  ogSphere: opt,
+  ogCylinder: opt,
+  ogAxis: opt,
+  ogAddition: opt,
+  pupillaryDistance: z.string().max(40).optional().or(z.literal('')),
+  lensType: z.string().max(60).optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type PrescriptionCreateInput = z.infer<typeof prescriptionCreateSchema>;
 
 export const branchCreateSchema = z.object({
   name: z.string().min(2).max(120),
