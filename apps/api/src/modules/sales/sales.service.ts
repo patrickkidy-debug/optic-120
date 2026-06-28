@@ -11,6 +11,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolveProvider, settlePayment } from '../payments/payment.service.js';
+import { assertWithinLimit } from '../billing/billing.service.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -37,6 +38,9 @@ interface ComputedLine {
  * atomiquement (rejet si insuffisant).
  */
 export async function createSale(tenantId: string, userId: string, input: SaleCreateInput) {
+  if (input.type === SaleType.SALE) {
+    await assertWithinLimit(tenantId, 'sales');
+  }
   return prisma.$transaction(async (tx) => {
     const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
     if (!branch) throw notFound('Succursale introuvable');

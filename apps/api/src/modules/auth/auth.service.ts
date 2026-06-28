@@ -10,6 +10,7 @@ import {
 } from '../../lib/tokens.js';
 import { recordAudit } from '../../lib/audit.js';
 import { mailer } from '../../lib/mailer.js';
+import { ensureTrialSubscription } from '../billing/billing.service.js';
 import { env } from '../../config/env.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
 
@@ -164,6 +165,10 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
         branches: { create: { branchId: branch.id } },
       },
     });
+
+    // Abonnement d'essai (offre Découverte) à l'inscription.
+    await ensureTrialSubscription(tx, tenant.id);
+
     return user.id;
   });
 

@@ -49,6 +49,8 @@ model Tenant {
   expenses      Expense[]
   suppliers     Supplier[]
   insurers      Insurer[]
+  subscription  Subscription?
+  subInvoices   SubscriptionInvoice[]
 }
 
 model Branch {
@@ -668,4 +670,104 @@ model Insurer {
   updatedAt       DateTime    @updatedAt
 
   @@index([tenantId])
+}
+
+/* ---------------- ABONNEMENTS SaaS ---------------- */
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
+enum SubInvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  VOID
+}
+
+model SubscriptionPlan {
+  id           String   @id @default(uuid())
+  code         String   @unique // TRIAL | STANDARD | PREMIUM
+  name         String
+  description  String?
+  priceMonthly Decimal  @db.Decimal(12, 2)
+  currency     String   @default("XOF")
+  trialDays    Int      @default(0)
+  maxUsers     Int? // null = illimité
+  maxBranches  Int?
+  maxPatients  Int?
+  maxSales     Int?
+  features     Json?
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  tenantId           String             @unique
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  autoRenew          Boolean            @default(true)
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  invoices SubscriptionInvoice[]
+
+  @@index([status])
+}
+
+model SubscriptionInvoice {
+  id             String                @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  subscription   Subscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  planId         String
+  number         String
+  amount         Decimal               @db.Decimal(12, 2)
+  currency       String                @default("XOF")
+  status         SubInvoiceStatus      @default(PENDING)
+  periodStart    DateTime
+  periodEnd      DateTime
+  dueDate        DateTime
+  paidAt         DateTime?
+  createdAt      DateTime              @default(now())
+
+  payments SubscriptionPayment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+}
+
+model SubscriptionPayment {
+  id          String              @id @default(uuid())
+  tenantId    String
+  invoiceId   String
+  invoice     SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  method      PaymentMethod
+  provider    String?
+  providerRef String?
+  status      PaymentStatus       @default(PENDING)
+  amount      Decimal             @db.Decimal(12, 2)
+  currency    String              @default("XOF")
+  rawPayload  Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([tenantId])
+  @@index([provider, providerRef])
 }

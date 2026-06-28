@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword } from '../../lib/password.js';
 import { badRequest, conflict, notFound } from '../../lib/http-error.js';
+import { assertWithinLimit } from '../billing/billing.service.js';
 import type { UserCreateInput } from '@oculo/shared-types';
 
 export async function listUsers(tenantId: string) {
@@ -30,6 +31,7 @@ async function assertBranchesInTenant(tenantId: string, branchIds: string[]): Pr
 }
 
 export async function createUser(tenantId: string, input: UserCreateInput) {
+  await assertWithinLimit(tenantId, 'users');
   const role = await prisma.role.findFirst({ where: { id: input.roleId, tenantId } });
   if (!role) throw badRequest('Rôle invalide');
   await assertBranchesInTenant(tenantId, input.branchIds);

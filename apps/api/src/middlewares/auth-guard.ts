@@ -2,8 +2,15 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { prisma } from '../lib/prisma.js';
 import { forTenant } from '../lib/prisma-tenant.js';
-import { unauthorized } from '../lib/http-error.js';
+import { unauthorized, paymentRequired } from '../lib/http-error.js';
 import type { AuthContext } from '../types/auth.js';
+import { getSubscriptionStatus } from '../modules/billing/billing.service.js';
+
+/** Routes accessibles même quand l'abonnement est suspendu (paiement, auth, opérateur). */
+function isBillingExempt(url: string): boolean {
+  const path = url.split('?')[0];
+  return path.startsWith('/billing') || path.startsWith('/auth') || path.startsWith('/platform');
+}
 
 /**
  * preHandler d'authentification. Vérifie le jeton d'accès (Bearer), charge le
@@ -54,6 +61,18 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
     branchIds: user.branches.map((b) => b.branchId),
     allBranches: user.role.allBranches,
   };
+
+  // Statut d'abonnement + application de la suspension (sauf routes exemptées).
+  const sub = await getSubscriptionStatus(user.tenantId);
+  if (sub) {
+    ctx.subscriptionStatus = sub.status;
+    const blocked = sub.status === 'SUSPENDED' || sub.status === 'CANCELLED';
+    if (blocked && !isBillingExempt(req.url)) {
+      throw paymentRequired(
+        'Abonnement suspendu. Régularisez votre paiement pour réactiver votre espace.',
+      );
+    }
+  }
 
   req.auth = ctx;
   req.db = forTenant(user.tenantId);

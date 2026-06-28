@@ -11,4 +11,5 @@ export interface AuthContext {
   permissions: Set<string>;
   branchIds: string[];
   allBranches: boolean;
+  subscriptionStatus?: string;
 }

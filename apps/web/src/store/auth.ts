@@ -8,10 +8,12 @@ interface AuthState {
   user: AuthUser | null;
   status: AuthStatus;
   locked: boolean;
+  suspended: boolean;
   setAuth: (token: string, user: AuthUser) => void;
   setUser: (user: AuthUser) => void;
   setStatus: (s: AuthStatus) => void;
   setLocked: (v: boolean) => void;
+  setSuspended: (v: boolean) => void;
   clear: () => void;
   hasPermission: (perm: string) => boolean;
 }
@@ -21,11 +23,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   status: 'loading',
   locked: false,
+  suspended: false,
   setAuth: (accessToken, user) => set({ accessToken, user, status: 'authenticated' }),
   setUser: (user) => set({ user }),
   setStatus: (status) => set({ status }),
   setLocked: (locked) => set({ locked }),
-  clear: () => set({ accessToken: null, user: null, status: 'unauthenticated', locked: false }),
+  setSuspended: (suspended) => set({ suspended }),
+  clear: () =>
+    set({ accessToken: null, user: null, status: 'unauthenticated', locked: false, suspended: false }),
   hasPermission: (perm) => get().user?.permissions.includes(perm) ?? false,
 }));
 

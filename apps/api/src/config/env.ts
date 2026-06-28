@@ -38,6 +38,9 @@ const envSchema = z.object({
   CINETPAY_SITE_ID: z.string().optional().default(''),
   CINETPAY_BASE_URL: z.string().default('https://api-checkout.cinetpay.com/v2'),
   CINETPAY_WEBHOOK_SECRET: z.string().optional().default(''),
+
+  // Emails des opérateurs de la plateforme (console SaaS cross-tenant), séparés par des virgules.
+  PLATFORM_ADMIN_EMAILS: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -20,6 +20,8 @@ import { BranchesPage } from './pages/settings/BranchesPage';
 import { PaymentsPage } from './pages/settings/PaymentsPage';
 import { AuditPage } from './pages/settings/AuditPage';
 import { ProfilePage } from './pages/settings/ProfilePage';
+import { SubscriptionPage } from './pages/settings/SubscriptionPage';
+import { PlatformPage } from './pages/platform/PlatformPage';
 import { NotFound } from './pages/NotFound';
 import { PatientsPage } from './pages/clinic/PatientsPage';
 import { ConsultationsPage } from './pages/clinic/ConsultationsPage';
@@ -64,7 +66,9 @@ export const router = createBrowserRouter([
           { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },
           { path: '/parametres/paiements', element: perm('settings.payments.view', <PaymentsPage />) },
           { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
+          { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
           { path: '/parametres/profil', element: <ProfilePage /> },
+          { path: '/plateforme', element: perm('platform.manage', <PlatformPage />) },
 
           { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },
           { path: '/clinique/consultations', element: perm('clinic.consultations.view', <ConsultationsPage />) },

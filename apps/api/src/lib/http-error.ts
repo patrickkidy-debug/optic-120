@@ -17,6 +17,8 @@ export const badRequest = (msg = 'Requête invalide', details?: unknown) =>
 export const unauthorized = (msg = 'Non authentifié') =>
   new HttpError(401, 'UNAUTHORIZED', msg);
 export const forbidden = (msg = 'Accès refusé') => new HttpError(403, 'FORBIDDEN', msg);
+export const paymentRequired = (msg = 'Abonnement requis', details?: unknown) =>
+  new HttpError(402, 'PAYMENT_REQUIRED', msg, details);
 export const notFound = (msg = 'Ressource introuvable') => new HttpError(404, 'NOT_FOUND', msg);
 export const conflict = (msg = 'Conflit') => new HttpError(409, 'CONFLICT', msg);
 export const locked = (msg = 'Compte verrouillé') => new HttpError(423, 'LOCKED', msg);

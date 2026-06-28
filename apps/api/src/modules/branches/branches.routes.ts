@@ -3,6 +3,7 @@ import { branchCreateSchema } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
+import { assertWithinLimit } from '../billing/billing.service.js';
 
 export async function branchesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -16,6 +17,7 @@ export async function branchesRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/', { preHandler: requirePermission('settings.branches.create') }, async (req, reply) => {
     const input = branchCreateSchema.parse(req.body);
+    await assertWithinLimit(req.auth!.tenantId, 'branches');
     const branch = await req.db!.branch.create({
       data: { tenantId: req.auth!.tenantId, name: input.name, city: input.city ?? '' },
     });

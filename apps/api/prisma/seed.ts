@@ -3,9 +3,65 @@ import {
   PERMISSIONS,
   SYSTEM_ROLES,
   DEFAULT_ROLE_PERMISSIONS,
+  PLAN_CATALOG,
+  TRIAL_PLAN_CODE,
 } from '@oculo/shared-types';
 
 const prisma = new PrismaClient();
+
+async function seedPlans() {
+  for (const p of PLAN_CATALOG) {
+    await prisma.subscriptionPlan.upsert({
+      where: { code: p.code },
+      create: {
+        code: p.code,
+        name: p.name,
+        description: p.description,
+        priceMonthly: p.priceMonthly,
+        trialDays: p.trialDays,
+        maxUsers: p.maxUsers,
+        maxBranches: p.maxBranches,
+        maxPatients: p.maxPatients,
+        maxSales: p.maxSales,
+        features: p.features,
+        sortOrder: p.sortOrder,
+      },
+      update: {
+        name: p.name,
+        description: p.description,
+        priceMonthly: p.priceMonthly,
+        trialDays: p.trialDays,
+        maxUsers: p.maxUsers,
+        maxBranches: p.maxBranches,
+        maxPatients: p.maxPatients,
+        maxSales: p.maxSales,
+        features: p.features,
+        sortOrder: p.sortOrder,
+      },
+    });
+  }
+  console.log(`✔ ${PLAN_CATALOG.length} offres d'abonnement seedées`);
+}
+
+/** Donne un abonnement d'essai aux tenants existants qui n'en ont pas encore. */
+async function backfillSubscriptions() {
+  const trial = await prisma.subscriptionPlan.findUnique({ where: { code: TRIAL_PLAN_CODE } });
+  if (!trial) return;
+  const tenants = await prisma.tenant.findMany({ where: { subscription: { is: null } } });
+  for (const t of tenants) {
+    const end = new Date(Date.now() + trial.trialDays * 24 * 60 * 60 * 1000);
+    await prisma.subscription.create({
+      data: {
+        tenantId: t.id,
+        planId: trial.id,
+        status: 'TRIALING',
+        currentPeriodEnd: end,
+        trialEndsAt: end,
+      },
+    });
+  }
+  if (tenants.length > 0) console.log(`✔ ${tenants.length} abonnement(s) d'essai créé(s) (backfill)`);
+}
 
 async function seedPermissions() {
   for (const p of PERMISSIONS) {
@@ -89,6 +145,8 @@ async function main() {
   await seedPermissions();
   await seedSystemRoles();
   await resyncTenantSystemRoles();
+  await seedPlans();
+  await backfillSubscriptions();
   console.log('✅ Seed terminé.');
 }
 

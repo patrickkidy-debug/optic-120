@@ -18,6 +18,8 @@ import {
   Store,
   CreditCard,
   ScrollText,
+  Crown,
+  Server,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -72,11 +74,18 @@ export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.settings',
     items: [
+      { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
       { to: '/parametres/roles', labelKey: 'nav.roles', icon: ShieldHalf, permission: 'rbac.roles.view' },
       { to: '/parametres/utilisateurs', labelKey: 'nav.users', icon: Users, permission: 'rbac.users.view' },
       { to: '/parametres/magasins', labelKey: 'nav.branches', icon: Store, permission: 'settings.branches.view' },
       { to: '/parametres/paiements', labelKey: 'nav.payments', icon: CreditCard, permission: 'settings.payments.view' },
       { to: '/parametres/journal', labelKey: 'nav.audit', icon: ScrollText, permission: 'audit.logs.view' },
+    ],
+  },
+  {
+    titleKey: 'nav.operator',
+    items: [
+      { to: '/plateforme', labelKey: 'nav.platform', icon: Server, permission: 'platform.manage' },
     ],
   },
 ];

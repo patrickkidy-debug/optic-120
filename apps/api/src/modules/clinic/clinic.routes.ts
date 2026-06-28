@@ -10,6 +10,7 @@ import {
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
+import { assertWithinLimit } from '../billing/billing.service.js';
 
 /** Convertit une chaîne ISO (éventuellement vide) en Date ou null. */
 function toDate(v?: string | null): Date | null {
@@ -56,6 +57,7 @@ async function patientsRoutes(app: FastifyInstance) {
 
   app.post('/', { preHandler: requirePermission('clinic.patients.create') }, async (req, reply) => {
     const input = clean(patientCreateSchema.parse(req.body));
+    await assertWithinLimit(req.auth!.tenantId, 'patients');
     const patient = await req.db!.patient.create({
       data: {
         tenantId: req.auth!.tenantId,

@@ -20,6 +20,8 @@ import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
 import { auditRoutes } from './modules/audit/audit.routes.js';
 import { clinicRoutes } from './modules/clinic/clinic.routes.js';
 import { managementRoutes } from './modules/management/management.routes.js';
+import { billingRoutes, billingWebhookRoutes } from './modules/billing/billing.routes.js';
+import { platformRoutes } from './modules/billing/platform.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: false, trustProxy: true });
@@ -48,6 +50,9 @@ export async function buildApp() {
   await app.register(auditRoutes, { prefix: '/audit' });
   await app.register(clinicRoutes);
   await app.register(managementRoutes);
+  await app.register(billingRoutes, { prefix: '/billing' });
+  await app.register(billingWebhookRoutes, { prefix: '/webhooks' });
+  await app.register(platformRoutes, { prefix: '/platform' });
 
   return app;
 }

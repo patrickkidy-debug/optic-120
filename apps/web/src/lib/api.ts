@@ -37,6 +37,11 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = original?.url ?? '';
 
+    // Abonnement suspendu : bascule l'app en mode "régularisation".
+    if (status === 402) {
+      useAuthStore.getState().setSuspended(true);
+    }
+
     if (status === 401 && original && !original._retry && !url.includes('/auth/')) {
       original._retry = true;
       if (!refreshing) {

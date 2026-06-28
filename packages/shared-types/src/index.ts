@@ -136,6 +136,105 @@ export const InsurerType = {
 } as const;
 export type InsurerType = (typeof InsurerType)[keyof typeof InsurerType];
 
+/* --- Abonnements SaaS --- */
+
+export const SubscriptionStatus = {
+  TRIALING: 'TRIALING',
+  ACTIVE: 'ACTIVE',
+  PAST_DUE: 'PAST_DUE',
+  SUSPENDED: 'SUSPENDED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
+
+export const SubInvoiceStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  VOID: 'VOID',
+} as const;
+export type SubInvoiceStatus = (typeof SubInvoiceStatus)[keyof typeof SubInvoiceStatus];
+
+/** Catalogue des offres — source de vérité pour le seed et l'affichage. */
+export interface PlanDef {
+  code: 'TRIAL' | 'STANDARD' | 'PREMIUM';
+  name: string;
+  description: string;
+  priceMonthly: number;
+  trialDays: number;
+  maxUsers: number | null; // null = illimité
+  maxBranches: number | null;
+  maxPatients: number | null;
+  maxSales: number | null;
+  features: string[];
+  sortOrder: number;
+}
+
+export const PLAN_CATALOG: PlanDef[] = [
+  {
+    code: 'TRIAL',
+    name: 'Découverte',
+    description: "Offre d'essai pour démarrer avec les fonctionnalités essentielles.",
+    priceMonthly: 2500,
+    trialDays: 14,
+    maxUsers: 2,
+    maxBranches: 1,
+    maxPatients: 50,
+    maxSales: 50,
+    features: [
+      'Fonctionnalités essentielles',
+      "Jusqu'à 2 utilisateurs",
+      "Jusqu'à 50 patients et 50 ventes",
+      'Support standard',
+      'Évolutif à tout moment',
+    ],
+    sortOrder: 1,
+  },
+  {
+    code: 'STANDARD',
+    name: 'Standard',
+    description: "Gestion complète d'un magasin d'optique ou d'une clinique.",
+    priceMonthly: 12000,
+    trialDays: 0,
+    maxUsers: 10,
+    maxBranches: 1,
+    maxPatients: null,
+    maxSales: null,
+    features: [
+      'Fonctionnalités principales',
+      'Gestion des stocks, patients et ventes',
+      'Gestion des paiements et dépenses',
+      'Tableau de bord complet',
+      "Jusqu'à 10 utilisateurs",
+      'Support prioritaire',
+    ],
+    sortOrder: 2,
+  },
+  {
+    code: 'PREMIUM',
+    name: 'Premium',
+    description: 'Toutes les fonctionnalités, multi-agences et utilisateurs illimités.',
+    priceMonthly: 23000,
+    trialDays: 0,
+    maxUsers: null,
+    maxBranches: null,
+    maxPatients: null,
+    maxSales: null,
+    features: [
+      'Toutes les fonctionnalités',
+      'Utilisateurs illimités',
+      'Multi-agences / multi-magasins',
+      'Gestion financière et RH avancées',
+      'Rapports et statistiques avancés',
+      'Sauvegardes renforcées',
+      'Support premium',
+    ],
+    sortOrder: 3,
+  },
+];
+
+export const TRIAL_PLAN_CODE = 'TRIAL';
+
 /* ============================================================
  * RÔLES SYSTÈME (12) — seedés comme templates globaux (tenantId = null)
  * ============================================================ */
@@ -261,6 +360,10 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'insurance', action: 'view', label: 'Voir les assurances' },
   { module: 'insurance', action: 'create', label: 'Créer des assurances' },
   { module: 'insurance', action: 'update', label: 'Modifier des assurances' },
+
+  { module: 'billing', action: 'view', label: "Voir l'abonnement et les factures" },
+  { module: 'billing', action: 'manage', label: "Gérer l'abonnement (souscrire/payer)" },
+  { module: 'platform', action: 'manage', label: 'Administrer la plateforme SaaS (opérateur)' },
 ];
 
 /** Clé canonique d'une permission : "module.action". */
@@ -297,6 +400,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
     'suppliers.view', 'suppliers.create', 'suppliers.update',
     'insurance.view', 'insurance.create', 'insurance.update',
+    'billing.view',
   ],
 
   opticien: [
@@ -726,6 +830,35 @@ export const insurerCreateSchema = z.object({
 export type InsurerCreateInput = z.infer<typeof insurerCreateSchema>;
 export const insurerUpdateSchema = insurerCreateSchema.partial();
 export type InsurerUpdateInput = z.infer<typeof insurerUpdateSchema>;
+
+/* --- Abonnements --- */
+
+export const subscribeSchema = z.object({
+  planId: z.string().uuid(),
+  method: paymentMethodEnum,
+  customerPhone: z.string().max(40).optional(),
+});
+export type SubscribeInput = z.infer<typeof subscribeSchema>;
+
+export const subscriptionPaySchema = z.object({
+  method: paymentMethodEnum,
+  customerPhone: z.string().max(40).optional(),
+});
+export type SubscriptionPayInput = z.infer<typeof subscriptionPaySchema>;
+
+export const planUpsertSchema = z.object({
+  name: z.string().min(1).max(80),
+  description: z.string().max(300).optional().or(z.literal('')),
+  priceMonthly: z.number().nonnegative(),
+  trialDays: z.number().int().min(0).default(0),
+  maxUsers: z.number().int().positive().nullable().optional(),
+  maxBranches: z.number().int().positive().nullable().optional(),
+  maxPatients: z.number().int().positive().nullable().optional(),
+  maxSales: z.number().int().positive().nullable().optional(),
+  features: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
+});
+export type PlanUpsertInput = z.infer<typeof planUpsertSchema>;
 
 /* ============================================================
  * TYPES DE RÉPONSE PARTAGÉS
