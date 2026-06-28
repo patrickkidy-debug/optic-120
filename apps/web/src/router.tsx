@@ -4,6 +4,7 @@ import { RequireAuth, RequirePermission } from './components/RouteGuards';
 import { AppShell } from './components/layout/AppShell';
 import { useAuthStore } from './store/auth';
 
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
@@ -43,6 +44,7 @@ function perm(permission: string, el: ReactNode) {
 }
 
 export const router = createBrowserRouter([
+  { path: '/', element: <PublicOnly><LandingPage /></PublicOnly> },
   { path: '/login', element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: '/signup', element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: '/forgot-password', element: <PublicOnly><ForgotPasswordPage /></PublicOnly> },
