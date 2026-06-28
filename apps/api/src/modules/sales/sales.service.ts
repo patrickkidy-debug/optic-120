@@ -249,6 +249,19 @@ export async function addPayment(
     },
   });
 
+  // Espèces / carte (TPE physique) : l'encaissement est constaté au comptoir,
+  // il ne passe JAMAIS par la passerelle en ligne (CinetPay). On règle direct.
+  const isMobile = MOBILE_MONEY_METHODS.includes(data.method);
+  if (!isMobile) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { provider: 'manual', providerRef: payment.id, status: PaymentStatus.SUCCESS },
+    });
+    await settlePayment(payment.id, PaymentStatus.SUCCESS, { manual: true, method: data.method });
+    return { paymentId: payment.id, status: PaymentStatus.SUCCESS, providerRef: payment.id };
+  }
+
+  // Mobile money : passe par la passerelle (CinetPay réel ou simulation).
   const provider = await resolveProvider(tenantId);
   const customerName = sale.customer
     ? `${sale.customer.firstName} ${sale.customer.lastName}`
@@ -269,9 +282,7 @@ export async function addPayment(
     data: { provider: provider.name, providerRef: result.providerRef, status: result.status },
   });
 
-  // Encaissement immédiat (cash/carte/simulation non-mobile) → règlement direct.
-  const isMobile = MOBILE_MONEY_METHODS.includes(data.method);
-  if (result.status === PaymentStatus.SUCCESS && !isMobile) {
+  if (result.status === PaymentStatus.SUCCESS) {
     await settlePayment(payment.id, PaymentStatus.SUCCESS, result.raw);
   }
 

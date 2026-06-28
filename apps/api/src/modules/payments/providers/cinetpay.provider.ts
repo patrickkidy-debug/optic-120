@@ -1,4 +1,6 @@
 import { PaymentStatus } from '@oculo/shared-types';
+import { badRequest } from '../../../lib/http-error.js';
+import { logger } from '../../../lib/logger.js';
 import type {
   PaymentProvider,
   InitiatePaymentInput,
@@ -50,31 +52,47 @@ export class CinetPayProvider implements PaymentProvider {
   constructor(private readonly config: CinetPayConfig) {}
 
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentResult> {
-    const res = await fetch(`${this.config.baseUrl}/payment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apikey: this.config.apiKey,
-        site_id: this.config.siteId,
-        transaction_id: input.paymentId,
-        amount: normalizeAmount(input.amount, input.currency),
-        currency: input.currency,
-        description: `Vente ${input.saleNumber}`,
-        customer_name: input.customerName,
-        customer_phone_number: input.customerPhone ?? '',
-        notify_url: this.config.notifyUrl,
-        return_url: this.config.returnUrl,
-        channels: 'ALL',
-      }),
-    });
-    const data = (await res.json()) as {
+    let data: {
       code?: string;
+      message?: string;
+      description?: string;
       data?: { payment_token?: string; payment_url?: string };
     };
+    try {
+      const res = await fetch(`${this.config.baseUrl}/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apikey: this.config.apiKey,
+          site_id: this.config.siteId,
+          transaction_id: input.paymentId,
+          amount: normalizeAmount(input.amount, input.currency),
+          currency: input.currency,
+          description: `Vente ${input.saleNumber}`,
+          customer_name: input.customerName,
+          customer_phone_number: input.customerPhone ?? '',
+          notify_url: this.config.notifyUrl,
+          return_url: this.config.returnUrl,
+          channels: 'ALL',
+        }),
+      });
+      data = (await res.json()) as typeof data;
+    } catch (err) {
+      logger.error({ err }, 'CinetPay : appel /payment échoué');
+      throw badRequest('Connexion à CinetPay impossible. Vérifiez votre connexion et réessayez.');
+    }
+
+    // CinetPay renvoie le code '201' (CREATED) + une payment_url en cas de succès.
+    if (!data.data?.payment_url) {
+      logger.error({ cinetpay: data }, 'CinetPay : transaction refusée');
+      const reason = data.description || data.message || data.code || 'réponse inattendue';
+      throw badRequest(`CinetPay a refusé la transaction : ${reason}`);
+    }
+
     return {
       providerRef: input.paymentId,
       status: PaymentStatus.PENDING,
-      redirectUrl: data.data?.payment_url,
+      redirectUrl: data.data.payment_url,
       raw: data,
     };
   }
