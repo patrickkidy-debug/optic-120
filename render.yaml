@@ -22,8 +22,11 @@ services:
       npm install --include=dev &&
       npm run build --workspace @oculo/shared-types &&
       npm run db:generate --workspace @oculo/api
+    # Au démarrage : applique les migrations, puis seed (idempotent) les rôles,
+    # permissions et offres — indispensables pour l'inscription — puis lance l'API.
     startCommand: >-
       npm run db:migrate:deploy --workspace @oculo/api &&
+      npm run db:seed --workspace @oculo/api &&
       npm run start --workspace @oculo/api
     healthCheckPath: /health
     envVars:
