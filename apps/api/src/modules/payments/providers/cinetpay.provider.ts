@@ -15,6 +15,15 @@ interface CinetPayConfig {
   returnUrl?: string;
 }
 
+/** CinetPay exige des montants multiples de 5 pour le FCFA (XOF/XAF). */
+function normalizeAmount(amount: number, currency: string): number {
+  const rounded = Math.round(amount);
+  if (currency === 'XOF' || currency === 'XAF') {
+    return Math.round(rounded / 5) * 5;
+  }
+  return rounded;
+}
+
 /** Mappe un statut CinetPay vers notre enum interne. */
 function mapStatus(code: string | undefined): PaymentStatus {
   switch (code) {
@@ -48,7 +57,7 @@ export class CinetPayProvider implements PaymentProvider {
         apikey: this.config.apiKey,
         site_id: this.config.siteId,
         transaction_id: input.paymentId,
-        amount: Math.round(input.amount),
+        amount: normalizeAmount(input.amount, input.currency),
         currency: input.currency,
         description: `Vente ${input.saleNumber}`,
         customer_name: input.customerName,

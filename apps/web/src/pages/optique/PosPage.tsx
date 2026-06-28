@@ -259,6 +259,7 @@ function PaymentModal({
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
+  const [instruction, setInstruction] = useState<string | null>(null);
 
   async function downloadInvoice() {
     try {
@@ -273,6 +274,9 @@ function PaymentModal({
     mutationFn: (m: PaymentMethod) => addPayment(sale.id, { method: m, amount: sale.due }),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
+      setInstruction(res.instruction ?? null);
+      // CinetPay réel : ouvre la page de paiement hébergée dans un nouvel onglet.
+      if (res.redirectUrl) window.open(res.redirectUrl, '_blank', 'noopener');
       if (res.status === 'SUCCESS') setPhase('done');
       else setPhase('pending');
     },
@@ -331,7 +335,13 @@ function PaymentModal({
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
           <p className="mt-3 text-sm text-content-muted">{t('pos.pendingMobile')}</p>
           <p className="mt-1 text-xs text-content-faint">{METHODS.find((m) => m.value === method)?.label}</p>
-          {paymentId && (
+          {instruction && (
+            <p className="mx-auto mt-3 max-w-xs rounded-lg bg-surface-2 p-2 text-xs text-content-muted">
+              {instruction}
+            </p>
+          )}
+          {/* Le bouton de simulation n'apparaît qu'en mode simulation (pas en CinetPay réel). */}
+          {paymentId && instruction?.toLowerCase().includes('simulation') && (
             <Button
               variant="outline"
               className="mt-4"
