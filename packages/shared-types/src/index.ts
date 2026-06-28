@@ -860,6 +860,28 @@ export const planUpsertSchema = z.object({
 });
 export type PlanUpsertInput = z.infer<typeof planUpsertSchema>;
 
+/* --- Profil & image de marque --- */
+
+// Image en data URL (base64) redimensionnée côté client, ou chaîne vide pour retirer.
+const imageData = z
+  .string()
+  .max(2_000_000, 'Image trop volumineuse')
+  .refine((v) => v === '' || v.startsWith('data:image/') || v.startsWith('http'), 'Image invalide')
+  .optional();
+
+export const profileUpdateSchema = z.object({
+  firstName: z.string().min(1).max(80).optional(),
+  lastName: z.string().min(1).max(80).optional(),
+  photoUrl: imageData,
+});
+export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+
+export const brandingUpdateSchema = z.object({
+  name: z.string().min(2).max(120).optional(),
+  logoUrl: imageData,
+});
+export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
+
 /* ============================================================
  * TYPES DE RÉPONSE PARTAGÉS
  * ============================================================ */
@@ -871,11 +893,14 @@ export interface AuthUser {
   username: string | null;
   firstName: string;
   lastName: string;
+  photoUrl: string | null;
   roleId: string;
   roleName: string;
   permissions: string[];
   branchIds: string[];
   allBranches: boolean;
+  tenantName: string;
+  tenantLogoUrl: string | null;
 }
 
 export interface AuthResponse {

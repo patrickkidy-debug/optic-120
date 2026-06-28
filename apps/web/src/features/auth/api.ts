@@ -1,4 +1,4 @@
-import type { AuthUser, SignupInput, LoginInput } from '@oculo/shared-types';
+import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput } from '@oculo/shared-types';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 
@@ -38,4 +38,10 @@ export async function logout(): Promise<void> {
 export async function verifyPassword(password: string): Promise<boolean> {
   const { data } = await api.post<{ ok: boolean }>('/auth/verify-password', { password });
   return data.ok;
+}
+
+export async function updateProfile(input: ProfileUpdateInput): Promise<AuthUser> {
+  const { data } = await api.patch<{ user: AuthUser }>('/auth/me', input);
+  useAuthStore.getState().setUser(data.user);
+  return data.user;
 }

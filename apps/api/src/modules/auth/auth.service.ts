@@ -1,4 +1,4 @@
-import type { AuthUser, SignupInput, LoginInput } from '@oculo/shared-types';
+import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { signAccessToken } from '../../lib/jwt.js';
@@ -22,6 +22,7 @@ interface RequestMeta {
 const USER_INCLUDE = {
   role: { include: { permissions: { include: { permission: true } } } },
   branches: true,
+  tenant: true,
 } as const;
 
 type UserWithCtx = Awaited<ReturnType<typeof loadUser>>;
@@ -42,6 +43,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
+    photoUrl: user.photoUrl,
     roleId: user.roleId,
     roleName: user.role.name,
     permissions: user.role.permissions.map(
@@ -49,6 +51,8 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     ),
     branchIds: user.branches.map((b) => b.branchId),
     allBranches: user.role.allBranches,
+    tenantName: user.tenant.name,
+    tenantLogoUrl: user.tenant.logoUrl,
   };
 }
 
@@ -381,4 +385,20 @@ export async function verifyUserPassword(userId: string, password: string): Prom
 export async function getCurrentAuthUser(userId: string): Promise<AuthUser | null> {
   const user = await loadUser({ id: userId });
   return user ? buildAuthUser(user) : null;
+}
+
+/** Met à jour le profil de l'utilisateur courant (nom, photo). */
+export async function updateOwnProfile(
+  userId: string,
+  input: ProfileUpdateInput,
+): Promise<AuthUser | null> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      firstName: input.firstName ?? undefined,
+      lastName: input.lastName ?? undefined,
+      photoUrl: input.photoUrl === undefined ? undefined : input.photoUrl || null,
+    },
+  });
+  return getCurrentAuthUser(userId);
 }

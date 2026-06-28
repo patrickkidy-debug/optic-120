@@ -22,6 +22,7 @@ model Tenant {
   id            String       @id @default(uuid())
   name          String
   slug          String       @unique
+  logoUrl       String?
   status        TenantStatus @default(ACTIVE)
   currency      String       @default("XOF")
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.

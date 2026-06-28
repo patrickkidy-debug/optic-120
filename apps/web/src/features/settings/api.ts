@@ -1,5 +1,6 @@
 import { api } from '../../lib/api';
-import type { PaymentConfigInput } from '@oculo/shared-types';
+import type { PaymentConfigInput, BrandingUpdateInput } from '@oculo/shared-types';
+import { useAuthStore } from '../../store/auth';
 
 export interface MaskedPaymentConfig {
   apiKeySet: boolean;
@@ -27,6 +28,30 @@ export interface AuditLogDto {
   ipAddress: string | null;
   createdAt: string;
   user: { firstName: string; lastName: string; email: string } | null;
+}
+
+export interface Branding {
+  name: string;
+  logoUrl: string | null;
+}
+
+export async function getBranding(): Promise<Branding> {
+  const { data } = await api.get<{ branding: Branding }>('/settings/branding');
+  return data.branding;
+}
+
+export async function updateBranding(input: BrandingUpdateInput): Promise<Branding> {
+  const { data } = await api.patch<{ branding: Branding }>('/settings/branding', input);
+  // Met à jour le logo/nom dans le contexte courant (barre latérale, etc.).
+  const user = useAuthStore.getState().user;
+  if (user) {
+    useAuthStore.getState().setUser({
+      ...user,
+      tenantName: data.branding.name,
+      tenantLogoUrl: data.branding.logoUrl,
+    });
+  }
+  return data.branding;
 }
 
 export async function getAuditLogs(page = 1) {

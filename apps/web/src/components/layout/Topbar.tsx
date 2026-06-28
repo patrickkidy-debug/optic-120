@@ -7,7 +7,7 @@ import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
 import { listBranches } from '../../features/optique/api';
 import { logout } from '../../features/auth/api';
-import { initials } from '../../lib/format';
+import { Avatar } from '../Avatar';
 import i18n from '../../lib/i18n';
 import type { ThemeMode } from '../../lib/theme';
 import { useNavigate } from 'react-router-dom';
@@ -115,9 +115,12 @@ function UserMenu() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-xl p-1 pr-2 hover:bg-surface-2">
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-xs font-bold text-white">
-          {initials(user?.firstName, user?.lastName)}
-        </span>
+        <Avatar
+          photoUrl={user?.photoUrl}
+          firstName={user?.firstName}
+          lastName={user?.lastName}
+          className="h-8 w-8 rounded-lg text-xs"
+        />
         <span className="hidden text-left sm:block">
           <span className="block text-sm font-semibold leading-tight text-content">
             {user?.firstName} {user?.lastName}

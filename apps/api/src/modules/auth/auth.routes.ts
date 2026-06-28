@@ -5,6 +5,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyPasswordSchema,
+  profileUpdateSchema,
 } from '@oculo/shared-types';
 import * as authService from './auth.service.js';
 import { REFRESH_COOKIE, setRefreshCookie, clearRefreshCookie } from './cookies.js';
@@ -62,6 +63,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/me', { preHandler: requireAuth }, async (req, reply) => {
     const user = await authService.getCurrentAuthUser(req.auth!.userId);
+    if (!user) throw unauthorized();
+    return reply.send({ user });
+  });
+
+  app.patch('/me', { preHandler: requireAuth }, async (req, reply) => {
+    const input = profileUpdateSchema.parse(req.body);
+    const user = await authService.updateOwnProfile(req.auth!.userId, input);
     if (!user) throw unauthorized();
     return reply.send({ user });
   });
