@@ -14,9 +14,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
-import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment } from '../../features/optique/api';
+import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
-import { usePermission } from '../../store/auth';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore, computeTotals } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
@@ -253,10 +254,20 @@ function PaymentModal({
   onPaid: () => void;
 }) {
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
+
+  async function downloadInvoice() {
+    try {
+      const full = await getSale(sale.id);
+      printSaleDocument(full, { name: user?.tenantName ?? 'OculoSaaS', logoUrl: user?.tenantLogoUrl });
+    } catch {
+      window.print();
+    }
+  }
 
   const payMut = useMutation({
     mutationFn: (m: PaymentMethod) => addPayment(sale.id, { method: m, amount: sale.due }),
@@ -337,7 +348,7 @@ function PaymentModal({
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
           <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.paid')}</p>
           <div className="mt-5 flex justify-center gap-2">
-            <Button variant="outline" onClick={() => window.print()}>
+            <Button variant="outline" onClick={downloadInvoice}>
               {t('sales.print')}
             </Button>
             <Button onClick={onPaid}>{t('pos.newSale')}</Button>

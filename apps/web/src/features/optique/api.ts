@@ -172,9 +172,36 @@ export interface SaleListItem {
   branch: { name: string };
 }
 
-export async function getSale(id: string) {
+export interface SaleDetailItem {
+  id: string;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+  product: { name: string; sku: string };
+}
+
+export interface SaleDetail {
+  id: string;
+  number: string;
+  type: 'SALE' | 'QUOTE';
+  status: string;
+  subtotal: string;
+  discountAmount: string;
+  taxAmount: string;
+  insuranceAmount: string;
+  totalAmount: string;
+  paidAmount: string;
+  currency: string;
+  createdAt: string;
+  items: SaleDetailItem[];
+  customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
+  branch: { name: string; city?: string | null; address?: string | null; phone?: string | null };
+  cashier?: { firstName: string; lastName: string } | null;
+}
+
+export async function getSale(id: string): Promise<SaleDetail> {
   const { data } = await api.get(`/sales/${id}`);
-  return data.sale;
+  return data.sale as SaleDetail;
 }
 
 export async function cancelSale(id: string) {
