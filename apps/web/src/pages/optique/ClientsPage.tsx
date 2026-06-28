@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Contact, Glasses } from 'lucide-react';
+import { Plus, Search, Pencil, Contact, Glasses, FileText } from 'lucide-react';
 import { customerCreateSchema, type CustomerCreateInput } from '@oculo/shared-types';
 import {
   listCustomers,
@@ -11,14 +12,17 @@ import {
   type Customer,
 } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
+import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
 import { ClientRecord } from './ClientRecord';
 
 export function ClientsPage() {
+  const navigate = useNavigate();
   const canCreate = usePermission('optique.customers.create');
   const canUpdate = usePermission('optique.customers.update');
   const canSeeRx = usePermission('optique.prescriptions.view');
+  const canQuote = usePermission('optique.quotes.create');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Customer | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,6 +32,14 @@ export function ClientsPage() {
     queryKey: ['customers', search],
     queryFn: () => listCustomers(search || undefined),
   });
+
+  // Pré-sélectionne le client en caisse et bascule sur la création de devis.
+  function startQuote(customerId: string) {
+    const pos = usePosStore.getState();
+    pos.clear();
+    pos.setCustomer(customerId);
+    navigate('/optique/caisse');
+  }
 
   return (
     <div>
@@ -83,6 +95,11 @@ export function ClientsPage() {
                   <td className="table-cell text-content-muted">{c.email ?? '—'}</td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
+                      {canQuote && (
+                        <button onClick={() => startQuote(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
+                          <FileText className="h-3.5 w-3.5" /> Devis
+                        </button>
+                      )}
                       {canSeeRx && (
                         <button onClick={() => setRecordId(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <Glasses className="h-3.5 w-3.5" /> Ordonnances

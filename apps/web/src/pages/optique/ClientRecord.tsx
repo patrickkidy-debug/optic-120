@@ -1,23 +1,35 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Glasses, Plus, Printer, ReceiptText } from 'lucide-react';
+import { Glasses, Plus, Printer, ReceiptText, FileText } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
 import { getCustomer, createPrescription, type Prescription } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
+import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate, formatCurrency } from '../../lib/format';
 import { Modal, Button, Badge, PageLoader, Field } from '../../components/ui';
 
 export function ClientRecord({ customerId, onClose }: { customerId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const canCreate = usePermission('optique.prescriptions.create');
+  const canQuote = usePermission('optique.quotes.create');
   const [adding, setAdding] = useState(false);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', customerId],
     queryFn: () => getCustomer(customerId),
   });
+
+  function startQuote() {
+    const pos = usePosStore.getState();
+    pos.clear();
+    pos.setCustomer(customerId);
+    onClose();
+    navigate('/optique/caisse');
+  }
 
   return (
     <Modal open onClose={onClose} title="Fiche client" size="lg">
@@ -32,11 +44,18 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
                 {customer.phone ?? '—'}{customer.email ? ` · ${customer.email}` : ''}
               </p>
             </div>
-            {canCreate && !adding && (
-              <Button onClick={() => setAdding(true)}>
-                <Plus className="h-4 w-4" /> Ordonnance
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {canQuote && (
+                <Button variant="outline" onClick={startQuote}>
+                  <FileText className="h-4 w-4" /> Créer un devis
+                </Button>
+              )}
+              {canCreate && !adding && (
+                <Button onClick={() => setAdding(true)}>
+                  <Plus className="h-4 w-4" /> Ordonnance
+                </Button>
+              )}
+            </div>
           </div>
 
           {adding && (
