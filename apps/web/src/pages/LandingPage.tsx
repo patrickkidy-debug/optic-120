@@ -49,6 +49,9 @@ const IMG_HERO =
   'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1400&q=60';
 const IMG_CTA =
   'https://images.unsplash.com/photo-1606318801954-d46d46d3360a?auto=format&fit=crop&w=1400&q=60';
+// Image d'ambiance « magasin d'optique / clinique » visible en fond du hero.
+const IMG_HERO_BG =
+  'https://images.unsplash.com/photo-1567361808960-dec9cb578182?auto=format&fit=crop&w=1600&q=70';
 
 const MODULES = [
   {
@@ -234,6 +237,20 @@ function Reveal({
     >
       {children}
     </div>
+  );
+}
+
+/** Mot final du titre qui défile en boucle (texte animé). */
+function RotatingWord({ words }: { words: string[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % words.length), 2600);
+    return () => clearInterval(t);
+  }, [words.length]);
+  return (
+    <span key={i} className="word-in text-gradient animate-gradient">
+      {words[i]}
+    </span>
   );
 }
 
@@ -514,7 +531,27 @@ export function LandingPage() {
           }}
           onMouseLeave={() => setHeroOffset({ x: 0, y: 0 })}
         >
-          <BlurBackdrop image={IMG_HERO} offset={heroOffset} />
+          {/* Image d'ambiance (magasin / clinique) bien visible en fond */}
+          <div className="pointer-events-none absolute inset-0">
+            <div
+              className="absolute inset-0 scale-105 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${IMG_HERO_BG})`,
+                opacity: 0.5,
+                transform: `translate(${heroOffset.x * 14}px, ${heroOffset.y * 14}px) scale(1.05)`,
+                transition: 'transform 0.4s ease-out',
+              }}
+            />
+            {/* Voile clair pour garder le texte lisible (plus dense au centre) */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(75% 70% at 50% 42%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.62) 55%, rgba(255,255,255,0.35) 100%)',
+              }}
+            />
+          </div>
+          <BlurBackdrop offset={heroOffset} />
           <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28">
             <Reveal delay={0}>
               <span className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/70 px-4 py-1.5 text-xs font-semibold text-content-muted backdrop-blur">
@@ -524,9 +561,9 @@ export function LandingPage() {
             </Reveal>
 
             <Reveal delay={90}>
-              <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="title-float mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
                 Gérez votre optique &amp; clinique en toute{' '}
-                <span className="text-gradient animate-gradient">simplicité</span>
+                <RotatingWord words={['simplicité', 'efficacité', 'sérénité', 'confiance']} />
               </h1>
             </Reveal>
 

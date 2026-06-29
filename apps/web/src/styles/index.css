@@ -121,6 +121,35 @@
     transform: none;
   }
 
+  /* Mot rotatif animé (hero) */
+  .word-in {
+    display: inline-block;
+    animation: wordin 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+  }
+  @keyframes wordin {
+    0% {
+      opacity: 0;
+      transform: translateY(0.5em) rotateX(-40deg);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Léger flottement du titre */
+  .title-float {
+    animation: titlefloat 6s ease-in-out infinite;
+  }
+  @keyframes titlefloat {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-7px);
+    }
+  }
+
   /* Flottement doux + dégradé animé */
   .float-slow {
     animation: floaty 7s ease-in-out infinite;
@@ -241,7 +270,9 @@
     .mq-track,
     .mini-bar,
     .live-dot,
-    .mini-line {
+    .mini-line,
+    .title-float,
+    .word-in {
       animation: none;
     }
   }
