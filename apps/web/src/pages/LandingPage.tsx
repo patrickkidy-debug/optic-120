@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Eye,
@@ -191,6 +191,50 @@ function formatPrice(value: number): string {
   return new Intl.NumberFormat('fr-FR').format(value);
 }
 
+/** Détecte l'entrée d'un élément dans le viewport (une seule fois). */
+function useInView<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return { ref, inView };
+}
+
+/** Enveloppe : anime l'apparition au défilement, avec délai (effet décalé). */
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const { ref, inView } = useInView<HTMLDivElement>();
+  return (
+    <div
+      ref={ref}
+      className={clsx('reveal', inView && 'is-visible', className)}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function BrandMark() {
   return (
     <div className="flex items-center gap-2.5">
@@ -204,8 +248,12 @@ function BrandMark() {
   );
 }
 
-/** Calque d'arrière-plan : photo floutée (optionnelle) + halos colorés. */
-function BlurBackdrop({ image }: { image?: string }) {
+/** Calque d'arrière-plan : photo floutée (optionnelle) + halos colorés animés.
+ *  `offset` (parallaxe souris, -1..1) décale les halos selon leur profondeur. */
+function BlurBackdrop({ image, offset }: { image?: string; offset?: { x: number; y: number } }) {
+  const o = offset ?? { x: 0, y: 0 };
+  const t = (depth: number) =>
+    offset ? { transform: `translate(${o.x * depth}px, ${o.y * depth}px)`, transition: 'transform 0.3s ease-out' } : undefined;
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {image && (
@@ -214,16 +262,17 @@ function BlurBackdrop({ image }: { image?: string }) {
           style={{ backgroundImage: `url(${image})` }}
         />
       )}
-      <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-violet-400/40 blur-3xl" />
-      <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-fuchsia-400/30 blur-3xl" />
-      <div className="absolute -bottom-24 left-1/3 h-80 w-80 rounded-full bg-cyan-300/40 blur-3xl" />
-      <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-amber-300/30 blur-3xl" />
+      <div className="float-slow absolute -left-24 -top-24 h-80 w-80 rounded-full bg-violet-400/40 blur-3xl" style={t(40)} />
+      <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-fuchsia-400/30 blur-3xl" style={t(24)} />
+      <div className="float-slow absolute -bottom-24 left-1/3 h-80 w-80 rounded-full bg-cyan-300/40 blur-3xl" style={{ ...t(32), animationDelay: '1.5s' }} />
+      <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-amber-300/30 blur-3xl" style={t(18)} />
     </div>
   );
 }
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [heroOffset, setHeroOffset] = useState({ x: 0, y: 0 });
 
   return (
     <div
@@ -309,56 +358,75 @@ export function LandingPage() {
 
       <main id="top">
         {/* ---------- Hero ---------- */}
-        <section className="relative overflow-hidden">
-          <BlurBackdrop image={IMG_HERO} />
+        <section
+          className="relative overflow-hidden"
+          onMouseMove={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setHeroOffset({ x: (e.clientX - r.left) / r.width - 0.5, y: (e.clientY - r.top) / r.height - 0.5 });
+          }}
+          onMouseLeave={() => setHeroOffset({ x: 0, y: 0 })}
+        >
+          <BlurBackdrop image={IMG_HERO} offset={heroOffset} />
           <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/70 px-4 py-1.5 text-xs font-semibold text-content-muted backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-              La plateforme tout-en-un pour optiques &amp; cliniques
-            </span>
-
-            <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-              Gérez votre optique &amp; clinique en toute{' '}
-              <span className="text-gradient">simplicité</span>
-            </h1>
-
-            <p className="mx-auto mt-5 max-w-2xl text-base text-content-muted sm:text-lg">
-              Caisse, stocks, patients, paiements Mobile Money et rapports : tout ce qu’il faut pour
-              piloter votre établissement, réuni dans une seule plateforme moderne pensée pour
-              l’Afrique de l’Ouest.
-            </p>
-
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link to="/signup" className="btn-primary w-full px-6 py-3 text-base sm:w-auto">
-                Démarrer gratuitement
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#tarifs" className="btn-outline w-full bg-white/70 px-6 py-3 text-base backdrop-blur sm:w-auto">
-                Voir les tarifs
-              </a>
-            </div>
-
-            <p className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-content-faint">
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-success" /> 14 jours d’essai gratuit
+            <Reveal delay={0}>
+              <span className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/70 px-4 py-1.5 text-xs font-semibold text-content-muted backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                La plateforme tout-en-un pour optiques &amp; cliniques
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-success" /> Sans carte bancaire
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-success" /> Sans engagement
-              </span>
-            </p>
+            </Reveal>
+
+            <Reveal delay={90}>
+              <h1 className="mx-auto mt-6 max-w-3xl font-display text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+                Gérez votre optique &amp; clinique en toute{' '}
+                <span className="text-gradient animate-gradient">simplicité</span>
+              </h1>
+            </Reveal>
+
+            <Reveal delay={170}>
+              <p className="mx-auto mt-5 max-w-2xl text-base text-content-muted sm:text-lg">
+                Caisse, stocks, patients, paiements Mobile Money et rapports : tout ce qu’il faut pour
+                piloter votre établissement, réuni dans une seule plateforme moderne pensée pour
+                l’Afrique de l’Ouest.
+              </p>
+            </Reveal>
+
+            <Reveal delay={250}>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link to="/signup" className="btn-primary w-full px-6 py-3 text-base transition hover:-translate-y-0.5 hover:shadow-card-lg sm:w-auto">
+                  Démarrer gratuitement
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <a href="#tarifs" className="btn-outline w-full bg-white/70 px-6 py-3 text-base backdrop-blur transition hover:-translate-y-0.5 sm:w-auto">
+                  Voir les tarifs
+                </a>
+              </div>
+            </Reveal>
+
+            <Reveal delay={320}>
+              <p className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-content-faint">
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-success" /> 14 jours d’essai gratuit
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-success" /> Sans carte bancaire
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-success" /> Sans engagement
+                </span>
+              </p>
+            </Reveal>
 
             {/* Stats */}
             <div className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
-              {STATS.map((s) => (
-                <div key={s.label} className="rounded-2xl border border-line bg-white/70 px-4 py-5 shadow-card backdrop-blur">
-                  <div className="font-display text-2xl font-extrabold text-content sm:text-3xl">
-                    {s.value}
+              {STATS.map((s, i) => (
+                <Reveal key={s.label} delay={400 + i * 90}>
+                  <div className="rounded-2xl border border-line bg-white/70 px-4 py-5 shadow-card backdrop-blur transition hover:-translate-y-1 hover:shadow-card-lg">
+                    <div className="font-display text-2xl font-extrabold text-content sm:text-3xl">
+                      {s.value}
+                    </div>
+                    <div className="mt-1 text-xs text-content-muted">{s.label}</div>
                   </div>
-                  <div className="mt-1 text-xs text-content-muted">{s.label}</div>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -377,22 +445,21 @@ export function LandingPage() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {MODULES.map((m) => (
-              <div
-                key={m.title}
-                className="card group p-5 transition hover:-translate-y-1 hover:shadow-card-lg"
-              >
-                <span
-                  className={clsx(
-                    'grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br text-white shadow-card',
-                    m.color,
-                  )}
-                >
-                  <m.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-display text-base font-bold">{m.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-content-muted">{m.text}</p>
-              </div>
+            {MODULES.map((m, i) => (
+              <Reveal key={m.title} delay={(i % 4) * 80} className="h-full">
+                <div className="card group h-full p-5 transition duration-300 hover:-translate-y-1.5 hover:shadow-card-lg hover:border-primary/40">
+                  <span
+                    className={clsx(
+                      'grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br text-white shadow-card transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3',
+                      m.color,
+                    )}
+                  >
+                    <m.icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 font-display text-base font-bold">{m.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-content-muted">{m.text}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -412,16 +479,18 @@ export function LandingPage() {
 
             <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
               {STEPS.map((s, i) => (
-                <div key={s.title} className="relative card bg-white/80 p-6 backdrop-blur">
-                  <span className="absolute -top-3 left-6 grid h-7 w-7 place-items-center rounded-full bg-brand text-xs font-bold text-white shadow-card">
-                    {i + 1}
-                  </span>
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-card">
-                    <s.icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-bold">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-content-muted">{s.text}</p>
-                </div>
+                <Reveal key={s.title} delay={i * 120} className="h-full">
+                  <div className="relative card h-full bg-white/80 p-6 backdrop-blur transition duration-300 hover:-translate-y-1.5 hover:shadow-card-lg">
+                    <span className="absolute -top-3 left-6 grid h-7 w-7 place-items-center rounded-full bg-brand text-xs font-bold text-white shadow-card">
+                      {i + 1}
+                    </span>
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-card">
+                      <s.icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="mt-4 font-display text-lg font-bold">{s.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-content-muted">{s.text}</p>
+                  </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -433,13 +502,12 @@ export function LandingPage() {
             Ils nous font confiance
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            {TRUST.map((name) => (
-              <span
-                key={name}
-                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/60 px-4 py-2.5 text-sm font-semibold text-content-muted backdrop-blur"
-              >
-                <Eye className="h-4 w-4 text-primary" /> {name}
-              </span>
+            {TRUST.map((name, i) => (
+              <Reveal key={name} delay={i * 60}>
+                <span className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/60 px-4 py-2.5 text-sm font-semibold text-content-muted backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/40 hover:text-content">
+                  <Eye className="h-4 w-4 text-primary" /> {name}
+                </span>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -452,25 +520,27 @@ export function LandingPage() {
             </h2>
           </div>
           <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="card relative p-6">
-                <Quote className="absolute right-5 top-5 h-7 w-7 text-primary/20" />
-                <div className="flex gap-1 text-accent">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-current" />
-                  ))}
-                </div>
-                <p className="mt-4 text-sm leading-relaxed text-content">“{t.text}”</p>
-                <div className="mt-5 flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-sm font-bold text-white">
-                    {t.initials}
-                  </span>
-                  <div>
-                    <div className="text-sm font-bold text-content">{t.name}</div>
-                    <div className="text-xs text-content-muted">{t.role}</div>
+            {TESTIMONIALS.map((t, i) => (
+              <Reveal key={t.name} delay={i * 120} className="h-full">
+                <div className="card relative h-full p-6 transition duration-300 hover:-translate-y-1.5 hover:shadow-card-lg">
+                  <Quote className="absolute right-5 top-5 h-7 w-7 text-primary/20" />
+                  <div className="flex gap-1 text-accent">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <Star key={j} className="h-4 w-4 fill-current" />
+                    ))}
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-content">“{t.text}”</p>
+                  <div className="mt-5 flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-sm font-bold text-white">
+                      {t.initials}
+                    </span>
+                    <div>
+                      <div className="text-sm font-bold text-content">{t.name}</div>
+                      <div className="text-xs text-content-muted">{t.role}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -478,12 +548,12 @@ export function LandingPage() {
         {/* ---------- Fondateur ---------- */}
         <section className="border-y border-line bg-bg-subtle">
           <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-[auto_1fr]">
-            <div className="mx-auto">
-              <div className="grid h-40 w-40 place-items-center rounded-3xl bg-brand text-5xl font-extrabold text-white shadow-card-lg">
+            <Reveal className="mx-auto">
+              <div className="float-slow grid h-40 w-40 place-items-center rounded-3xl bg-brand text-5xl font-extrabold text-white shadow-card-lg">
                 EK
               </div>
-            </div>
-            <div>
+            </Reveal>
+            <Reveal delay={120}>
               <span className="kicker text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
                 Le fondateur
               </span>
@@ -500,7 +570,7 @@ export function LandingPage() {
                 « Mon objectif est simple : faire gagner du temps aux professionnels de la vue, pour
                 qu’ils se concentrent sur l’essentiel — leurs patients. »
               </p>
-            </div>
+            </Reveal>
           </div>
         </section>
 
@@ -517,16 +587,16 @@ export function LandingPage() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-            {PLAN_CATALOG.map((plan) => {
+            {PLAN_CATALOG.map((plan, i) => {
               const highlighted = plan.code === 'STANDARD';
               return (
+                <Reveal key={plan.code} delay={i * 120} className="h-full">
                 <div
-                  key={plan.code}
                   className={clsx(
-                    'relative flex flex-col rounded-2xl border bg-surface p-6 shadow-card transition',
+                    'relative flex h-full flex-col rounded-2xl border bg-surface p-6 shadow-card transition duration-300',
                     highlighted
-                      ? 'border-primary ring-2 ring-primary shadow-card-lg lg:-translate-y-2'
-                      : 'hover:-translate-y-1 hover:shadow-card-lg',
+                      ? 'border-primary ring-2 ring-primary shadow-card-lg lg:-translate-y-2 hover:-translate-y-3'
+                      : 'hover:-translate-y-1.5 hover:shadow-card-lg',
                   )}
                 >
                   {highlighted && (
@@ -568,6 +638,7 @@ export function LandingPage() {
                     ))}
                   </ul>
                 </div>
+                </Reveal>
               );
             })}
           </div>
