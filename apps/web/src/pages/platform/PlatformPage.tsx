@@ -13,6 +13,7 @@ import {
   UserPlus,
   Save,
   LifeBuoy,
+  BadgeCheck,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -26,6 +27,7 @@ import {
   type PlatformPlan,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
+import { listPendingPayments, confirmPayment } from '../../features/billing/api';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard } from '../../components/ui';
@@ -38,7 +40,7 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
 
-type Tab = 'subs' | 'users' | 'plans' | 'support';
+type Tab = 'subs' | 'payments' | 'users' | 'plans' | 'support';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -89,6 +91,7 @@ export function PlatformPage() {
       <div className="mt-6 flex gap-1 border-b">
         {[
           { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
+          { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
           { id: 'support' as Tab, label: 'Support', icon: LifeBuoy },
@@ -109,6 +112,7 @@ export function PlatformPage() {
 
       <div className="mt-5">
         {tab === 'subs' && <SubscriptionsTab />}
+        {tab === 'payments' && <PaymentsTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'plans' && <PlansTab />}
         {tab === 'support' && <SupportTab />}
@@ -210,6 +214,60 @@ function UsersTab() {
               </td>
               <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
               <td className="table-cell text-content-muted">{formatDate(u.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PaymentsTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['platform-pending'], queryFn: listPendingPayments });
+  const mut = useMutation({
+    mutationFn: confirmPayment,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['platform-pending'] });
+      qc.invalidateQueries({ queryKey: ['platform-subs'] });
+      qc.invalidateQueries({ queryKey: ['platform-stats'] });
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0) return <EmptyState icon={BadgeCheck} title="Aucun paiement en attente" />;
+
+  return (
+    <div className="card overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+            <th className="table-cell font-semibold">Établissement</th>
+            <th className="table-cell font-semibold">Référence</th>
+            <th className="table-cell text-right font-semibold">Montant</th>
+            <th className="table-cell font-semibold">Demandé le</th>
+            <th className="table-cell text-right font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((p) => (
+            <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
+              <td className="table-cell font-medium text-content">{p.tenantName}</td>
+              <td className="table-cell font-mono text-content-muted">{p.invoiceNumber}</td>
+              <td className="table-cell text-right font-semibold text-content">{formatCurrency(p.amount)}</td>
+              <td className="table-cell text-content-muted">{formatDateTime(p.createdAt)}</td>
+              <td className="table-cell text-right">
+                <Button
+                  className="h-8 px-3 text-xs"
+                  loading={mut.isPending}
+                  onClick={() => {
+                    if (confirm(`Confirmer le paiement de ${p.tenantName} (${formatCurrency(p.amount)}) et activer l'abonnement ?`))
+                      mut.mutate(p.id);
+                  }}
+                >
+                  <BadgeCheck className="h-4 w-4" /> Confirmer
+                </Button>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -1,5 +1,4 @@
-import { PaymentStatus, SubscriptionStatus, SubInvoiceStatus, MOBILE_MONEY_METHODS } from '@oculo/shared-types';
-import type { PaymentMethod } from '@oculo/shared-types';
+import { PaymentStatus, SubscriptionStatus, SubInvoiceStatus, MOBILE_MONEY_METHODS, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
@@ -171,6 +170,84 @@ export async function payInvoice(
   customerPhone: string | undefined,
 ) {
   return initiateInvoicePayment(tenantId, invoiceId, method, customerPhone);
+}
+
+/**
+ * Souscription par paiement Mobile Money MANUEL : crée une facture + un paiement
+ * en attente (sans passerelle). Le client paie sur le numéro de l'éditeur, puis
+ * l'opérateur confirme depuis la console → l'abonnement s'active.
+ */
+export async function subscribeManual(tenantId: string, planId: string) {
+  const sub = await prisma.subscription.findUnique({ where: { tenantId } });
+  if (!sub) throw notFound('Abonnement introuvable');
+  const plan = await prisma.subscriptionPlan.findFirst({ where: { id: planId, isActive: true } });
+  if (!plan) throw badRequest('Offre invalide');
+
+  const now = new Date();
+  const invoice = await prisma.subscriptionInvoice.create({
+    data: {
+      tenantId,
+      subscriptionId: sub.id,
+      planId: plan.id,
+      number: await nextInvoiceNumber(tenantId),
+      amount: plan.priceMonthly,
+      currency: plan.currency,
+      status: SubInvoiceStatus.PENDING,
+      periodStart: now,
+      periodEnd: addOneMonth(now),
+      dueDate: now,
+    },
+  });
+  const payment = await prisma.subscriptionPayment.create({
+    data: {
+      tenantId,
+      invoiceId: invoice.id,
+      method: PaymentMethod.CASH,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      status: PaymentStatus.PENDING,
+      provider: 'manual',
+      providerRef: `MAN-${invoice.number}`,
+    },
+  });
+  return {
+    paymentId: payment.id,
+    invoiceId: invoice.id,
+    number: invoice.number,
+    amount: Number(invoice.amount),
+    currency: invoice.currency,
+    planName: plan.name,
+  };
+}
+
+/** Paiements manuels en attente de confirmation (console fondateur). */
+export async function listPendingManualPayments() {
+  const rows = await prisma.subscriptionPayment.findMany({
+    where: { status: PaymentStatus.PENDING, provider: 'manual' },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    include: { invoice: true },
+  });
+  const tenants = await prisma.tenant.findMany({
+    where: { id: { in: rows.map((r) => r.tenantId) } },
+    select: { id: true, name: true },
+  });
+  const names = new Map(tenants.map((t) => [t.id, t.name]));
+  return rows.map((r) => ({
+    id: r.id,
+    tenantName: names.get(r.tenantId) ?? r.tenantId,
+    amount: Number(r.amount),
+    currency: r.currency,
+    invoiceNumber: r.invoice.number,
+    createdAt: r.createdAt,
+  }));
+}
+
+/** Confirme un paiement manuel reçu → active/prolonge l'abonnement. */
+export async function confirmManualPayment(paymentId: string) {
+  const payment = await prisma.subscriptionPayment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw notFound('Paiement introuvable');
+  return settleSubscriptionPayment(paymentId, PaymentStatus.SUCCESS, { manual: true });
 }
 
 async function initiateInvoicePayment(

@@ -77,6 +77,20 @@ export async function payInvoice(invoiceId: string, method: PaymentMethod, custo
   const { data } = await api.post<PayResult>(`/billing/invoices/${invoiceId}/pay`, { method, customerPhone });
   return data;
 }
+export interface ManualSubscribeResult {
+  paymentId: string;
+  invoiceId: string;
+  number: string;
+  amount: number;
+  currency: string;
+  planName: string;
+}
+
+export async function subscribeManual(planId: string): Promise<ManualSubscribeResult> {
+  const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId });
+  return data;
+}
+
 export async function billingPaymentStatus(paymentId: string) {
   const { data } = await api.get<{ status: string }>(`/billing/payments/${paymentId}/status`);
   return data;
@@ -115,6 +129,24 @@ export async function platformReactivate(tenantId: string) {
 export async function runBilling() {
   const { data } = await api.post<{ markedPastDue: number; suspended: number }>('/platform/billing/run');
   return data;
+}
+
+export interface PendingPayment {
+  id: string;
+  tenantName: string;
+  amount: number;
+  currency: string;
+  invoiceNumber: string;
+  createdAt: string;
+}
+
+export async function listPendingPayments(): Promise<PendingPayment[]> {
+  const { data } = await api.get<{ payments: PendingPayment[] }>('/platform/payments/pending');
+  return data.payments;
+}
+
+export async function confirmPayment(id: string): Promise<void> {
+  await api.post(`/platform/payments/${id}/confirm`);
 }
 
 export interface PlatformStats {

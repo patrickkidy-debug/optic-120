@@ -40,6 +40,25 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ users });
   });
 
+  // Paiements manuels en attente de confirmation.
+  app.get('/payments/pending', async (_req, reply) => {
+    return reply.send({ payments: await billing.listPendingManualPayments() });
+  });
+
+  app.post('/payments/:id/confirm', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const result = await billing.confirmManualPayment(id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_CONFIRM_PAYMENT',
+      entity: 'SubscriptionPayment',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true, status: result?.status });
+  });
+
   // Tickets de support (console fondateur).
   app.get('/support', async (_req, reply) => {
     return reply.send({ tickets: await support.listTickets() });

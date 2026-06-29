@@ -17,9 +17,11 @@ import {
   getInvoices,
   subscribe,
   payInvoice,
+  subscribeManual,
   billingPaymentStatus,
   simulateBillingPayment,
   type Plan,
+  type ManualSubscribeResult,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -233,6 +235,13 @@ function PlanCard({
   );
 }
 
+// Coordonnées de paiement Mobile Money manuel de l'éditeur (modifiable).
+const MANUAL_PAY = {
+  networks: 'Wave / Orange Money',
+  number: '+221 76 888 17 39',
+  name: 'OculoSaaS — Eloge KONAN',
+};
+
 const METHODS: { value: PaymentMethod; label: string; icon: typeof Banknote }[] = [
   { value: 'WAVE', label: 'Wave', icon: Smartphone },
   { value: 'ORANGE_MONEY', label: 'Orange Money', icon: Smartphone },
@@ -252,9 +261,19 @@ function BillingPaymentModal({
   onPaid: () => void;
 }) {
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
+  const [phase, setPhase] = useState<'choose' | 'pending' | 'done' | 'manual'>('choose');
   const [error, setError] = useState('');
   const [isSimulation, setIsSimulation] = useState(false);
+  const [manual, setManual] = useState<ManualSubscribeResult | null>(null);
+
+  const manualMut = useMutation({
+    mutationFn: () => subscribeManual(target.id),
+    onSuccess: (res) => {
+      setManual(res);
+      setPhase('manual');
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
 
   const payMut = useMutation({
     mutationFn: (method: PaymentMethod) =>
@@ -309,11 +328,52 @@ function BillingPaymentModal({
             ))}
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+
+          {target.kind === 'plan' && (
+            <button
+              onClick={() => manualMut.mutate()}
+              disabled={manualMut.isPending}
+              className="mt-3 w-full rounded-xl border border-dashed border-primary/50 bg-primary-soft p-3 text-left transition hover:border-primary"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-content">
+                <Smartphone className="h-4 w-4 text-primary" /> Payer par Mobile Money (recommandé)
+              </div>
+              <p className="mt-0.5 text-xs text-content-muted">
+                Envoyez le montant sur notre numéro Wave / Orange Money, activation après confirmation.
+              </p>
+            </button>
+          )}
+
           <div className="mt-4 border-t pt-3">
             <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via PayTech</p>
             <PaymentMethodLogos />
           </div>
         </>
+      )}
+
+      {phase === 'manual' && manual && (
+        <div className="py-2">
+          <p className="text-sm text-content-muted">Pour activer votre offre, envoyez :</p>
+          <div className="mt-3 rounded-xl border bg-surface-2 p-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-content-muted">Montant</span>
+              <span className="font-display text-2xl font-bold text-gradient">
+                {formatCurrency(manual.amount)}
+              </span>
+            </div>
+            <div className="mt-3 space-y-1.5 text-sm">
+              <div className="flex justify-between"><span className="text-content-muted">Réseau</span><span className="font-semibold text-content">{MANUAL_PAY.networks}</span></div>
+              <div className="flex justify-between"><span className="text-content-muted">Numéro</span><span className="font-bold text-content">{MANUAL_PAY.number}</span></div>
+              <div className="flex justify-between"><span className="text-content-muted">Bénéficiaire</span><span className="font-semibold text-content">{MANUAL_PAY.name}</span></div>
+              <div className="flex justify-between"><span className="text-content-muted">Référence</span><span className="font-mono text-content">{manual.number}</span></div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-content-muted">
+            ⏳ Après votre paiement, votre abonnement <b>{manual.planName}</b> sera activé dès
+            confirmation par notre équipe (généralement sous quelques minutes).
+          </p>
+          <Button className="mt-4 w-full" onClick={onPaid}>J’ai effectué le paiement</Button>
+        </div>
       )}
 
       {phase === 'pending' && (
