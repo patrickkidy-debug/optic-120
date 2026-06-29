@@ -20,6 +20,9 @@ const MOBILE_BRANDS: BrandPill[] = [
   { label: 'Wave', bg: '#1DC9FF', fg: '#003049' },
   { label: 'Orange Money', bg: '#FF7900', fg: '#ffffff' },
   { label: 'Free Money', bg: '#CD1A2B', fg: '#ffffff' },
+  { label: 'T-Money (Togocel)', bg: '#009FE3', fg: '#ffffff' },
+  { label: 'MTN MoMo', bg: '#FFC500', fg: '#000000' },
+  { label: 'Moov Money', bg: '#0056B3', fg: '#ffffff' },
   { label: 'Wizall', bg: '#00A94F', fg: '#ffffff' },
 ];
 

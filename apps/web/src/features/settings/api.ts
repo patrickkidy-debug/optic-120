@@ -3,6 +3,7 @@ import type { PaymentConfigInput, BrandingUpdateInput } from '@oculo/shared-type
 import { useAuthStore } from '../../store/auth';
 
 export interface MaskedPaymentConfig {
+  provider?: 'paytech' | 'moneroo';
   apiKeySet: boolean;
   apiSecretSet: boolean;
   siteId: string;

@@ -700,6 +700,7 @@ export const cashCloseSchema = z.object({
 export type CashCloseInput = z.infer<typeof cashCloseSchema>;
 
 export const paymentConfigSchema = z.object({
+  provider: z.enum(['paytech', 'moneroo']).default('paytech'),
   apiKey: z.string().optional().default(''),
   apiSecret: z.string().optional().default(''),
   siteId: z.string().optional().default(''),

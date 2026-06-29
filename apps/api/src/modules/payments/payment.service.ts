@@ -7,8 +7,10 @@ import { logger } from '../../lib/logger.js';
 import type { PaymentProvider } from './payment-provider.interface.js';
 import { SimulatedPaymentProvider } from './providers/simulated.provider.js';
 import { PayTechProvider } from './providers/paytech.provider.js';
+import { MonerooProvider } from './providers/moneroo.provider.js';
 
 interface StoredPaymentConfig {
+  provider?: 'paytech' | 'moneroo';
   apiKeyEnc?: string;
   apiSecretEnc?: string;
   siteId?: string;
@@ -18,6 +20,7 @@ interface StoredPaymentConfig {
 }
 
 interface ResolvedConfig {
+  provider: 'paytech' | 'moneroo';
   apiKey: string;
   apiSecret: string;
   siteId: string;
@@ -35,17 +38,18 @@ export async function resolvePaymentConfig(tenantId: string): Promise<ResolvedCo
     try {
       apiKey = decryptSecret(cfg.apiKeyEnc);
     } catch (err) {
-      logger.error({ err }, 'Échec de déchiffrement de la clé API PayTech');
+      logger.error({ err }, 'Échec de déchiffrement de la clé API de paiement');
     }
   }
   if (cfg?.apiSecretEnc) {
     try {
       apiSecret = decryptSecret(cfg.apiSecretEnc);
     } catch (err) {
-      logger.error({ err }, 'Échec de déchiffrement de la clé secrète PayTech');
+      logger.error({ err }, 'Échec de déchiffrement de la clé secrète de paiement');
     }
   }
   return {
+    provider: cfg?.provider ?? 'paytech',
     apiKey,
     apiSecret,
     siteId: cfg?.siteId ?? '',
@@ -59,6 +63,7 @@ export async function resolvePaymentConfig(tenantId: string): Promise<ResolvedCo
 export async function getMaskedPaymentConfig(tenantId: string) {
   const c = await resolvePaymentConfig(tenantId);
   return {
+    provider: c.provider,
     apiKeySet: c.apiKey.length > 0,
     apiSecretSet: c.apiSecret.length > 0,
     siteId: c.siteId,
@@ -74,6 +79,7 @@ export async function savePaymentConfig(tenantId: string, input: PaymentConfigIn
   const apiKey = input.apiKey ? input.apiKey : current.apiKey;
   const apiSecret = input.apiSecret ? input.apiSecret : current.apiSecret;
   const stored: StoredPaymentConfig = {
+    provider: input.provider,
     apiKeyEnc: apiKey ? encryptSecret(apiKey) : undefined,
     apiSecretEnc: apiSecret ? encryptSecret(apiSecret) : undefined,
     siteId: input.siteId ?? '',
@@ -90,43 +96,40 @@ export async function savePaymentConfig(tenantId: string, input: PaymentConfigIn
 
 /**
  * Choisit le fournisseur pour les VENTES du tenant.
- * Priorité : 1) clés PayTech propres au tenant ; 2) repli sur les clés PayTech
- * de la plateforme (env) — ainsi une config unique sur Render encaisse aussi
- * les ventes ; 3) simulation si aucune clé n'est disponible.
+ * IMPORTANT (modèle revendeur) : chaque boutique encaisse sur SON propre compte.
+ * On n'utilise JAMAIS le compte de la plateforme pour les ventes (sinon l'éditeur
+ * collecterait le chiffre d'affaires de ses clients). Sans config tenant valide
+ * → simulation (encaissement en ligne désactivé tant que la boutique n'a pas
+ * branché son compte).
  */
 export async function resolveProvider(tenantId: string): Promise<PaymentProvider> {
   const c = await resolvePaymentConfig(tenantId);
   const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
-  const ipnUrl = apiBase ? `${apiBase}/webhooks/paytech` : undefined;
   const successUrl = `${appOrigin}/optique/caisse`;
 
-  // 1) Clés propres au tenant (sauf simulation forcée).
-  if (!c.simulationMode && c.apiKey && c.apiSecret) {
-    return new PayTechProvider({
-      apiKey: c.apiKey,
-      apiSecret: c.apiSecret,
-      env: c.environment === 'production' ? 'prod' : 'test',
-      baseUrl: env.PAYTECH_BASE_URL,
-      ipnUrl,
-      successUrl,
-      cancelUrl: successUrl,
-    });
+  if (!c.simulationMode && c.apiKey) {
+    if (c.provider === 'moneroo') {
+      return new MonerooProvider({
+        secretKey: c.apiKey,
+        baseUrl: env.MONEROO_BASE_URL,
+        returnUrl: successUrl,
+        webhookSecret: c.apiSecret || undefined,
+      });
+    }
+    if (c.apiSecret) {
+      return new PayTechProvider({
+        apiKey: c.apiKey,
+        apiSecret: c.apiSecret,
+        env: c.environment === 'production' ? 'prod' : 'test',
+        baseUrl: env.PAYTECH_BASE_URL,
+        ipnUrl: apiBase ? `${apiBase}/webhooks/paytech` : undefined,
+        successUrl,
+        cancelUrl: successUrl,
+      });
+    }
   }
 
-  // 2) Repli sur les clés PayTech de la plateforme (compte unique).
-  if (env.PAYTECH_API_KEY && env.PAYTECH_API_SECRET) {
-    return new PayTechProvider({
-      apiKey: env.PAYTECH_API_KEY,
-      apiSecret: env.PAYTECH_API_SECRET,
-      env: env.PAYTECH_ENV,
-      baseUrl: env.PAYTECH_BASE_URL,
-      ipnUrl,
-      successUrl,
-      cancelUrl: successUrl,
-    });
-  }
-
-  // 3) Aucune clé → simulation.
+  // Aucune config propre à la boutique → simulation (jamais le compte éditeur).
   return new SimulatedPaymentProvider();
 }
 
