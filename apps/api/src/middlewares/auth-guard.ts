@@ -5,6 +5,14 @@ import { forTenant } from '../lib/prisma-tenant.js';
 import { unauthorized, paymentRequired } from '../lib/http-error.js';
 import type { AuthContext } from '../types/auth.js';
 import { getSubscriptionStatus } from '../modules/billing/billing.service.js';
+import { env } from '../config/env.js';
+
+/** L'éditeur du SaaS (opérateur) n'est jamais bloqué par l'abonnement. */
+function isOperator(email: string): boolean {
+  return env.PLATFORM_ADMIN_EMAILS.split(',')
+    .map((e) => e.trim().toLowerCase())
+    .includes(email.toLowerCase());
+}
 
 /** Routes accessibles même quand l'abonnement est suspendu (paiement, auth, opérateur). */
 function isBillingExempt(url: string): boolean {
@@ -66,10 +74,13 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
   const sub = await getSubscriptionStatus(user.tenantId);
   if (sub) {
     ctx.subscriptionStatus = sub.status;
-    const blocked = sub.status === 'SUSPENDED' || sub.status === 'CANCELLED';
-    if (blocked && !isBillingExempt(req.url)) {
+    // Blocage si l'abonnement est suspendu/annulé OU si la période (essai ou
+    // payée) est expirée → « essai gratuit puis blocage tant que pas payé ».
+    const expired = sub.currentPeriodEnd.getTime() < Date.now();
+    const blocked = sub.status === 'SUSPENDED' || sub.status === 'CANCELLED' || expired;
+    if (blocked && !isBillingExempt(req.url) && !isOperator(user.email)) {
       throw paymentRequired(
-        'Abonnement suspendu. Régularisez votre paiement pour réactiver votre espace.',
+        'Votre période est terminée. Activez votre abonnement pour continuer.',
       );
     }
   }

@@ -20,11 +20,11 @@ export function SuspensionGate() {
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/10 p-4">
           <AlertOctagon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
-            <h1 className="font-display text-lg font-bold text-content">Abonnement suspendu</h1>
+            <h1 className="font-display text-lg font-bold text-content">Activez votre abonnement</h1>
             <p className="text-sm text-content-muted">
               {canManage
-                ? 'Régularisez votre paiement ci-dessous pour réactiver immédiatement votre espace.'
-                : "Votre espace est temporairement suspendu. Contactez l'administrateur de votre établissement pour régulariser l'abonnement."}
+                ? "Votre période d'essai (ou votre abonnement) est terminée. Choisissez une offre et payez ci-dessous pour réactiver immédiatement votre espace."
+                : "L'accès est en pause. Contactez l'administrateur de votre établissement pour activer l'abonnement."}
             </p>
           </div>
         </div>

@@ -86,12 +86,18 @@ export async function getSubscription(tenantId: string) {
 /** Statut léger pour l'enforcement (requireAuth). */
 export async function getSubscriptionStatus(
   tenantId: string,
-): Promise<{ status: SubscriptionStatus; planCode: string } | null> {
+): Promise<{ status: SubscriptionStatus; planCode: string; currentPeriodEnd: Date } | null> {
   const sub = await prisma.subscription.findUnique({
     where: { tenantId },
-    select: { status: true, plan: { select: { code: true } } },
+    select: { status: true, currentPeriodEnd: true, plan: { select: { code: true } } },
   });
-  return sub ? { status: sub.status as SubscriptionStatus, planCode: sub.plan.code } : null;
+  return sub
+    ? {
+        status: sub.status as SubscriptionStatus,
+        planCode: sub.plan.code,
+        currentPeriodEnd: sub.currentPeriodEnd,
+      }
+    : null;
 }
 
 /** Vérifie qu'une création ne dépasse pas la limite de l'offre courante. */
