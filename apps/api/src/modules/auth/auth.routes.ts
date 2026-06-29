@@ -16,6 +16,8 @@ import { unauthorized } from '../../lib/http-error.js';
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Limiteur renforcé sur les routes sensibles (anti brute-force).
   const strictLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
+  // Limite modérée sur le rafraîchissement de session (anti abus de jeton).
+  const refreshLimit = { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } };
 
   app.post('/signup', strictLimit, async (req, reply) => {
     const input = signupSchema.parse(req.body);
@@ -34,7 +36,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ accessToken, user });
   });
 
-  app.post('/refresh', async (req, reply) => {
+  app.post('/refresh', refreshLimit, async (req, reply) => {
     const token = req.cookies[REFRESH_COOKIE];
     if (!token) throw unauthorized('Aucune session');
     const { accessToken, refreshToken, user } = await authService.refresh(token, requestMeta(req));
