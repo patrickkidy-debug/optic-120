@@ -254,14 +254,16 @@ function BillingPaymentModal({
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
+  const [isSimulation, setIsSimulation] = useState(false);
 
   const payMut = useMutation({
     mutationFn: (method: PaymentMethod) =>
       target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
-      // Moneroo : redirection vers le checkout hébergé, puis on attend la
-      // confirmation par webhook (polling du statut en arrière-plan).
+      setIsSimulation(res.simulation);
+      // PayTech : redirection vers le checkout hébergé, puis on attend la
+      // confirmation par IPN (polling du statut en arrière-plan).
       if (res.redirectUrl) {
         window.open(res.redirectUrl, '_blank', 'noopener');
         setPhase('pending');
@@ -321,7 +323,7 @@ function BillingPaymentModal({
             Finalisez le paiement dans l’onglet PayTech, puis revenez ici. Confirmation
             automatique en cours…
           </p>
-          {paymentId && (
+          {paymentId && isSimulation && (
             <Button variant="outline" className="mt-4" onClick={() => void simulateBillingPayment(paymentId)}>
               Simuler la confirmation
             </Button>

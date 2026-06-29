@@ -88,23 +88,46 @@ export async function savePaymentConfig(tenantId: string, input: PaymentConfigIn
   return getMaskedPaymentConfig(tenantId);
 }
 
-/** Choisit le fournisseur selon la config : simulation par défaut. */
+/**
+ * Choisit le fournisseur pour les VENTES du tenant.
+ * Priorité : 1) clés PayTech propres au tenant ; 2) repli sur les clés PayTech
+ * de la plateforme (env) — ainsi une config unique sur Render encaisse aussi
+ * les ventes ; 3) simulation si aucune clé n'est disponible.
+ */
 export async function resolveProvider(tenantId: string): Promise<PaymentProvider> {
   const c = await resolvePaymentConfig(tenantId);
-  // PayTech exige une clé API ET une clé secrète.
-  if (c.simulationMode || !c.apiKey || !c.apiSecret) {
-    return new SimulatedPaymentProvider();
-  }
   const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
-  return new PayTechProvider({
-    apiKey: c.apiKey,
-    apiSecret: c.apiSecret,
-    env: c.environment === 'production' ? 'prod' : 'test',
-    baseUrl: env.PAYTECH_BASE_URL,
-    ipnUrl: apiBase ? `${apiBase}/webhooks/paytech` : undefined,
-    successUrl: `${appOrigin}/optique/caisse`,
-    cancelUrl: `${appOrigin}/optique/caisse`,
-  });
+  const ipnUrl = apiBase ? `${apiBase}/webhooks/paytech` : undefined;
+  const successUrl = `${appOrigin}/optique/caisse`;
+
+  // 1) Clés propres au tenant (sauf simulation forcée).
+  if (!c.simulationMode && c.apiKey && c.apiSecret) {
+    return new PayTechProvider({
+      apiKey: c.apiKey,
+      apiSecret: c.apiSecret,
+      env: c.environment === 'production' ? 'prod' : 'test',
+      baseUrl: env.PAYTECH_BASE_URL,
+      ipnUrl,
+      successUrl,
+      cancelUrl: successUrl,
+    });
+  }
+
+  // 2) Repli sur les clés PayTech de la plateforme (compte unique).
+  if (env.PAYTECH_API_KEY && env.PAYTECH_API_SECRET) {
+    return new PayTechProvider({
+      apiKey: env.PAYTECH_API_KEY,
+      apiSecret: env.PAYTECH_API_SECRET,
+      env: env.PAYTECH_ENV,
+      baseUrl: env.PAYTECH_BASE_URL,
+      ipnUrl,
+      successUrl,
+      cancelUrl: successUrl,
+    });
+  }
+
+  // 3) Aucune clé → simulation.
+  return new SimulatedPaymentProvider();
 }
 
 /**

@@ -72,32 +72,45 @@ export class PayTechProvider implements PaymentProvider {
       throw badRequest(`Connexion à PayTech impossible (${reason}). Réessayez.`);
     }
 
-    let data: { success?: number | boolean; token?: string; redirect_url?: string; errors?: unknown };
+    let data: {
+      success?: number | boolean | string;
+      token?: string;
+      redirect_url?: string;
+      redirectUrl?: string;
+      message?: string;
+      error?: unknown;
+      errors?: unknown;
+    };
     try {
       data = JSON.parse(bodyText);
     } catch {
-      const snippet = bodyText.slice(0, 200).replace(/\s+/g, ' ').trim();
+      const snippet = bodyText.slice(0, 250).replace(/\s+/g, ' ').trim();
       logger.error({ status: res.status, body: snippet, url }, 'PayTech : réponse non-JSON');
       throw badRequest(
         `PayTech a renvoyé une réponse inattendue (HTTP ${res.status}) : ${snippet || 'corps vide'}`,
       );
     }
 
-    const ok = data.success === 1 || data.success === true;
-    if (!ok || !data.token || !data.redirect_url) {
-      logger.error({ paytech: data, status: res.status }, 'PayTech : initialisation refusée');
-      const reason = data.errors
-        ? JSON.stringify(data.errors).slice(0, 200)
-        : `HTTP ${res.status}`;
-      throw badRequest(`PayTech a refusé la transaction : ${reason}`);
+    // La présence d'un token + d'une URL de redirection EST le signal de succès
+    // (le champ `success` peut arriver en nombre, booléen ou chaîne « 1 »).
+    const redirectUrl = data.redirect_url ?? data.redirectUrl;
+    if (data.token && redirectUrl) {
+      return {
+        providerRef: data.token,
+        status: PaymentStatus.PENDING,
+        redirectUrl,
+        raw: data,
+      };
     }
 
-    return {
-      providerRef: data.token,
-      status: PaymentStatus.PENDING,
-      redirectUrl: data.redirect_url,
-      raw: data,
-    };
+    logger.error({ paytech: data, status: res.status }, 'PayTech : initialisation refusée');
+    const detail =
+      (data.errors && JSON.stringify(data.errors)) ||
+      (data.error && JSON.stringify(data.error)) ||
+      data.message ||
+      bodyText.slice(0, 250).replace(/\s+/g, ' ').trim() ||
+      `HTTP ${res.status}`;
+    throw badRequest(`PayTech a refusé la transaction : ${detail}`);
   }
 
   async verifyPayment(providerRef: string): Promise<VerifyResult> {
