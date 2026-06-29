@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OculoSaaS — Vidéo de présentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #070b14;
+    --ink: #eef2fb;
+    --muted: #9aa7c2;
+    --faint: #5b6b88;
+    --violet: #7c3aed;
+    --pink: #ec4899;
+    --orange: #f97316;
+    --cyan: #22d3ee;
+    --grad: linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%);
+    --grad2: linear-gradient(120deg, #22d3ee 0%, #7c3aed 100%);
+    --card: rgba(255,255,255,0.04);
+    --stroke: rgba(255,255,255,0.10);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #04060c; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+  .display { font-family: 'Outfit', 'Inter', sans-serif; }
+
+  /* ---- Scène 16:9 mise à l'échelle ---- */
+  .frame { position: fixed; inset: 0; display: grid; place-items: center; background:
+      radial-gradient(60rem 40rem at 80% -10%, rgba(124,58,237,.18), transparent 60%),
+      radial-gradient(50rem 40rem at -10% 110%, rgba(34,211,238,.14), transparent 60%),
+      var(--bg); }
+  .stage {
+    position: relative; width: 1920px; height: 1080px; transform-origin: center center;
+    background: var(--bg); overflow: hidden; color: var(--ink);
+    box-shadow: 0 40px 120px rgba(0,0,0,.6);
+  }
+
+  /* ---- Halos d'arrière-plan animés ---- */
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; pointer-events: none; }
+  .b1 { width: 720px; height: 720px; background: var(--violet); top: -240px; left: -200px; animation: drift1 18s ease-in-out infinite; }
+  .b2 { width: 640px; height: 640px; background: var(--pink); bottom: -260px; right: -180px; animation: drift2 21s ease-in-out infinite; }
+  .b3 { width: 520px; height: 520px; background: var(--cyan); bottom: -200px; left: 35%; opacity: .35; animation: drift3 24s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(120px,80px)} }
+  @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-100px,-90px)} }
+  @keyframes drift3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(80px,-60px)} }
+  .grid-overlay { position:absolute; inset:0; opacity:.06; background-image:
+      linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px);
+      background-size: 64px 64px; mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 75%); }
+
+  /* ---- Progress bar ---- */
+  .progress { position: absolute; top: 0; left: 0; height: 5px; width: 0%; background: var(--grad); z-index: 50; box-shadow: 0 0 18px rgba(236,72,153,.6); }
+  .brandmark { position: absolute; top: 44px; left: 56px; z-index: 40; display: flex; align-items: center; gap: 14px; opacity: .92; }
+  .brandmark .dot { width: 44px; height: 44px; border-radius: 13px; background: var(--grad); display: grid; place-items: center; box-shadow: 0 8px 24px rgba(124,58,237,.5); }
+  .brandmark .dot svg { width: 24px; height: 24px; }
+  .brandmark .txt { font-family:'Outfit'; font-weight: 800; font-size: 26px; letter-spacing: -.5px; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .cyan-text { background: var(--grad2); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color: transparent; }
+
+  /* ---- Scenes ---- */
+  .scene { position: absolute; inset: 0; display: grid; place-items: center; padding: 120px; opacity: 0; visibility: hidden; }
+  .scene--active { opacity: 1; visibility: visible; }
+  .scene__inner { width: 100%; max-width: 1500px; text-align: center; }
+
+  /* éléments animés : démarrent décalés, jouent quand la scène est active */
+  .anim { opacity: 0; }
+  .scene--active .anim { animation: rise .9s cubic-bezier(.2,.7,.2,1) forwards; }
+  .scene--active .anim.d1 { animation-delay: .15s } .scene--active .anim.d2 { animation-delay: .35s }
+  .scene--active .anim.d3 { animation-delay: .55s } .scene--active .anim.d4 { animation-delay: .75s }
+  .scene--active .anim.d5 { animation-delay: .95s } .scene--active .anim.d6 { animation-delay: 1.15s }
+  @keyframes rise { from { opacity: 0; transform: translateY(46px); filter: blur(6px) } to { opacity: 1; transform: translateY(0); filter: blur(0) } }
+  @keyframes pop { 0%{opacity:0; transform: scale(.6)} 60%{opacity:1; transform: scale(1.08)} 100%{opacity:1; transform: scale(1)} }
+  .scene--active .popin { animation: pop .7s cubic-bezier(.2,.8,.2,1.2) forwards; }
+
+  .kicker { display:inline-flex; align-items:center; gap:12px; font-weight:700; letter-spacing: 3px; text-transform: uppercase; font-size: 22px; color: var(--cyan); }
+  .kicker .line { width: 46px; height: 2px; background: var(--cyan); display:inline-block; }
+  h1.title { font-family:'Outfit'; font-weight: 900; font-size: 132px; line-height: 1.02; letter-spacing: -3px; }
+  h2.head { font-family:'Outfit'; font-weight: 800; font-size: 96px; line-height: 1.05; letter-spacing: -2px; }
+  .lede { font-size: 34px; color: var(--muted); margin-top: 30px; line-height: 1.45; }
+
+  /* logo intro */
+  .logo-xl { width: 168px; height: 168px; border-radius: 44px; background: var(--grad); display: grid; place-items: center; margin: 0 auto 38px; box-shadow: 0 30px 90px rgba(124,58,237,.55); }
+  .logo-xl svg { width: 92px; height: 92px; }
+
+  /* feature grid */
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin-top: 64px; }
+  .fcard { background: var(--card); border: 1px solid var(--stroke); border-radius: 26px; padding: 38px 28px; text-align: left; backdrop-filter: blur(6px); }
+  .fcard .ic { width: 70px; height: 70px; border-radius: 18px; display: grid; place-items: center; margin-bottom: 22px; }
+  .fcard .ic svg { width: 36px; height: 36px; color: #fff; }
+  .fcard h3 { font-family:'Outfit'; font-weight: 800; font-size: 30px; margin-bottom: 10px; }
+  .fcard p { color: var(--muted); font-size: 21px; line-height: 1.4; }
+
+  /* payment pills */
+  .pills { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 60px; }
+  .pill { height: 78px; padding: 0 34px; border-radius: 18px; display: inline-flex; align-items: center; font-family:'Outfit'; font-weight: 800; font-size: 30px; box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+  .pill.card { background: #fff; gap: 16px; }
+
+  /* pricing */
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 64px; }
+  .plan { background: var(--card); border: 1px solid var(--stroke); border-radius: 30px; padding: 46px 38px; text-align: left; position: relative; }
+  .plan.hot { border: 2px solid var(--pink); box-shadow: 0 30px 80px rgba(236,72,153,.3); transform: translateY(-22px); }
+  .plan .pname { font-family:'Outfit'; font-weight: 800; font-size: 34px; }
+  .plan .price { font-family:'Outfit'; font-weight: 900; font-size: 78px; margin-top: 18px; line-height: 1; }
+  .plan .price small { font-size: 26px; color: var(--muted); font-weight: 500; }
+  .plan .feat { margin-top: 28px; color: var(--muted); font-size: 23px; display:flex; gap: 12px; align-items:center; margin-bottom: 14px; }
+  .badge-hot { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: var(--grad); color:#fff; font-family:'Outfit'; font-weight:800; font-size: 22px; padding: 10px 22px; border-radius: 999px; box-shadow: 0 12px 30px rgba(124,58,237,.5); }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px; margin-top: 30px; }
+  .stat .num { font-family:'Outfit'; font-weight: 900; font-size: 110px; line-height: 1; letter-spacing: -2px; }
+  .stat .lbl { color: var(--muted); font-size: 26px; margin-top: 14px; }
+
+  /* CTA */
+  .cta-btn { display:inline-flex; align-items:center; gap:18px; margin-top: 54px; background: var(--grad); color:#fff; font-family:'Outfit'; font-weight: 800; font-size: 40px; padding: 30px 60px; border-radius: 22px; box-shadow: 0 24px 70px rgba(236,72,153,.45); animation: pulse 2.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ transform: scale(1) } 50%{ transform: scale(1.04) } }
+  .url { margin-top: 40px; font-family:'Outfit'; font-weight: 700; font-size: 38px; letter-spacing: .5px; }
+
+  /* contrôles (non enregistrés) */
+  .controls { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100; display:flex; gap:10px; }
+  .controls button { background: rgba(255,255,255,.08); color:#cdd6ea; border: 1px solid rgba(255,255,255,.18); padding: 10px 18px; border-radius: 10px; font: 600 14px Inter, sans-serif; cursor: pointer; backdrop-filter: blur(6px); }
+  .controls button:hover { background: rgba(255,255,255,.16); }
+  .hint { position: fixed; top: 14px; right: 16px; z-index: 100; color:#7c89a6; font: 500 12px Inter; opacity:.7; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="stage" id="stage">
+      <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+      <div class="grid-overlay"></div>
+      <div class="progress" id="progress"></div>
+
+      <div class="brandmark">
+        <span class="dot">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="#fff"/></svg>
+        </span>
+        <span class="txt">Oculo<span class="grad-text">SaaS</span></span>
+      </div>
+
+      <!-- SCENE 1 — Intro -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <div class="logo-xl popin">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg>
+          </div>
+          <h1 class="title anim d2">Oculo<span class="grad-text">SaaS</span></h1>
+          <p class="lede anim d4">La plateforme tout-en-un pour optiques &amp; cliniques d'Afrique de l'Ouest</p>
+        </div>
+      </section>
+
+      <!-- SCENE 2 — Hook -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <span class="kicker anim d1"><span class="line"></span> Le problème</span>
+          <h2 class="head anim d2" style="margin-top:34px">Gérer une optique &amp; une clinique,<br/>c'est <span style="color:var(--orange)">trop d'outils dispersés.</span></h2>
+          <p class="lede anim d4">Caisse, stocks, patients, paiements, comptabilité… éparpillés.</p>
+        </div>
+      </section>
+
+      <!-- SCENE 3 — Solution -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <span class="kicker anim d1"><span class="line"></span> La solution</span>
+          <h2 class="head anim d2" style="margin-top:34px">Tout votre métier,<br/><span class="grad-text">réuni en une plateforme.</span></h2>
+          <p class="lede anim d4">Moderne, rapide, accessible partout — sur tout appareil.</p>
+        </div>
+      </section>
+
+      <!-- SCENE 4 — Features -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <h2 class="head anim d1" style="font-size:74px">Des modules pensés pour <span class="grad-text">votre métier</span></h2>
+          <div class="grid4">
+            <div class="fcard anim d1"><div class="ic" style="background:linear-gradient(135deg,#8b5cf6,#d946ef)">${ICON_STORE}</div><h3>Caisse &amp; ventes</h3><p>Point de vente, devis, factures en temps réel.</p></div>
+            <div class="fcard anim d2"><div class="ic" style="background:linear-gradient(135deg,#0ea5e9,#22d3ee)">${ICON_STETH}</div><h3>Clinique</h3><p>Patients, consultations, rendez-vous, chirurgies.</p></div>
+            <div class="fcard anim d3"><div class="ic" style="background:linear-gradient(135deg,#10b981,#34d399)">${ICON_BOX}</div><h3>Stocks</h3><p>Montures, verres, alertes &amp; inventaire à jour.</p></div>
+            <div class="fcard anim d4"><div class="ic" style="background:linear-gradient(135deg,#f97316,#fbbf24)">${ICON_PHONE}</div><h3>Paiements</h3><p>Mobile Money &amp; cartes, encaissement intégré.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 5 — Paiements -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <span class="kicker anim d1"><span class="line"></span> Encaissez partout</span>
+          <h2 class="head anim d2" style="margin-top:30px">Tous les moyens de paiement,<br/><span class="cyan-text">sécurisés via PayTech.</span></h2>
+          <div class="pills">
+            <span class="pill popin" style="background:#1DC9FF;color:#003049;animation-delay:.2s">Wave</span>
+            <span class="pill popin" style="background:#FF7900;color:#fff;animation-delay:.35s">Orange Money</span>
+            <span class="pill popin" style="background:#CD1A2B;color:#fff;animation-delay:.5s">Free Money</span>
+            <span class="pill popin" style="background:#00A94F;color:#fff;animation-delay:.65s">Wizall</span>
+            <span class="pill card popin" style="color:#1A1F71;animation-delay:.8s">VISA</span>
+            <span class="pill card popin" style="animation-delay:.95s"><svg viewBox="0 0 36 22" style="height:34px"><circle cx="14" cy="11" r="10" fill="#EB001B"/><circle cx="22" cy="11" r="10" fill="#F79E1B" fill-opacity=".9"/></svg><span style="color:#1A1F71;font-size:26px">Mastercard</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 6 — Pricing -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <h2 class="head anim d1" style="font-size:74px">Des tarifs <span class="grad-text">clairs &amp; accessibles</span></h2>
+          <div class="plans">
+            <div class="plan anim d1">
+              <div class="pname">Découverte</div>
+              <div class="price">2 500 <small>FCFA/mois</small></div>
+              <div class="feat">${ICON_CHECK} 14 jours d'essai gratuit</div>
+              <div class="feat">${ICON_CHECK} Fonctions essentielles</div>
+            </div>
+            <div class="plan hot anim d2">
+              <span class="badge-hot">Le plus populaire</span>
+              <div class="pname">Standard</div>
+              <div class="price">12 000 <small>FCFA/mois</small></div>
+              <div class="feat">${ICON_CHECK} Gestion complète</div>
+              <div class="feat">${ICON_CHECK} Jusqu'à 10 utilisateurs</div>
+            </div>
+            <div class="plan anim d3">
+              <div class="pname">Premium</div>
+              <div class="price">23 000 <small>FCFA/mois</small></div>
+              <div class="feat">${ICON_CHECK} Multi-agences illimité</div>
+              <div class="feat">${ICON_CHECK} Rapports avancés</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 7 — Stats -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <h2 class="head anim d1" style="font-size:70px">Conçu pour <span class="grad-text">la performance</span></h2>
+          <div class="stats">
+            <div class="stat anim d1"><div class="num grad-text"><span data-count="14">0</span> j</div><div class="lbl">d'essai gratuit</div></div>
+            <div class="stat anim d2"><div class="num cyan-text"><span data-count="5">0</span>+</div><div class="lbl">moyens de paiement</div></div>
+            <div class="stat anim d3"><div class="num grad-text"><span data-count="100">0</span> %</div><div class="lbl">web &amp; responsive</div></div>
+            <div class="stat anim d4"><div class="num cyan-text">24/7</div><div class="lbl">accès à vos données</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENE 8 — CTA -->
+      <section class="scene" data-scene>
+        <div class="scene__inner">
+          <div class="logo-xl popin" style="width:120px;height:120px;border-radius:32px;margin-bottom:30px"><svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg></div>
+          <h2 class="head anim d1" style="font-size:104px">Démarrez <span class="grad-text">gratuitement.</span></h2>
+          <p class="lede anim d2">14 jours d'essai · sans carte bancaire · sans engagement</p>
+          <div class="anim d3"><span class="cta-btn">Créer mon compte ${ICON_ARROW}</span></div>
+          <div class="url anim d4 grad-text">exquisite-cobbler-127461.netlify.app</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">Astuce : clique « Télécharger la vidéo », choisis « Cet onglet », et laisse jouer un tour</div>
+  <div class="controls" id="controls">
+    <button id="replay">↻ Rejouer</button>
+    <button id="toggle">⏸ Pause</button>
+    <button id="download" style="background:linear-gradient(120deg,#7c3aed,#ec4899);color:#fff;border-color:transparent;font-weight:700">⬇ Télécharger la vidéo</button>
+  </div>
+  <div id="recordMsg" style="position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:100;color:#fff;font:600 14px Inter;background:rgba(0,0,0,.6);padding:8px 16px;border-radius:10px;display:none"></div>
+
+<script>
+  // ---- Icônes (injectées dans le HTML ci-dessus via remplacement) ----
+  const ICONS = {
+    ICON_STORE: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1-5h16l1 5M4 9v11h16V9M4 9h16"/></svg>',
+    ICON_STETH: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v6a4 4 0 008 0V3M9 3H5m8 0h-2m1 11v3a4 4 0 008 0v-2"/><circle cx="19" cy="13" r="2"/></svg>',
+    ICON_BOX: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"/></svg>',
+    ICON_PHONE: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
+    ICON_CHECK: '<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3" style="width:26px;height:26px;flex:none"><path d="M5 13l4 4L19 7"/></svg>',
+    ICON_ARROW: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="width:36px;height:36px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  };
+  document.getElementById('stage').innerHTML = document.getElementById('stage').innerHTML
+    .replace(/\$\{(ICON_[A-Z]+)\}/g, (_, k) => ICONS[k] || '');
+
+  // ---- Mise à l'échelle 16:9 ----
+  function fit() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.getElementById('stage').style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  // ---- Timeline (boucle rAF unique, pause fiable) ----
+  const scenes = [...document.querySelectorAll('[data-scene]')];
+  const DUR = [4200, 4600, 4600, 6200, 5400, 6200, 4600, 6000]; // ms par scène
+  const TOTAL = DUR.reduce((a, b) => a + b, 0);
+  const OFFSET = DUR.map((_, k) => DUR.slice(0, k).reduce((a, b) => a + b, 0));
+  const progress = document.getElementById('progress');
+
+  let cur = -1;            // scène affichée
+  let sceneStart = 0;      // timestamp de début de la scène courante
+  let paused = false;
+  let pauseStart = 0;
+
+  function countUp(scene) {
+    scene.querySelectorAll('[data-count]').forEach(el => {
+      const target = +el.dataset.count, t0 = performance.now(), d = 1400;
+      (function tick(now) {
+        const p = Math.min(1, (now - t0) / d);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(tick);
+      })(t0);
+    });
+  }
+  function showScene(n, now) {
+    scenes.forEach((s, idx) => s.classList.toggle('scene--active', idx === n));
+    countUp(scenes[n]);
+    cur = n; sceneStart = now;
+  }
+
+  function frame(now) {
+    if (paused) { requestAnimationFrame(frame); return; }
+    let inScene = now - sceneStart;
+    if (inScene >= DUR[cur]) {                 // passer à la scène suivante
+      const next = (cur + 1) % scenes.length;
+      showScene(next, now);
+      inScene = 0;
+    }
+    const elapsedTotal = OFFSET[cur] + Math.min(inScene, DUR[cur]);
+    progress.style.width = (elapsedTotal / TOTAL * 100) + '%';
+    requestAnimationFrame(frame);
+  }
+
+  function play() {
+    const now = performance.now();
+    showScene(0, now);
+    progress.style.width = '0%';
+  }
+
+  document.getElementById('replay').onclick = () => { paused = false; document.getElementById('toggle').textContent = '⏸ Pause'; play(); };
+  document.getElementById('toggle').onclick = (e) => {
+    paused = !paused;
+    if (paused) { pauseStart = performance.now(); }
+    else { sceneStart += performance.now() - pauseStart; } // décale pour ignorer la pause
+    e.target.textContent = paused ? '▶ Lire' : '⏸ Pause';
+  };
+
+  play();
+  requestAnimationFrame(frame);
+
+  // ---- Enregistrement → téléchargement (MP4 si supporté, sinon WebM) ----
+  const recordMsg = document.getElementById('recordMsg');
+  const controlsEl = document.getElementById('controls');
+  const hintEl = document.getElementById('hint');
+
+  async function recordVideo() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert("Ton navigateur ne supporte pas l'enregistrement. Utilise Chrome/Edge récent, ou enregistre l'écran (Win+Alt+R / OBS).");
+      return;
+    }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30, width: 1920, height: 1080 },
+        audio: false,
+        preferCurrentTab: true,
+      });
+    } catch (e) { return; } // annulé par l'utilisateur
+
+    // Choix du format : MP4 (H.264) si dispo, sinon WebM.
+    const candidates = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    const mime = candidates.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || 'video/webm';
+    const ext = mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm';
+
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 10_000_000 });
+    const chunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(chunks, { type: mime });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'oculosaas-promo.' + ext;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      controlsEl.style.display = ''; hintEl.style.display = '';
+      recordMsg.textContent = '✅ Vidéo téléchargée (' + ext.toUpperCase() + ')';
+      setTimeout(() => { recordMsg.style.display = 'none'; }, 4000);
+    };
+
+    // Si l'utilisateur arrête le partage manuellement, on finalise proprement.
+    stream.getVideoTracks()[0].addEventListener('ended', () => { if (rec.state !== 'inactive') rec.stop(); });
+
+    // Masque les contrôles pendant la capture, relance l'anim, enregistre 1 tour.
+    controlsEl.style.display = 'none'; hintEl.style.display = 'none';
+    paused = false; document.getElementById('toggle').textContent = '⏸ Pause';
+    play();
+    rec.start();
+    recordMsg.style.display = 'block';
+    let left = Math.ceil((TOTAL + 800) / 1000);
+    recordMsg.textContent = '● Enregistrement… ' + left + 's';
+    const iv = setInterval(() => { left--; recordMsg.textContent = '● Enregistrement… ' + left + 's'; if (left <= 0) clearInterval(iv); }, 1000);
+    setTimeout(() => { if (rec.state !== 'inactive') rec.stop(); }, TOTAL + 800);
+  }
+
+  document.getElementById('download').onclick = recordVideo;
+</script>
+</body>
+</html>
