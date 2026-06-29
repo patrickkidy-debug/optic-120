@@ -273,7 +273,8 @@ export async function addPayment(
     currency: sale.currency,
     method: data.method,
     customerName,
-    customerPhone: data.customerPhone,
+    customerPhone: data.customerPhone ?? sale.customer?.phone ?? undefined,
+    customerEmail: sale.customer?.email ?? undefined,
     saleNumber: sale.number,
   });
 

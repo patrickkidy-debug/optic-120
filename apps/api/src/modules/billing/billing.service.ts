@@ -186,6 +186,12 @@ async function initiateInvoicePayment(
   if (invoice.status === SubInvoiceStatus.PAID) throw conflict('Facture déjà payée');
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  // Contact de facturation : email du compte le plus ancien (propriétaire).
+  const owner = await prisma.user.findFirst({
+    where: { tenantId },
+    orderBy: { createdAt: 'asc' },
+    select: { email: true },
+  });
 
   const payment = await prisma.subscriptionPayment.create({
     data: {
@@ -206,6 +212,7 @@ async function initiateInvoicePayment(
     method,
     customerName: tenant?.name ?? 'Abonné OculoSaaS',
     customerPhone,
+    customerEmail: owner?.email ?? undefined,
     saleNumber: invoice.number,
   });
 

@@ -6,8 +6,7 @@ import { getPaymentConfig, savePaymentConfig } from '../../features/settings/api
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Field, Badge, PageLoader } from '../../components/ui';
-
-const PROVIDERS = ['Orange Money', 'Wave', 'MTN MoMo', 'Moov Money', 'Free Money', 'Visa', 'Mastercard'];
+import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 
 export function PaymentsPage() {
   const qc = useQueryClient();
@@ -51,7 +50,7 @@ export function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="Paiements — CinetPay" subtitle="Mobile Money & cartes pour l'Afrique de l'Ouest" />
+      <PageHeader title="Paiements — Moneroo" subtitle="Mobile Money & cartes pour l'Afrique de l'Ouest" />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
@@ -60,7 +59,7 @@ export function PaymentsPage() {
               <CreditCard className="h-5 w-5" />
             </span>
             <div>
-              <h3 className="font-display font-bold text-content">Configuration CinetPay</h3>
+              <h3 className="font-display font-bold text-content">Configuration Moneroo</h3>
               <p className="text-xs text-content-muted">
                 {config.simulationMode ? 'Mode simulation actif' : 'Mode production'}
               </p>
@@ -86,41 +85,31 @@ export function PaymentsPage() {
               </button>
             </div>
 
-            <Field label="API Key">
+            <Field label="Clé secrète Moneroo">
               <input
                 className="input"
                 type="password"
-                placeholder={config.apiKeySet ? '•••••••• (laisser vide pour conserver)' : 'Votre clé API CinetPay'}
+                placeholder={config.apiKeySet ? '•••••••• (laisser vide pour conserver)' : 'Votre clé secrète Moneroo'}
                 value={form.apiKey}
                 disabled={!canUpdate}
                 onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Site ID">
-                <input
-                  className="input"
-                  value={form.siteId}
-                  disabled={!canUpdate}
-                  onChange={(e) => setForm((f) => ({ ...f, siteId: e.target.value }))}
-                />
-              </Field>
-              <Field label="Environnement">
-                <select
-                  className="input"
-                  value={form.environment}
-                  disabled={!canUpdate}
-                  onChange={(e) => setForm((f) => ({ ...f, environment: e.target.value as 'sandbox' | 'production' }))}
-                >
-                  <option value="sandbox">Sandbox</option>
-                  <option value="production">Production</option>
-                </select>
-              </Field>
-            </div>
-            <Field label="URL de webhook (notify_url)">
+            <Field label="Environnement">
+              <select
+                className="input"
+                value={form.environment}
+                disabled={!canUpdate}
+                onChange={(e) => setForm((f) => ({ ...f, environment: e.target.value as 'sandbox' | 'production' }))}
+              >
+                <option value="sandbox">Sandbox (test)</option>
+                <option value="production">Production</option>
+              </select>
+            </Field>
+            <Field label="URL de retour / webhook">
               <input
                 className="input"
-                placeholder="https://votre-domaine/webhooks/cinetpay"
+                placeholder="https://votre-domaine/webhooks/moneroo"
                 value={form.webhookUrl}
                 disabled={!canUpdate}
                 onChange={(e) => setForm((f) => ({ ...f, webhookUrl: e.target.value }))}
@@ -148,14 +137,7 @@ export function PaymentsPage() {
             <Smartphone className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-content">Moyens acceptés</h3>
           </div>
-          <div className="space-y-2">
-            {PROVIDERS.map((p) => (
-              <div key={p} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
-                <span className="text-content">{p}</span>
-                <CheckCircle2 className="h-4 w-4 text-success" />
-              </div>
-            ))}
-          </div>
+          <PaymentMethodLogos />
           <p className="mt-4 text-xs text-content-faint">
             Devises : XOF (FCFA) · XAF. En mode simulation, les paiements mobiles se confirment manuellement.
           </p>

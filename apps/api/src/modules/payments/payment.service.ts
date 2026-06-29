@@ -2,11 +2,11 @@ import { PaymentStatus, SaleStatus } from '@oculo/shared-types';
 import type { PaymentConfigInput } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { encryptSecret, decryptSecret } from '../../lib/crypto.js';
-import { env } from '../../config/env.js';
+import { env, appOrigin } from '../../config/env.js';
 import { logger } from '../../lib/logger.js';
 import type { PaymentProvider } from './payment-provider.interface.js';
 import { SimulatedPaymentProvider } from './providers/simulated.provider.js';
-import { CinetPayProvider } from './providers/cinetpay.provider.js';
+import { MonerooProvider } from './providers/moneroo.provider.js';
 
 interface StoredPaymentConfig {
   apiKeyEnc?: string;
@@ -77,14 +77,15 @@ export async function savePaymentConfig(tenantId: string, input: PaymentConfigIn
 /** Choisit le fournisseur selon la config : simulation par défaut. */
 export async function resolveProvider(tenantId: string): Promise<PaymentProvider> {
   const c = await resolvePaymentConfig(tenantId);
-  if (c.simulationMode || !c.apiKey || !c.siteId) {
+  // Moneroo n'exige qu'une clé secrète (pas de siteId).
+  if (c.simulationMode || !c.apiKey) {
     return new SimulatedPaymentProvider();
   }
-  return new CinetPayProvider({
-    apiKey: c.apiKey,
-    siteId: c.siteId,
-    baseUrl: env.CINETPAY_BASE_URL,
-    notifyUrl: c.webhookUrl || undefined,
+  return new MonerooProvider({
+    secretKey: c.apiKey,
+    baseUrl: env.MONEROO_BASE_URL,
+    returnUrl: c.webhookUrl || `${appOrigin}/optique/caisse`,
+    webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
   });
 }
 

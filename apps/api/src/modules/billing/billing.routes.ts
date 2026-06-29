@@ -82,17 +82,18 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
-/** Webhook public pour les paiements d'abonnement (préfixe /webhooks). */
+/** Webhook public Moneroo pour les paiements d'abonnement (préfixe /webhooks). */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/cinetpay-subscription', async (req, reply) => {
-    const body = (req.body ?? {}) as { cpm_trans_id?: string; providerRef?: string };
-    const providerRef = body.cpm_trans_id ?? body.providerRef;
+  app.post('/moneroo-subscription', async (req, reply) => {
+    const body = (req.body ?? {}) as { data?: { id?: string }; providerRef?: string };
+    const providerRef = body.data?.id ?? body.providerRef;
     if (!providerRef) return reply.status(400).send({ error: 'providerRef manquant' });
     const payment = await billing.findPaymentByProviderRef(providerRef);
     if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
+    // Statut authentique re-vérifié côté serveur (corps du webhook non fiable).
     const provider = resolvePlatformProvider();
-    const result = await provider.handleWebhook(req.body);
-    await billing.settleSubscriptionPayment(payment.id, result.status, result.raw);
+    const verified = await provider.verifyPayment(providerRef);
+    await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
     return reply.send({ ok: true });
   });
 }

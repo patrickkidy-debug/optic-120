@@ -7,6 +7,8 @@ export interface InitiatePaymentInput {
   method: PaymentMethod;
   customerName: string;
   customerPhone?: string;
+  /** Email du client — requis par certaines passerelles (Moneroo). */
+  customerEmail?: string;
   saleNumber: string;
 }
 
@@ -32,7 +34,7 @@ export interface WebhookResult {
 
 /**
  * Contrat d'abstraction des fournisseurs de paiement. Permet de brancher
- * indifféremment la simulation (dev / pas de clés) ou CinetPay réel sans
+ * indifféremment la simulation (dev / pas de clés) ou Moneroo réel sans
  * toucher au flux de vente.
  */
 export interface PaymentProvider {

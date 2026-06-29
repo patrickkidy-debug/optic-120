@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
+import { PaymentMethodLogos } from '../components/PaymentMethodLogos';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale)
@@ -472,6 +473,14 @@ export function LandingPage() {
               <Smartphone className="h-4 w-4 text-primary" /> Paiement Mobile Money intégré
             </span>
           </p>
+
+          {/* Moyens de paiement acceptés (via Moneroo) */}
+          <div className="mt-10 flex flex-col items-center gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
+              Paiement sécurisé via Moneroo
+            </p>
+            <PaymentMethodLogos className="justify-center" />
+          </div>
         </section>
 
         {/* ---------- FAQ ---------- */}

@@ -1,25 +1,26 @@
-import { env } from '../../config/env.js';
+import { env, appOrigin } from '../../config/env.js';
 import type { PaymentProvider } from '../payments/payment-provider.interface.js';
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
-import { CinetPayProvider } from '../payments/providers/cinetpay.provider.js';
+import { MonerooProvider } from '../payments/providers/moneroo.provider.js';
 
 /**
  * Fournisseur de paiement de la PLATEFORME (l'éditeur SaaS encaisse les
- * abonnements). Utilise les clés CinetPay globales (env) ; bascule en
- * simulation tant qu'elles ne sont pas configurées. Distinct du provider des
- * ventes, qui encaisse pour le compte du tenant.
+ * abonnements via Moneroo). Utilise la clé secrète Moneroo globale (env) ;
+ * bascule en simulation tant qu'elle n'est pas configurée. Distinct du provider
+ * des ventes, qui encaisse pour le compte du tenant.
  */
 export function resolvePlatformProvider(): PaymentProvider {
-  if (env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID) {
-    return new CinetPayProvider({
-      apiKey: env.CINETPAY_API_KEY,
-      siteId: env.CINETPAY_SITE_ID,
-      baseUrl: env.CINETPAY_BASE_URL,
+  if (env.MONEROO_SECRET_KEY) {
+    return new MonerooProvider({
+      secretKey: env.MONEROO_SECRET_KEY,
+      baseUrl: env.MONEROO_BASE_URL,
+      returnUrl: `${appOrigin}/parametres/abonnement`,
+      webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
     });
   }
   return new SimulatedPaymentProvider();
 }
 
 export function isPlatformSimulation(): boolean {
-  return !(env.CINETPAY_API_KEY && env.CINETPAY_SITE_ID);
+  return !env.MONEROO_SECRET_KEY;
 }

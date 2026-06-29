@@ -25,6 +25,7 @@ import { useAuthStore, usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Badge, PageLoader } from '../../components/ui';
+import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
   TRIALING: { label: "Période d'essai", tone: 'info' },
@@ -259,6 +260,13 @@ function BillingPaymentModal({
       target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
+      // Moneroo : redirection vers le checkout hébergé, puis on attend la
+      // confirmation par webhook (polling du statut en arrière-plan).
+      if (res.redirectUrl) {
+        window.open(res.redirectUrl, '_blank', 'noopener');
+        setPhase('pending');
+        return;
+      }
       setPhase(res.status === 'SUCCESS' ? 'done' : 'pending');
     },
     onError: (e) => setError(apiErrorMessage(e)),
@@ -299,13 +307,20 @@ function BillingPaymentModal({
             ))}
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+          <div className="mt-4 border-t pt-3">
+            <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
+            <PaymentMethodLogos />
+          </div>
         </>
       )}
 
       {phase === 'pending' && (
         <div className="py-6 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-          <p className="mt-3 text-sm text-content-muted">En attente de confirmation du paiement…</p>
+          <p className="mt-3 text-sm text-content-muted">
+            Finalisez le paiement dans l’onglet Moneroo, puis revenez ici. Confirmation
+            automatique en cours…
+          </p>
           {paymentId && (
             <Button variant="outline" className="mt-4" onClick={() => void simulateBillingPayment(paymentId)}>
               Simuler la confirmation

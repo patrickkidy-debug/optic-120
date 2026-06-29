@@ -46,6 +46,12 @@ const envSchema = z.object({
   CINETPAY_BASE_URL: z.string().default('https://api-checkout.cinetpay.com/v2'),
   CINETPAY_WEBHOOK_SECRET: z.string().optional().default(''),
 
+  // Moneroo — passerelle de paiement (Mobile Money + cartes) Afrique.
+  // Clé secrète de la plateforme (encaissement des abonnements).
+  MONEROO_SECRET_KEY: z.string().optional().default(''),
+  MONEROO_BASE_URL: z.string().default('https://api.moneroo.io/v1'),
+  MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
+
   // Emails des opérateurs de la plateforme (console SaaS cross-tenant), séparés par des virgules.
   PLATFORM_ADMIN_EMAILS: z.string().optional().default(''),
 });
