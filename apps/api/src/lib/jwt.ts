@@ -27,3 +27,22 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenClaim
     roleId: String(payload.roleId),
   };
 }
+
+/**
+ * Jeton court (5 min) émis après le mot de passe quand la 2FA est active.
+ * Échangé contre une vraie session une fois le code TOTP validé.
+ */
+export async function signTwoFactorChallenge(userId: string): Promise<string> {
+  return new SignJWT({ typ: '2fa' })
+    .setProtectedHeader({ alg: ALG })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(secret);
+}
+
+export async function verifyTwoFactorChallenge(token: string): Promise<string> {
+  const { payload } = await jwtVerify(token, secret, { algorithms: [ALG] });
+  if (payload.typ !== '2fa') throw new Error('Jeton 2FA invalide');
+  return String(payload.sub);
+}

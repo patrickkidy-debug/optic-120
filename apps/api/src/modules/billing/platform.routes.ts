@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma.js';
 import { env } from '../../config/env.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
+import * as support from '../support/support.service.js';
 
 function operatorEmails(): Set<string> {
   return new Set(
@@ -37,6 +38,19 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.get('/users', async (_req, reply) => {
     const users = await billing.listAllUsers();
     return reply.send({ users });
+  });
+
+  // Tickets de support (console fondateur).
+  app.get('/support', async (_req, reply) => {
+    return reply.send({ tickets: await support.listTickets() });
+  });
+
+  app.patch('/support/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { status } = (req.body ?? {}) as { status?: string };
+    const next = status === 'CLOSED' ? 'CLOSED' : 'OPEN';
+    const ticket = await support.setTicketStatus(id, next);
+    return reply.send({ ticket });
   });
 
   // Liste de tous les abonnements (cross-tenant).

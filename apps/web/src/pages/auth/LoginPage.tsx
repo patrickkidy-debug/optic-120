@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loginSchema, type LoginInput } from '@oculo/shared-types';
-import { login } from '../../features/auth/api';
+import { login, loginTwoFactor } from '../../features/auth/api';
 import { apiErrorMessage } from '../../lib/api';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field } from '../../components/ui';
@@ -13,6 +13,9 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const {
     register,
     handleSubmit,
@@ -22,11 +25,64 @@ export function LoginPage() {
   async function onSubmit(values: LoginInput) {
     setServerError('');
     try {
-      await login(values);
+      const res = await login(values);
+      if ('twoFactorRequired' in res) {
+        setChallenge(res.challenge);
+        return;
+      }
       navigate('/dashboard');
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Connexion impossible'));
     }
+  }
+
+  async function onVerify(e: React.FormEvent) {
+    e.preventDefault();
+    if (!challenge) return;
+    setServerError('');
+    setVerifying(true);
+    try {
+      await loginTwoFactor(challenge, code.trim());
+      navigate('/dashboard');
+    } catch (err) {
+      setServerError(apiErrorMessage(err, 'Code invalide'));
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  // Étape 2 : saisie du code de vérification (2FA).
+  if (challenge) {
+    return (
+      <AuthLayout title="Vérification en deux étapes" subtitle="Saisissez le code de votre application d'authentification">
+        <form onSubmit={onVerify} className="space-y-4">
+          <Field label="Code à 6 chiffres">
+            <input
+              className="input text-center text-2xl tracking-[0.4em]"
+              autoFocus
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="······"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+          </Field>
+          {serverError && (
+            <div className="rounded-xl bg-[color:var(--danger)]/12 px-3 py-2 text-sm text-danger">{serverError}</div>
+          )}
+          <Button type="submit" loading={verifying} disabled={code.length !== 6} className="w-full">
+            Vérifier
+          </Button>
+          <button
+            type="button"
+            onClick={() => { setChallenge(null); setCode(''); setServerError(''); }}
+            className="w-full text-center text-sm text-content-muted hover:text-content"
+          >
+            ← Retour
+          </button>
+        </form>
+      </AuthLayout>
+    );
   }
 
   return (

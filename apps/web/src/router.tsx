@@ -35,6 +35,7 @@ const ProfilePage = lazy(() => named(import('./pages/settings/ProfilePage'), 'Pr
 const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionPage'), 'SubscriptionPage'));
 const PlatformPage = lazy(() => named(import('./pages/platform/PlatformPage'), 'PlatformPage'));
 const NotFound = lazy(() => named(import('./pages/NotFound'), 'NotFound'));
+const SupportPage = lazy(() => named(import('./pages/SupportPage'), 'SupportPage'));
 const PatientsPage = lazy(() => named(import('./pages/clinic/PatientsPage'), 'PatientsPage'));
 const ConsultationsPage = lazy(() => named(import('./pages/clinic/ConsultationsPage'), 'ConsultationsPage'));
 const AppointmentsPage = lazy(() => named(import('./pages/clinic/AppointmentsPage'), 'AppointmentsPage'));
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
           { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
           { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
           { path: '/parametres/profil', element: <ProfilePage /> },
+          { path: '/aide', element: <SupportPage /> },
           { path: '/plateforme', element: perm('platform.manage', <PlatformPage />) },
 
           { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },

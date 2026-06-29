@@ -92,6 +92,8 @@ model User {
   lockedUntil      DateTime?
   resetTokenHash      String?
   resetTokenExpiresAt DateTime?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String? // secret TOTP chiffré (AES-256-GCM)
   preferences      Json? // { theme: 'light'|'dark'|'auto', locale: 'fr'|'en'|'pt', ... }
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -771,4 +773,19 @@ model SubscriptionPayment {
 
   @@index([tenantId])
   @@index([provider, providerRef])
+}
+
+model SupportTicket {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String   @default("OPEN") // OPEN | CLOSED
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tenantId])
 }

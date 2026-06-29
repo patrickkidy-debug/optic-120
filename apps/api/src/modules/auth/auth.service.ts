@@ -1,7 +1,9 @@
 import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
-import { signAccessToken } from '../../lib/jwt.js';
+import { signAccessToken, signTwoFactorChallenge, verifyTwoFactorChallenge } from '../../lib/jwt.js';
+import { generateTotpSecret, otpauthURL, qrDataUrl, verifyTotp } from '../../lib/totp.js';
+import { encryptSecret, decryptSecret } from '../../lib/crypto.js';
 import {
   generateRefreshToken,
   hashRefreshToken,
@@ -107,6 +109,9 @@ export interface SessionResult {
   user: AuthUser;
 }
 
+/** Résultat de login : soit une session, soit un défi 2FA à compléter. */
+export type LoginResult = SessionResult | { twoFactorRequired: true; challenge: string };
+
 /**
  * Inscription d'une nouvelle entreprise : crée le tenant, sa succursale par
  * défaut, clone les 12 rôles système (templates tenantId=null) avec leurs
@@ -193,7 +198,7 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
 }
 
 /** Connexion par email OU nom d'utilisateur + mot de passe, avec verrouillage. */
-export async function login(input: LoginInput, meta: RequestMeta): Promise<SessionResult> {
+export async function login(input: LoginInput, meta: RequestMeta): Promise<LoginResult> {
   const found = await prisma.user.findFirst({
     where: { OR: [{ email: input.identifier }, { username: input.identifier }] },
     include: USER_INCLUDE,
@@ -229,19 +234,101 @@ export async function login(input: LoginInput, meta: RequestMeta): Promise<Sessi
     throw unauthorized('Identifiants invalides');
   }
 
+  // Mot de passe correct : on réinitialise les compteurs d'échec.
   await prisma.user.update({
     where: { id: found.id },
-    data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() },
+    data: { failedLoginCount: 0, lockedUntil: null },
   });
-  await recordAudit({
-    tenantId: found.tenantId,
-    userId: found.id,
-    action: 'LOGIN_SUCCESS',
-    ...meta,
-  });
+
+  // 2FA active : on n'ouvre PAS de session ; on renvoie un défi à compléter.
+  if (found.twoFactorEnabled && found.twoFactorSecret) {
+    await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_2FA_REQUIRED', ...meta });
+    return { twoFactorRequired: true, challenge: await signTwoFactorChallenge(found.id) };
+  }
+
+  await prisma.user.update({ where: { id: found.id }, data: { lastLoginAt: new Date() } });
+  await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_SUCCESS', ...meta });
 
   const session = await issueSession(found, meta);
   return { ...session, user: buildAuthUser(found) };
+}
+
+/** 2ᵉ étape de connexion : valide le code TOTP et ouvre la session. */
+export async function loginTwoFactor(
+  challenge: string,
+  code: string,
+  meta: RequestMeta,
+): Promise<SessionResult> {
+  let userId: string;
+  try {
+    userId = await verifyTwoFactorChallenge(challenge);
+  } catch {
+    throw unauthorized('Session de vérification expirée. Reconnectez-vous.');
+  }
+  const found = await loadUser({ id: userId });
+  if (!found || !found.isActive || !found.twoFactorEnabled || !found.twoFactorSecret) {
+    throw unauthorized('Vérification 2FA impossible');
+  }
+  const secret = decryptSecret(found.twoFactorSecret);
+  if (!verifyTotp(code, secret)) {
+    await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_2FA_FAILED', ...meta });
+    throw unauthorized('Code de vérification invalide');
+  }
+  await prisma.user.update({ where: { id: found.id }, data: { lastLoginAt: new Date() } });
+  await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_SUCCESS', ...meta });
+  const session = await issueSession(found, meta);
+  return { ...session, user: buildAuthUser(found) };
+}
+
+/* ----------------------------- 2FA (TOTP) ----------------------------- */
+
+export async function getTwoFactorStatus(userId: string): Promise<{ enabled: boolean }> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { twoFactorEnabled: true } });
+  return { enabled: u?.twoFactorEnabled ?? false };
+}
+
+/** Génère un secret (non encore activé) et renvoie le QR à scanner. */
+export async function startTwoFactorSetup(
+  userId: string,
+): Promise<{ qrDataUrl: string; secret: string }> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw unauthorized();
+  const secret = generateTotpSecret();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { twoFactorSecret: encryptSecret(secret), twoFactorEnabled: false },
+  });
+  const url = otpauthURL(secret, user.email);
+  return { qrDataUrl: await qrDataUrl(url), secret };
+}
+
+/** Confirme l'activation après vérification d'un premier code. */
+export async function enableTwoFactor(userId: string, code: string, meta: RequestMeta): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.twoFactorSecret) throw badRequest("Configuration 2FA non initiée");
+  if (!verifyTotp(code, decryptSecret(user.twoFactorSecret))) throw badRequest('Code invalide');
+  await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
+  await recordAudit({ tenantId: user.tenantId, userId, action: '2FA_ENABLED', ...meta });
+}
+
+/** Désactive la 2FA (exige mot de passe + code valides). */
+export async function disableTwoFactor(
+  userId: string,
+  password: string,
+  code: string,
+  meta: RequestMeta,
+): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw unauthorized();
+  if (!(await verifyPassword(user.passwordHash, password))) throw badRequest('Mot de passe incorrect');
+  if (!user.twoFactorSecret || !verifyTotp(code, decryptSecret(user.twoFactorSecret))) {
+    throw badRequest('Code invalide');
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { twoFactorEnabled: false, twoFactorSecret: null },
+  });
+  await recordAudit({ tenantId: user.tenantId, userId, action: '2FA_DISABLED', ...meta });
 }
 
 /** Rotation du refresh token avec détection de rejeu (token volé). */

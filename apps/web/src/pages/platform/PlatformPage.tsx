@@ -12,6 +12,7 @@ import {
   Layers,
   UserPlus,
   Save,
+  LifeBuoy,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -24,6 +25,7 @@ import {
   updatePlatformPlan,
   type PlatformPlan,
 } from '../../features/billing/api';
+import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard } from '../../components/ui';
@@ -36,7 +38,7 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
 
-type Tab = 'subs' | 'users' | 'plans';
+type Tab = 'subs' | 'users' | 'plans' | 'support';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -89,6 +91,7 @@ export function PlatformPage() {
           { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
+          { id: 'support' as Tab, label: 'Support', icon: LifeBuoy },
         ].map((t) => (
           <button
             key={t.id}
@@ -108,6 +111,7 @@ export function PlatformPage() {
         {tab === 'subs' && <SubscriptionsTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'plans' && <PlansTab />}
+        {tab === 'support' && <SupportTab />}
       </div>
     </div>
   );
@@ -210,6 +214,47 @@ function UsersTab() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function SupportTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['platform-support'], queryFn: listSupportTickets });
+  const mut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'OPEN' | 'CLOSED' }) => setSupportTicketStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-support'] }),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0) return <EmptyState icon={LifeBuoy} title="Aucune demande de support" />;
+
+  return (
+    <div className="space-y-3">
+      {data.map((t) => (
+        <div key={t.id} className="card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-display font-bold text-content">{t.subject}</h4>
+                <Badge tone={t.status === 'CLOSED' ? 'neutral' : 'warning'}>
+                  {t.status === 'CLOSED' ? 'Résolu' : 'Ouvert'}
+                </Badge>
+              </div>
+              <div className="mt-0.5 text-xs text-content-faint">
+                {t.name} · {t.email} · {formatDateTime(t.createdAt)}
+              </div>
+            </div>
+            <button
+              onClick={() => mut.mutate({ id: t.id, status: t.status === 'CLOSED' ? 'OPEN' : 'CLOSED' })}
+              className="btn-outline h-8 rounded-lg px-3 text-xs"
+            >
+              {t.status === 'CLOSED' ? 'Rouvrir' : 'Marquer résolu'}
+            </button>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap text-sm text-content-muted">{t.message}</p>
+        </div>
+      ))}
     </div>
   );
 }

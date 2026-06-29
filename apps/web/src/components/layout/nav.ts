@@ -20,6 +20,7 @@ import {
   ScrollText,
   Crown,
   Server,
+  LifeBuoy,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -80,6 +81,7 @@ export const NAV: NavGroup[] = [
       { to: '/parametres/magasins', labelKey: 'nav.branches', icon: Store, permission: 'settings.branches.view' },
       { to: '/parametres/paiements', labelKey: 'nav.payments', icon: CreditCard, permission: 'settings.payments.view' },
       { to: '/parametres/journal', labelKey: 'nav.audit', icon: ScrollText, permission: 'audit.logs.view' },
+      { to: '/aide', labelKey: 'nav.support', icon: LifeBuoy },
     ],
   },
   {

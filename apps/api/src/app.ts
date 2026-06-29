@@ -23,6 +23,7 @@ import { managementRoutes } from './modules/management/management.routes.js';
 import { billingRoutes, billingWebhookRoutes } from './modules/billing/billing.routes.js';
 import { platformRoutes } from './modules/billing/platform.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
+import { supportRoutes } from './modules/support/support.routes.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: false, trustProxy: true });
@@ -69,6 +70,7 @@ export async function buildApp() {
   await app.register(billingWebhookRoutes, { prefix: '/webhooks' });
   await app.register(platformRoutes, { prefix: '/platform' });
   await app.register(settingsRoutes, { prefix: '/settings' });
+  await app.register(supportRoutes, { prefix: '/support' });
 
   return app;
 }

@@ -6,6 +6,9 @@ import {
   resetPasswordSchema,
   verifyPasswordSchema,
   profileUpdateSchema,
+  twoFactorEnableSchema,
+  twoFactorDisableSchema,
+  twoFactorLoginSchema,
 } from '@oculo/shared-types';
 import * as authService from './auth.service.js';
 import { REFRESH_COOKIE, setRefreshCookie, clearRefreshCookie } from './cookies.js';
@@ -31,7 +34,22 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/login', strictLimit, async (req, reply) => {
     const input = loginSchema.parse(req.body);
-    const { accessToken, refreshToken, user } = await authService.login(input, requestMeta(req));
+    const result = await authService.login(input, requestMeta(req));
+    if ('twoFactorRequired' in result) {
+      return reply.send({ twoFactorRequired: true, challenge: result.challenge });
+    }
+    setRefreshCookie(reply, result.refreshToken);
+    return reply.send({ accessToken: result.accessToken, user: result.user });
+  });
+
+  // 2ᵉ étape de connexion : code TOTP.
+  app.post('/2fa/login', strictLimit, async (req, reply) => {
+    const { challenge, code } = twoFactorLoginSchema.parse(req.body);
+    const { accessToken, refreshToken, user } = await authService.loginTwoFactor(
+      challenge,
+      code,
+      requestMeta(req),
+    );
     setRefreshCookie(reply, refreshToken);
     return reply.send({ accessToken, user });
   });
@@ -80,5 +98,26 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const { password } = verifyPasswordSchema.parse(req.body);
     const ok = await authService.verifyUserPassword(req.auth!.userId, password);
     return reply.send({ ok });
+  });
+
+  /* --- 2FA (compte connecté) --- */
+  app.get('/2fa', { preHandler: requireAuth }, async (req, reply) => {
+    return reply.send(await authService.getTwoFactorStatus(req.auth!.userId));
+  });
+
+  app.post('/2fa/setup', { preHandler: requireAuth }, async (req, reply) => {
+    return reply.send(await authService.startTwoFactorSetup(req.auth!.userId));
+  });
+
+  app.post('/2fa/enable', { preHandler: requireAuth }, async (req, reply) => {
+    const { code } = twoFactorEnableSchema.parse(req.body);
+    await authService.enableTwoFactor(req.auth!.userId, code, requestMeta(req));
+    return reply.send({ ok: true });
+  });
+
+  app.post('/2fa/disable', { preHandler: requireAuth }, async (req, reply) => {
+    const { password, code } = twoFactorDisableSchema.parse(req.body);
+    await authService.disableTwoFactor(req.auth!.userId, password, code, requestMeta(req));
+    return reply.send({ ok: true });
   });
 }

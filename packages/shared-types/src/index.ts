@@ -536,6 +536,31 @@ export const verifyPasswordSchema = z.object({
 });
 export type VerifyPasswordInput = z.infer<typeof verifyPasswordSchema>;
 
+/* --- 2FA (TOTP) --- */
+const totpCode = z.string().trim().regex(/^[0-9]{6}$/, 'Code à 6 chiffres');
+
+export const twoFactorEnableSchema = z.object({ code: totpCode });
+export type TwoFactorEnableInput = z.infer<typeof twoFactorEnableSchema>;
+
+export const twoFactorDisableSchema = z.object({
+  password: z.string().min(1),
+  code: totpCode,
+});
+export type TwoFactorDisableInput = z.infer<typeof twoFactorDisableSchema>;
+
+export const twoFactorLoginSchema = z.object({
+  challenge: z.string().min(10),
+  code: totpCode,
+});
+export type TwoFactorLoginInput = z.infer<typeof twoFactorLoginSchema>;
+
+/* --- Support --- */
+export const supportTicketSchema = z.object({
+  subject: z.string().trim().min(2).max(160),
+  message: z.string().trim().min(5).max(4000),
+});
+export type SupportTicketInput = z.infer<typeof supportTicketSchema>;
+
 export const productCategoryEnum = z.enum([
   ProductCategory.MONTURE,
   ProductCategory.VERRE,

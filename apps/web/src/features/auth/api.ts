@@ -7,10 +7,41 @@ interface AuthResponse {
   user: AuthUser;
 }
 
-export async function login(input: LoginInput): Promise<AuthUser> {
-  const { data } = await api.post<AuthResponse>('/auth/login', input);
+export type LoginOutcome = { twoFactorRequired: true; challenge: string } | { user: AuthUser };
+
+export async function login(input: LoginInput): Promise<LoginOutcome> {
+  const { data } = await api.post<AuthResponse & { twoFactorRequired?: boolean; challenge?: string }>(
+    '/auth/login',
+    input,
+  );
+  if (data.twoFactorRequired && data.challenge) {
+    return { twoFactorRequired: true, challenge: data.challenge };
+  }
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return { user: data.user };
+}
+
+/** 2ᵉ étape : valide le code TOTP et ouvre la session. */
+export async function loginTwoFactor(challenge: string, code: string): Promise<AuthUser> {
+  const { data } = await api.post<AuthResponse>('/auth/2fa/login', { challenge, code });
   useAuthStore.getState().setAuth(data.accessToken, data.user);
   return data.user;
+}
+
+/* --- Gestion 2FA (compte connecté) --- */
+export async function getTwoFactorStatus(): Promise<boolean> {
+  const { data } = await api.get<{ enabled: boolean }>('/auth/2fa');
+  return data.enabled;
+}
+export async function setupTwoFactor(): Promise<{ qrDataUrl: string; secret: string }> {
+  const { data } = await api.post<{ qrDataUrl: string; secret: string }>('/auth/2fa/setup');
+  return data;
+}
+export async function enableTwoFactor(code: string): Promise<void> {
+  await api.post('/auth/2fa/enable', { code });
+}
+export async function disableTwoFactor(password: string, code: string): Promise<void> {
+  await api.post('/auth/2fa/disable', { password, code });
 }
 
 export async function signup(input: SignupInput): Promise<AuthUser> {

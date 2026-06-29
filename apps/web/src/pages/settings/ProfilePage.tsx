@@ -1,14 +1,20 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
 import i18n from '../../lib/i18n';
 import { fileToResizedDataUrl } from '../../lib/image';
 import { apiErrorMessage } from '../../lib/api';
-import { updateProfile } from '../../features/auth/api';
+import {
+  updateProfile,
+  getTwoFactorStatus,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+} from '../../features/auth/api';
 import { getBranding, updateBranding } from '../../features/settings/api';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
@@ -265,7 +271,121 @@ export function ProfilePage() {
             </p>
           </div>
         )}
+
+        {/* Sécurité — Double authentification (2FA) */}
+        <div className="lg:col-span-3">
+          <TwoFactorCard />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function TwoFactorCard() {
+  const qc = useQueryClient();
+  const { data: enabled } = useQuery({ queryKey: ['2fa-status'], queryFn: getTwoFactorStatus });
+  const [phase, setPhase] = useState<'idle' | 'setup' | 'disable'>('idle');
+  const [qr, setQr] = useState('');
+  const [secret, setSecret] = useState('');
+  const [code, setCode] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ['2fa-status'] });
+  const reset = () => { setPhase('idle'); setQr(''); setSecret(''); setCode(''); setPwd(''); setErr(''); };
+
+  async function startSetup() {
+    setErr(''); setBusy(true);
+    try { const d = await setupTwoFactor(); setQr(d.qrDataUrl); setSecret(d.secret); setPhase('setup'); }
+    catch (e) { setErr(apiErrorMessage(e)); } finally { setBusy(false); }
+  }
+  async function confirmEnable() {
+    setErr(''); setBusy(true);
+    try { await enableTwoFactor(code.trim()); refresh(); reset(); }
+    catch (e) { setErr(apiErrorMessage(e)); } finally { setBusy(false); }
+  }
+  async function confirmDisable() {
+    setErr(''); setBusy(true);
+    try { await disableTwoFactor(pwd, code.trim()); refresh(); reset(); }
+    catch (e) { setErr(apiErrorMessage(e)); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <h3 className="font-display font-bold text-content">Double authentification (2FA)</h3>
+        </div>
+        <Badge tone={enabled ? 'success' : 'neutral'}>{enabled ? 'Activée' : 'Désactivée'}</Badge>
+      </div>
+
+      {phase === 'idle' && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-xl text-sm text-content-muted">
+            Ajoutez une couche de sécurité : un code à 6 chiffres généré par une application
+            (Google Authenticator, Authy…) sera demandé à chaque connexion.
+          </p>
+          {enabled ? (
+            <Button variant="outline" className="text-danger" onClick={() => setPhase('disable')}>
+              Désactiver
+            </Button>
+          ) : (
+            <Button onClick={startSetup} loading={busy}>Activer la 2FA</Button>
+          )}
+        </div>
+      )}
+
+      {phase === 'setup' && (
+        <div className="flex flex-wrap gap-6">
+          <div className="text-center">
+            {qr && <img src={qr} alt="QR 2FA" className="h-44 w-44 rounded-xl bg-white p-2" />}
+            <p className="mt-2 max-w-[200px] text-xs text-content-faint">
+              Scannez ce QR avec votre application d'authentification.
+            </p>
+          </div>
+          <div className="min-w-[240px] flex-1">
+            <p className="text-sm text-content-muted">Ou saisie manuelle de la clé :</p>
+            <code className="mt-1 block break-all rounded-lg bg-surface-2 p-2 text-xs text-content">{secret}</code>
+            <Field label="Code de vérification">
+              <input
+                className="input text-center text-xl tracking-[0.3em]"
+                inputMode="numeric" maxLength={6} placeholder="······"
+                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </Field>
+            {err && <p className="mt-1 text-sm text-danger">{err}</p>}
+            <div className="mt-3 flex gap-2">
+              <Button onClick={confirmEnable} loading={busy} disabled={code.length !== 6}>Activer</Button>
+              <Button variant="ghost" onClick={reset}>Annuler</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {phase === 'disable' && (
+        <div className="max-w-sm space-y-3">
+          <p className="text-sm text-content-muted">Confirmez avec votre mot de passe et un code 2FA.</p>
+          <Field label="Mot de passe">
+            <input className="input" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+          </Field>
+          <Field label="Code 2FA">
+            <input
+              className="input text-center text-xl tracking-[0.3em]"
+              inputMode="numeric" maxLength={6} placeholder="······"
+              value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+          </Field>
+          {err && <p className="text-sm text-danger">{err}</p>}
+          <div className="flex gap-2">
+            <Button className="text-danger" variant="outline" onClick={confirmDisable} loading={busy} disabled={!pwd || code.length !== 6}>
+              Désactiver la 2FA
+            </Button>
+            <Button variant="ghost" onClick={reset}>Annuler</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
