@@ -105,7 +105,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: 'Créez votre compte',
-    text: 'Inscrivez votre établissement en 2 minutes et profitez de 14 jours d’essai gratuit.',
+    text: 'Inscrivez votre établissement en 2 minutes et profitez de 5 jours d’essai gratuit.',
   },
   {
     icon: Users,
@@ -120,7 +120,7 @@ const STEPS = [
 ];
 
 const STATS = [
-  { value: '14 j', label: 'd’essai gratuit' },
+  { value: '5 j', label: 'd’essai gratuit' },
   { value: '5+', label: 'opérateurs Mobile Money' },
   { value: '100 %', label: 'web & responsive' },
   { value: '24/7', label: 'accès à vos données' },
@@ -133,7 +133,7 @@ const FAQ = [
   },
   {
     q: 'Puis-je essayer gratuitement ?',
-    a: 'Oui, vous bénéficiez de 14 jours d’essai gratuit sur l’offre Découverte, sans engagement et sans carte bancaire.',
+    a: 'Oui, vous bénéficiez de 5 jours d’essai gratuit sur l’offre Découverte, sans engagement et sans carte bancaire.',
   },
   {
     q: 'Mes données sont-elles en sécurité ?',
@@ -551,7 +551,7 @@ export function LandingPage() {
             <Reveal delay={320}>
               <p className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-content-faint">
                 <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-success" /> 14 jours d’essai gratuit
+                  <Check className="h-3.5 w-3.5 text-success" /> 5 jours d’essai gratuit
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5 text-success" /> Sans carte bancaire
@@ -874,7 +874,7 @@ export function LandingPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/90">
                 Rejoignez les optiques et cliniques qui digitalisent leur gestion avec OculoSaaS.
-                Essai gratuit de 14 jours, sans engagement.
+                Essai gratuit de 5 jours, sans engagement.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link

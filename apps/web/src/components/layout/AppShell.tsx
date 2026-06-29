@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { TrialBanner } from '../TrialBanner';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
@@ -54,6 +55,7 @@ export function AppShell() {
 
       <div className="lg:pl-64">
         <Topbar />
+        <TrialBanner />
         <main className="mx-auto max-w-7xl animate-fade-in px-4 py-6 sm:px-6">
           <Suspense fallback={<PageLoader />}>
             <Outlet />

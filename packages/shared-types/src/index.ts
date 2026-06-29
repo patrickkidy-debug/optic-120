@@ -176,7 +176,7 @@ export const PLAN_CATALOG: PlanDef[] = [
     name: 'Découverte',
     description: "Offre d'essai pour démarrer avec les fonctionnalités essentielles.",
     priceMonthly: 2500,
-    trialDays: 14,
+    trialDays: 5,
     maxUsers: 2,
     maxBranches: 1,
     maxPatients: 50,
