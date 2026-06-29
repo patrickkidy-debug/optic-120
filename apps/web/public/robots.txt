@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+# Pages applicatives (privées, sans intérêt SEO)
+Disallow: /dashboard
+Disallow: /optique
+Disallow: /clinique
+Disallow: /gestion
+Disallow: /parametres
+Disallow: /plateforme
+Disallow: /aide
+
+Sitemap: https://oculosaas.com/sitemap.xml
