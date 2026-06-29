@@ -82,18 +82,18 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
-/** Webhook public Moneroo pour les paiements d'abonnement (préfixe /webhooks). */
+/** Webhook public PayTech (IPN) pour les paiements d'abonnement (/webhooks). */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/moneroo-subscription', async (req, reply) => {
-    const body = (req.body ?? {}) as { data?: { id?: string }; providerRef?: string };
-    const providerRef = body.data?.id ?? body.providerRef;
+  app.post('/paytech-subscription', async (req, reply) => {
+    const body = (req.body ?? {}) as { token?: string; ref_command?: string };
+    const providerRef = body.token ?? body.ref_command;
     if (!providerRef) return reply.status(400).send({ error: 'providerRef manquant' });
     const payment = await billing.findPaymentByProviderRef(providerRef);
     if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
-    // Statut authentique re-vérifié côté serveur (corps du webhook non fiable).
+    // Le provider authentifie l'IPN (sha256 des clés) avant de renvoyer un statut.
     const provider = resolvePlatformProvider();
-    const verified = await provider.verifyPayment(providerRef);
-    await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+    const result = await provider.handleWebhook(req.body);
+    await billing.settleSubscriptionPayment(payment.id, result.status, result.raw);
     return reply.send({ ok: true });
   });
 }

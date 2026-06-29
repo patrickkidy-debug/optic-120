@@ -29,6 +29,20 @@ export async function buildApp() {
 
   app.setErrorHandler(errorHandler);
 
+  // PayTech envoie ses IPN en application/x-www-form-urlencoded : on les parse
+  // en objet (Fastify ne gère nativement que le JSON).
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string' },
+    (_req, body, done) => {
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(body as string)));
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    },
+  );
+
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: corsOrigins, credentials: true });
   await app.register(cookie);

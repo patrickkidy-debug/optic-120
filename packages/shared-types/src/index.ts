@@ -675,6 +675,7 @@ export type CashCloseInput = z.infer<typeof cashCloseSchema>;
 
 export const paymentConfigSchema = z.object({
   apiKey: z.string().optional().default(''),
+  apiSecret: z.string().optional().default(''),
   siteId: z.string().optional().default(''),
   environment: z.enum(['sandbox', 'production']).default('sandbox'),
   webhookUrl: z.string().optional().default(''),

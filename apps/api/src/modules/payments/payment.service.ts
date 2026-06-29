@@ -6,10 +6,11 @@ import { env, appOrigin } from '../../config/env.js';
 import { logger } from '../../lib/logger.js';
 import type { PaymentProvider } from './payment-provider.interface.js';
 import { SimulatedPaymentProvider } from './providers/simulated.provider.js';
-import { MonerooProvider } from './providers/moneroo.provider.js';
+import { PayTechProvider } from './providers/paytech.provider.js';
 
 interface StoredPaymentConfig {
   apiKeyEnc?: string;
+  apiSecretEnc?: string;
   siteId?: string;
   environment?: 'sandbox' | 'production';
   webhookUrl?: string;
@@ -18,6 +19,7 @@ interface StoredPaymentConfig {
 
 interface ResolvedConfig {
   apiKey: string;
+  apiSecret: string;
   siteId: string;
   environment: 'sandbox' | 'production';
   webhookUrl: string;
@@ -28,15 +30,24 @@ export async function resolvePaymentConfig(tenantId: string): Promise<ResolvedCo
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
   const cfg = (tenant?.paymentConfig as StoredPaymentConfig | null) ?? null;
   let apiKey = '';
+  let apiSecret = '';
   if (cfg?.apiKeyEnc) {
     try {
       apiKey = decryptSecret(cfg.apiKeyEnc);
     } catch (err) {
-      logger.error({ err }, 'Échec de déchiffrement de la clé CinetPay');
+      logger.error({ err }, 'Échec de déchiffrement de la clé API PayTech');
+    }
+  }
+  if (cfg?.apiSecretEnc) {
+    try {
+      apiSecret = decryptSecret(cfg.apiSecretEnc);
+    } catch (err) {
+      logger.error({ err }, 'Échec de déchiffrement de la clé secrète PayTech');
     }
   }
   return {
     apiKey,
+    apiSecret,
     siteId: cfg?.siteId ?? '',
     environment: cfg?.environment ?? 'sandbox',
     webhookUrl: cfg?.webhookUrl ?? '',
@@ -49,6 +60,7 @@ export async function getMaskedPaymentConfig(tenantId: string) {
   const c = await resolvePaymentConfig(tenantId);
   return {
     apiKeySet: c.apiKey.length > 0,
+    apiSecretSet: c.apiSecret.length > 0,
     siteId: c.siteId,
     environment: c.environment,
     webhookUrl: c.webhookUrl,
@@ -58,10 +70,12 @@ export async function getMaskedPaymentConfig(tenantId: string) {
 
 export async function savePaymentConfig(tenantId: string, input: PaymentConfigInput) {
   const current = await resolvePaymentConfig(tenantId);
-  // Si apiKey vide en entrée, conserver la clé existante.
+  // Si une clé est vide en entrée, conserver la valeur existante.
   const apiKey = input.apiKey ? input.apiKey : current.apiKey;
+  const apiSecret = input.apiSecret ? input.apiSecret : current.apiSecret;
   const stored: StoredPaymentConfig = {
     apiKeyEnc: apiKey ? encryptSecret(apiKey) : undefined,
+    apiSecretEnc: apiSecret ? encryptSecret(apiSecret) : undefined,
     siteId: input.siteId ?? '',
     environment: input.environment,
     webhookUrl: input.webhookUrl ?? '',
@@ -77,15 +91,19 @@ export async function savePaymentConfig(tenantId: string, input: PaymentConfigIn
 /** Choisit le fournisseur selon la config : simulation par défaut. */
 export async function resolveProvider(tenantId: string): Promise<PaymentProvider> {
   const c = await resolvePaymentConfig(tenantId);
-  // Moneroo n'exige qu'une clé secrète (pas de siteId).
-  if (c.simulationMode || !c.apiKey) {
+  // PayTech exige une clé API ET une clé secrète.
+  if (c.simulationMode || !c.apiKey || !c.apiSecret) {
     return new SimulatedPaymentProvider();
   }
-  return new MonerooProvider({
-    secretKey: c.apiKey,
-    baseUrl: env.MONEROO_BASE_URL,
-    returnUrl: c.webhookUrl || `${appOrigin}/optique/caisse`,
-    webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
+  const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
+  return new PayTechProvider({
+    apiKey: c.apiKey,
+    apiSecret: c.apiSecret,
+    env: c.environment === 'production' ? 'prod' : 'test',
+    baseUrl: env.PAYTECH_BASE_URL,
+    ipnUrl: apiBase ? `${apiBase}/webhooks/paytech` : undefined,
+    successUrl: `${appOrigin}/optique/caisse`,
+    cancelUrl: `${appOrigin}/optique/caisse`,
   });
 }
 

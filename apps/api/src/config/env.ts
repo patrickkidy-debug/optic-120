@@ -52,6 +52,16 @@ const envSchema = z.object({
   MONEROO_BASE_URL: z.string().default('https://api.moneroo.io/v1'),
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
+  // PayTech — passerelle de paiement (Wave, Orange Money, Free Money, cartes).
+  // Clés de la PLATEFORME (encaissement des abonnements). Tant que la clé API
+  // est vide → mode simulation.
+  PAYTECH_API_KEY: z.string().optional().default(''),
+  PAYTECH_API_SECRET: z.string().optional().default(''),
+  PAYTECH_ENV: z.enum(['test', 'prod']).default('prod'),
+  PAYTECH_BASE_URL: z.string().default('https://paytech.sn/api'),
+  // URL publique de l'API (pour les IPN PayTech). Ex : https://oculosaas-api.onrender.com
+  PUBLIC_API_URL: z.string().optional().default(''),
+
   // Emails des opérateurs de la plateforme (console SaaS cross-tenant), séparés par des virgules.
   PLATFORM_ADMIN_EMAILS: z.string().optional().default(''),
 });

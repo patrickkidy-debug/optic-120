@@ -477,7 +477,7 @@ export function LandingPage() {
           {/* Moyens de paiement acceptés (via Moneroo) */}
           <div className="mt-10 flex flex-col items-center gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
-              Paiement sécurisé via Moneroo
+              Paiement sécurisé via PayTech
             </p>
             <PaymentMethodLogos className="justify-center" />
           </div>

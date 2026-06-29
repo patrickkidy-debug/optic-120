@@ -62,22 +62,21 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
-/** Webhook public Moneroo (pas d'auth JWT, préfixe /webhooks). */
+/** Webhook public PayTech (IPN, pas d'auth JWT, préfixe /webhooks). */
 export async function paymentWebhookRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/moneroo', async (req, reply) => {
-    const body = (req.body ?? {}) as { data?: { id?: string }; providerRef?: string };
-    const providerRef = body.data?.id ?? body.providerRef;
+  app.post('/paytech', async (req, reply) => {
+    const body = (req.body ?? {}) as { token?: string; ref_command?: string };
+    const providerRef = body.token ?? body.ref_command;
     if (!providerRef) return reply.status(400).send({ error: 'providerRef manquant' });
 
     const payment = await paymentService.findPaymentByProviderRef(providerRef);
     if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
 
-    // SÉCURITÉ : on ne fait JAMAIS confiance au statut envoyé dans le corps du
-    // webhook (il est falsifiable). On ré-interroge Moneroo (API /verify) pour
-    // obtenir le statut authentique avant de créditer la vente.
+    // SÉCURITÉ : le provider authentifie l'IPN (sha256 des clés) avant de
+    // renvoyer un statut. Un IPN falsifié lève une erreur (non crédité).
     const provider = await paymentService.resolveProvider(payment.tenantId);
-    const verified = await provider.verifyPayment(providerRef);
-    await paymentService.settlePayment(payment.id, verified.status, verified.raw);
+    const result = await provider.handleWebhook(req.body);
+    await paymentService.settlePayment(payment.id, result.status, result.raw);
 
     return reply.send({ ok: true });
   });

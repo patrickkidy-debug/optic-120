@@ -19,9 +19,8 @@ interface BrandPill {
 const MOBILE_BRANDS: BrandPill[] = [
   { label: 'Wave', bg: '#1DC9FF', fg: '#003049' },
   { label: 'Orange Money', bg: '#FF7900', fg: '#ffffff' },
-  { label: 'MTN MoMo', bg: '#FFCC00', fg: '#1A1F71' },
-  { label: 'Moov Money', bg: '#0A4DA6', fg: '#ffffff' },
   { label: 'Free Money', bg: '#CD1A2B', fg: '#ffffff' },
+  { label: 'Wizall', bg: '#00A94F', fg: '#ffffff' },
 ];
 
 function Pill({ brand }: { brand: BrandPill }) {

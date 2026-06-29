@@ -308,7 +308,7 @@ function BillingPaymentModal({
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           <div className="mt-4 border-t pt-3">
-            <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
+            <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via PayTech</p>
             <PaymentMethodLogos />
           </div>
         </>
@@ -318,7 +318,7 @@ function BillingPaymentModal({
         <div className="py-6 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
           <p className="mt-3 text-sm text-content-muted">
-            Finalisez le paiement dans l’onglet Moneroo, puis revenez ici. Confirmation
+            Finalisez le paiement dans l’onglet PayTech, puis revenez ici. Confirmation
             automatique en cours…
           </p>
           {paymentId && (

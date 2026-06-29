@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/auth';
 
 export interface MaskedPaymentConfig {
   apiKeySet: boolean;
+  apiSecretSet: boolean;
   siteId: string;
   environment: 'sandbox' | 'production';
   webhookUrl: string;

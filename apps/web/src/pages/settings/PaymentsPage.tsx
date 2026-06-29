@@ -15,6 +15,7 @@ export function PaymentsPage() {
 
   const [form, setForm] = useState<PaymentConfigInput>({
     apiKey: '',
+    apiSecret: '',
     siteId: '',
     environment: 'sandbox',
     webhookUrl: '',
@@ -27,6 +28,7 @@ export function PaymentsPage() {
     if (config) {
       setForm({
         apiKey: '',
+        apiSecret: '',
         siteId: config.siteId,
         environment: config.environment,
         webhookUrl: config.webhookUrl,
@@ -40,7 +42,7 @@ export function PaymentsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payment-config'] });
       setSaved(true);
-      setForm((f) => ({ ...f, apiKey: '' }));
+      setForm((f) => ({ ...f, apiKey: '', apiSecret: '' }));
       setTimeout(() => setSaved(false), 2500);
     },
     onError: (e) => setError(apiErrorMessage(e)),
@@ -50,7 +52,7 @@ export function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="Paiements — Moneroo" subtitle="Mobile Money & cartes pour l'Afrique de l'Ouest" />
+      <PageHeader title="Paiements — PayTech" subtitle="Wave, Orange Money, Free Money & cartes" />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
@@ -59,7 +61,7 @@ export function PaymentsPage() {
               <CreditCard className="h-5 w-5" />
             </span>
             <div>
-              <h3 className="font-display font-bold text-content">Configuration Moneroo</h3>
+              <h3 className="font-display font-bold text-content">Configuration PayTech</h3>
               <p className="text-xs text-content-muted">
                 {config.simulationMode ? 'Mode simulation actif' : 'Mode production'}
               </p>
@@ -85,14 +87,24 @@ export function PaymentsPage() {
               </button>
             </div>
 
-            <Field label="Clé secrète Moneroo">
+            <Field label="Clé API PayTech">
               <input
                 className="input"
                 type="password"
-                placeholder={config.apiKeySet ? '•••••••• (laisser vide pour conserver)' : 'Votre clé secrète Moneroo'}
+                placeholder={config.apiKeySet ? '•••••••• (laisser vide pour conserver)' : 'Votre clé API PayTech'}
                 value={form.apiKey}
                 disabled={!canUpdate}
                 onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+              />
+            </Field>
+            <Field label="Clé secrète PayTech">
+              <input
+                className="input"
+                type="password"
+                placeholder={config.apiSecretSet ? '•••••••• (laisser vide pour conserver)' : 'Votre clé secrète PayTech'}
+                value={form.apiSecret}
+                disabled={!canUpdate}
+                onChange={(e) => setForm((f) => ({ ...f, apiSecret: e.target.value }))}
               />
             </Field>
             <Field label="Environnement">
@@ -102,19 +114,14 @@ export function PaymentsPage() {
                 disabled={!canUpdate}
                 onChange={(e) => setForm((f) => ({ ...f, environment: e.target.value as 'sandbox' | 'production' }))}
               >
-                <option value="sandbox">Sandbox (test)</option>
+                <option value="sandbox">Test</option>
                 <option value="production">Production</option>
               </select>
             </Field>
-            <Field label="URL de retour / webhook">
-              <input
-                className="input"
-                placeholder="https://votre-domaine/webhooks/moneroo"
-                value={form.webhookUrl}
-                disabled={!canUpdate}
-                onChange={(e) => setForm((f) => ({ ...f, webhookUrl: e.target.value }))}
-              />
-            </Field>
+            <p className="text-xs text-content-faint">
+              L’URL IPN à configurer dans PayTech est gérée automatiquement par le serveur
+              (/webhooks/paytech).
+            </p>
 
             {error && <p className="text-sm text-danger">{error}</p>}
             {canUpdate && (
