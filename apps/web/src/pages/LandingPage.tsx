@@ -43,15 +43,10 @@ const VIVID_THEME = {
   '--ring': 'rgba(124, 58, 237, 0.35)',
 } as CSSProperties;
 
-/** Photos d'ambiance (Unsplash) posées en CSS background : si une URL
+/** Photo d'ambiance (Unsplash) posée en CSS background du CTA final : si l'URL
  *  échoue, le dégradé en dessous reste visible (aucune icône cassée). */
-const IMG_HERO =
-  'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=1400&q=60';
 const IMG_CTA =
   'https://images.unsplash.com/photo-1606318801954-d46d46d3360a?auto=format&fit=crop&w=1400&q=60';
-// Image d'ambiance « magasin d'optique / clinique » visible en fond du hero.
-const IMG_HERO_BG =
-  'https://images.unsplash.com/photo-1567361808960-dec9cb578182?auto=format&fit=crop&w=1600&q=70';
 
 const MODULES = [
   {
@@ -531,26 +526,6 @@ export function LandingPage() {
           }}
           onMouseLeave={() => setHeroOffset({ x: 0, y: 0 })}
         >
-          {/* Image d'ambiance (magasin / clinique) bien visible en fond */}
-          <div className="pointer-events-none absolute inset-0">
-            <div
-              className="absolute inset-0 scale-105 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${IMG_HERO_BG})`,
-                opacity: 0.5,
-                transform: `translate(${heroOffset.x * 14}px, ${heroOffset.y * 14}px) scale(1.05)`,
-                transition: 'transform 0.4s ease-out',
-              }}
-            />
-            {/* Voile clair pour garder le texte lisible (plus dense au centre) */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(75% 70% at 50% 42%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.62) 55%, rgba(255,255,255,0.35) 100%)',
-              }}
-            />
-          </div>
           <BlurBackdrop offset={heroOffset} />
           <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28">
             <Reveal delay={0}>
