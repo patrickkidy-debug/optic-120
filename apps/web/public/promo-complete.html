@@ -361,6 +361,7 @@
     </div>
   </div>
 
+  <audio id="vo" src="oculosaas-voix-synchro.mp3" preload="auto"></audio>
   <div id="recMsg"></div>
   <div class="controls" id="controls">
     <button id="replay">↻ Rejouer</button>
@@ -380,11 +381,13 @@
   const OFFSET=DUR.map((_,k)=>DUR.slice(0,k).reduce((a,b)=>a+b,0));
   const progress=document.getElementById('progress');
   let cur=-1,sceneStart=0,paused=false,pauseStart=0;
+  const vo=document.getElementById('vo');
+  function voPlay(){try{vo.currentTime=0;vo.play().catch(()=>{});}catch(e){}}
 
   function fmt(n){return n>=1000?n.toLocaleString('fr-FR'):n;}
   function counters(sc){sc.querySelectorAll('[data-count]').forEach(el=>{const tg=+el.dataset.count,t0=performance.now(),d=1300;
     (function tk(now){const p=Math.min(1,(now-t0)/d);el.textContent=fmt(Math.round(tg*(1-Math.pow(1-p,3))));if(p<1)requestAnimationFrame(tk);})(t0);});}
-  function show(n,now){scenes.forEach((s,i)=>s.classList.toggle('scene--active',i===n));counters(scenes[n]);cur=n;sceneStart=now;}
+  function show(n,now){scenes.forEach((s,i)=>s.classList.toggle('scene--active',i===n));counters(scenes[n]);cur=n;sceneStart=now;if(n===0)voPlay();}
   function frame(now){
     if(paused){requestAnimationFrame(frame);return;}
     let inS=now-sceneStart;
@@ -394,7 +397,9 @@
   }
   function play(){show(0,performance.now());progress.style.width='0%';}
   document.getElementById('replay').onclick=()=>{paused=false;document.getElementById('toggle').textContent='⏸ Pause';play();};
-  document.getElementById('toggle').onclick=e=>{paused=!paused;if(paused)pauseStart=performance.now();else sceneStart+=performance.now()-pauseStart;e.target.textContent=paused?'▶ Lire':'⏸ Pause';};
+  document.getElementById('toggle').onclick=e=>{paused=!paused;if(paused){pauseStart=performance.now();vo.pause();}else{sceneStart+=performance.now()-pauseStart;vo.play().catch(()=>{});}e.target.textContent=paused?'▶ Lire':'⏸ Pause';};
+  // Démarre la voix dès la première interaction (autoplay audio bloqué sinon).
+  document.addEventListener('pointerdown',()=>{ if(vo.paused) play(); },{once:true});
   function toggleFull(){const el=document.documentElement;if(!document.fullscreenElement)(el.requestFullscreen||el.webkitRequestFullscreen).call(el);else (document.exitFullscreen||document.webkitExitFullscreen).call(document);}
   document.getElementById('full').onclick=toggleFull;
   play();requestAnimationFrame(frame);
@@ -403,7 +408,7 @@
   const recMsg=document.getElementById('recMsg'),controlsEl=document.getElementById('controls');
   document.getElementById('download').onclick=async()=>{
     if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){alert("Enregistrement non supporté sur ce navigateur. Utilise Chrome/Edge récent, ou enregistre l'écran (Win+Alt+R / OBS).");return;}
-    let stream;try{stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:1920,height:1080},audio:false,preferCurrentTab:true});}catch(e){return;}
+    let stream;try{stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,width:1920,height:1080},audio:true,preferCurrentTab:true});}catch(e){return;}
     const cand=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
     const mime=cand.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'video/webm';
     const ext=mime.indexOf('mp4')!==-1?'mp4':'webm';
