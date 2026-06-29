@@ -28,12 +28,15 @@ export async function listPlans(activeOnly = true) {
 export async function ensureTrialSubscription(
   tx: Prisma.TransactionClient | PrismaClient,
   tenantId: string,
+  options?: { noTrial?: boolean },
 ): Promise<void> {
   const existing = await tx.subscription.findUnique({ where: { tenantId } });
   if (existing) return;
   const trial = await tx.subscriptionPlan.findFirst({ where: { code: 'TRIAL' } });
   if (!trial) return;
-  const end = new Date(Date.now() + trial.trialDays * DAY);
+  // Forfait payant choisi à l'inscription → aucun essai : période déjà expirée,
+  // l'accès reste bloqué jusqu'au paiement (Standard/Premium).
+  const end = options?.noTrial ? new Date(Date.now() - 1000) : new Date(Date.now() + trial.trialDays * DAY);
   await tx.subscription.create({
     data: {
       tenantId,

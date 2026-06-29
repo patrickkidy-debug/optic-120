@@ -76,20 +76,50 @@ export function SubscriptionPage() {
     if (sub && sub.status !== 'SUSPENDED' && sub.status !== 'CANCELLED') setSuspended(false);
   }, [sub, setSuspended]);
 
-  // Offre présélectionnée depuis la landing (?plan=CODE) → ouvre le paiement.
+  // Offre présélectionnée depuis la landing (?plan=CODE).
   const [params] = useSearchParams();
   const autoOpened = useRef(false);
+  const [autoLaunch, setAutoLaunch] = useState(false);
   useEffect(() => {
     const code = params.get('plan');
     if (!code || autoOpened.current || !plans) return;
     const plan = plans.find((p) => p.code === code);
-    if (plan) {
-      autoOpened.current = true;
+    if (!plan) return;
+    autoOpened.current = true;
+    // Forfaits payants (Standard/Premium) → on lance directement le paiement
+    // Moneroo : redirection automatique vers le checkout sécurisé.
+    if (plan.code === 'STANDARD' || plan.code === 'PREMIUM') {
+      setAutoLaunch(true);
+      subscribe(plan.id, 'WAVE')
+        .then((res) => {
+          if (res.redirectUrl) {
+            window.location.href = res.redirectUrl;
+          } else {
+            setAutoLaunch(false);
+            setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+          }
+        })
+        .catch(() => {
+          setAutoLaunch(false);
+          setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+        });
+    } else {
       setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
     }
   }, [params, plans]);
 
   if (isLoading) return <PageLoader />;
+  if (autoLaunch)
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-center">
+        <div>
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+          <p className="mt-3 text-sm text-content-muted">
+            Redirection vers le paiement sécurisé Moneroo…
+          </p>
+        </div>
+      </div>
+    );
 
   return (
     <div>

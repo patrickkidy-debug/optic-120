@@ -27,10 +27,11 @@ export function SignupPage() {
   async function onSubmit(values: SignupInput) {
     setServerError('');
     try {
-      await signup(values);
-      // Si une offre a été choisie sur la landing, on dirige vers l'abonnement
-      // (avec l'offre présélectionnée) ; sinon vers le tableau de bord.
-      navigate(plan && plan !== 'TRIAL' ? `/parametres/abonnement?plan=${plan}` : '/dashboard');
+      const isPaid = plan === 'STANDARD' || plan === 'PREMIUM';
+      await signup({ ...values, plan: isPaid || plan === 'TRIAL' ? (plan as SignupInput['plan']) : undefined });
+      // Forfait payant → page abonnement (le paiement Moneroo se lance auto) ;
+      // sinon (Découverte/essai) → tableau de bord.
+      navigate(isPaid ? `/parametres/abonnement?plan=${plan}` : '/dashboard');
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Création impossible'));
     }

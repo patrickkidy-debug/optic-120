@@ -511,6 +511,9 @@ export const signupSchema = z.object({
   adminEmail: z.string().email(),
   adminUsername: z.string().min(3).max(40).optional(),
   adminPassword: passwordSchema,
+  // Offre choisie sur la landing. STANDARD/PREMIUM → paiement immédiat (pas
+  // d'essai) ; TRIAL ou absent → essai gratuit.
+  plan: z.enum(['TRIAL', 'STANDARD', 'PREMIUM']).optional(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 

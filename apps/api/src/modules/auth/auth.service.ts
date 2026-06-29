@@ -186,8 +186,9 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
       },
     });
 
-    // Abonnement d'essai (offre Découverte) à l'inscription.
-    await ensureTrialSubscription(tx, tenant.id);
+    // Découverte → essai gratuit ; Standard/Premium → pas d'essai (paiement requis).
+    const paidPlanChosen = input.plan === 'STANDARD' || input.plan === 'PREMIUM';
+    await ensureTrialSubscription(tx, tenant.id, { noTrial: paidPlanChosen });
 
     return user.id;
   });
