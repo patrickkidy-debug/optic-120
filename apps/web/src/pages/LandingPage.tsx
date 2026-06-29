@@ -205,7 +205,9 @@ function useInView<T extends HTMLElement>() {
           obs.disconnect();
         }
       },
-      { threshold: 0.15 },
+      // Déclenche quand l'élément est ~12% remonté dans la fenêtre : sur grand
+      // écran, les sections s'animent progressivement au défilement.
+      { threshold: 0.1, rootMargin: '0px 0px -12% 0px' },
     );
     obs.observe(el);
     return () => obs.disconnect();
