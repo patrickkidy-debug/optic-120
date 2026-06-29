@@ -11,10 +11,10 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { Banknote, TrendingUp, ShoppingBag, AlertTriangle, Receipt } from 'lucide-react';
-import { useAuthStore } from '../store/auth';
+import { Banknote, TrendingUp, ShoppingBag, AlertTriangle, Receipt, Building2, Trophy, Wallet, Users } from 'lucide-react';
+import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
-import { getDashboard } from '../features/optique/api';
+import { getDashboard, getAdminDashboard } from '../features/optique/api';
 import { StatCard, PageLoader, EmptyState, Badge } from '../components/ui';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
@@ -43,9 +43,17 @@ export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const branchId = useUIStore((s) => s.activeBranchId);
 
+  const isAdmin = usePermission('finance.expenses.view');
+
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', branchId],
     queryFn: () => getDashboard(branchId ?? undefined),
+  });
+
+  const { data: admin } = useQuery({
+    queryKey: ['admin-dashboard'],
+    queryFn: getAdminDashboard,
+    enabled: isAdmin,
   });
 
   if (isLoading || !data) return <PageLoader />;
@@ -187,6 +195,93 @@ export function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ---- Vue administrateur (enrichie) ---- */}
+      {isAdmin && admin && (
+        <div className="mt-8">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-soft text-primary">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <h2 className="font-display text-lg font-bold text-content">Vue administrateur</h2>
+            <span className="text-xs text-content-faint">— mois en cours</span>
+          </div>
+
+          {/* Finance du mois */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard icon={Banknote} label="Recettes (mois)" value={formatCurrency(admin.finance.monthRevenue)} tone="success" />
+            <StatCard icon={Wallet} label="Dépenses (mois)" value={formatCurrency(admin.finance.monthExpenses)} tone="danger" />
+            <StatCard
+              icon={TrendingUp}
+              label="Résultat net (mois)"
+              value={formatCurrency(admin.finance.net)}
+              tone={admin.finance.net >= 0 ? 'primary' : 'danger'}
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Par magasin */}
+            <div className="card p-5">
+              <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-content">
+                <Building2 className="h-4 w-4 text-primary" /> Par magasin
+              </h3>
+              {admin.branchBreakdown.length === 0 ? (
+                <p className="text-sm text-content-muted">Aucune donnée ce mois-ci.</p>
+              ) : (
+                <div className="space-y-3">
+                  {admin.branchBreakdown.map((b) => {
+                    const max = Math.max(1, ...admin.branchBreakdown.map((x) => x.revenue));
+                    return (
+                      <div key={b.name}>
+                        <div className="mb-1 flex items-center justify-between text-sm">
+                          <span className="text-content">{b.name}</span>
+                          <span className="font-semibold text-content">
+                            {formatCurrency(b.revenue)}
+                            <span className="ml-2 text-xs font-normal text-content-faint">{b.salesCount} ventes</span>
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-surface-3">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${Math.round((b.revenue / max) * 100)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Top vendeurs */}
+            <div className="card p-5">
+              <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-content">
+                <Trophy className="h-4 w-4 text-accent" /> Meilleurs vendeurs
+              </h3>
+              {admin.topSellers.length === 0 ? (
+                <p className="text-sm text-content-muted">Aucune vente ce mois-ci.</p>
+              ) : (
+                <div className="space-y-2">
+                  {admin.topSellers.map((s, i) => (
+                    <div key={s.name + i} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
+                      <span className="flex items-center gap-3 text-sm">
+                        <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">{i + 1}</span>
+                        <span className="text-content">{s.name}</span>
+                      </span>
+                      <span className="text-sm font-semibold text-content">
+                        {formatCurrency(s.revenue)}
+                        <span className="ml-2 text-xs font-normal text-content-faint">{s.salesCount}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Équipe */}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <StatCard icon={Users} label="Utilisateurs actifs" value={`${admin.team.usersActive} / ${admin.team.usersTotal}`} tone="primary" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

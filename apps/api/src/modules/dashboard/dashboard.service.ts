@@ -103,3 +103,69 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     })),
   };
 }
+
+/**
+ * Vue enrichie pour les administrateurs/propriétaires (mois en cours) :
+ * répartition par magasin, meilleurs vendeurs, effectif et finance.
+ * Respecte le périmètre du rôle : tous les magasins ou ceux assignés.
+ */
+export async function getAdminDashboard(
+  tenantId: string,
+  opts: { allBranches: boolean; branchIds: string[] },
+) {
+  const monthStart = startOfMonth();
+  const scopedIds = opts.branchIds.length ? opts.branchIds : ['__none__'];
+  const branchWhere = opts.allBranches ? { tenantId } : { tenantId, id: { in: scopedIds } };
+  const branches = await prisma.branch.findMany({ where: branchWhere, select: { id: true, name: true } });
+  const saleScope = opts.allBranches ? {} : { branchId: { in: scopedIds } };
+  const saleWhere = { tenantId, type: SaleType.SALE, createdAt: { gte: monthStart }, ...saleScope };
+
+  const [perBranch, perCashier, revenueAgg, expenseAgg, usersTotal, usersActive] = await Promise.all([
+    prisma.sale.groupBy({ by: ['branchId'], where: saleWhere, _sum: { paidAmount: true }, _count: { _all: true } }),
+    prisma.sale.groupBy({ by: ['cashierId'], where: saleWhere, _sum: { paidAmount: true }, _count: { _all: true } }),
+    prisma.sale.aggregate({ where: saleWhere, _sum: { paidAmount: true } }),
+    prisma.expense.aggregate({
+      where: {
+        tenantId,
+        date: { gte: monthStart },
+        ...(opts.allBranches ? {} : { OR: [{ branchId: { in: scopedIds } }, { branchId: null }] }),
+      },
+      _sum: { amount: true },
+    }),
+    prisma.user.count({ where: { tenantId } }),
+    prisma.user.count({ where: { tenantId, isActive: true } }),
+  ]);
+
+  const branchBreakdown = branches
+    .map((b) => {
+      const g = perBranch.find((x) => x.branchId === b.id);
+      return { name: b.name, revenue: Number(g?._sum.paidAmount ?? 0), salesCount: g?._count._all ?? 0 };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const top = [...perCashier]
+    .sort((a, b) => Number(b._sum.paidAmount ?? 0) - Number(a._sum.paidAmount ?? 0))
+    .slice(0, 5);
+  const sellers = await prisma.user.findMany({
+    where: { id: { in: top.map((t) => t.cashierId) } },
+    select: { id: true, firstName: true, lastName: true },
+  });
+  const topSellers = top.map((t) => {
+    const u = sellers.find((s) => s.id === t.cashierId);
+    return {
+      name: u ? `${u.firstName} ${u.lastName}` : '—',
+      revenue: Number(t._sum.paidAmount ?? 0),
+      salesCount: t._count._all,
+    };
+  });
+
+  const monthRevenue = Number(revenueAgg._sum.paidAmount ?? 0);
+  const monthExpenses = Number(expenseAgg._sum.amount ?? 0);
+
+  return {
+    branchBreakdown,
+    topSellers,
+    team: { usersTotal, usersActive },
+    finance: { monthRevenue, monthExpenses, net: monthRevenue - monthExpenses },
+  };
+}

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
-import { getDashboard } from './dashboard.service.js';
+import { getDashboard, getAdminDashboard } from './dashboard.service.js';
 
 export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -13,5 +13,14 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
     const branchId = q.branchId ?? (req.auth!.allBranches ? undefined : req.auth!.branchIds[0]);
     const data = await getDashboard(req.auth!.tenantId, branchId);
     return reply.send({ dashboard: data });
+  });
+
+  // Vue enrichie administrateur (par magasin, vendeurs, équipe, finance).
+  app.get('/admin', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
+    const data = await getAdminDashboard(req.auth!.tenantId, {
+      allBranches: req.auth!.allBranches,
+      branchIds: req.auth!.branchIds,
+    });
+    return reply.send({ admin: data });
   });
 }

@@ -265,3 +265,15 @@ export async function getDashboard(branchId?: string): Promise<DashboardData> {
   });
   return data.dashboard;
 }
+
+export interface AdminDashboardData {
+  branchBreakdown: { name: string; revenue: number; salesCount: number }[];
+  topSellers: { name: string; revenue: number; salesCount: number }[];
+  team: { usersTotal: number; usersActive: number };
+  finance: { monthRevenue: number; monthExpenses: number; net: number };
+}
+
+export async function getAdminDashboard(): Promise<AdminDashboardData> {
+  const { data } = await api.get<{ admin: AdminDashboardData }>('/dashboard/admin');
+  return data.admin;
+}
