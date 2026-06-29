@@ -7,8 +7,8 @@ import { createSupportTicket } from '../features/support/api';
 import { apiErrorMessage } from '../lib/api';
 import { PageHeader, Button, Field } from '../components/ui';
 
-const SUPPORT_EMAIL = 'support@oculosaas.com';
-const WHATSAPP = '221771255799'; // numéro de support (format international, sans +)
+const SUPPORT_EMAIL = 'oculossaas@gmail.com';
+const WHATSAPP = '221768881739'; // numéro de support (format international, sans +)
 
 const FAQ = [
   { q: 'Comment encaisser par Mobile Money ?', a: 'À la caisse, choisissez le moyen Mobile Money ; le client est redirigé vers PayTech pour valider le paiement.' },
