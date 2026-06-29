@@ -235,6 +235,152 @@ function Reveal({
   );
 }
 
+/** Bandeau défilant en boucle (auto-scroll, pause au survol). */
+function Marquee({
+  items,
+  reverse,
+}: {
+  items: { key: string; node: ReactNode }[];
+  reverse?: boolean;
+}) {
+  return (
+    <div className="mq-wrap">
+      <div className={clsx('mq-track', reverse && 'rev')}>
+        {items.map((it) => (
+          <div key={it.key}>{it.node}</div>
+        ))}
+        {items.map((it) => (
+          <div key={it.key + '-dup'} aria-hidden>
+            {it.node}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Fenêtre « mini-démo » (look capture d'écran animée). */
+function MiniWindow({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="w-[340px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1222] shadow-card-lg">
+      <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+        <span className="ml-2 truncate text-xs font-semibold text-white/80">{title}</span>
+        <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" /> LIVE
+        </span>
+      </div>
+      <div className="h-44 p-4">{children}</div>
+    </div>
+  );
+}
+
+const MINI_DEMOS: { key: string; title: string; node: ReactNode }[] = [
+  {
+    key: 'dash',
+    title: 'Tableau de bord',
+    node: (
+      <MiniWindow title="Tableau de bord">
+        <div className="flex h-full items-end gap-2">
+          {[55, 35, 80, 50, 92, 68, 78].map((h, i) => (
+            <div
+              key={i}
+              className="mini-bar flex-1 rounded-t"
+              style={{ height: `${h}%`, background: 'linear-gradient(180deg,#8b5cf6,#ec4899)', animationDelay: `${i * 0.18}s` }}
+            />
+          ))}
+        </div>
+      </MiniWindow>
+    ),
+  },
+  {
+    key: 'rapports',
+    title: 'Rapports',
+    node: (
+      <MiniWindow title="Rapports">
+        <svg viewBox="0 0 300 150" className="h-full w-full" preserveAspectRatio="none">
+          <polyline
+            className="mini-line"
+            points="0,120 50,90 100,105 150,60 200,75 250,35 300,50"
+            fill="none"
+            stroke="#22d3ee"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </MiniWindow>
+    ),
+  },
+  {
+    key: 'caisse',
+    title: 'Caisse',
+    node: (
+      <MiniWindow title="Caisse & ventes">
+        <div className="space-y-2 text-[11px] text-white/70">
+          <div className="flex justify-between"><span>Monture RB5154</span><span>45 000</span></div>
+          <div className="flex justify-between"><span>Verres anti-reflet</span><span>30 000</span></div>
+          <div className="flex justify-between border-t border-white/10 pt-2 text-sm font-extrabold text-white"><span>Total</span><span className="text-fuchsia-400">80 000 F</span></div>
+          <div className="mt-1 rounded-lg py-2 text-center text-xs font-bold text-white" style={{ background: 'linear-gradient(120deg,#7c3aed,#ec4899)' }}>Encaisser · Wave</div>
+        </div>
+      </MiniWindow>
+    ),
+  },
+  {
+    key: 'stocks',
+    title: 'Stocks',
+    node: (
+      <MiniWindow title="Stocks">
+        <div className="space-y-3">
+          {[['Montures', 78, '#8b5cf6'], ['Verres', 55, '#22d3ee'], ['Lentilles', 30, '#f97316'], ['Solution', 12, '#ec4899']].map(([l, w, c], i) => (
+            <div key={i}>
+              <div className="mb-1 flex justify-between text-[10px] text-white/60"><span>{l as string}</span></div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="mini-line h-full rounded-full" style={{ width: `${w}%`, background: c as string, animation: 'none' }} /></div>
+            </div>
+          ))}
+        </div>
+      </MiniWindow>
+    ),
+  },
+  {
+    key: 'paiements',
+    title: 'Paiements',
+    node: (
+      <MiniWindow title="Paiements Mobile Money">
+        <div className="flex flex-wrap gap-2">
+          {[['Wave', '#1DC9FF', '#003049'], ['Orange Money', '#FF7900', '#fff'], ['Free Money', '#CD1A2B', '#fff'], ['Wizall', '#00A94F', '#fff']].map((p, i) => (
+            <span key={i} className="rounded-lg px-3 py-2 text-xs font-extrabold" style={{ background: p[1], color: p[2] }}>{p[0]}</span>
+          ))}
+        </div>
+      </MiniWindow>
+    ),
+  },
+  {
+    key: 'clinique',
+    title: 'Clinique',
+    node: (
+      <MiniWindow title="Rendez-vous">
+        <div className="space-y-2">
+          {[['AD', 'Awa Diop', '09:00', '#22d3ee'], ['MK', 'Moussa Kane', '10:30', '#8b5cf6'], ['FN', 'Fatou Ndiaye', '14:00', '#f97316']].map((r, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5">
+              <span className="grid h-6 w-6 place-items-center rounded-md text-[10px] font-bold text-white" style={{ background: 'linear-gradient(120deg,#7c3aed,#ec4899)' }}>{r[0]}</span>
+              <span className="text-[11px] text-white/80">{r[1]}</span>
+              <span className="ml-auto rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ color: r[3] as string, background: 'rgba(255,255,255,.08)' }}>{r[2]}</span>
+            </div>
+          ))}
+        </div>
+      </MiniWindow>
+    ),
+  },
+];
+
 function BrandMark() {
   return (
     <div className="flex items-center gap-2.5">
@@ -242,7 +388,7 @@ function BrandMark() {
         <Eye className="h-5 w-5 text-white" strokeWidth={2.6} />
       </div>
       <span className="font-display text-lg font-extrabold tracking-tight text-content">
-        Oculo<span className="text-gradient">SaaS</span>
+        Oculo<span className="text-gradient animate-gradient">SaaS</span>
       </span>
     </div>
   );
@@ -432,11 +578,21 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* ---------- L'application en action (carrousel mini-démos) ---------- */}
+        <section className="py-12">
+          <Reveal>
+            <p className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">
+              L’application en action
+            </p>
+          </Reveal>
+          <Marquee items={MINI_DEMOS} reverse />
+        </section>
+
         {/* ---------- Fonctionnalités ---------- */}
         <section id="fonctionnalites" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Tout votre métier, <span className="text-gradient">au même endroit</span>
+              Tout votre métier, <span className="text-gradient animate-gradient">au même endroit</span>
             </h2>
             <p className="mt-4 text-content-muted">
               Des modules pensés pour les opticiens et ophtalmologues : de la vente au suivi médical,
@@ -470,7 +626,7 @@ export function LandingPage() {
           <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Opérationnel en <span className="text-gradient">quelques minutes</span>
+                Opérationnel en <span className="text-gradient animate-gradient">quelques minutes</span>
               </h2>
               <p className="mt-4 text-content-muted">
                 Pas de matériel, pas d’installation. Créez votre compte et commencez immédiatement.
@@ -516,13 +672,18 @@ export function LandingPage() {
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Ce qu’en disent <span className="text-gradient">nos clients</span>
+              Ce qu’en disent <span className="text-gradient animate-gradient">nos clients</span>
             </h2>
           </div>
-          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <Reveal key={t.name} delay={i * 120} className="h-full">
-                <div className="card relative h-full p-6 transition duration-300 hover:-translate-y-1.5 hover:shadow-card-lg">
+        </section>
+
+        {/* Témoignages défilants en boucle */}
+        <div className="-mt-4 pb-16">
+          <Marquee
+            items={TESTIMONIALS.map((t) => ({
+              key: t.name,
+              node: (
+                <div className="card relative w-[360px] shrink-0 p-6">
                   <Quote className="absolute right-5 top-5 h-7 w-7 text-primary/20" />
                   <div className="flex gap-1 text-accent">
                     {Array.from({ length: 5 }).map((_, j) => (
@@ -540,10 +701,10 @@ export function LandingPage() {
                     </div>
                   </div>
                 </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
+              ),
+            }))}
+          />
+        </div>
 
         {/* ---------- Fondateur ---------- */}
         <section className="border-y border-line bg-bg-subtle">
@@ -558,7 +719,7 @@ export function LandingPage() {
                 Le fondateur
               </span>
               <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Eloge <span className="text-gradient">KONAN</span>
+                Eloge <span className="text-gradient animate-gradient">KONAN</span>
               </h2>
               <p className="text-sm font-semibold text-content-muted">Fondateur &amp; CEO d’OculoSaaS</p>
               <p className="mt-4 text-base leading-relaxed text-content-muted">
@@ -578,7 +739,7 @@ export function LandingPage() {
         <section id="tarifs" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Des tarifs <span className="text-gradient">clairs et accessibles</span>
+              Des tarifs <span className="text-gradient animate-gradient">clairs et accessibles</span>
             </h2>
             <p className="mt-4 text-content-muted">
               Choisissez l’offre adaptée à votre établissement. Changez de formule à tout moment,
