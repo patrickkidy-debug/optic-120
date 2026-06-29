@@ -27,12 +27,13 @@
   .display { font-family: 'Outfit', 'Inter', sans-serif; }
 
   /* ---- Scène 16:9 mise à l'échelle ---- */
-  .frame { position: fixed; inset: 0; display: grid; place-items: center; background:
+  .frame { position: fixed; inset: 0; overflow: hidden; background:
       radial-gradient(60rem 40rem at 80% -10%, rgba(124,58,237,.18), transparent 60%),
       radial-gradient(50rem 40rem at -10% 110%, rgba(34,211,238,.14), transparent 60%),
       var(--bg); }
   .stage {
-    position: relative; width: 1920px; height: 1080px; transform-origin: center center;
+    position: absolute; top: 50%; left: 50%; width: 1920px; height: 1080px;
+    transform: translate(-50%, -50%) scale(1); transform-origin: center center;
     background: var(--bg); overflow: hidden; color: var(--ink);
     box-shadow: 0 40px 120px rgba(0,0,0,.6);
   }
@@ -254,6 +255,7 @@
   <div class="controls" id="controls">
     <button id="replay">↻ Rejouer</button>
     <button id="toggle">⏸ Pause</button>
+    <button id="full">⛶ Plein écran</button>
     <button id="download" style="background:linear-gradient(120deg,#7c3aed,#ec4899);color:#fff;border-color:transparent;font-weight:700">⬇ Télécharger la vidéo</button>
   </div>
   <div id="recordMsg" style="position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:100;color:#fff;font:600 14px Inter;background:rgba(0,0,0,.6);padding:8px 16px;border-radius:10px;display:none"></div>
@@ -274,9 +276,11 @@
   // ---- Mise à l'échelle 16:9 ----
   function fit() {
     const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-    document.getElementById('stage').style.transform = 'scale(' + s + ')';
+    document.getElementById('stage').style.transform = 'translate(-50%, -50%) scale(' + s + ')';
   }
-  window.addEventListener('resize', fit); fit();
+  window.addEventListener('resize', fit);
+  document.addEventListener('fullscreenchange', () => setTimeout(fit, 60));
+  fit();
 
   // ---- Timeline (boucle rAF unique, pause fiable) ----
   const scenes = [...document.querySelectorAll('[data-scene]')];
@@ -392,6 +396,17 @@
   }
 
   document.getElementById('download').onclick = recordVideo;
+
+  // ---- Plein écran ----
+  function toggleFull() {
+    const el = document.documentElement;
+    if (!document.fullscreenElement) {
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+  }
+  document.getElementById('full').onclick = toggleFull;
 </script>
 </body>
 </html>
