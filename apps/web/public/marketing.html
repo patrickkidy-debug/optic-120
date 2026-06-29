@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OculoSaaS — Visuels marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{--grad:linear-gradient(120deg,#7c3aed,#ec4899,#f97316)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif;background:
+    radial-gradient(50rem 40rem at 85% -10%,rgba(124,58,237,.18),transparent 60%),
+    radial-gradient(45rem 40rem at -10% 110%,rgba(34,211,238,.12),transparent 60%),#070b14;color:#eef2fb;min-height:100vh}
+  .wrap{max-width:1200px;margin:0 auto;padding:48px 24px 80px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .dot{width:44px;height:44px;border-radius:13px;background:var(--grad);display:grid;place-items:center}
+  .dot svg{width:24px;height:24px}
+  h1{font-family:Outfit;font-weight:800;font-size:34px;letter-spacing:-1px}
+  .gt{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:#9aa7c2;margin:6px 0 26px;font-size:17px}
+  .btn{display:inline-flex;align-items:center;gap:10px;background:var(--grad);color:#fff;font-family:Outfit;font-weight:800;
+    padding:14px 26px;border-radius:14px;text-decoration:none;font-size:17px;box-shadow:0 14px 36px rgba(236,72,153,.35)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:22px;margin-top:34px}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:18px;overflow:hidden}
+  .card img{width:100%;display:block;background:#0d1222;border-bottom:1px solid rgba(255,255,255,.08)}
+  .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px}
+  .meta b{font-family:Outfit;font-weight:700;font-size:17px}
+  .dl{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.2);color:#eef2fb;text-decoration:none;
+    padding:9px 14px;border-radius:10px;font-size:14px;font-weight:600}
+  .dl:hover{background:rgba(255,255,255,.1)}
+  footer{margin-top:44px;color:#5b6b88;font-size:13px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="dot"><svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="#fff"/></svg></span>
+      <h1>Oculo<span class="gt">SaaS</span> — Visuels marketing</h1>
+    </header>
+    <p class="sub">Images haute résolution (1600×1000) des interfaces du logiciel, aux couleurs de la marque. Libres d'usage pour ta communication.</p>
+    <a class="btn" href="/marketing/oculosaas-interfaces.zip" download>⬇ Tout télécharger (ZIP)</a>
+
+    <div class="grid" id="grid"></div>
+    <footer>© 2026 OculoSaaS · oculosaas.com — Clique droit → « Enregistrer l'image sous… » pour télécharger une image individuelle, ou utilise le bouton.</footer>
+  </div>
+
+<script>
+  const items=[
+    ['01-dashboard','Tableau de bord'],
+    ['02-caisse','Caisse & ventes'],
+    ['03-stocks','Stocks & produits'],
+    ['04-clinique','Gestion clinique'],
+    ['05-multi-magasins','Multi-magasins'],
+    ['06-paiements','Paiements Mobile Money'],
+  ];
+  document.getElementById('grid').innerHTML = items.map(([id,label])=>`
+    <div class="card">
+      <a href="/marketing/oculosaas-${id}.png" target="_blank" rel="noopener"><img src="/marketing/thumb-${id}.png" alt="${label}" loading="lazy"/></a>
+      <div class="meta"><b>${label}</b><a class="dl" href="/marketing/oculosaas-${id}.png" download>⬇ PNG</a></div>
+    </div>`).join('');
+</script>
+</body>
+</html>
