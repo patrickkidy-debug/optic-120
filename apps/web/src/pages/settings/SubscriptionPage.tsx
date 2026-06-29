@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Crown,
@@ -76,6 +77,19 @@ export function SubscriptionPage() {
   useEffect(() => {
     if (sub && sub.status !== 'SUSPENDED' && sub.status !== 'CANCELLED') setSuspended(false);
   }, [sub, setSuspended]);
+
+  // Offre présélectionnée depuis la landing (?plan=CODE) → ouvre le paiement.
+  const [params] = useSearchParams();
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    const code = params.get('plan');
+    if (!code || autoOpened.current || !plans) return;
+    const plan = plans.find((p) => p.code === code);
+    if (plan) {
+      autoOpened.current = true;
+      setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+    }
+  }, [params, plans]);
 
   if (isLoading) return <PageLoader />;
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { signupSchema, type SignupInput } from '@oculo/shared-types';
 import { signup } from '../../features/auth/api';
@@ -12,6 +12,8 @@ import { Button, Field } from '../../components/ui';
 export function SignupPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const plan = params.get('plan'); // offre présélectionnée depuis la landing
   const [serverError, setServerError] = useState('');
   const {
     register,
@@ -26,7 +28,9 @@ export function SignupPage() {
     setServerError('');
     try {
       await signup(values);
-      navigate('/dashboard');
+      // Si une offre a été choisie sur la landing, on dirige vers l'abonnement
+      // (avec l'offre présélectionnée) ; sinon vers le tableau de bord.
+      navigate(plan && plan !== 'TRIAL' ? `/parametres/abonnement?plan=${plan}` : '/dashboard');
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Création impossible'));
     }

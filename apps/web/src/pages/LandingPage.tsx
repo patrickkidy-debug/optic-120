@@ -784,7 +784,7 @@ export function LandingPage() {
                   )}
 
                   <Link
-                    to="/signup"
+                    to={`/signup?plan=${plan.code}`}
                     className={clsx('mt-6 w-full', highlighted ? 'btn-primary' : 'btn-outline')}
                   >
                     Choisir {plan.name}
