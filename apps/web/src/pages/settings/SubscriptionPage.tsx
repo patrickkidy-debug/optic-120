@@ -238,7 +238,7 @@ function PlanCard({
 // Coordonnées de paiement Mobile Money manuel de l'éditeur (modifiable).
 const MANUAL_PAY = {
   networks: 'Wave / Orange Money',
-  number: '+221 76 888 17 39',
+  number: '+225 01 73 37 46 08',
   name: 'OculoSaaS — Eloge KONAN',
 };
 
