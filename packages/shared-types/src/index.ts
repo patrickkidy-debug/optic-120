@@ -699,6 +699,15 @@ export const cashCloseSchema = z.object({
 });
 export type CashCloseInput = z.infer<typeof cashCloseSchema>;
 
+/** Coordonnées d'encaissement manuel de la boutique (QR + numéro Mobile Money). */
+export const collectInfoSchema = z.object({
+  network: z.string().max(40).optional().default(''),
+  number: z.string().max(40).optional().default(''),
+  name: z.string().max(120).optional().default(''),
+  qr: z.string().optional().default(''),
+});
+export type CollectInfoInput = z.infer<typeof collectInfoSchema>;
+
 export const paymentConfigSchema = z.object({
   provider: z.enum(['paytech', 'moneroo']).default('paytech'),
   apiKey: z.string().optional().default(''),

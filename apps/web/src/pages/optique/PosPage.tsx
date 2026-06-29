@@ -12,9 +12,11 @@ import {
   CreditCard,
   CheckCircle2,
   Loader2,
+  QrCode,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
 import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
@@ -257,9 +259,10 @@ function PaymentModal({
   const user = useAuthStore((s) => s.user);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
+  const [phase, setPhase] = useState<'choose' | 'collect' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
   const [instruction, setInstruction] = useState<string | null>(null);
+  const { data: collect } = useQuery({ queryKey: ['collect-info'], queryFn: getCollectInfo });
 
   async function downloadInvoice() {
     try {
@@ -316,7 +319,10 @@ function PaymentModal({
                 key={m.value}
                 onClick={() => {
                   setMethod(m.value);
-                  payMut.mutate(m.value);
+                  // Mobile Money : on affiche le QR / numéro de la boutique, puis
+                  // le caissier confirme la réception. Espèces / carte : direct.
+                  if (m.mobile) setPhase('collect');
+                  else payMut.mutate(m.value);
                 }}
                 disabled={payMut.isPending}
                 className="card flex flex-col items-center gap-1.5 p-3 transition hover:border-primary"
@@ -328,6 +334,43 @@ function PaymentModal({
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         </>
+      )}
+
+      {phase === 'collect' && (
+        <div className="text-center">
+          <p className="mb-3 text-sm text-content-muted">
+            Le client paie via <b>{METHODS.find((m) => m.value === method)?.label}</b>
+          </p>
+          {collect?.qr ? (
+            <img src={collect.qr} alt="QR de paiement" className="mx-auto h-44 w-44 rounded-xl border bg-white object-contain p-2" />
+          ) : (
+            <div className="mx-auto grid h-44 w-44 place-items-center rounded-xl border bg-surface-2 text-content-faint">
+              <QrCode className="h-10 w-10" />
+            </div>
+          )}
+          <div className="mx-auto mt-3 max-w-xs rounded-xl bg-surface-2 p-3 text-sm">
+            {collect?.number ? (
+              <>
+                <div className="flex justify-between"><span className="text-content-muted">Numéro</span><span className="font-bold text-content">{collect.number}</span></div>
+                {collect.name && <div className="flex justify-between"><span className="text-content-muted">Nom</span><span className="font-semibold text-content">{collect.name}</span></div>}
+                {collect.network && <div className="flex justify-between"><span className="text-content-muted">Réseau</span><span className="text-content">{collect.network}</span></div>}
+              </>
+            ) : (
+              <p className="text-xs text-content-muted">
+                Aucune coordonnée d'encaissement configurée. Renseignez-la dans Paramètres → Paiements.
+              </p>
+            )}
+          </div>
+          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+          <div className="mt-4 flex gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => { setPhase('choose'); setMethod(null); }}>
+              Retour
+            </Button>
+            <Button className="flex-1" loading={payMut.isPending} onClick={() => method && payMut.mutate(method)}>
+              Paiement reçu
+            </Button>
+          </div>
+        </div>
       )}
 
       {phase === 'pending' && (

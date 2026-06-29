@@ -4,13 +4,12 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
-  MOBILE_MONEY_METHODS,
 } from '@oculo/shared-types';
 import type { SaleCreateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
-import { resolveProvider, settlePayment } from '../payments/payment.service.js';
+import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
 
 type Tx = Prisma.TransactionClient;
@@ -238,6 +237,9 @@ export async function addPayment(
   if (!sale) throw notFound('Vente introuvable');
   if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente annulée');
 
+  // Encaissement MANUEL constaté au comptoir (espèces, carte, Mobile Money via
+  // le QR / numéro de la boutique). Aucune passerelle n'intervient : c'est le
+  // caissier qui confirme la réception. Chaque boutique encaisse sur SON compte.
   const payment = await prisma.payment.create({
     data: {
       tenantId,
@@ -245,53 +247,11 @@ export async function addPayment(
       method: data.method,
       amount: data.amount,
       currency: sale.currency,
-      status: PaymentStatus.PENDING,
+      status: PaymentStatus.SUCCESS,
+      provider: 'manual',
     },
   });
-
-  // Espèces / carte (TPE physique) : l'encaissement est constaté au comptoir,
-  // il ne passe JAMAIS par la passerelle en ligne (CinetPay). On règle direct.
-  const isMobile = MOBILE_MONEY_METHODS.includes(data.method);
-  if (!isMobile) {
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { provider: 'manual', providerRef: payment.id, status: PaymentStatus.SUCCESS },
-    });
-    await settlePayment(payment.id, PaymentStatus.SUCCESS, { manual: true, method: data.method });
-    return { paymentId: payment.id, status: PaymentStatus.SUCCESS, providerRef: payment.id };
-  }
-
-  // Mobile money : passe par la passerelle (CinetPay réel ou simulation).
-  const provider = await resolveProvider(tenantId);
-  const customerName = sale.customer
-    ? `${sale.customer.firstName} ${sale.customer.lastName}`
-    : 'Client comptant';
-
-  const result = await provider.initiatePayment({
-    paymentId: payment.id,
-    amount: data.amount,
-    currency: sale.currency,
-    method: data.method,
-    customerName,
-    customerPhone: data.customerPhone ?? sale.customer?.phone ?? undefined,
-    customerEmail: sale.customer?.email ?? undefined,
-    saleNumber: sale.number,
-  });
-
-  await prisma.payment.update({
-    where: { id: payment.id },
-    data: { provider: provider.name, providerRef: result.providerRef, status: result.status },
-  });
-
-  if (result.status === PaymentStatus.SUCCESS) {
-    await settlePayment(payment.id, PaymentStatus.SUCCESS, result.raw);
-  }
-
-  return {
-    paymentId: payment.id,
-    status: result.status,
-    providerRef: result.providerRef,
-    instruction: result.instruction,
-    redirectUrl: result.redirectUrl,
-  };
+  await prisma.payment.update({ where: { id: payment.id }, data: { providerRef: payment.id } });
+  await settlePayment(payment.id, PaymentStatus.SUCCESS, { manual: true, method: data.method });
+  return { paymentId: payment.id, status: PaymentStatus.SUCCESS, providerRef: payment.id };
 }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { paymentConfigSchema, PaymentStatus } from '@oculo/shared-types';
+import { paymentConfigSchema, collectInfoSchema, PaymentStatus } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
@@ -34,6 +34,23 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       return reply.send({ config });
     },
   );
+
+  // Coordonnées d'encaissement manuel de la boutique (QR + numéro).
+  app.get('/collect-info', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
+    return reply.send({ collect: await paymentService.getCollectInfo(req.auth!.tenantId) });
+  });
+
+  app.put('/collect-info', { preHandler: requirePermission('settings.payments.update') }, async (req, reply) => {
+    const input = collectInfoSchema.parse(req.body);
+    const collect = await paymentService.saveCollectInfo(req.auth!.tenantId, input);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'COLLECT_INFO_UPDATED',
+      ...requestMeta(req),
+    });
+    return reply.send({ collect });
+  });
 
   app.get('/:id/status', async (req, reply) => {
     const { id } = req.params as { id: string };

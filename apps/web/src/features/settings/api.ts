@@ -22,6 +22,23 @@ export async function savePaymentConfig(input: PaymentConfigInput): Promise<Mask
   return data.config;
 }
 
+export interface CollectInfo {
+  network: string;
+  number: string;
+  name: string;
+  qr: string;
+}
+
+export async function getCollectInfo(): Promise<CollectInfo> {
+  const { data } = await api.get<{ collect: CollectInfo }>('/payments/collect-info');
+  return data.collect;
+}
+
+export async function saveCollectInfo(input: CollectInfo): Promise<CollectInfo> {
+  const { data } = await api.put<{ collect: CollectInfo }>('/payments/collect-info', input);
+  return data.collect;
+}
+
 export interface AuditLogDto {
   id: string;
   action: string;

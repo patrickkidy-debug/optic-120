@@ -17,6 +17,44 @@ interface StoredPaymentConfig {
   environment?: 'sandbox' | 'production';
   webhookUrl?: string;
   simulationMode?: boolean;
+  // Encaissement MANUEL de la boutique (QR + coordonnées affichés au client).
+  collectNetwork?: string;
+  collectNumber?: string;
+  collectName?: string;
+  collectQr?: string; // image (data URL)
+}
+
+export interface CollectInfo {
+  network: string;
+  number: string;
+  name: string;
+  qr: string;
+}
+
+/** Coordonnées d'encaissement manuel de la boutique (affichées à la caisse). */
+export async function getCollectInfo(tenantId: string): Promise<CollectInfo> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  const cfg = (tenant?.paymentConfig as StoredPaymentConfig | null) ?? null;
+  return {
+    network: cfg?.collectNetwork ?? '',
+    number: cfg?.collectNumber ?? '',
+    name: cfg?.collectName ?? '',
+    qr: cfg?.collectQr ?? '',
+  };
+}
+
+export async function saveCollectInfo(tenantId: string, input: CollectInfo): Promise<CollectInfo> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  const cfg = (tenant?.paymentConfig as StoredPaymentConfig | null) ?? {};
+  const stored: StoredPaymentConfig = {
+    ...cfg,
+    collectNetwork: input.network,
+    collectNumber: input.number,
+    collectName: input.name,
+    collectQr: input.qr,
+  };
+  await prisma.tenant.update({ where: { id: tenantId }, data: { paymentConfig: stored as object } });
+  return getCollectInfo(tenantId);
 }
 
 interface ResolvedConfig {
