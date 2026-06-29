@@ -42,3 +42,9 @@
     Content-Security-Policy = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
     # Isole le contexte de navigation tout en autorisant les popups (checkout).
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+
+# Type MIME correct pour le manifeste PWA.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
