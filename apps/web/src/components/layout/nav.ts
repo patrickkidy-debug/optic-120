@@ -29,6 +29,8 @@ export interface NavItem {
   labelKey: string;
   icon: LucideIcon;
   permission?: string;
+  /** Réservé à l'éditeur du SaaS (console plateforme). */
+  operatorOnly?: boolean;
   soon?: boolean;
   badge?: 'lowStock';
 }
@@ -87,7 +89,7 @@ export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.operator',
     items: [
-      { to: '/plateforme', labelKey: 'nav.platform', icon: Server, permission: 'platform.manage' },
+      { to: '/plateforme', labelKey: 'nav.platform', icon: Server, operatorOnly: true },
     ],
   },
 ];

@@ -22,6 +22,7 @@ export function Sidebar() {
     refetchInterval: 60_000,
   });
 
+  const isOperator = user?.isPlatformOperator ?? false;
   const can = (perm?: string) => !perm || (user?.permissions.includes(perm) ?? false);
 
   return (
@@ -32,7 +33,9 @@ export function Sidebar() {
 
       <div className="flex-1 space-y-5">
         {NAV.map((group) => {
-          const items = group.items.filter((it) => it.soon || can(it.permission));
+          const items = group.items.filter((it) =>
+            it.operatorOnly ? isOperator : it.soon || can(it.permission),
+          );
           if (items.length === 0) return null;
           return (
             <div key={group.titleKey}>

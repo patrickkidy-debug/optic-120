@@ -929,6 +929,8 @@ export interface AuthUser {
   allBranches: boolean;
   tenantName: string;
   tenantLogoUrl: string | null;
+  /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
+  isPlatformOperator: boolean;
 }
 
 export interface AuthResponse {

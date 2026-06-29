@@ -80,6 +80,13 @@ function perm(permission: string, el: ReactNode) {
   return <RequirePermission permission={permission}>{el}</RequirePermission>;
 }
 
+/** Réservé à l'éditeur du SaaS (console plateforme). */
+function OperatorOnly({ children }: { children: ReactNode }) {
+  const isOperator = useAuthStore((s) => s.user?.isPlatformOperator ?? false);
+  if (!isOperator) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
 export const router = createBrowserRouter([
   { path: '/', element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly> },
   { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
@@ -107,7 +114,7 @@ export const router = createBrowserRouter([
           { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
           { path: '/parametres/profil', element: <ProfilePage /> },
           { path: '/aide', element: <SupportPage /> },
-          { path: '/plateforme', element: perm('platform.manage', <PlatformPage />) },
+          { path: '/plateforme', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
 
           { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },
           { path: '/clinique/consultations', element: perm('clinic.consultations.view', <ConsultationsPage />) },

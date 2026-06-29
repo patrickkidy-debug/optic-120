@@ -37,11 +37,22 @@ function refreshExpiry(): Date {
   return new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
 }
 
+/** Emails déclarés comme opérateurs de la plateforme (éditeur + équipe). */
+function isOperatorEmail(email: string): boolean {
+  const set = new Set(
+    env.PLATFORM_ADMIN_EMAILS.split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return set.has(email.toLowerCase());
+}
+
 function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
   return {
     id: user.id,
     tenantId: user.tenantId,
     email: user.email,
+    isPlatformOperator: isOperatorEmail(user.email),
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
