@@ -37,6 +37,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
+// Après un déploiement, un ancien chunk peut manquer (404). Vite émet alors
+// « vite:preloadError » : on recharge une fois pour charger la nouvelle version.
+window.addEventListener('vite:preloadError', () => {
+  const k = 'oculo-chunk-reload';
+  if (Date.now() - Number(sessionStorage.getItem(k) || 0) > 10000) {
+    sessionStorage.setItem(k, String(Date.now()));
+    window.location.reload();
+  }
+});
+
 // PWA : enregistre le service worker (rend l'app installable + hors-ligne).
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

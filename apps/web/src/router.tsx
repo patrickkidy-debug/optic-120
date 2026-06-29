@@ -10,8 +10,28 @@ import { useAuthStore } from './store/auth';
  * visitée est téléchargé, ce qui allège fortement le bundle initial (les
  * dépendances lourdes comme chart.js ne se chargent que sur le dashboard).
  */
+/**
+ * Après un nouveau déploiement, l'ancien index.html chargé en mémoire référence
+ * d'anciens chunks (hash) qui n'existent plus → « Failed to fetch dynamically
+ * imported module ». On recharge alors la page UNE fois pour récupérer le
+ * nouvel index et les nouveaux chunks (garde anti-boucle de 10 s).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const named = (p: Promise<any>, key: string) => p.then((m) => ({ default: m[key] }));
+function onChunkError(err: unknown): Promise<any> {
+  const k = 'oculo-chunk-reload';
+  const last = Number(sessionStorage.getItem(k) || 0);
+  if (Date.now() - last > 10000) {
+    sessionStorage.setItem(k, String(Date.now()));
+    window.location.reload();
+    // Promesse jamais résolue : suspend le rendu le temps du rechargement.
+    return new Promise(() => {});
+  }
+  throw err;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const named = (p: Promise<any>, key: string) =>
+  p.then((m) => ({ default: m[key] })).catch(onChunkError);
 
 const LandingPage = lazy(() => named(import('./pages/LandingPage'), 'LandingPage'));
 const LoginPage = lazy(() => named(import('./pages/auth/LoginPage'), 'LoginPage'));
