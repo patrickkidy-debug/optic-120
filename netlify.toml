@@ -16,9 +16,9 @@
   NODE_VERSION = "20"
   # Évite que NODE_ENV=production fasse sauter l'installation des devDeps de build.
   NPM_FLAGS = "--include=dev"
-  # URL de l'API (Render). Vite la fige dans le bundle au build. Publique par nature.
-  # Surchargeable depuis le dashboard Netlify si l'API change d'URL.
-  VITE_API_URL = "https://oculosaas-api.onrender.com"
+  # URL de l'API (domaine personnalisé pointant vers Render). Vite la fige dans
+  # le bundle au build. Publique par nature. Surchargeable depuis le dashboard.
+  VITE_API_URL = "https://api.oculosaas.com"
 
 # SPA : toutes les routes inconnues renvoient index.html (React Router gère ensuite).
 [[redirects]]
