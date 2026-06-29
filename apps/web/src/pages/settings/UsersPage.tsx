@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, UserX, Users as UsersIcon } from 'lucide-react';
+import { Plus, UserX, Users as UsersIcon, Pencil } from 'lucide-react';
 import { userCreateSchema, type UserCreateInput } from '@oculo/shared-types';
-import { listUsers, createUser, deactivateUser, listRoles } from '../../features/rbac/api';
+import { listUsers, createUser, updateUser, deactivateUser, listRoles, type UserDto } from '../../features/rbac/api';
 import { listBranches } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -14,8 +14,10 @@ import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from 
 export function UsersPage() {
   const qc = useQueryClient();
   const canCreate = usePermission('rbac.users.create');
+  const canUpdate = usePermission('rbac.users.update');
   const canDeactivate = usePermission('rbac.users.deactivate');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editUser, setEditUser] = useState<UserDto | null>(null);
 
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: listUsers });
 
@@ -79,13 +81,22 @@ export function UsersPage() {
                     {u.isActive ? <Badge tone="success">Actif</Badge> : <Badge tone="danger">Inactif</Badge>}
                   </td>
                   <td className="table-cell text-right text-xs text-content-faint">
-                    {u.lastLoginAt ? formatDate(u.lastLoginAt) : 'Jamais connecté'}
+                    <span className="align-middle">{u.lastLoginAt ? formatDate(u.lastLoginAt) : 'Jamais connecté'}</span>
+                    {canUpdate && (
+                      <button
+                        onClick={() => setEditUser(u)}
+                        className="btn-ghost ml-2 h-8 w-8 rounded-lg p-0 text-content-muted"
+                        title="Modifier le rôle / les magasins"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
                     {canDeactivate && u.isActive && (
                       <button
                         onClick={() => {
                           if (confirm(`Désactiver ${u.firstName} ${u.lastName} ?`)) deactivateMut.mutate(u.id);
                         }}
-                        className="btn-ghost ml-2 h-8 w-8 rounded-lg p-0 text-danger"
+                        className="btn-ghost ml-1 h-8 w-8 rounded-lg p-0 text-danger"
                         title="Désactiver"
                       >
                         <UserX className="h-4 w-4" />
@@ -100,7 +111,66 @@ export function UsersPage() {
       )}
 
       {modalOpen && <CreateUserModal onClose={() => setModalOpen(false)} />}
+      {editUser && <EditUserModal user={editUser} onClose={() => setEditUser(null)} />}
     </div>
+  );
+}
+
+function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [error, setError] = useState('');
+  const [roleId, setRoleId] = useState(user.role.id);
+  const [branchIds, setBranchIds] = useState<string[]>(user.branches.map((b) => b.id));
+  const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: listRoles });
+  const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
+
+  const toggleBranch = (id: string) =>
+    setBranchIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const mut = useMutation({
+    mutationFn: () => updateUser(user.id, { roleId, branchIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      onClose();
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={`Modifier — ${user.firstName} ${user.lastName}`}>
+      <div className="space-y-4">
+        <Field label="Rôle">
+          <select className="input" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+            {roles?.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Magasins assignés">
+          <div className="space-y-1.5 rounded-xl bg-surface-2 p-2">
+            {branches?.map((b) => (
+              <label key={b.id} className="flex items-center gap-2 px-1 text-sm text-content">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[var(--primary)]"
+                  checked={branchIds.includes(b.id)}
+                  onChange={() => toggleBranch(b.id)}
+                />
+                {b.name}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-content-faint">
+            Sans effet pour les rôles « tous magasins » (admin, gestionnaire…).
+          </p>
+        </Field>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button onClick={() => mut.mutate()} loading={mut.isPending}>Enregistrer</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -68,6 +68,11 @@ export async function createUser(input: UserCreateInput) {
   return data.user;
 }
 
+export async function updateUser(id: string, input: Partial<UserCreateInput>) {
+  const { data } = await api.patch(`/users/${id}`, input);
+  return data.user;
+}
+
 export async function deactivateUser(id: string) {
   await api.post(`/users/${id}/deactivate`);
 }
