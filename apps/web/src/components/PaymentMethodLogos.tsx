@@ -38,44 +38,12 @@ function Pill({ brand }: { brand: BrandPill }) {
   );
 }
 
-/** Marque Visa (wordmark). */
-function VisaMark() {
-  return (
-    <span
-      title="Visa"
-      className="inline-flex h-8 select-none items-center rounded-lg border border-black/10 bg-white px-3 shadow-sm"
-    >
-      <span className="font-display text-sm font-black italic tracking-tight text-[#1A1F71]">
-        VISA
-      </span>
-    </span>
-  );
-}
-
-/** Marque Mastercard (deux cercles entrelacés). */
-function MastercardMark() {
-  return (
-    <span
-      title="Mastercard"
-      className="inline-flex h-8 select-none items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 shadow-sm"
-    >
-      <svg viewBox="0 0 36 22" className="h-4 w-auto" aria-hidden="true">
-        <circle cx="14" cy="11" r="10" fill="#EB001B" />
-        <circle cx="22" cy="11" r="10" fill="#F79E1B" fillOpacity="0.9" />
-      </svg>
-      <span className="text-[11px] font-bold text-[#1A1F71]">Mastercard</span>
-    </span>
-  );
-}
-
 export function PaymentMethodLogos({ className }: { className?: string }) {
   return (
     <div className={clsx('flex flex-wrap items-center gap-2', className)}>
       {MOBILE_BRANDS.map((b) => (
         <Pill key={b.label} brand={b} />
       ))}
-      <VisaMark />
-      <MastercardMark />
     </div>
   );
 }
