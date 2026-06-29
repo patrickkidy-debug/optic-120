@@ -27,6 +27,18 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
   app.addHook('preHandler', requirePlatformOperator);
 
+  // Indicateurs clés (console fondateur).
+  app.get('/stats', async (_req, reply) => {
+    const stats = await billing.getPlatformStats();
+    return reply.send({ stats });
+  });
+
+  // Liste des utilisateurs de toute la plateforme (suivi).
+  app.get('/users', async (_req, reply) => {
+    const users = await billing.listAllUsers();
+    return reply.send({ users });
+  });
+
   // Liste de tous les abonnements (cross-tenant).
   app.get('/subscriptions', async (_req, reply) => {
     const subscriptions = await billing.listAllSubscriptions();

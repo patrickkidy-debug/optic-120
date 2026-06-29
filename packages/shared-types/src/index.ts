@@ -193,11 +193,11 @@ export const PLAN_CATALOG: PlanDef[] = [
   {
     code: 'STANDARD',
     name: 'Standard',
-    description: "Gestion complète d'un magasin d'optique ou d'une clinique.",
+    description: "Gestion complète d'une optique ou clinique, jusqu'à 10 magasins.",
     priceMonthly: 12000,
     trialDays: 0,
     maxUsers: 10,
-    maxBranches: 1,
+    maxBranches: 10,
     maxPatients: null,
     maxSales: null,
     features: [
@@ -205,6 +205,7 @@ export const PLAN_CATALOG: PlanDef[] = [
       'Gestion des stocks, patients et ventes',
       'Gestion des paiements et dépenses',
       'Tableau de bord complet',
+      "Jusqu'à 10 magasins",
       "Jusqu'à 10 utilisateurs",
       'Support prioritaire',
     ],

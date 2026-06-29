@@ -313,6 +313,64 @@ export async function getPaymentStatus(tenantId: string, paymentId: string) {
 
 /* ------------------------ Console plateforme ----------------------- */
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Indicateurs clés de la plateforme (console fondateur). */
+export async function getPlatformStats() {
+  const since = new Date(Date.now() - 30 * DAY_MS);
+  const [tenantsTotal, usersTotal, usersActive, newTenants30d, newUsers30d, subs] =
+    await Promise.all([
+      prisma.tenant.count(),
+      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
+      prisma.tenant.count({ where: { createdAt: { gte: since } } }),
+      prisma.user.count({ where: { createdAt: { gte: since } } }),
+      prisma.subscription.findMany({ include: { plan: { select: { priceMonthly: true } } } }),
+    ]);
+
+  const countBy = (st: SubscriptionStatus) => subs.filter((s) => s.status === st).length;
+  // MRR = somme des prix mensuels des abonnements actifs (revenu récurrent).
+  const mrr = subs
+    .filter((s) => s.status === SubscriptionStatus.ACTIVE)
+    .reduce((acc, s) => acc + Number(s.plan.priceMonthly), 0);
+
+  return {
+    tenantsTotal,
+    usersTotal,
+    usersActive,
+    newTenants30d,
+    newUsers30d,
+    subsActive: countBy(SubscriptionStatus.ACTIVE),
+    subsTrialing: countBy(SubscriptionStatus.TRIALING),
+    subsPastDue: countBy(SubscriptionStatus.PAST_DUE),
+    subsSuspended: countBy(SubscriptionStatus.SUSPENDED),
+    mrr,
+  };
+}
+
+/** Liste des utilisateurs de toute la plateforme (cross-tenant, pour suivi). */
+export async function listAllUsers(limit = 200) {
+  const users = await prisma.user.findMany({
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      tenant: { select: { name: true, slug: true } },
+      role: { select: { name: true } },
+    },
+  });
+  return users.map((u) => ({
+    id: u.id,
+    name: `${u.firstName} ${u.lastName}`,
+    email: u.email,
+    tenantName: u.tenant.name,
+    tenantSlug: u.tenant.slug,
+    roleLabel: u.role.name,
+    isActive: u.isActive,
+    lastLoginAt: u.lastLoginAt,
+    createdAt: u.createdAt,
+  }));
+}
+
 export async function listAllSubscriptions() {
   const subs = await prisma.subscription.findMany({
     include: { plan: true, tenant: { select: { id: true, name: true, slug: true } } },

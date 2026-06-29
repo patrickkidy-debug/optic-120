@@ -116,3 +116,73 @@ export async function runBilling() {
   const { data } = await api.post<{ markedPastDue: number; suspended: number }>('/platform/billing/run');
   return data;
 }
+
+export interface PlatformStats {
+  tenantsTotal: number;
+  usersTotal: number;
+  usersActive: number;
+  newTenants30d: number;
+  newUsers30d: number;
+  subsActive: number;
+  subsTrialing: number;
+  subsPastDue: number;
+  subsSuspended: number;
+  mrr: number;
+}
+
+export async function getPlatformStats(): Promise<PlatformStats> {
+  const { data } = await api.get<{ stats: PlatformStats }>('/platform/stats');
+  return data.stats;
+}
+
+export interface PlatformUser {
+  id: string;
+  name: string;
+  email: string;
+  tenantName: string;
+  tenantSlug: string;
+  roleLabel: string;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export async function listPlatformUsers(): Promise<PlatformUser[]> {
+  const { data } = await api.get<{ users: PlatformUser[] }>('/platform/users');
+  return data.users;
+}
+
+export interface PlatformPlan {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  priceMonthly: string | number;
+  trialDays: number;
+  maxUsers: number | null;
+  maxBranches: number | null;
+  maxPatients: number | null;
+  maxSales: number | null;
+  isActive: boolean;
+}
+
+export async function getPlatformPlans(): Promise<PlatformPlan[]> {
+  const { data } = await api.get<{ plans: PlatformPlan[] }>('/platform/plans');
+  return data.plans;
+}
+
+export async function updatePlatformPlan(
+  id: string,
+  input: Partial<{
+    name: string;
+    priceMonthly: number;
+    maxUsers: number | null;
+    maxBranches: number | null;
+    maxPatients: number | null;
+    maxSales: number | null;
+    isActive: boolean;
+  }>,
+): Promise<PlatformPlan> {
+  const { data } = await api.patch<{ plan: PlatformPlan }>(`/platform/plans/${id}`, input);
+  return data.plan;
+}
