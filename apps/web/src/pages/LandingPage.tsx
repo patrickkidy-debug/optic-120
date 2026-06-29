@@ -19,6 +19,8 @@ import {
   Clock,
   Globe,
   HeartPulse,
+  Star,
+  Quote,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -144,6 +146,37 @@ const FAQ = [
   {
     q: 'Puis-je changer d’offre plus tard ?',
     a: 'Oui, vous pouvez passer à une offre supérieure ou inférieure à tout moment, selon l’évolution de votre activité.',
+  },
+];
+
+/* Établissements & témoignages — exemples illustratifs (à remplacer par de vrais clients). */
+const TRUST = [
+  'Vision Plus',
+  'Optique Horizon',
+  'Clinique de l’Œil',
+  'Centre Ophtalmo Teranga',
+  'Optic Sénégal',
+  'Clinique Regard Neuf',
+];
+
+const TESTIMONIALS = [
+  {
+    name: 'Dr. Aminata Sow',
+    role: 'Clinique de l’Œil — Dakar',
+    initials: 'AS',
+    text: 'OculoSaaS a transformé notre organisation : rendez-vous, dossiers patients et caisse réunis au même endroit. Un gain de temps énorme au quotidien.',
+  },
+  {
+    name: 'Mamadou Diallo',
+    role: 'Optique Horizon — Abidjan',
+    initials: 'MD',
+    text: 'Encaisser par Wave et Orange Money directement à la caisse, c’est exactement ce qu’il nous fallait. Mes clients adorent la simplicité.',
+  },
+  {
+    name: 'Fatou Ndiaye',
+    role: 'Vision Plus — Thiès',
+    initials: 'FN',
+    text: 'Je pilote mes 3 magasins depuis mon téléphone. Les rapports me montrent enfin clairement où je gagne de l’argent.',
   },
 ];
 
@@ -390,6 +423,83 @@ export function LandingPage() {
                   <p className="mt-2 text-sm leading-relaxed text-content-muted">{s.text}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Ils nous font confiance ---------- */}
+        <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">
+            Ils nous font confiance
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            {TRUST.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/60 px-4 py-2.5 text-sm font-semibold text-content-muted backdrop-blur"
+              >
+                <Eye className="h-4 w-4 text-primary" /> {name}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- Témoignages ---------- */}
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Ce qu’en disent <span className="text-gradient">nos clients</span>
+            </h2>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="card relative p-6">
+                <Quote className="absolute right-5 top-5 h-7 w-7 text-primary/20" />
+                <div className="flex gap-1 text-accent">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-current" />
+                  ))}
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-content">“{t.text}”</p>
+                <div className="mt-5 flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-sm font-bold text-white">
+                    {t.initials}
+                  </span>
+                  <div>
+                    <div className="text-sm font-bold text-content">{t.name}</div>
+                    <div className="text-xs text-content-muted">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- Fondateur ---------- */}
+        <section className="border-y border-line bg-bg-subtle">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-[auto_1fr]">
+            <div className="mx-auto">
+              <div className="grid h-40 w-40 place-items-center rounded-3xl bg-brand text-5xl font-extrabold text-white shadow-card-lg">
+                EK
+              </div>
+            </div>
+            <div>
+              <span className="kicker text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+                Le fondateur
+              </span>
+              <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                Eloge <span className="text-gradient">KONAN</span>
+              </h2>
+              <p className="text-sm font-semibold text-content-muted">Fondateur &amp; CEO d’OculoSaaS</p>
+              <p className="mt-4 text-base leading-relaxed text-content-muted">
+                Convaincu que la technologie doit servir les professionnels de santé d’Afrique de
+                l’Ouest, Eloge KONAN a créé OculoSaaS pour donner aux opticiens et ophtalmologues un
+                outil moderne, simple et abordable — du petit magasin à la clinique multi-sites.
+              </p>
+              <p className="mt-4 border-l-2 border-primary pl-4 text-base italic text-content">
+                « Mon objectif est simple : faire gagner du temps aux professionnels de la vue, pour
+                qu’ils se concentrent sur l’essentiel — leurs patients. »
+              </p>
             </div>
           </div>
         </section>
