@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
 
@@ -54,7 +55,9 @@ export function AppShell() {
       <div className="lg:pl-64">
         <Topbar />
         <main className="mx-auto max-w-7xl animate-fade-in px-4 py-6 sm:px-6">
-          <Outlet />
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
