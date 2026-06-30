@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, UserX, Users as UsersIcon, Pencil } from 'lucide-react';
+import { Plus, UserX, Users as UsersIcon, Pencil, KeyRound, Copy, Check } from 'lucide-react';
 import { userCreateSchema, type UserCreateInput } from '@oculo/shared-types';
-import { listUsers, createUser, updateUser, deactivateUser, listRoles, type UserDto } from '../../features/rbac/api';
+import { listUsers, createUser, updateUser, deactivateUser, resetUserPassword, listRoles, type UserDto } from '../../features/rbac/api';
 import { listBranches } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -18,12 +18,18 @@ export function UsersPage() {
   const canDeactivate = usePermission('rbac.users.deactivate');
   const [modalOpen, setModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserDto | null>(null);
+  const [resetResult, setResetResult] = useState<{ user: UserDto; tempPassword: string } | null>(null);
 
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: listUsers });
 
   const deactivateMut = useMutation({
     mutationFn: deactivateUser,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  const resetPasswordMut = useMutation({
+    mutationFn: resetUserPassword,
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
@@ -91,6 +97,21 @@ export function UsersPage() {
                         <Pencil className="h-4 w-4" />
                       </button>
                     )}
+                    {canUpdate && u.isActive && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Générer un nouveau mot de passe temporaire pour ${u.firstName} ${u.lastName} ? Ses sessions actives seront déconnectées.`)) {
+                            resetPasswordMut.mutate(u.id, {
+                              onSuccess: (res) => setResetResult({ user: u, tempPassword: res.tempPassword }),
+                            });
+                          }
+                        }}
+                        className="btn-ghost ml-1 h-8 w-8 rounded-lg p-0 text-content-muted"
+                        title="Réinitialiser le mot de passe (sans email)"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
+                    )}
                     {canDeactivate && u.isActive && (
                       <button
                         onClick={() => {
@@ -112,7 +133,63 @@ export function UsersPage() {
 
       {modalOpen && <CreateUserModal onClose={() => setModalOpen(false)} />}
       {editUser && <EditUserModal user={editUser} onClose={() => setEditUser(null)} />}
+      {resetResult && (
+        <ResetPasswordResultModal
+          user={resetResult.user}
+          tempPassword={resetResult.tempPassword}
+          onClose={() => setResetResult(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Affiche le mot de passe temporaire généré UNE SEULE FOIS (il n'est jamais
+ * stocké en clair côté serveur). À transmettre soi-même à l'employé —
+ * solution fiable tant que l'envoi automatique par email reste aléatoire.
+ */
+function ResetPasswordResultModal({
+  user,
+  tempPassword,
+  onClose,
+}: {
+  user: UserDto;
+  tempPassword: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Presse-papier indisponible (contexte non sécurisé) : l'utilisateur copie manuellement.
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Mot de passe temporaire" size="sm">
+      <p className="text-sm text-content-muted">
+        Nouveau mot de passe pour <b className="text-content">{user.firstName} {user.lastName}</b>{' '}
+        ({user.email}). Transmettez-le vous-même (WhatsApp, SMS, en personne…) — il ne sera plus
+        affiché après fermeture de cette fenêtre.
+      </p>
+      <div className="mt-4 flex items-center gap-2 rounded-xl border bg-surface-2 p-3">
+        <span className="flex-1 select-all font-mono text-lg font-bold tracking-wider text-content">{tempPassword}</span>
+        <button onClick={copy} className="btn-ghost h-9 w-9 rounded-lg p-0" title="Copier">
+          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+      <p className="mt-3 text-xs text-content-faint">
+        Ses sessions actives ont été déconnectées ; il devra se reconnecter avec ce mot de passe.
+      </p>
+      <Button className="mt-5 w-full" onClick={onClose}>
+        J'ai noté le mot de passe
+      </Button>
+    </Modal>
   );
 }
 

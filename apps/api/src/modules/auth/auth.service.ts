@@ -105,7 +105,11 @@ export async function verifyEmail(token: string): Promise<void> {
 export async function resendVerification(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.emailVerifiedAt) return;
-  await sendVerificationEmail(user);
+  try {
+    await sendVerificationEmail(user);
+  } catch (err) {
+    logger.error({ err }, 'Renvoi email de confirmation échoué');
+  }
 }
 
 async function issueSession(
@@ -585,12 +589,18 @@ export async function forgotPassword(email: string, meta: RequestMeta): Promise<
   });
 
   const link = `${appOrigin}/reset-password?token=${token}`;
-  await mailer.send({
-    to: email,
-    subject: 'Réinitialisation de votre mot de passe OculoSaaS',
-    text: `Bonjour,\n\nVous avez demandé à réinitialiser votre mot de passe.\nCliquez sur ce lien (valable 15 minutes) :\n${link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`,
-    html: `<p>Bonjour,</p><p>Vous avez demandé à réinitialiser votre mot de passe.</p><p><a href="${link}">Réinitialiser mon mot de passe</a> (valable 15 minutes)</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`,
-  });
+  // Non bloquant : un email qui échoue ne doit pas faire échouer la requête
+  // (et ne doit pas révéler si l'envoi a réussi — anti-énumération).
+  try {
+    await mailer.send({
+      to: email,
+      subject: 'Réinitialisation de votre mot de passe OculoSaaS',
+      text: `Bonjour,\n\nVous avez demandé à réinitialiser votre mot de passe.\nCliquez sur ce lien (valable 15 minutes) :\n${link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`,
+      html: `<p>Bonjour,</p><p>Vous avez demandé à réinitialiser votre mot de passe.</p><p><a href="${link}">Réinitialiser mon mot de passe</a> (valable 15 minutes)</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`,
+    });
+  } catch (err) {
+    logger.error({ err }, "Envoi email de réinitialisation échoué");
+  }
 
   await recordAudit({
     tenantId: user.tenantId,

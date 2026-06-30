@@ -76,3 +76,9 @@ export async function updateUser(id: string, input: Partial<UserCreateInput>) {
 export async function deactivateUser(id: string) {
   await api.post(`/users/${id}/deactivate`);
 }
+
+/** Réinitialise le mot de passe sans email : renvoie un mot de passe temporaire à transmettre soi-même. */
+export async function resetUserPassword(id: string): Promise<{ tempPassword: string }> {
+  const { data } = await api.post<{ tempPassword: string }>(`/users/${id}/reset-password`);
+  return data;
+}

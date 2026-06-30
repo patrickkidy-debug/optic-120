@@ -1,8 +1,20 @@
+import { randomInt } from 'node:crypto';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword } from '../../lib/password.js';
 import { badRequest, conflict, notFound } from '../../lib/http-error.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
 import type { UserCreateInput } from '@oculo/shared-types';
+
+// Alphabet sans caractères ambigus (pas de 0/O, 1/l/I) : lisible à l'oral/WhatsApp.
+const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+
+function generateTempPassword(length = 10): string {
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += TEMP_PASSWORD_ALPHABET[randomInt(TEMP_PASSWORD_ALPHABET.length)];
+  }
+  return out;
+}
 
 export async function listUsers(tenantId: string) {
   const users = await prisma.user.findMany({
@@ -94,6 +106,31 @@ export async function updateUser(
     }
   });
   return { id };
+}
+
+/**
+ * Réinitialisation de mot de passe SANS email (l'envoi automatique étant peu
+ * fiable selon les boîtes mail) : un administrateur génère un mot de passe
+ * temporaire affiché une seule fois à l'écran, à transmettre lui-même
+ * (WhatsApp, SMS, en personne...) à l'utilisateur concerné.
+ */
+export async function resetUserPassword(tenantId: string, id: string): Promise<{ tempPassword: string }> {
+  const user = await prisma.user.findFirst({ where: { id, tenantId } });
+  if (!user) throw notFound('Utilisateur introuvable');
+
+  const tempPassword = generateTempPassword();
+  const passwordHash = await hashPassword(tempPassword);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+  return { tempPassword };
 }
 
 export async function deactivateUser(tenantId: string, id: string, currentUserId: string) {

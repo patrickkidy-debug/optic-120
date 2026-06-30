@@ -34,6 +34,23 @@ export async function usersRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ user: result });
   });
 
+  // Réinitialisation sans email : génère un mot de passe temporaire affiché
+  // une seule fois, à transmettre soi-même à l'utilisateur (l'envoi email
+  // automatique n'étant pas toujours fiable selon les boîtes de réception).
+  app.post('/:id/reset-password', { preHandler: requirePermission('rbac.users.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const result = await usersService.resetUserPassword(req.auth!.tenantId, id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'USER_PASSWORD_RESET_BY_ADMIN',
+      entity: 'User',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send(result);
+  });
+
   app.post('/:id/deactivate', { preHandler: requirePermission('rbac.users.deactivate') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     await usersService.deactivateUser(req.auth!.tenantId, id, req.auth!.userId);
