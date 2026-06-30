@@ -48,3 +48,10 @@
   for = "/manifest.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
+
+# Assets Vite (JS/CSS) : nom de fichier hashé sur le contenu → cache navigateur
+# longue durée sûr (un changement de code donne un nouveau nom de fichier).
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -76,10 +76,27 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Chargement non bloquant : la feuille de style Google Fonts retardait
+         le premier rendu (le navigateur doit la télécharger avant de pouvoir
+         peindre la page). On la charge en arrière-plan (media="print" ignoré
+         au rendu) puis on l'active une fois prête ; repli <noscript>. -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+    />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
 
     <!-- Google Identity Services (« Se connecter avec Google ») -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
