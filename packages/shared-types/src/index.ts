@@ -174,19 +174,19 @@ export const PLAN_CATALOG: PlanDef[] = [
   {
     code: 'TRIAL',
     name: 'Découverte',
-    description: "Offre d'essai pour démarrer avec les fonctionnalités essentielles.",
+    description: "Offre d'essai 5 jours pour tester les fonctionnalités essentielles.",
     priceMonthly: 2500,
     trialDays: 5,
-    maxUsers: 2,
+    maxUsers: 1,
     maxBranches: 1,
-    maxPatients: 50,
-    maxSales: 50,
+    maxPatients: 20,
+    maxSales: 20,
     features: [
-      'Fonctionnalités essentielles',
-      "Jusqu'à 2 utilisateurs",
-      "Jusqu'à 50 patients et 50 ventes",
-      'Support standard',
-      'Évolutif à tout moment',
+      '1 établissement',
+      '1 utilisateur',
+      "Jusqu'à 20 patients",
+      "Jusqu'à 20 ventes",
+      'Essai 5 jours',
     ],
     sortOrder: 1,
   },
@@ -235,6 +235,28 @@ export const PLAN_CATALOG: PlanDef[] = [
 ];
 
 export const TRIAL_PLAN_CODE = 'TRIAL';
+
+/**
+ * Fonctionnalités premium (STANDARD/PREMIUM) verrouillées pendant l'essai
+ * Découverte. Dérivées du code de l'offre — pas de colonne DB dédiée, les
+ * 3 offres étant fixes (TRIAL/STANDARD/PREMIUM).
+ */
+export type PremiumFeature =
+  | 'advancedReports'
+  | 'multiBranch'
+  | 'stockTransfer'
+  | 'pdfExport';
+
+export function planHasFeature(planCode: string, _feature: PremiumFeature): boolean {
+  return planCode !== 'TRIAL';
+}
+
+export const PREMIUM_FEATURE_LABELS: Record<PremiumFeature, string> = {
+  advancedReports: 'Rapports financiers avancés',
+  multiBranch: 'Multi-magasins',
+  stockTransfer: 'Transferts de stock entre magasins',
+  pdfExport: 'Export PDF des rapports',
+};
 
 /* ============================================================
  * RÔLES SYSTÈME (12) — seedés comme templates globaux (tenantId = null)

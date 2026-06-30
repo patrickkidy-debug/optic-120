@@ -71,7 +71,11 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
     // payée) est expirée → « essai gratuit puis blocage tant que pas payé ».
     const expired = sub.currentPeriodEnd.getTime() < Date.now();
     const blocked = sub.status === 'SUSPENDED' || sub.status === 'CANCELLED' || expired;
-    if (blocked && !isBillingExempt(req.url) && !isOperator(user.email)) {
+    // Compte suspendu : consultation des données (GET) toujours permise — seules
+    // les actions qui modifient quelque chose (création, vente, encaissement…)
+    // sont bloquées tant que l'abonnement n'est pas activé.
+    const isReadOnly = req.method === 'GET';
+    if (blocked && !isReadOnly && !isBillingExempt(req.url) && !isOperator(user.email)) {
       throw paymentRequired(
         'Votre période est terminée. Activez votre abonnement pour continuer.',
       );

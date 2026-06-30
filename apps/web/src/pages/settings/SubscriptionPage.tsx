@@ -298,15 +298,24 @@ function PlanCard({
   canManage: boolean;
   onSubscribe: () => void;
 }) {
-  const highlight = plan.code === 'PREMIUM';
+  const highlight = plan.code === 'STANDARD';
   return (
-    <div className={`card relative p-5 ${highlight ? 'border-primary shadow-glow' : ''}`}>
+    <div
+      className={`card relative p-5 ${
+        highlight ? 'border-2 border-primary bg-gradient-to-b from-primary-soft to-surface shadow-glow' : ''
+      }`}
+    >
       {highlight && (
-        <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
-          <Sparkles className="h-3 w-3" /> Populaire
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-xs font-bold text-white shadow-card">
+          ⭐ LE PLUS POPULAIRE
         </span>
       )}
-      <h4 className="font-display text-lg font-bold text-content">{plan.name}</h4>
+      <h4 className="mt-1 font-display text-lg font-bold text-content">{plan.name}</h4>
+      {highlight && (
+        <p className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
+          <Sparkles className="h-3 w-3" /> Recommandé pour les opticiens
+        </p>
+      )}
       <p className="mt-1 text-sm text-content-muted">{plan.description}</p>
       <p className="mt-3 font-display text-2xl font-bold text-content">
         {formatCurrency(plan.priceMonthly)}
@@ -319,6 +328,11 @@ function PlanCard({
           </li>
         ))}
       </ul>
+      {highlight && (
+        <p className="mt-4 rounded-xl bg-success/10 px-3 py-2 text-center text-xs font-semibold text-success">
+          Plus de 90&nbsp;% des établissements actifs choisissent cette offre.
+        </p>
+      )}
       <div className="mt-5">
         {current ? (
           <Button variant="outline" className="w-full" disabled>
@@ -327,7 +341,7 @@ function PlanCard({
         ) : (
           canManage && (
             <Button variant={highlight ? 'accent' : 'primary'} className="w-full" onClick={onSubscribe}>
-              Choisir cette offre
+              {highlight ? '🚀 Passer au plan Standard' : 'Choisir cette offre'}
             </Button>
           )
         )}

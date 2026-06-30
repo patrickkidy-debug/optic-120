@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { TrialBanner } from '../TrialBanner';
 import { EmailVerifyBanner } from '../EmailVerifyBanner';
+import { UpgradeModal } from '../UpgradeModal';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
@@ -64,6 +65,7 @@ export function AppShell() {
           </Suspense>
         </main>
       </div>
+      <UpgradeModal />
     </div>
   );
 }

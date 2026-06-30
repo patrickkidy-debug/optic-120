@@ -5,16 +5,21 @@ import { listBranches, createBranch } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { useSubscriptionPlan } from '../../features/billing/useSubscriptionPlan';
+import { useUpgradeModalStore } from '../../store/upgradeModal';
 
 export function BranchesPage() {
   const qc = useQueryClient();
   const canCreate = usePermission('settings.branches.create');
+  const { hasFeature } = useSubscriptionPlan();
+  const openUpgrade = useUpgradeModalStore((s) => s.open);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [error, setError] = useState('');
 
   const { data: branches, isLoading } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
+  const canAddBranch = hasFeature('multiBranch');
 
   const mut = useMutation({
     mutationFn: () => createBranch({ name, city }),
@@ -34,8 +39,8 @@ export function BranchesPage() {
         subtitle="Architecture multi-magasins de votre établissement"
         actions={
           canCreate && (
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" /> Nouveau magasin
+            <Button onClick={() => (canAddBranch ? setOpen(true) : openUpgrade('multiBranch'))}>
+              <Plus className="h-4 w-4" /> Nouveau magasin {!canAddBranch && '🔒'}
             </Button>
           )
         }

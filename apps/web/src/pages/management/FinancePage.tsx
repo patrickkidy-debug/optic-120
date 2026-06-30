@@ -14,6 +14,8 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
+import { useSubscriptionPlan } from '../../features/billing/useSubscriptionPlan';
+import { FeatureLockScreen } from '../../components/FeatureLockScreen';
 
 const CATEGORIES = [
   { value: 'RENT', label: 'Loyer' },
@@ -35,6 +37,7 @@ export function FinancePage() {
   const canCreate = usePermission('finance.expenses.create');
   const canDelete = usePermission('finance.expenses.delete');
   const [open, setOpen] = useState(false);
+  const { hasFeature } = useSubscriptionPlan();
 
   const { data: summary } = useQuery({ queryKey: ['finance-summary'], queryFn: getFinanceSummary });
   const { data: expenses, isLoading } = useQuery({ queryKey: ['expenses'], queryFn: listExpenses });
@@ -47,6 +50,15 @@ export function FinancePage() {
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
+
+  if (!hasFeature('advancedReports')) {
+    return (
+      <div>
+        <PageHeader title="Finance" subtitle="Recettes, dépenses et résultat du mois" />
+        <FeatureLockScreen feature="advancedReports" />
+      </div>
+    );
+  }
 
   return (
     <div>

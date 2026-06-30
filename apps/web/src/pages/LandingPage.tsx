@@ -124,6 +124,15 @@ const STATS = [
   { value: '24/7', label: 'accès à vos données' },
 ];
 
+/** Fonctionnalités Standard non disponibles sur l'offre Découverte (affichage cadenas). */
+const TRIAL_LOCKED_FEATURES = [
+  'Multi-magasins',
+  'Gestion avancée du stock',
+  'Rapports financiers avancés',
+  'Export PDF des rapports',
+  'Paiements Wave / Orange Money / MTN',
+];
+
 const FAQ = [
   {
     q: 'Ai-je besoin d’installer un logiciel ?',
@@ -770,17 +779,22 @@ export function LandingPage() {
                   className={clsx(
                     'relative flex h-full flex-col rounded-2xl border bg-surface p-6 shadow-card transition duration-300',
                     highlighted
-                      ? 'border-primary ring-2 ring-primary shadow-card-lg lg:-translate-y-2 hover:-translate-y-3'
+                      ? 'border-2 border-primary bg-gradient-to-b from-primary-soft to-surface shadow-card-lg lg:-translate-y-3 lg:scale-[1.04] hover:-translate-y-4'
                       : 'hover:-translate-y-1.5 hover:shadow-card-lg',
                   )}
                 >
                   {highlighted && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white shadow-card">
-                      Le plus populaire
+                    <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white shadow-card-lg">
+                      ⭐ LE PLUS POPULAIRE
                     </span>
                   )}
 
                   <h3 className="font-display text-xl font-extrabold">{plan.name}</h3>
+                  {highlighted && (
+                    <p className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
+                      ⭐ Recommandé pour les opticiens
+                    </p>
+                  )}
                   <p className="mt-1.5 min-h-[40px] text-sm text-content-muted">
                     {plan.description}
                   </p>
@@ -796,12 +810,18 @@ export function LandingPage() {
                       <Clock className="h-3.5 w-3.5" /> {plan.trialDays} jours d’essai gratuit
                     </p>
                   )}
+                  {highlighted && (
+                    <p className="mt-1.5 text-xs font-semibold text-primary">Soit ~400 FCFA / jour</p>
+                  )}
 
                   <Link
                     to={`/signup?plan=${plan.code}`}
-                    className={clsx('mt-6 w-full', highlighted ? 'btn-primary' : 'btn-outline')}
+                    className={clsx(
+                      'mt-6 w-full',
+                      highlighted ? 'btn-primary shadow-glow' : 'btn-outline',
+                    )}
                   >
-                    Choisir {plan.name}
+                    {highlighted ? '🚀 Choisir Standard' : `Choisir ${plan.name}`}
                   </Link>
 
                   <ul className="mt-6 space-y-3 border-t border-line pt-6">
@@ -811,12 +831,49 @@ export function LandingPage() {
                         <span className="text-content-muted">{f}</span>
                       </li>
                     ))}
+                    {plan.code === 'TRIAL' &&
+                      TRIAL_LOCKED_FEATURES.map((f) => (
+                        <li key={f} className="flex items-start gap-2.5 text-sm opacity-70">
+                          <span className="mt-0.5 shrink-0">🔒</span>
+                          <span className="text-content-faint line-through decoration-content-faint/40">{f}</span>
+                        </li>
+                      ))}
                   </ul>
+
+                  {highlighted && (
+                    <p className="mt-5 rounded-xl bg-success/10 px-3 py-2 text-center text-xs font-semibold text-success">
+                      Plus de 90&nbsp;% des établissements actifs choisissent cette offre.
+                    </p>
+                  )}
                 </div>
                 </Reveal>
               );
             })}
           </div>
+
+          {/* Retour sur investissement */}
+          <Reveal delay={140} className="mt-10">
+            <div className="mx-auto max-w-3xl rounded-2xl border border-primary/20 bg-hero p-6 text-center sm:p-8">
+              <p className="font-display text-xl font-extrabold sm:text-2xl">
+                Pour seulement <span className="text-gradient">400 FCFA par jour</span>, gérez votre
+                établissement comme une grande chaîne d’optique.
+              </p>
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl bg-surface/70 p-4 backdrop-blur">
+                  <p className="text-sm text-content-muted">
+                    Moins cher qu’<b className="text-content">une seule monture vendue</b> — l’abonnement
+                    se rentabilise dès la première vente du mois.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-surface/70 p-4 backdrop-blur">
+                  <p className="text-sm text-content-muted">
+                    Des <b className="text-content">heures économisées chaque mois</b> sur la caisse, les
+                    stocks et les rapports, automatisés au lieu d’être faits à la main.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
 
           <p className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-content-faint">
             <span className="inline-flex items-center gap-1.5">

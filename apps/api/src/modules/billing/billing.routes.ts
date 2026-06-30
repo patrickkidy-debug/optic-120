@@ -22,6 +22,14 @@ function capiContext(req: FastifyRequest): CapiContext {
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
+  // Statut minimal (offre + échéance), accessible à tout utilisateur connecté
+  // (pas seulement billing.view) : sert au badge d'essai et au verrouillage des
+  // fonctionnalités premium pour TOUT le personnel, pas uniquement les gérants.
+  app.get('/plan-status', async (req, reply) => {
+    const status = await billing.getSubscriptionStatus(req.auth!.tenantId);
+    return reply.send({ status });
+  });
+
   app.get('/plans', { preHandler: requirePermission('billing.view') }, async (_req, reply) => {
     const plans = await billing.listPlans();
     return reply.send({

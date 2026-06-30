@@ -65,6 +65,19 @@ export async function getSubscription(): Promise<SubscriptionInfo | null> {
   const { data } = await api.get<{ subscription: SubscriptionInfo | null }>('/billing/subscription');
   return data.subscription;
 }
+
+export interface PlanStatus {
+  status: string;
+  planCode: string;
+  currentPeriodEnd: string;
+  trialEndsAt: string | null;
+}
+
+/** Statut minimal (offre + échéance) accessible à tout utilisateur connecté. */
+export async function getPlanStatus(): Promise<PlanStatus | null> {
+  const { data } = await api.get<{ status: PlanStatus | null }>('/billing/plan-status');
+  return data.status;
+}
 export async function getInvoices(): Promise<SubInvoice[]> {
   const { data } = await api.get<{ invoices: SubInvoice[] }>('/billing/invoices');
   return data.invoices;
