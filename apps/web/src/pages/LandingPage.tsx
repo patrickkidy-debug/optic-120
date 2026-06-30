@@ -16,11 +16,11 @@ import {
   Sparkles,
   Menu,
   X,
-  Clock,
   Globe,
   HeartPulse,
   Star,
   Quote,
+  Volume2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -103,7 +103,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: 'Créez votre compte',
-    text: 'Inscrivez votre établissement en 2 minutes et profitez de 5 jours d’essai gratuit.',
+    text: 'Inscrivez votre établissement en 2 minutes et choisissez votre offre.',
   },
   {
     icon: Users,
@@ -118,19 +118,10 @@ const STEPS = [
 ];
 
 const STATS = [
-  { value: '5 j', label: 'd’essai gratuit' },
+  { value: '3', label: 'offres adaptées à votre taille' },
   { value: '5+', label: 'opérateurs Mobile Money' },
   { value: '100 %', label: 'web & responsive' },
   { value: '24/7', label: 'accès à vos données' },
-];
-
-/** Fonctionnalités Standard non disponibles sur l'offre Découverte (affichage cadenas). */
-const TRIAL_LOCKED_FEATURES = [
-  'Multi-magasins',
-  'Gestion avancée du stock',
-  'Rapports financiers avancés',
-  'Export PDF des rapports',
-  'Paiements Wave / Orange Money / MTN',
 ];
 
 const FAQ = [
@@ -139,8 +130,8 @@ const FAQ = [
     a: 'Non. OculoSaaS est 100 % en ligne. Il fonctionne dans votre navigateur, sur ordinateur, tablette et téléphone, sans installation.',
   },
   {
-    q: 'Puis-je essayer gratuitement ?',
-    a: 'Oui, vous bénéficiez de 5 jours d’essai gratuit sur l’offre Découverte, sans engagement et sans carte bancaire.',
+    q: 'Quelle offre choisir pour démarrer ?',
+    a: 'L’offre Starter (7 500 FCFA/mois) couvre déjà toutes les fonctionnalités essentielles jusqu’à 2 magasins. Vous pouvez évoluer vers Standard ou Growth à tout moment.',
   },
   {
     q: 'Mes données sont-elles en sécurité ?',
@@ -255,6 +246,45 @@ function RotatingWord({ words }: { words: string[] }) {
     <span key={i} className="word-in text-gradient animate-gradient">
       {words[i]}
     </span>
+  );
+}
+
+/**
+ * Vidéo de démonstration sous le CTA principal : lecture automatique
+ * silencieuse (seul moyen autorisé par les navigateurs pour l'autoplay),
+ * avec un bouton pour activer le son à la demande.
+ */
+function DemoVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+
+  return (
+    <div className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-line shadow-card-lg">
+      <video
+        ref={ref}
+        className="aspect-video w-full bg-black"
+        src="/oculosaas-presentation-complete.mp4"
+        poster="/og-image.png"
+        autoPlay
+        muted={muted}
+        loop
+        playsInline
+        preload="metadata"
+        controls={!muted}
+      />
+      {muted && (
+        <button
+          type="button"
+          onClick={() => {
+            setMuted(false);
+            ref.current?.play().catch(() => {});
+          }}
+          className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/85"
+        >
+          <Volume2 className="h-4 w-4" /> Activer le son
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -484,7 +514,7 @@ export function LandingPage() {
               Se connecter
             </Link>
             <Link to="/signup" className="btn-primary">
-              Essai gratuit
+              Utiliser le logiciel
             </Link>
           </div>
 
@@ -517,7 +547,7 @@ export function LandingPage() {
                   Se connecter
                 </Link>
                 <Link to="/signup" onClick={() => setMenuOpen(false)} className="btn-primary">
-                  Essai gratuit
+                  Utiliser le logiciel
                 </Link>
               </div>
             </nav>
@@ -562,7 +592,7 @@ export function LandingPage() {
             <Reveal delay={250}>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/signup" className="btn-primary w-full px-6 py-3 text-base transition hover:-translate-y-0.5 hover:shadow-card-lg sm:w-auto">
-                  Démarrer gratuitement
+                  Utiliser le logiciel
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a href="#tarifs" className="btn-outline w-full bg-white/70 px-6 py-3 text-base backdrop-blur transition hover:-translate-y-0.5 sm:w-auto">
@@ -574,15 +604,20 @@ export function LandingPage() {
             <Reveal delay={320}>
               <p className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-content-faint">
                 <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-success" /> 5 jours d’essai gratuit
+                  <Check className="h-3.5 w-3.5 text-success" /> Activation immédiate
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-success" /> Sans carte bancaire
+                  <Check className="h-3.5 w-3.5 text-success" /> Paiement Mobile Money sécurisé
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5 text-success" /> Sans engagement
                 </span>
               </p>
+            </Reveal>
+
+            {/* Vidéo de démonstration : autoplay silencieux, son activable */}
+            <Reveal delay={360}>
+              <DemoVideo />
             </Reveal>
 
             {/* Stats */}
@@ -805,11 +840,6 @@ export function LandingPage() {
                     </span>
                     <span className="text-sm text-content-muted">FCFA / mois</span>
                   </div>
-                  {plan.trialDays > 0 && (
-                    <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-success">
-                      <Clock className="h-3.5 w-3.5" /> {plan.trialDays} jours d’essai gratuit
-                    </p>
-                  )}
                   {highlighted && (
                     <p className="mt-1.5 text-xs font-semibold text-primary">Soit ~400 FCFA / jour</p>
                   )}
@@ -831,13 +861,6 @@ export function LandingPage() {
                         <span className="text-content-muted">{f}</span>
                       </li>
                     ))}
-                    {plan.code === 'TRIAL' &&
-                      TRIAL_LOCKED_FEATURES.map((f) => (
-                        <li key={f} className="flex items-start gap-2.5 text-sm opacity-70">
-                          <span className="mt-0.5 shrink-0">🔒</span>
-                          <span className="text-content-faint line-through decoration-content-faint/40">{f}</span>
-                        </li>
-                      ))}
                   </ul>
 
                   {highlighted && (
@@ -890,7 +913,7 @@ export function LandingPage() {
           {/* Moyens de paiement acceptés (via Moneroo) */}
           <div className="mt-10 flex flex-col items-center gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
-              Paiement sécurisé via PayTech
+              Paiement sécurisé via Moneroo
             </p>
             <PaymentMethodLogos className="justify-center" />
           </div>
@@ -945,14 +968,14 @@ export function LandingPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/90">
                 Rejoignez les optiques et cliniques qui digitalisent leur gestion avec OculoSaaS.
-                Essai gratuit de 5 jours, sans engagement.
+                Activation immédiate après paiement, sans engagement.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
                   to="/signup"
                   className="btn w-full bg-white px-6 py-3 text-base text-primary hover:bg-white/90 sm:w-auto"
                 >
-                  Créer mon compte
+                  Utiliser le logiciel
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link

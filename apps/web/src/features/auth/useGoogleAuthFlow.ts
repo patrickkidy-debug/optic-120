@@ -46,7 +46,7 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
     setError('');
     setLoading(true);
     try {
-      await googleSignup({ idToken: step.idToken, tenantName, branchName, plan });
+      await googleSignup({ idToken: step.idToken, tenantName, branchName, plan: plan ?? 'STARTER' });
       navigate(redirectTo);
     } catch (e) {
       setError(apiErrorMessage(e, 'Inscription impossible'));

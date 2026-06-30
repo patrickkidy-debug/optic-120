@@ -155,12 +155,13 @@ export const SubInvoiceStatus = {
 } as const;
 export type SubInvoiceStatus = (typeof SubInvoiceStatus)[keyof typeof SubInvoiceStatus];
 
-/** Catalogue des offres — source de vérité pour le seed et l'affichage. */
+/** Catalogue des offres — source de vérité pour le seed et l'affichage. Pas d'essai gratuit : toutes les offres sont payantes dès l'inscription. */
 export interface PlanDef {
-  code: 'TRIAL' | 'STANDARD' | 'PREMIUM';
+  code: 'STARTER' | 'STANDARD' | 'GROWTH';
   name: string;
   description: string;
   priceMonthly: number;
+  /** Conservé pour compat schéma (toujours 0 : plus d'essai). */
   trialDays: number;
   maxUsers: number | null; // null = illimité
   maxBranches: number | null;
@@ -172,21 +173,24 @@ export interface PlanDef {
 
 export const PLAN_CATALOG: PlanDef[] = [
   {
-    code: 'TRIAL',
-    name: 'Découverte',
-    description: "Offre d'essai 5 jours pour tester les fonctionnalités essentielles.",
-    priceMonthly: 2500,
-    trialDays: 5,
-    maxUsers: 1,
-    maxBranches: 1,
-    maxPatients: 20,
-    maxSales: 20,
+    code: 'STARTER',
+    name: 'Starter',
+    description: "Toutes les fonctionnalités essentielles pour démarrer, jusqu'à 2 magasins.",
+    priceMonthly: 7500,
+    trialDays: 0,
+    maxUsers: null,
+    maxBranches: 2,
+    maxPatients: null,
+    maxSales: null,
     features: [
-      '1 établissement',
-      '1 utilisateur',
-      "Jusqu'à 20 patients",
-      "Jusqu'à 20 ventes",
-      'Essai 5 jours',
+      "Jusqu'à 2 magasins",
+      'Utilisateurs illimités',
+      'Assurances',
+      'Encaissement & paiements',
+      'Rôles & permissions',
+      'Rapports',
+      'Gestion des stocks (inventaire)',
+      'Support standard',
     ],
     sortOrder: 1,
   },
@@ -196,24 +200,23 @@ export const PLAN_CATALOG: PlanDef[] = [
     description: "Gestion complète d'une optique ou clinique, jusqu'à 10 magasins.",
     priceMonthly: 12000,
     trialDays: 0,
-    maxUsers: 10,
+    maxUsers: null,
     maxBranches: 10,
     maxPatients: null,
     maxSales: null,
     features: [
-      'Fonctionnalités principales',
-      'Gestion des stocks, patients et ventes',
-      'Gestion des paiements et dépenses',
-      'Tableau de bord complet',
       "Jusqu'à 10 magasins",
-      "Jusqu'à 10 utilisateurs",
+      'Utilisateurs illimités',
+      'Tout Starter, en plus grand',
+      'Gestion des stocks, patients et ventes',
+      'Tableau de bord complet',
       'Support prioritaire',
     ],
     sortOrder: 2,
   },
   {
-    code: 'PREMIUM',
-    name: 'Premium',
+    code: 'GROWTH',
+    name: 'Growth',
     description: 'Toutes les fonctionnalités, multi-agences et utilisateurs illimités.',
     priceMonthly: 23000,
     trialDays: 0,
@@ -222,9 +225,9 @@ export const PLAN_CATALOG: PlanDef[] = [
     maxPatients: null,
     maxSales: null,
     features: [
-      'Toutes les fonctionnalités',
+      'Magasins illimités',
       'Utilisateurs illimités',
-      'Multi-agences / multi-magasins',
+      'Multi-agences',
       'Gestion financière et RH avancées',
       'Rapports et statistiques avancés',
       'Sauvegardes renforcées',
@@ -234,33 +237,8 @@ export const PLAN_CATALOG: PlanDef[] = [
   },
 ];
 
-export const TRIAL_PLAN_CODE = 'TRIAL';
-
-/**
- * Fonctionnalités premium (STANDARD/PREMIUM) verrouillées pendant l'essai
- * Découverte. Dérivées du code de l'offre — pas de colonne DB dédiée, les
- * 3 offres étant fixes (TRIAL/STANDARD/PREMIUM).
- */
-export type PremiumFeature =
-  | 'advancedReports'
-  | 'multiBranch'
-  | 'stockTransfer'
-  | 'pdfExport'
-  | 'insurance'
-  | 'rolesPermissions';
-
-export function planHasFeature(planCode: string, _feature: PremiumFeature): boolean {
-  return planCode !== 'TRIAL';
-}
-
-export const PREMIUM_FEATURE_LABELS: Record<PremiumFeature, string> = {
-  advancedReports: 'Rapports financiers avancés',
-  multiBranch: 'Multi-magasins',
-  stockTransfer: 'Transferts de stock entre magasins',
-  pdfExport: 'Export PDF des rapports',
-  insurance: 'Gestion des assurances',
-  rolesPermissions: 'Rôles & permissions personnalisés',
-};
+/** Offre présélectionnée par défaut après la création d'un compte. */
+export const DEFAULT_PLAN_CODE = 'STARTER';
 
 /* ============================================================
  * RÔLES SYSTÈME (12) — seedés comme templates globaux (tenantId = null)
@@ -537,9 +515,9 @@ export const signupSchema = z.object({
   adminEmail: z.string().email(),
   adminUsername: z.string().min(3).max(40).optional(),
   adminPassword: passwordSchema,
-  // Offre choisie sur la landing. STANDARD/PREMIUM → paiement immédiat (pas
-  // d'essai) ; TRIAL ou absent → essai gratuit.
-  plan: z.enum(['TRIAL', 'STANDARD', 'PREMIUM']).optional(),
+  // Offre choisie (présélectionnée à Starter si absente) — aucun essai
+  // gratuit : l'accès au dashboard reste bloqué jusqu'au paiement.
+  plan: z.enum(['STARTER', 'STANDARD', 'GROWTH']).default(DEFAULT_PLAN_CODE),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -554,7 +532,7 @@ export const googleSignupSchema = z.object({
   idToken: z.string().min(20),
   tenantName: z.string().min(2).max(120),
   branchName: z.string().min(2).max(120).default('Magasin principal'),
-  plan: z.enum(['TRIAL', 'STANDARD', 'PREMIUM']).optional(),
+  plan: z.enum(['STARTER', 'STANDARD', 'GROWTH']).default(DEFAULT_PLAN_CODE),
 });
 export type GoogleSignupInput = z.infer<typeof googleSignupSchema>;
 

@@ -20,7 +20,7 @@ import {
 import { recordAudit } from '../../lib/audit.js';
 import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
-import { ensureTrialSubscription } from '../billing/billing.service.js';
+import { ensurePendingSubscription } from '../billing/billing.service.js';
 import { env, appOrigin } from '../../config/env.js';
 import { isOperatorEmail } from '../../lib/operators.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
@@ -174,7 +174,7 @@ interface NewTenantAdmin {
   passwordHash: string;
   firstName: string;
   lastName: string;
-  plan?: 'TRIAL' | 'STANDARD' | 'PREMIUM';
+  plan?: 'STARTER' | 'STANDARD' | 'GROWTH';
   /** Vrai pour Google (email déjà vérifié par Google) : saute notre propre vérification. */
   emailVerifiedNow?: boolean;
 }
@@ -238,9 +238,9 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
       },
     });
 
-    // Découverte → essai gratuit ; Standard/Premium → pas d'essai (paiement requis).
-    const paidPlanChosen = opts.plan === 'STANDARD' || opts.plan === 'PREMIUM';
-    await ensureTrialSubscription(tx, tenant.id, { noTrial: paidPlanChosen });
+    // Plus d'essai gratuit : l'abonnement est créé bloqué, l'accès au dashboard
+    // n'est débloqué qu'à la confirmation du paiement (settleSubscriptionPayment).
+    await ensurePendingSubscription(tx, tenant.id, opts.plan);
 
     return user.id;
   });

@@ -35,25 +35,29 @@ export async function listPlans(activeOnly = true) {
 
 /* --------------------- Abonnement d'un tenant --------------------- */
 
-export async function ensureTrialSubscription(
+/**
+ * Crée l'abonnement à l'inscription, toujours bloqué (période déjà expirée) :
+ * il n'y a plus d'essai gratuit, l'accès au dashboard reste interdit tant que
+ * le paiement n'est pas confirmé (settleSubscriptionPayment).
+ */
+export async function ensurePendingSubscription(
   tx: Prisma.TransactionClient | PrismaClient,
   tenantId: string,
-  options?: { noTrial?: boolean },
+  planCode?: string,
 ): Promise<void> {
   const existing = await tx.subscription.findUnique({ where: { tenantId } });
   if (existing) return;
-  const trial = await tx.subscriptionPlan.findFirst({ where: { code: 'TRIAL' } });
-  if (!trial) return;
-  // Forfait payant choisi à l'inscription → aucun essai : période déjà expirée,
-  // l'accès reste bloqué jusqu'au paiement (Standard/Premium).
-  const end = options?.noTrial ? new Date(Date.now() - 1000) : new Date(Date.now() + trial.trialDays * DAY);
+  const plan =
+    (await tx.subscriptionPlan.findFirst({ where: { code: planCode ?? 'STARTER' } })) ??
+    (await tx.subscriptionPlan.findFirst({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }));
+  if (!plan) return;
   await tx.subscription.create({
     data: {
       tenantId,
-      planId: trial.id,
+      planId: plan.id,
       status: SubscriptionStatus.TRIALING,
-      currentPeriodEnd: end,
-      trialEndsAt: end,
+      currentPeriodEnd: new Date(Date.now() - 1000),
+      trialEndsAt: null,
     },
   });
 }

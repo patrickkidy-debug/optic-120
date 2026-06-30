@@ -12,6 +12,6 @@ export interface AuthContext {
   branchIds: string[];
   allBranches: boolean;
   subscriptionStatus?: string;
-  /** Code de l'offre (TRIAL/STANDARD/PREMIUM) — sert au verrouillage de fonctionnalités premium. */
+  /** Code de l'offre active (STARTER/STANDARD/GROWTH). */
   planCode?: string;
 }

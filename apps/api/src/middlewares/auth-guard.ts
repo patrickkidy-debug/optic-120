@@ -68,17 +68,14 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
   if (sub) {
     ctx.subscriptionStatus = sub.status;
     ctx.planCode = sub.planCode;
-    // Blocage si l'abonnement est suspendu/annulé OU si la période (essai ou
-    // payée) est expirée → « essai gratuit puis blocage tant que pas payé ».
+    // Blocage total (lecture ET écriture) si l'abonnement est suspendu/annulé
+    // ou si la période est expirée — pas d'essai gratuit, aucun accès au
+    // dashboard tant que le paiement n'est pas confirmé.
     const expired = sub.currentPeriodEnd.getTime() < Date.now();
     const blocked = sub.status === 'SUSPENDED' || sub.status === 'CANCELLED' || expired;
-    // Compte suspendu : consultation des données (GET) toujours permise — seules
-    // les actions qui modifient quelque chose (création, vente, encaissement…)
-    // sont bloquées tant que l'abonnement n'est pas activé.
-    const isReadOnly = req.method === 'GET';
-    if (blocked && !isReadOnly && !isBillingExempt(req.url) && !isOperator(user.email)) {
+    if (blocked && !isBillingExempt(req.url) && !isOperator(user.email)) {
       throw paymentRequired(
-        'Votre période est terminée. Activez votre abonnement pour continuer.',
+        "Votre abonnement n'est pas activé. Effectuez le paiement pour accéder à votre espace.",
       );
     }
   }

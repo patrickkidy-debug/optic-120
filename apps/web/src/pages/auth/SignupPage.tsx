@@ -12,14 +12,20 @@ import { AuthLayout } from './AuthLayout';
 import { Button, Field } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 
+const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
+
 export function SignupPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const plan = params.get('plan'); // offre présélectionnée depuis la landing
-  const isPaidPlan = plan === 'STANDARD' || plan === 'PREMIUM';
-  const redirectTo = isPaidPlan ? `/parametres/abonnement?plan=${plan}` : '/dashboard';
-  const google = useGoogleAuthFlow(redirectTo, (isPaidPlan || plan === 'TRIAL' ? plan : undefined) as SignupInput['plan']);
+  // Offre présélectionnée depuis la landing — Starter par défaut. Plus d'essai
+  // gratuit : toute inscription mène au paiement avant l'accès au dashboard.
+  const rawPlan = params.get('plan');
+  const plan: SignupInput['plan'] = (VALID_PLANS as string[]).includes(rawPlan ?? '')
+    ? (rawPlan as SignupInput['plan'])
+    : 'STARTER';
+  const redirectTo = `/parametres/abonnement?plan=${plan}`;
+  const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
   const [googleCode, setGoogleCode] = useState('');
@@ -36,13 +42,12 @@ export function SignupPage() {
   async function onSubmit(values: SignupInput) {
     setServerError('');
     try {
-      const isPaid = plan === 'STANDARD' || plan === 'PREMIUM';
-      const user = await signup({ ...values, plan: isPaid || plan === 'TRIAL' ? (plan as SignupInput['plan']) : undefined });
+      const user = await signup({ ...values, plan });
       // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
-      trackPixelEvent('CompleteRegistration', { content_name: plan ?? 'TRIAL', status: true }, `registration_${user.id}`);
-      // Forfait payant → page abonnement (le paiement Moneroo se lance auto) ;
-      // sinon (Découverte/essai) → tableau de bord.
-      navigate(isPaid ? `/parametres/abonnement?plan=${plan}` : '/dashboard');
+      trackPixelEvent('CompleteRegistration', { content_name: plan, status: true }, `registration_${user.id}`);
+      // Toujours vers la page d'abonnement : le paiement Moneroo se lance
+      // automatiquement, l'accès au dashboard n'est débloqué qu'après paiement.
+      navigate(redirectTo);
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Création impossible'));
     }

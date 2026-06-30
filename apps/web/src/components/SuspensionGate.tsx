@@ -1,20 +1,17 @@
-import { useState } from 'react';
-import { AlertOctagon, Eye, EyeOff } from 'lucide-react';
+import { AlertOctagon } from 'lucide-react';
 import { Logo } from './Logo';
 import { usePermission } from '../store/auth';
 import { logout } from '../features/auth/api';
 import { SubscriptionPage } from '../pages/settings/SubscriptionPage';
-import { DashboardPage } from '../pages/DashboardPage';
 
 /**
- * Écran de reprise d'activité affiché quand l'essai/abonnement est terminé.
- * Les opérations sont bloquées côté serveur (méthodes d'écriture uniquement),
- * mais la consultation des données (tableau de bord en lecture seule) reste
- * possible — seul le paiement permet de réactiver les actions.
+ * Écran affiché tant que l'abonnement n'est pas payé : accès au dashboard et
+ * à toutes les opérations totalement interdit (plus d'essai gratuit, plus
+ * d'aperçu en lecture seule). Seuls le paiement et la déconnexion sont
+ * disponibles ici.
  */
 export function SuspensionGate() {
   const canManage = usePermission('billing.view');
-  const [showData, setShowData] = useState(true);
 
   return (
     <div className="min-h-screen bg-bg">
@@ -32,28 +29,13 @@ export function SuspensionGate() {
             <h1 className="font-display text-lg font-bold text-content">Activez votre abonnement</h1>
             <p className="text-sm text-content-muted">
               {canManage
-                ? "Votre période d'essai (ou votre abonnement) est terminée. Vos données sont conservées et consultables ci-dessous ; choisissez une offre et payez pour réactiver immédiatement la caisse, les ventes et les autres actions."
-                : "L'accès aux opérations est en pause. Vos données restent consultables ci-dessous. Contactez l'administrateur de votre établissement pour activer l'abonnement."}
+                ? "L'accès à votre espace est réservé aux comptes à jour de paiement. Choisissez une offre et payez ci-dessous pour débloquer immédiatement votre dashboard."
+                : "L'accès est en pause tant que l'abonnement n'est pas activé. Contactez l'administrateur de votre établissement."}
             </p>
           </div>
         </div>
 
         {canManage && <SubscriptionPage />}
-
-        <div className="mt-8">
-          <button
-            onClick={() => setShowData((v) => !v)}
-            className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-content-muted hover:text-content"
-          >
-            {showData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showData ? 'Masquer mes données' : 'Consulter mes données (lecture seule)'}
-          </button>
-          {showData && (
-            <div className="pointer-events-none opacity-90">
-              <DashboardPage />
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

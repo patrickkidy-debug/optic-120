@@ -48,7 +48,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         fbp: cookies._fbp,
         fbc: cookies._fbc,
       },
-      customData: { content_name: input.plan ?? 'TRIAL' },
+      customData: { content_name: input.plan ?? 'STARTER' },
     });
 
     return reply.status(201).send({ accessToken, user });
@@ -101,7 +101,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         fbp: cookies._fbp,
         fbc: cookies._fbc,
       },
-      customData: { content_name: input.plan ?? 'TRIAL' },
+      customData: { content_name: input.plan ?? 'STARTER' },
     });
 
     return reply.status(201).send({ accessToken, user });

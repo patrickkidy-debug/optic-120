@@ -8,8 +8,6 @@ import { listInsurers, createInsurer, updateInsurer, type Insurer } from '../../
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
-import { useSubscriptionPlan } from '../../features/billing/useSubscriptionPlan';
-import { FeatureLockScreen } from '../../components/FeatureLockScreen';
 
 const TYPES = [
   { value: 'HEALTH_INSURANCE', label: 'Assurance maladie' },
@@ -25,16 +23,6 @@ export function InsurancePage() {
   const [editing, setEditing] = useState<Insurer | null>(null);
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers });
-  const { hasFeature } = useSubscriptionPlan();
-
-  if (!hasFeature('insurance')) {
-    return (
-      <div>
-        <PageHeader title="Assurances" subtitle="Mutuelles, tiers payant et prises en charge" />
-        <FeatureLockScreen feature="insurance" />
-      </div>
-    );
-  }
 
   return (
     <div>

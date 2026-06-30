@@ -35,7 +35,7 @@ import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 const PENDING_PURCHASE_KEY = 'oculo-pending-purchase';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
-  TRIALING: { label: "Période d'essai", tone: 'info' },
+  TRIALING: { label: 'En attente de paiement', tone: 'warning' },
   ACTIVE: { label: 'Actif', tone: 'success' },
   PAST_DUE: { label: 'Paiement en retard', tone: 'warning' },
   SUSPENDED: { label: 'Suspendu', tone: 'danger' },
@@ -134,37 +134,33 @@ export function SubscriptionPage() {
     const plan = plans.find((p) => p.code === code);
     if (!plan) return;
     autoOpened.current = true;
-    // Forfaits payants (Standard/Premium) → on lance directement le paiement
-    // Moneroo : redirection automatique vers le checkout sécurisé.
-    if (plan.code === 'STANDARD' || plan.code === 'PREMIUM') {
-      setAutoLaunch(true);
-      subscribe(plan.id, 'WAVE')
-        .then((res) => {
-          // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
-          trackPixelEvent(
-            'InitiateCheckout',
-            { value: plan.priceMonthly, currency: 'XOF', content_name: plan.name },
-            `checkout_${res.paymentId}`,
+    // Plus d'essai gratuit : toute offre présélectionnée (Starter par défaut
+    // après l'inscription) lance directement le paiement Moneroo.
+    setAutoLaunch(true);
+    subscribe(plan.id, 'WAVE')
+      .then((res) => {
+        // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+        trackPixelEvent(
+          'InitiateCheckout',
+          { value: plan.priceMonthly, currency: 'XOF', content_name: plan.name },
+          `checkout_${res.paymentId}`,
+        );
+        if (res.redirectUrl) {
+          // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
+          sessionStorage.setItem(
+            PENDING_PURCHASE_KEY,
+            JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: plan.priceMonthly }),
           );
-          if (res.redirectUrl) {
-            // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
-            sessionStorage.setItem(
-              PENDING_PURCHASE_KEY,
-              JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: plan.priceMonthly }),
-            );
-            window.location.href = res.redirectUrl;
-          } else {
-            setAutoLaunch(false);
-            setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
-          }
-        })
-        .catch(() => {
+          window.location.href = res.redirectUrl;
+        } else {
           setAutoLaunch(false);
           setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
-        });
-    } else {
-      setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
-    }
+        }
+      })
+      .catch(() => {
+        setAutoLaunch(false);
+        setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
+      });
   }, [params, plans]);
 
   if (isLoading) return <PageLoader />;
@@ -196,8 +192,8 @@ export function SubscriptionPage() {
             <h3 className="mt-3 font-display text-xl font-bold text-content">Offre {sub.plan.name}</h3>
             <p className="font-display text-2xl font-bold text-gradient">{formatCurrency(sub.plan.priceMonthly)}<span className="text-sm font-normal text-content-muted"> / mois</span></p>
             <p className="mt-2 text-xs text-content-muted">
-              {sub.status === 'TRIALING' && sub.trialEndsAt
-                ? `Essai jusqu'au ${formatDate(sub.trialEndsAt)}`
+              {sub.status === 'TRIALING'
+                ? "Activez votre abonnement pour accéder à votre espace."
                 : `Période en cours jusqu'au ${formatDate(sub.currentPeriodEnd)}`}
             </p>
           </div>

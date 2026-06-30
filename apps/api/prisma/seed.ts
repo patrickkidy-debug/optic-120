@@ -4,7 +4,7 @@ import {
   SYSTEM_ROLES,
   DEFAULT_ROLE_PERMISSIONS,
   PLAN_CATALOG,
-  TRIAL_PLAN_CODE,
+  DEFAULT_PLAN_CODE,
 } from '@oculo/shared-types';
 
 const prisma = new PrismaClient();
@@ -25,6 +25,7 @@ async function seedPlans() {
         maxSales: p.maxSales,
         features: p.features,
         sortOrder: p.sortOrder,
+        isActive: true,
       },
       update: {
         name: p.name,
@@ -37,30 +38,48 @@ async function seedPlans() {
         maxSales: p.maxSales,
         features: p.features,
         sortOrder: p.sortOrder,
+        isActive: true,
       },
     });
   }
   console.log(`✔ ${PLAN_CATALOG.length} offres d'abonnement seedées`);
+
+  // Désactive les anciennes offres (ex. essai gratuit "Découverte" / "Premium"
+  // renommée "Growth") : conservées pour les abonnements existants qui y
+  // référent encore, mais plus proposées à la souscription.
+  const currentCodes = PLAN_CATALOG.map((p) => p.code);
+  const deactivated = await prisma.subscriptionPlan.updateMany({
+    where: { code: { notIn: currentCodes }, isActive: true },
+    data: { isActive: false },
+  });
+  if (deactivated.count > 0) {
+    console.log(`✔ ${deactivated.count} ancienne(s) offre(s) désactivée(s)`);
+  }
 }
 
-/** Donne un abonnement d'essai aux tenants existants qui n'en ont pas encore. */
-async function backfillSubscriptions() {
-  const trial = await prisma.subscriptionPlan.findUnique({ where: { code: TRIAL_PLAN_CODE } });
-  if (!trial) return;
+/**
+ * Donne un abonnement (bloqué, en attente de paiement) aux tenants existants
+ * qui n'en ont pas encore. Plus d'essai gratuit : seul un paiement confirmé
+ * débloque l'accès.
+ */
+async function backfillPendingSubscriptions() {
+  const plan =
+    (await prisma.subscriptionPlan.findUnique({ where: { code: DEFAULT_PLAN_CODE } })) ??
+    (await prisma.subscriptionPlan.findFirst({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }));
+  if (!plan) return;
   const tenants = await prisma.tenant.findMany({ where: { subscription: { is: null } } });
   for (const t of tenants) {
-    const end = new Date(Date.now() + trial.trialDays * 24 * 60 * 60 * 1000);
     await prisma.subscription.create({
       data: {
         tenantId: t.id,
-        planId: trial.id,
+        planId: plan.id,
         status: 'TRIALING',
-        currentPeriodEnd: end,
-        trialEndsAt: end,
+        currentPeriodEnd: new Date(Date.now() - 1000),
+        trialEndsAt: null,
       },
     });
   }
-  if (tenants.length > 0) console.log(`✔ ${tenants.length} abonnement(s) d'essai créé(s) (backfill)`);
+  if (tenants.length > 0) console.log(`✔ ${tenants.length} abonnement(s) créé(s) (backfill, en attente de paiement)`);
 }
 
 async function seedPermissions() {
@@ -146,7 +165,7 @@ async function main() {
   await seedSystemRoles();
   await resyncTenantSystemRoles();
   await seedPlans();
-  await backfillSubscriptions();
+  await backfillPendingSubscriptions();
   console.log('✅ Seed terminé.');
 }
 
