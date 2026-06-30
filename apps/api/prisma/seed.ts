@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
 import {
   PERMISSIONS,
@@ -80,6 +81,85 @@ async function backfillPendingSubscriptions() {
     });
   }
   if (tenants.length > 0) console.log(`✔ ${tenants.length} abonnement(s) créé(s) (backfill, en attente de paiement)`);
+}
+
+/** Compte administrateur principal : toujours préservé par la migration. */
+const PROTECTED_ADMIN_EMAIL = 'patrickkidy@gmail.com';
+
+/**
+ * Migration « 100 % payant » (idempotente, rejouée à chaque déploiement) :
+ *  - Bloque immédiatement tous les abonnements encore en période d'essai
+ *    (status TRIALING dont l'accès est encore valide) : la période est expirée,
+ *    donc l'auth-guard refuse l'accès au dashboard tant que le paiement n'est
+ *    pas confirmé.
+ *  - Révoque les sessions actives (refresh tokens) de ces utilisateurs :
+ *    déconnexion forcée immédiate.
+ *  - Préserve le compte administrateur principal : son abonnement reste ACTIVE
+ *    avec une période très lointaine (jamais bloqué) et ses sessions ne sont
+ *    jamais révoquées.
+ */
+export async function migrateToPaidOnly() {
+  // 1) Repérer le(s) compte(s) administrateur principal et leurs tenants.
+  const adminUsers = await prisma.user.findMany({
+    where: { email: { equals: PROTECTED_ADMIN_EMAIL, mode: 'insensitive' } },
+    select: { id: true, tenantId: true },
+  });
+  const protectedTenantIds = [...new Set(adminUsers.map((u) => u.tenantId))];
+  const protectedUserIds = adminUsers.map((u) => u.id);
+  const tenantExclusion = protectedTenantIds.length > 0 ? { notIn: protectedTenantIds } : undefined;
+
+  // 2) Garantir un accès permanent à l'administrateur principal : abonnement
+  //    ACTIVE + période très lointaine. Rejoué à chaque déploiement pour qu'il
+  //    ne soit jamais suspendu par erreur.
+  if (protectedTenantIds.length > 0) {
+    const farFuture = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
+    await prisma.subscription.updateMany({
+      where: { tenantId: { in: protectedTenantIds } },
+      data: { status: 'ACTIVE', currentPeriodEnd: farFuture, trialEndsAt: null },
+    });
+  }
+
+  // 3) Bloquer immédiatement tous les essais encore actifs (hors admin). Le
+  //    filtre `currentPeriodEnd > now` rend l'opération auto-limitée : une fois
+  //    bloqués, les essais ne sont plus reciblés aux déploiements suivants.
+  const blocked = await prisma.subscription.updateMany({
+    where: {
+      status: 'TRIALING',
+      currentPeriodEnd: { gt: new Date() },
+      ...(tenantExclusion ? { tenantId: tenantExclusion } : {}),
+    },
+    data: { currentPeriodEnd: new Date(Date.now() - 1000), trialEndsAt: null },
+  });
+
+  // 4) Déconnexion forcée : révoquer les sessions actives des utilisateurs des
+  //    tenants encore en essai (hors compte administrateur principal).
+  const trialTenants = await prisma.subscription.findMany({
+    where: {
+      status: 'TRIALING',
+      ...(tenantExclusion ? { tenantId: tenantExclusion } : {}),
+    },
+    select: { tenantId: true },
+  });
+  const trialTenantIds = trialTenants.map((t) => t.tenantId);
+  let revoked = 0;
+  if (trialTenantIds.length > 0) {
+    const res = await prisma.refreshToken.updateMany({
+      where: {
+        revokedAt: null,
+        user: {
+          tenantId: { in: trialTenantIds },
+          id: { notIn: protectedUserIds },
+        },
+      },
+      data: { revokedAt: new Date() },
+    });
+    revoked = res.count;
+  }
+
+  console.log(
+    `✔ Migration 100% payant : ${blocked.count} essai(s) bloqué(s), ` +
+      `${revoked} session(s) révoquée(s), ${protectedTenantIds.length} tenant(s) admin protégé(s)`,
+  );
 }
 
 async function seedPermissions() {
@@ -166,14 +246,22 @@ async function main() {
   await resyncTenantSystemRoles();
   await seedPlans();
   await backfillPendingSubscriptions();
+  await migrateToPaidOnly();
   console.log('✅ Seed terminé.');
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Seed échoué :', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// N'exécute le seed que lorsque le fichier est lancé directement (pas à l'import,
+// ce qui permet de tester unitairement les fonctions exportées).
+const isDirectRun =
+  process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isDirectRun) {
+  main()
+    .catch((e) => {
+      console.error('❌ Seed échoué :', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
