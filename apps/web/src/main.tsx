@@ -11,8 +11,18 @@ import { useAuthStore } from './store/auth';
 import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
 import { BrandSplash } from './components/BrandSplash';
+import { trackPixelPageView } from './lib/pixel';
 
 applyTheme(getStoredTheme());
+
+// SPA : le script de base (index.html) ne déclenche le PageView Meta Pixel
+// qu'au tout premier chargement. On retrace chaque navigation client ici.
+let lastPixelPath = router.state.location.pathname;
+router.subscribe((state) => {
+  if (state.location.pathname === lastPixelPath) return;
+  lastPixelPath = state.location.pathname;
+  trackPixelPageView();
+});
 
 function Root() {
   const status = useAuthStore((s) => s.status);
