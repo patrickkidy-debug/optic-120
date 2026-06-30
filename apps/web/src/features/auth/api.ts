@@ -58,6 +58,16 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await api.post('/auth/reset-password', { token, newPassword });
 }
 
+/** Confirme l'adresse email à partir du jeton du lien. */
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post('/auth/verify-email', { token });
+}
+
+/** Renvoie l'email de confirmation au compte connecté. */
+export async function resendVerification(): Promise<void> {
+  await api.post('/auth/resend-verification');
+}
+
 export async function logout(): Promise<void> {
   try {
     await api.post('/auth/logout');

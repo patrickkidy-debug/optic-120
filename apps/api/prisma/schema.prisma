@@ -92,6 +92,9 @@ model User {
   lockedUntil      DateTime?
   resetTokenHash      String?
   resetTokenExpiresAt DateTime?
+  emailVerifiedAt      DateTime?
+  verifyTokenHash      String?
+  verifyTokenExpiresAt DateTime?
   twoFactorEnabled Boolean   @default(false)
   twoFactorSecret  String? // secret TOTP chiffré (AES-256-GCM)
   preferences      Json? // { theme: 'light'|'dark'|'auto', locale: 'fr'|'en'|'pt', ... }

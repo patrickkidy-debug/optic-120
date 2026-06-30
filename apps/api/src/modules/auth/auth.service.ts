@@ -12,6 +12,7 @@ import {
 } from '../../lib/tokens.js';
 import { recordAudit } from '../../lib/audit.js';
 import { mailer } from '../../lib/mailer.js';
+import { logger } from '../../lib/logger.js';
 import { ensureTrialSubscription } from '../billing/billing.service.js';
 import { env, appOrigin } from '../../config/env.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
@@ -66,7 +67,46 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     allBranches: user.role.allBranches,
     tenantName: user.tenant.name,
     tenantLogoUrl: user.tenant.logoUrl,
+    emailVerified: user.emailVerifiedAt != null,
   };
+}
+
+/** Génère un jeton de confirmation, le stocke (haché) et envoie l'email. */
+async function sendVerificationEmail(user: { id: string; email: string; firstName: string }): Promise<void> {
+  const token = generateResetToken();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      verifyTokenHash: hashRefreshToken(token),
+      verifyTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+  const link = `${appOrigin}/verifier-email?token=${token}`;
+  await mailer.send({
+    to: user.email,
+    subject: 'Confirmez votre adresse email — OculoSaaS',
+    text: `Bonjour ${user.firstName},\n\nBienvenue sur OculoSaaS ! Confirmez votre adresse email en cliquant sur ce lien (valable 24 h) :\n${link}\n\nSi vous n'êtes pas à l'origine de cette inscription, ignorez cet email.`,
+    html: `<p>Bonjour ${user.firstName},</p><p>Bienvenue sur <b>OculoSaaS</b> ! Confirmez votre adresse email :</p><p><a href="${link}">Confirmer mon adresse email</a> (lien valable 24 h)</p><p>Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.</p>`,
+  });
+}
+
+/** Confirme l'email à partir du jeton reçu par lien. */
+export async function verifyEmail(token: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { verifyTokenHash: hashRefreshToken(token), verifyTokenExpiresAt: { gt: new Date() } },
+  });
+  if (!user) throw badRequest('Lien de confirmation invalide ou expiré');
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { emailVerifiedAt: new Date(), verifyTokenHash: null, verifyTokenExpiresAt: null },
+  });
+}
+
+/** Renvoie l'email de confirmation à l'utilisateur connecté (si non vérifié). */
+export async function resendVerification(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || user.emailVerifiedAt) return;
+  await sendVerificationEmail(user);
 }
 
 async function issueSession(
@@ -204,6 +244,13 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
     entityId: user.tenantId,
     ...meta,
   });
+
+  // Envoi de l'email de confirmation (non bloquant : ne fait pas échouer l'inscription).
+  try {
+    await sendVerificationEmail(user);
+  } catch (err) {
+    logger.error({ err }, 'Envoi email de confirmation échoué');
+  }
 
   const session = await issueSession(user, meta);
   return { ...session, user: buildAuthUser(user) };

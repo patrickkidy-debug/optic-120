@@ -4,6 +4,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   verifyPasswordSchema,
   profileUpdateSchema,
   twoFactorEnableSchema,
@@ -78,6 +79,17 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/reset-password', strictLimit, async (req, reply) => {
     const { token, newPassword } = resetPasswordSchema.parse(req.body);
     await authService.resetPassword(token, newPassword, requestMeta(req));
+    return reply.send({ ok: true });
+  });
+
+  app.post('/verify-email', strictLimit, async (req, reply) => {
+    const { token } = verifyEmailSchema.parse(req.body);
+    await authService.verifyEmail(token);
+    return reply.send({ ok: true });
+  });
+
+  app.post('/resend-verification', { preHandler: requireAuth }, async (req, reply) => {
+    await authService.resendVerification(req.auth!.userId);
     return reply.send({ ok: true });
   });
 

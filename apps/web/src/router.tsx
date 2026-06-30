@@ -38,6 +38,7 @@ const LoginPage = lazy(() => named(import('./pages/auth/LoginPage'), 'LoginPage'
 const SignupPage = lazy(() => named(import('./pages/auth/SignupPage'), 'SignupPage'));
 const ForgotPasswordPage = lazy(() => named(import('./pages/auth/ForgotPasswordPage'), 'ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => named(import('./pages/auth/ResetPasswordPage'), 'ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => named(import('./pages/auth/VerifyEmailPage'), 'VerifyEmailPage'));
 const DashboardPage = lazy(() => named(import('./pages/DashboardPage'), 'DashboardPage'));
 const ProductsPage = lazy(() => named(import('./pages/optique/ProductsPage'), 'ProductsPage'));
 const StockPage = lazy(() => named(import('./pages/optique/StockPage'), 'StockPage'));
@@ -93,6 +94,7 @@ export const router = createBrowserRouter([
   { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
   { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
   { path: '/reset-password', element: pub(<ResetPasswordPage />) },
+  { path: '/verifier-email', element: pub(<VerifyEmailPage />) },
   {
     element: <RequireAuth />,
     children: [

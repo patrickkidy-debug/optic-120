@@ -943,7 +943,12 @@ export interface AuthUser {
   tenantLogoUrl: string | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
   isPlatformOperator: boolean;
+  /** Vrai une fois l'adresse email confirmée. */
+  emailVerified: boolean;
 }
+
+export const verifyEmailSchema = z.object({ token: z.string().min(10) });
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 
 export interface AuthResponse {
   accessToken: string;
