@@ -24,9 +24,15 @@ import {
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { trackPixelEvent } from '../../lib/pixel';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Badge, PageLoader } from '../../components/ui';
 import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
+
+// Trace un paiement lancé en plein écran (redirection Moneroo) le temps que
+// l'utilisateur revienne sur la page, afin de pouvoir confirmer le Purchase
+// Meta Pixel sans dépendre d'un paramètre d'URL renvoyé par Moneroo.
+const PENDING_PURCHASE_KEY = 'oculo-pending-purchase';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
   TRIALING: { label: "Période d'essai", tone: 'info' },
@@ -65,7 +71,7 @@ export function SubscriptionPage() {
   const qc = useQueryClient();
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
-  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string } | null>(null);
+  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number } | null>(null);
 
   const { data: sub, isLoading } = useQuery({ queryKey: ['subscription'], queryFn: getSubscription });
   const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: getPlans });
@@ -75,6 +81,47 @@ export function SubscriptionPage() {
   useEffect(() => {
     if (sub && sub.status !== 'SUSPENDED' && sub.status !== 'CANCELLED') setSuspended(false);
   }, [sub, setSuspended]);
+
+  // Retour d'une redirection plein écran vers Moneroo (forfait payant choisi
+  // à l'inscription) : on reprend le suivi du paiement amorcé avant le départ
+  // pour confirmer l'événement Purchase une fois le paiement validé.
+  const resumedPurchase = useRef(false);
+  useEffect(() => {
+    if (resumedPurchase.current) return;
+    resumedPurchase.current = true;
+    const raw = sessionStorage.getItem(PENDING_PURCHASE_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(PENDING_PURCHASE_KEY);
+    let pending: { paymentId: string; planName: string; amount: number };
+    try {
+      pending = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    let attempts = 0;
+    const iv = setInterval(async () => {
+      attempts += 1;
+      try {
+        const s = await billingPaymentStatus(pending.paymentId);
+        if (s.status === 'SUCCESS') {
+          trackPixelEvent('Purchase', {
+            value: pending.amount,
+            currency: 'XOF',
+            content_name: pending.planName,
+          });
+          qc.invalidateQueries({ queryKey: ['subscription'] });
+          setSuspended(false);
+          clearInterval(iv);
+        } else if (s.status === 'FAILED' || attempts >= 24) {
+          clearInterval(iv);
+        }
+      } catch {
+        clearInterval(iv);
+      }
+    }, 2500);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Offre présélectionnée depuis la landing (?plan=CODE).
   const [params] = useSearchParams();
@@ -90,21 +137,31 @@ export function SubscriptionPage() {
     // Moneroo : redirection automatique vers le checkout sécurisé.
     if (plan.code === 'STANDARD' || plan.code === 'PREMIUM') {
       setAutoLaunch(true);
+      trackPixelEvent('InitiateCheckout', {
+        value: plan.priceMonthly,
+        currency: 'XOF',
+        content_name: plan.name,
+      });
       subscribe(plan.id, 'WAVE')
         .then((res) => {
           if (res.redirectUrl) {
+            // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
+            sessionStorage.setItem(
+              PENDING_PURCHASE_KEY,
+              JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: plan.priceMonthly }),
+            );
             window.location.href = res.redirectUrl;
           } else {
             setAutoLaunch(false);
-            setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+            setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
           }
         })
         .catch(() => {
           setAutoLaunch(false);
-          setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+          setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
         });
     } else {
-      setPayFor({ kind: 'plan', id: plan.id, label: plan.name });
+      setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
     }
   }, [params, plans]);
 
@@ -163,7 +220,7 @@ export function SubscriptionPage() {
             plan={p}
             current={sub?.plan.code === p.code}
             canManage={canManage}
-            onSubscribe={() => setPayFor({ kind: 'plan', id: p.id, label: p.name })}
+            onSubscribe={() => setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: p.priceMonthly })}
           />
         ))}
       </div>
@@ -199,7 +256,7 @@ export function SubscriptionPage() {
                     </td>
                     <td className="table-cell text-right">
                       {inv.status !== 'PAID' && canManage && (
-                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number })} className="h-8 px-3 text-xs">
+                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount) })} className="h-8 px-3 text-xs">
                           Payer
                         </Button>
                       )}
@@ -291,7 +348,7 @@ function BillingPaymentModal({
   onClose,
   onPaid,
 }: {
-  target: { kind: 'plan' | 'invoice'; id: string; label: string };
+  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number };
   onClose: () => void;
   onPaid: () => void;
 }) {
@@ -299,10 +356,13 @@ function BillingPaymentModal({
   const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
   const [isSimulation, setIsSimulation] = useState(false);
+  const purchaseTracked = useRef(false);
 
   const payMut = useMutation({
-    mutationFn: (method: PaymentMethod) =>
-      target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method),
+    mutationFn: (method: PaymentMethod) => {
+      trackPixelEvent('InitiateCheckout', { value: target.amount, currency: 'XOF', content_name: target.label });
+      return target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method);
+    },
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
       setIsSimulation(res.simulation);
@@ -333,6 +393,12 @@ function BillingPaymentModal({
     }, 2500);
     return () => clearInterval(iv);
   }, [phase, paymentId]);
+
+  useEffect(() => {
+    if (phase !== 'done' || purchaseTracked.current) return;
+    purchaseTracked.current = true;
+    trackPixelEvent('Purchase', { value: target.amount, currency: 'XOF', content_name: target.label });
+  }, [phase, target]);
 
   return (
     <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">

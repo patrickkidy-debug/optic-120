@@ -12,3 +12,13 @@ declare global {
 export function trackPixelPageView(): void {
   window.fbq?.('track', 'PageView');
 }
+
+/**
+ * Déclenche un événement standard Meta Pixel (CompleteRegistration,
+ * InitiateCheckout, Purchase…). `params` suit les paramètres standard Meta
+ * (value, currency, content_name…) pour permettre l'optimisation des
+ * campagnes publicitaires sur ces conversions.
+ */
+export function trackPixelEvent(name: string, params?: Record<string, unknown>): void {
+  window.fbq?.('track', name, params);
+}

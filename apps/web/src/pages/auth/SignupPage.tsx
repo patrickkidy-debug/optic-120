@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { signupSchema, type SignupInput } from '@oculo/shared-types';
 import { signup } from '../../features/auth/api';
 import { apiErrorMessage } from '../../lib/api';
+import { trackPixelEvent } from '../../lib/pixel';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field } from '../../components/ui';
 
@@ -29,6 +30,7 @@ export function SignupPage() {
     try {
       const isPaid = plan === 'STANDARD' || plan === 'PREMIUM';
       await signup({ ...values, plan: isPaid || plan === 'TRIAL' ? (plan as SignupInput['plan']) : undefined });
+      trackPixelEvent('CompleteRegistration', { content_name: plan ?? 'TRIAL', status: true });
       // Forfait payant → page abonnement (le paiement Moneroo se lance auto) ;
       // sinon (Découverte/essai) → tableau de bord.
       navigate(isPaid ? `/parametres/abonnement?plan=${plan}` : '/dashboard');
