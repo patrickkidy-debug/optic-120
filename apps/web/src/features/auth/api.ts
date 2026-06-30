@@ -1,4 +1,4 @@
-import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput } from '@oculo/shared-types';
+import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput, GoogleSignupInput } from '@oculo/shared-types';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 
@@ -46,6 +46,33 @@ export async function disableTwoFactor(password: string, code: string): Promise<
 
 export async function signup(input: SignupInput): Promise<AuthUser> {
   const { data } = await api.post<AuthResponse>('/auth/signup', input);
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return data.user;
+}
+
+export type GoogleLoginOutcome =
+  | { twoFactorRequired: true; challenge: string }
+  | { needsSignup: true; email: string; firstName: string; lastName: string }
+  | { user: AuthUser };
+
+/** « Se connecter avec Google » : idToken vérifié côté serveur. */
+export async function googleLogin(idToken: string): Promise<GoogleLoginOutcome> {
+  const { data } = await api.post<
+    AuthResponse & { twoFactorRequired?: boolean; challenge?: string; needsSignup?: boolean; email?: string; firstName?: string; lastName?: string }
+  >('/auth/google/login', { idToken });
+  if (data.needsSignup) {
+    return { needsSignup: true, email: data.email!, firstName: data.firstName!, lastName: data.lastName! };
+  }
+  if (data.twoFactorRequired && data.challenge) {
+    return { twoFactorRequired: true, challenge: data.challenge };
+  }
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return { user: data.user };
+}
+
+/** Inscription d'un nouvel établissement via Google. */
+export async function googleSignup(input: GoogleSignupInput): Promise<AuthUser> {
+  const { data } = await api.post<AuthResponse>('/auth/google/signup', input);
   useAuthStore.getState().setAuth(data.accessToken, data.user);
   return data.user;
 }

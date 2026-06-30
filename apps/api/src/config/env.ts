@@ -71,6 +71,10 @@ const envSchema = z.object({
   META_CAPI_ACCESS_TOKEN: z.string().optional().default(''),
   // Code de test (onglet « Test Events » du gestionnaire d'évènements Meta).
   META_CAPI_TEST_EVENT_CODE: z.string().optional().default(''),
+
+  // « Se connecter avec Google » — Client ID OAuth (Google Cloud Console).
+  // Tant qu'il est vide, les routes /auth/google répondent une erreur claire.
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

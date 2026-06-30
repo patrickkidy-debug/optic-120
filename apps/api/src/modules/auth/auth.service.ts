@@ -1,4 +1,11 @@
-import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput } from '@oculo/shared-types';
+import type {
+  AuthUser,
+  SignupInput,
+  LoginInput,
+  ProfileUpdateInput,
+  GoogleSignupInput,
+} from '@oculo/shared-types';
+import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { signAccessToken, signTwoFactorChallenge, verifyTwoFactorChallenge } from '../../lib/jwt.js';
@@ -155,18 +162,26 @@ export interface SessionResult {
 /** Résultat de login : soit une session, soit un défi 2FA à compléter. */
 export type LoginResult = SessionResult | { twoFactorRequired: true; challenge: string };
 
+interface NewTenantAdmin {
+  tenantName: string;
+  branchName: string;
+  email: string;
+  username?: string | null;
+  passwordHash: string;
+  firstName: string;
+  lastName: string;
+  plan?: 'TRIAL' | 'STANDARD' | 'PREMIUM';
+  /** Vrai pour Google (email déjà vérifié par Google) : saute notre propre vérification. */
+  emailVerifiedNow?: boolean;
+}
+
 /**
- * Inscription d'une nouvelle entreprise : crée le tenant, sa succursale par
- * défaut, clone les 12 rôles système (templates tenantId=null) avec leurs
- * permissions, crée l'administrateur, et ouvre une session.
+ * Crée le tenant, sa succursale par défaut, clone les 12 rôles système
+ * (templates tenantId=null) avec leurs permissions, et crée l'administrateur.
+ * Partagé par l'inscription classique et l'inscription via Google.
  */
-export async function signupTenant(input: SignupInput, meta: RequestMeta): Promise<SessionResult> {
-  const existing = await prisma.user.findFirst({ where: { email: input.adminEmail } });
-  if (existing) throw conflict('Un compte existe déjà avec cet email');
-
-  const slug = await uniqueSlug(input.tenantName);
-  const passwordHash = await hashPassword(input.adminPassword);
-
+async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
+  const slug = await uniqueSlug(opts.tenantName);
   const templates = await prisma.role.findMany({
     where: { tenantId: null },
     include: { permissions: true },
@@ -177,12 +192,12 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
     );
   }
 
-  const userId = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
-      data: { name: input.tenantName, slug },
+      data: { name: opts.tenantName, slug },
     });
     const branch = await tx.branch.create({
-      data: { tenantId: tenant.id, name: input.branchName, city: '' },
+      data: { tenantId: tenant.id, name: opts.branchName, city: '' },
     });
 
     let adminRoleId: string | null = null;
@@ -208,21 +223,40 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
     const user = await tx.user.create({
       data: {
         tenantId: tenant.id,
-        email: input.adminEmail,
-        username: input.adminUsername ?? null,
-        passwordHash,
-        firstName: input.adminFirstName,
-        lastName: input.adminLastName,
+        email: opts.email,
+        username: opts.username ?? null,
+        passwordHash: opts.passwordHash,
+        firstName: opts.firstName,
+        lastName: opts.lastName,
         roleId: adminRoleId,
         branches: { create: { branchId: branch.id } },
+        emailVerifiedAt: opts.emailVerifiedNow ? new Date() : undefined,
       },
     });
 
     // Découverte → essai gratuit ; Standard/Premium → pas d'essai (paiement requis).
-    const paidPlanChosen = input.plan === 'STANDARD' || input.plan === 'PREMIUM';
+    const paidPlanChosen = opts.plan === 'STANDARD' || opts.plan === 'PREMIUM';
     await ensureTrialSubscription(tx, tenant.id, { noTrial: paidPlanChosen });
 
     return user.id;
+  });
+}
+
+/** Inscription classique (email + mot de passe) d'une nouvelle entreprise. */
+export async function signupTenant(input: SignupInput, meta: RequestMeta): Promise<SessionResult> {
+  const existing = await prisma.user.findFirst({ where: { email: input.adminEmail } });
+  if (existing) throw conflict('Un compte existe déjà avec cet email');
+
+  const passwordHash = await hashPassword(input.adminPassword);
+  const userId = await createTenantWithAdmin({
+    tenantName: input.tenantName,
+    branchName: input.branchName,
+    email: input.adminEmail,
+    username: input.adminUsername,
+    passwordHash,
+    firstName: input.adminFirstName,
+    lastName: input.adminLastName,
+    plan: input.plan,
   });
 
   const user = await loadUser({ id: userId });
@@ -243,6 +277,95 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
   } catch (err) {
     logger.error({ err }, 'Envoi email de confirmation échoué');
   }
+
+  const session = await issueSession(user, meta);
+  return { ...session, user: buildAuthUser(user) };
+}
+
+/**
+ * Connexion « Se connecter avec Google ». Si l'email Google correspond à un
+ * compte existant (créé par mot de passe), on lie le compte automatiquement.
+ * Sinon, renvoie `needsSignup` pour que le frontend bascule vers l'inscription
+ * Google (sans redemander le consentement Google).
+ */
+export async function loginWithGoogle(
+  idToken: string,
+  meta: RequestMeta,
+): Promise<LoginResult | { needsSignup: true; email: string; firstName: string; lastName: string }> {
+  const profile = await verifyGoogleIdToken(idToken);
+
+  let found = await prisma.user.findFirst({ where: { googleId: profile.googleId }, include: USER_INCLUDE });
+  if (!found) {
+    const byEmail = await prisma.user.findFirst({ where: { email: profile.email }, include: USER_INCLUDE });
+    if (byEmail) {
+      found = await prisma.user.update({
+        where: { id: byEmail.id },
+        data: { googleId: profile.googleId, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date() },
+        include: USER_INCLUDE,
+      });
+    }
+  }
+
+  if (!found) {
+    return { needsSignup: true, email: profile.email, firstName: profile.firstName, lastName: profile.lastName };
+  }
+  if (!found.isActive) throw unauthorized('Compte désactivé');
+
+  if (found.twoFactorEnabled && found.twoFactorSecret) {
+    await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_2FA_REQUIRED', ...meta });
+    return { twoFactorRequired: true, challenge: await signTwoFactorChallenge(found.id) };
+  }
+
+  await prisma.user.update({ where: { id: found.id }, data: { lastLoginAt: new Date() } });
+  await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_GOOGLE_SUCCESS', ...meta });
+
+  const session = await issueSession(found, meta);
+  return { ...session, user: buildAuthUser(found) };
+}
+
+/**
+ * Inscription d'une nouvelle entreprise via Google : l'identité (nom, email
+ * déjà vérifié) vient du jeton Google, seul le nom de l'établissement est
+ * demandé. Un mot de passe aléatoire est généré (jamais communiqué) — le
+ * compte reste utilisable via « Mot de passe oublié » si besoin plus tard.
+ */
+export async function signupWithGoogle(input: GoogleSignupInput, meta: RequestMeta): Promise<SessionResult> {
+  const profile = await verifyGoogleIdToken(input.idToken);
+
+  const existingByGoogle = await prisma.user.findFirst({ where: { googleId: profile.googleId } });
+  if (existingByGoogle) throw conflict('Ce compte Google est déjà lié à un compte existant');
+  const existingByEmail = await prisma.user.findFirst({ where: { email: profile.email } });
+  if (existingByEmail) {
+    throw conflict('Un compte existe déjà avec cet email — connectez-vous avec Google depuis la page de connexion.');
+  }
+
+  const passwordHash = await hashPassword(generateResetToken());
+  const userId = await createTenantWithAdmin({
+    tenantName: input.tenantName,
+    branchName: input.branchName,
+    email: profile.email,
+    passwordHash,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    plan: input.plan,
+    emailVerifiedNow: true,
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { googleId: profile.googleId, photoUrl: profile.pictureUrl },
+  });
+
+  const user = await loadUser({ id: userId });
+  if (!user) throw badRequest("Échec de création du compte");
+
+  await recordAudit({
+    tenantId: user.tenantId,
+    userId: user.id,
+    action: 'TENANT_SIGNUP_GOOGLE',
+    entity: 'Tenant',
+    entityId: user.tenantId,
+    ...meta,
+  });
 
   const session = await issueSession(user, meta);
   return { ...session, user: buildAuthUser(user) };

@@ -539,6 +539,21 @@ export const signupSchema = z.object({
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
+/* --- Connexion avec Google --- */
+
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(20),
+});
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
+
+export const googleSignupSchema = z.object({
+  idToken: z.string().min(20),
+  tenantName: z.string().min(2).max(120),
+  branchName: z.string().min(2).max(120).default('Magasin principal'),
+  plan: z.enum(['TRIAL', 'STANDARD', 'PREMIUM']).optional(),
+});
+export type GoogleSignupInput = z.infer<typeof googleSignupSchema>;
+
 export const loginSchema = z.object({
   identifier: z.string().min(1, "Email ou nom d'utilisateur requis"),
   password: z.string().min(1, 'Mot de passe requis'),

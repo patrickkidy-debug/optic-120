@@ -95,6 +95,7 @@ model User {
   emailVerifiedAt      DateTime?
   verifyTokenHash      String?
   verifyTokenExpiresAt DateTime?
+  googleId         String?   @unique // identifiant Google (sub) si connecté via "Se connecter avec Google"
   twoFactorEnabled Boolean   @default(false)
   twoFactorSecret  String? // secret TOTP chiffré (AES-256-GCM)
   preferences      Json? // { theme: 'light'|'dark'|'auto', locale: 'fr'|'en'|'pt', ... }

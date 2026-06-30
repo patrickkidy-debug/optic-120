@@ -10,6 +10,8 @@ import {
   twoFactorEnableSchema,
   twoFactorDisableSchema,
   twoFactorLoginSchema,
+  googleLoginSchema,
+  googleSignupSchema,
 } from '@oculo/shared-types';
 import * as authService from './auth.service.js';
 import { REFRESH_COOKIE, setRefreshCookie, clearRefreshCookie } from './cookies.js';
@@ -60,6 +62,49 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     setRefreshCookie(reply, result.refreshToken);
     return reply.send({ accessToken: result.accessToken, user: result.user });
+  });
+
+  // « Se connecter avec Google ». Si l'email ne correspond à aucun compte,
+  // renvoie needsSignup (le frontend bascule alors vers /auth/google/signup).
+  app.post('/google/login', strictLimit, async (req, reply) => {
+    const { idToken } = googleLoginSchema.parse(req.body);
+    const result = await authService.loginWithGoogle(idToken, requestMeta(req));
+    if ('needsSignup' in result) {
+      return reply.send({ needsSignup: true, email: result.email, firstName: result.firstName, lastName: result.lastName });
+    }
+    if ('twoFactorRequired' in result) {
+      return reply.send({ twoFactorRequired: true, challenge: result.challenge });
+    }
+    setRefreshCookie(reply, result.refreshToken);
+    return reply.send({ accessToken: result.accessToken, user: result.user });
+  });
+
+  // Inscription d'un nouvel établissement via Google (identité déjà vérifiée).
+  app.post('/google/signup', strictLimit, async (req, reply) => {
+    const input = googleSignupSchema.parse(req.body);
+    const { accessToken, refreshToken, user } = await authService.signupWithGoogle(
+      input,
+      requestMeta(req),
+    );
+    setRefreshCookie(reply, refreshToken);
+
+    const cookies = req.cookies as Record<string, string | undefined>;
+    void sendConversionEvent({
+      eventName: 'CompleteRegistration',
+      eventId: `registration_${user.id}`,
+      eventSourceUrl: `${appOrigin}/signup`,
+      user: {
+        email: user.email,
+        externalId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        fbp: cookies._fbp,
+        fbc: cookies._fbc,
+      },
+      customData: { content_name: input.plan ?? 'TRIAL' },
+    });
+
+    return reply.status(201).send({ accessToken, user });
   });
 
   // 2ᵉ étape de connexion : code TOTP.
