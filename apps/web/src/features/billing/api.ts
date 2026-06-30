@@ -218,3 +218,79 @@ export async function updatePlatformPlan(
   const { data } = await api.patch<{ plan: PlatformPlan }>(`/platform/plans/${id}`, input);
   return data.plan;
 }
+
+/* --- Équipe & accès (opérateurs de la console fondateur) --- */
+
+export interface PlatformOperator {
+  id: string;
+  email: string;
+  name: string | null;
+  readOnly: boolean;
+  createdAt: string | null;
+}
+
+export async function listOperators(): Promise<PlatformOperator[]> {
+  const { data } = await api.get<{ operators: PlatformOperator[] }>('/platform/operators');
+  return data.operators;
+}
+export async function addOperator(email: string, name?: string): Promise<void> {
+  await api.post('/platform/operators', { email, name });
+}
+export async function removeOperator(id: string): Promise<void> {
+  await api.delete(`/platform/operators/${id}`);
+}
+
+/* --- Finances --- */
+
+export interface FinanceSummary {
+  totalRevenue: number;
+  paidInvoicesCount: number;
+  mrr: number;
+  arpu: number;
+  activeCount: number;
+  churnRate30d: number;
+}
+
+export async function getFinanceSummary(): Promise<FinanceSummary> {
+  const { data } = await api.get<{ summary: FinanceSummary }>('/platform/finance/summary');
+  return data.summary;
+}
+
+export async function getRevenueSeries(days = 30): Promise<{ date: string; revenue: number }[]> {
+  const { data } = await api.get<{ series: { date: string; revenue: number }[] }>(
+    '/platform/finance/revenue',
+    { params: { days } },
+  );
+  return data.series;
+}
+
+export interface PlatformInvoice {
+  id: string;
+  number: string;
+  tenantName: string;
+  tenantSlug: string;
+  planName: string;
+  amount: number;
+  currency: string;
+  status: string;
+  periodStart: string;
+  periodEnd: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export async function listAllInvoices(status?: string): Promise<PlatformInvoice[]> {
+  const { data } = await api.get<{ invoices: PlatformInvoice[] }>('/platform/finance/invoices', {
+    params: status ? { status } : undefined,
+  });
+  return data.invoices;
+}
+
+/* --- Utilisateurs (actions cross-tenant) --- */
+
+export async function setUserActive(id: string, isActive: boolean): Promise<void> {
+  await api.patch(`/platform/users/${id}/active`, { isActive });
+}
+export async function forceLogoutUser(id: string): Promise<void> {
+  await api.post(`/platform/users/${id}/force-logout`);
+}

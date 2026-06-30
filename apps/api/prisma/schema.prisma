@@ -796,3 +796,14 @@ model SupportTicket {
   @@index([createdAt])
   @@index([tenantId])
 }
+
+/// Équipe de l'éditeur ayant accès à la console fondateur (cross-tenant).
+/// S'ajoute aux emails de PLATFORM_ADMIN_EMAILS (bootstrap via env), sans les
+/// remplacer : retirer une ligne ici ne révoque pas un email listé dans l'env.
+model PlatformOperator {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  addedById String?
+  createdAt DateTime @default(now())
+}

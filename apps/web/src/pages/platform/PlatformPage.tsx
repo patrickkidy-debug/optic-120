@@ -1,5 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import {
   Building2,
   Users,
@@ -14,6 +24,16 @@ import {
   Save,
   LifeBuoy,
   BadgeCheck,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
+  Search,
+  ShieldOff,
+  ShieldCheck,
+  LogOut,
+  Trash2,
+  Lock,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -24,13 +44,23 @@ import {
   listPlatformUsers,
   getPlatformPlans,
   updatePlatformPlan,
+  listOperators,
+  addOperator,
+  removeOperator,
+  getFinanceSummary,
+  getRevenueSeries,
+  listAllInvoices,
+  setUserActive,
+  forceLogoutUser,
   type PlatformPlan,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
 import { listPendingPayments, confirmPayment } from '../../features/billing/api';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
-import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard } from '../../components/ui';
+import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard, Field } from '../../components/ui';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
   TRIALING: { label: 'Essai', tone: 'info' },
@@ -40,7 +70,7 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
 
-type Tab = 'subs' | 'payments' | 'users' | 'plans' | 'support';
+type Tab = 'subs' | 'payments' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -88,18 +118,20 @@ export function PlatformPage() {
       )}
 
       {/* Onglets */}
-      <div className="mt-6 flex gap-1 border-b">
+      <div className="mt-6 flex gap-1 overflow-x-auto border-b">
         {[
+          { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
           { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
+          { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
           { id: 'support' as Tab, label: 'Support', icon: LifeBuoy },
         ].map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
               tab === t.id
                 ? 'border-primary text-content'
                 : 'border-transparent text-content-muted hover:text-content'
@@ -111,9 +143,11 @@ export function PlatformPage() {
       </div>
 
       <div className="mt-5">
+        {tab === 'finance' && <FinanceTab />}
         {tab === 'subs' && <SubscriptionsTab />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'users' && <UsersTab />}
+        {tab === 'team' && <TeamTab />}
         {tab === 'plans' && <PlansTab />}
         {tab === 'support' && <SupportTab />}
       </div>
@@ -183,41 +217,342 @@ function SubscriptionsTab() {
 }
 
 function UsersTab() {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-users'], queryFn: listPlatformUsers });
+  const [query, setQuery] = useState('');
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['platform-users'] });
+  const activeMut = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setUserActive(id, isActive),
+    onSuccess: invalidate,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const logoutMut = useMutation({
+    mutationFn: forceLogoutUser,
+    onSuccess: () => alert('Sessions révoquées : cet utilisateur devra se reconnecter.'),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.tenantName.toLowerCase().includes(q),
+    );
+  }, [data, query]);
+
   if (isLoading) return <PageLoader />;
   if (!data || data.length === 0) return <EmptyState icon={Users} title="Aucun utilisateur" />;
 
   return (
-    <div className="card overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-            <th className="table-cell font-semibold">Utilisateur</th>
-            <th className="table-cell font-semibold">Établissement</th>
-            <th className="table-cell font-semibold">Rôle</th>
-            <th className="table-cell font-semibold">Statut</th>
-            <th className="table-cell font-semibold">Dernière connexion</th>
-            <th className="table-cell font-semibold">Inscrit le</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((u) => (
-            <tr key={u.id} className="border-b last:border-0 hover:bg-surface-2/50">
-              <td className="table-cell">
-                <div className="font-medium text-content">{u.name}</div>
-                <div className="text-xs text-content-faint">{u.email}</div>
-              </td>
-              <td className="table-cell text-content-muted">{u.tenantName}</td>
-              <td className="table-cell text-content-muted">{u.roleLabel}</td>
-              <td className="table-cell">
-                <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Actif' : 'Inactif'}</Badge>
-              </td>
-              <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
-              <td className="table-cell text-content-muted">{formatDate(u.createdAt)}</td>
+    <div>
+      <div className="relative mb-3 max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher (nom, email, établissement)…"
+          className="input pl-9"
+        />
+      </div>
+      <div className="card overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+              <th className="table-cell font-semibold">Utilisateur</th>
+              <th className="table-cell font-semibold">Établissement</th>
+              <th className="table-cell font-semibold">Rôle</th>
+              <th className="table-cell font-semibold">Statut</th>
+              <th className="table-cell font-semibold">Dernière connexion</th>
+              <th className="table-cell text-right font-semibold">Actions</th>
             </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.id} className="border-b last:border-0 hover:bg-surface-2/50">
+                <td className="table-cell">
+                  <div className="font-medium text-content">{u.name}</div>
+                  <div className="text-xs text-content-faint">{u.email}</div>
+                </td>
+                <td className="table-cell text-content-muted">{u.tenantName}</td>
+                <td className="table-cell text-content-muted">{u.roleLabel}</td>
+                <td className="table-cell">
+                  <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Actif' : 'Inactif'}</Badge>
+                </td>
+                <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
+                <td className="table-cell text-right">
+                  <div className="flex justify-end gap-1.5">
+                    <button
+                      title="Déconnecter de toutes les sessions"
+                      onClick={() => { if (confirm(`Forcer la déconnexion de ${u.name} ?`)) logoutMut.mutate(u.id); }}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </button>
+                    {u.isActive ? (
+                      <button
+                        onClick={() => { if (confirm(`Désactiver le compte de ${u.name} ?`)) activeMut.mutate({ id: u.id, isActive: false }); }}
+                        className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                      >
+                        <ShieldOff className="h-3.5 w-3.5" /> Désactiver
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => activeMut.mutate({ id: u.id, isActive: true })}
+                        className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" /> Réactiver
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TeamTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['platform-operators'], queryFn: listOperators });
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['platform-operators'] });
+  const addMut = useMutation({
+    mutationFn: () => addOperator(email.trim(), name.trim() || undefined),
+    onSuccess: () => {
+      setEmail('');
+      setName('');
+      setError('');
+      invalidate();
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const removeMut = useMutation({
+    mutationFn: removeOperator,
+    onSuccess: invalidate,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  if (isLoading) return <PageLoader />;
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="card p-5 lg:col-span-2">
+        <h3 className="mb-1 font-display font-bold text-content">Accès à la console fondateur</h3>
+        <p className="mb-4 text-xs text-content-faint">
+          Toute personne ajoutée ici peut voir le MRR, tous les clients et gérer la plateforme. N'ajoutez que des personnes de confiance.
+        </p>
+        <div className="space-y-2">
+          {data?.map((o) => (
+            <div key={o.id} className="flex items-center justify-between rounded-xl border bg-surface-2 px-4 py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-content">{o.name || o.email}</span>
+                  {o.readOnly && <Badge tone="info">Configuré serveur</Badge>}
+                </div>
+                <div className="text-xs text-content-faint">{o.email}</div>
+              </div>
+              {!o.readOnly && (
+                <button
+                  onClick={() => { if (confirm(`Retirer l'accès de ${o.email} ?`)) removeMut.mutate(o.id); }}
+                  className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <h3 className="mb-3 font-display font-bold text-content">Ajouter un accès</h3>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!email.includes('@')) { setError('Email invalide'); return; }
+            addMut.mutate();
+          }}
+          className="space-y-3"
+        >
+          <Field label="Email">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="input" placeholder="associe@oculosaas.com" />
+          </Field>
+          <Field label="Nom (optionnel)">
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Prénom Nom" />
+          </Field>
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <Button type="submit" loading={addMut.isPending} className="w-full">
+            <UserPlus className="h-4 w-4" /> Donner l'accès
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const INVOICE_STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+  PAID: { label: 'Payée', tone: 'success' },
+  PENDING: { label: 'En attente', tone: 'warning' },
+  FAILED: { label: 'Échouée', tone: 'danger' },
+};
+
+function FinanceTab() {
+  const [days, setDays] = useState(30);
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const { data: summary, isLoading: loadingSummary } = useQuery({
+    queryKey: ['platform-finance-summary'],
+    queryFn: getFinanceSummary,
+  });
+  const { data: series } = useQuery({
+    queryKey: ['platform-finance-revenue', days],
+    queryFn: () => getRevenueSeries(days),
+  });
+  const { data: invoices, isLoading: loadingInvoices } = useQuery({
+    queryKey: ['platform-finance-invoices', statusFilter],
+    queryFn: () => listAllInvoices(statusFilter),
+  });
+
+  const lineData = {
+    labels: (series ?? []).map((d) => d.date.slice(5)),
+    datasets: [
+      {
+        data: (series ?? []).map((d) => d.revenue),
+        borderColor: '#22c55e',
+        backgroundColor: (ctx: { chart: ChartJS }) => {
+          const { ctx: c, chartArea } = ctx.chart;
+          if (!chartArea) return 'rgba(34,197,94,0.15)';
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, 'rgba(34,197,94,0.35)');
+          g.addColorStop(1, 'rgba(34,197,94,0)');
+          return g;
+        },
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+        pointBackgroundColor: '#22c55e',
+      },
+    ],
+  };
+
+  if (loadingSummary) return <PageLoader />;
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={Wallet} label="Revenu total encaissé" value={summary ? formatCurrency(summary.totalRevenue) : '—'} tone="success" />
+        <StatCard icon={TrendingUp} label="Panier moyen (ARPU)" value={summary ? formatCurrency(summary.arpu) : '—'} tone="primary" />
+        <StatCard icon={Receipt} label="Factures payées" value={summary?.paidInvoicesCount ?? '—'} tone="accent" />
+        <StatCard
+          icon={TrendingDown}
+          label="Churn (30j)"
+          value={summary ? `${summary.churnRate30d}%` : '—'}
+          tone={summary && summary.churnRate30d > 5 ? 'danger' : 'primary'}
+        />
+      </div>
+
+      <div className="mt-5 card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display font-bold text-content">Revenu encaissé</h3>
+          <div className="flex gap-1">
+            {[30, 90, 180].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  days === d ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted hover:text-content'
+                }`}
+              >
+                {d}j
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-64">
+          <Line
+            data={lineData}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', maxTicksLimit: 10 } },
+                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 card overflow-hidden">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <h3 className="font-display font-bold text-content">Factures (toute la plateforme)</h3>
+          <div className="flex gap-1">
+            {[
+              { v: undefined, label: 'Toutes' },
+              { v: 'PAID', label: 'Payées' },
+              { v: 'PENDING', label: 'En attente' },
+              { v: 'FAILED', label: 'Échouées' },
+            ].map((opt) => (
+              <button
+                key={opt.label}
+                onClick={() => setStatusFilter(opt.v)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  statusFilter === opt.v ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted hover:text-content'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {loadingInvoices ? (
+          <PageLoader />
+        ) : !invoices || invoices.length === 0 ? (
+          <EmptyState icon={Receipt} title="Aucune facture" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                  <th className="table-cell font-semibold">N°</th>
+                  <th className="table-cell font-semibold">Établissement</th>
+                  <th className="table-cell font-semibold">Offre</th>
+                  <th className="table-cell text-right font-semibold">Montant</th>
+                  <th className="table-cell font-semibold">Statut</th>
+                  <th className="table-cell font-semibold">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b last:border-0 hover:bg-surface-2/50">
+                    <td className="table-cell font-mono text-xs text-content-muted">{inv.number}</td>
+                    <td className="table-cell font-medium text-content">{inv.tenantName}</td>
+                    <td className="table-cell text-content-muted">{inv.planName}</td>
+                    <td className="table-cell text-right font-semibold text-content">{formatCurrency(inv.amount)}</td>
+                    <td className="table-cell">
+                      <Badge tone={INVOICE_STATUS[inv.status]?.tone ?? 'neutral'}>
+                        {INVOICE_STATUS[inv.status]?.label ?? inv.status}
+                      </Badge>
+                    </td>
+                    <td className="table-cell text-content-muted">{formatDate(inv.paidAt ?? inv.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

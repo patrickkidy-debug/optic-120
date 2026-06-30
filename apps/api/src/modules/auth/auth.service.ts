@@ -15,6 +15,7 @@ import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensureTrialSubscription } from '../billing/billing.service.js';
 import { env, appOrigin } from '../../config/env.js';
+import { isOperatorEmail } from '../../lib/operators.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
 
 interface RequestMeta {
@@ -38,15 +39,6 @@ function refreshExpiry(): Date {
   return new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
 }
 
-/** Emails déclarés comme opérateurs de la plateforme (éditeur + équipe). */
-function isOperatorEmail(email: string): boolean {
-  const set = new Set(
-    env.PLATFORM_ADMIN_EMAILS.split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
-  return set.has(email.toLowerCase());
-}
 
 function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
   return {

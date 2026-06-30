@@ -1,25 +1,23 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { planUpsertSchema, SubscriptionStatus } from '@oculo/shared-types';
+import {
+  planUpsertSchema,
+  SubscriptionStatus,
+  operatorCreateSchema,
+  userActiveSchema,
+} from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { forbidden, notFound } from '../../lib/http-error.js';
 import { prisma } from '../../lib/prisma.js';
-import { env } from '../../config/env.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
+import * as platform from './platform.service.js';
 import * as support from '../support/support.service.js';
-
-function operatorEmails(): Set<string> {
-  return new Set(
-    env.PLATFORM_ADMIN_EMAILS.split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
+import { getOperatorEmails, isEnvOperator } from '../../lib/operators.js';
 
 /** Garde opérateur : réservé aux emails déclarés comme administrateurs plateforme. */
 async function requirePlatformOperator(req: FastifyRequest): Promise<void> {
   const email = req.auth?.email?.toLowerCase();
-  if (!email || !operatorEmails().has(email)) {
+  if (!email || !getOperatorEmails().has(email)) {
     throw forbidden('Réservé aux opérateurs de la plateforme');
   }
 }
@@ -135,5 +133,99 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     return reply.send({ plan: updated });
+  });
+
+  /* --------------------------- Équipe & accès --------------------------- */
+
+  // Liste complète : emails env (bootstrap, lecture seule) + équipe ajoutée via la console.
+  app.get('/operators', async (_req, reply) => {
+    const [envEmails, team] = [
+      [...getOperatorEmails()].filter((e) => isEnvOperator(e)),
+      await platform.listOperators(),
+    ];
+    return reply.send({
+      operators: [
+        ...envEmails.map((email) => ({ id: email, email, name: null, readOnly: true, createdAt: null })),
+        ...team.map((o) => ({ ...o, readOnly: false })),
+      ],
+    });
+  });
+
+  app.post('/operators', async (req, reply) => {
+    const input = operatorCreateSchema.parse(req.body);
+    const row = await platform.addOperator(input.email, input.name, req.auth!.userId);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_OPERATOR_ADDED',
+      entity: 'PlatformOperator',
+      entityId: row.id,
+      metadata: { email: row.email },
+      ...requestMeta(req),
+    });
+    return reply.status(201).send({ operator: row });
+  });
+
+  app.delete('/operators/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    await platform.removeOperator(id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_OPERATOR_REMOVED',
+      entity: 'PlatformOperator',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
+  });
+
+  /* ------------------------------- Finances ------------------------------- */
+
+  app.get('/finance/summary', async (_req, reply) => {
+    return reply.send({ summary: await platform.getFinanceSummary() });
+  });
+
+  app.get('/finance/revenue', async (req, reply) => {
+    const { days } = req.query as { days?: string };
+    const n = Math.min(180, Math.max(7, Number(days) || 30));
+    return reply.send({ series: await platform.getRevenueSeries(n) });
+  });
+
+  app.get('/finance/invoices', async (req, reply) => {
+    const { status } = req.query as { status?: string };
+    return reply.send({ invoices: await platform.listAllInvoices(status, 150) });
+  });
+
+  /* ----------------------- Utilisateurs (cross-tenant) ----------------------- */
+
+  app.patch('/users/:id/active', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (id === req.auth!.userId) throw forbidden('Vous ne pouvez pas vous désactiver vous-même');
+    const { isActive } = userActiveSchema.parse(req.body);
+    const { tenantId } = await platform.setUserActiveCrossTenant(id, isActive);
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: isActive ? 'PLATFORM_USER_REACTIVATED' : 'PLATFORM_USER_DEACTIVATED',
+      entity: 'User',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
+  });
+
+  app.post('/users/:id/force-logout', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { tenantId } = await platform.forceLogoutUser(id);
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_USER_FORCE_LOGOUT',
+      entity: 'User',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
   });
 }

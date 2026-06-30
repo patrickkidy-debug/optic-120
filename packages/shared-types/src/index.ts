@@ -900,6 +900,19 @@ export const planUpsertSchema = z.object({
 });
 export type PlanUpsertInput = z.infer<typeof planUpsertSchema>;
 
+/* --- Console plateforme (fondateur) --- */
+
+export const operatorCreateSchema = z.object({
+  email: z.string().email(),
+  name: z.string().max(120).optional(),
+});
+export type OperatorCreateInput = z.infer<typeof operatorCreateSchema>;
+
+export const userActiveSchema = z.object({
+  isActive: z.boolean(),
+});
+export type UserActiveInput = z.infer<typeof userActiveSchema>;
+
 /* --- Profil & image de marque --- */
 
 // Image en data URL (base64) redimensionnée côté client, ou chaîne vide pour retirer.

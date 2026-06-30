@@ -5,14 +5,7 @@ import { forTenant } from '../lib/prisma-tenant.js';
 import { unauthorized, paymentRequired } from '../lib/http-error.js';
 import type { AuthContext } from '../types/auth.js';
 import { getSubscriptionStatus } from '../modules/billing/billing.service.js';
-import { env } from '../config/env.js';
-
-/** L'éditeur du SaaS (opérateur) n'est jamais bloqué par l'abonnement. */
-function isOperator(email: string): boolean {
-  return env.PLATFORM_ADMIN_EMAILS.split(',')
-    .map((e) => e.trim().toLowerCase())
-    .includes(email.toLowerCase());
-}
+import { isOperatorEmail as isOperator } from '../lib/operators.js';
 
 /** Routes accessibles même quand l'abonnement est suspendu (paiement, auth, opérateur). */
 function isBillingExempt(url: string): boolean {
