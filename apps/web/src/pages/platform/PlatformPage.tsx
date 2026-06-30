@@ -34,6 +34,9 @@ import {
   LogOut,
   Trash2,
   Lock,
+  KeyRound,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -52,13 +55,15 @@ import {
   listAllInvoices,
   setUserActive,
   forceLogoutUser,
+  platformResetPassword,
   type PlatformPlan,
+  type PlatformUser,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
 import { listPendingPayments, confirmPayment } from '../../features/billing/api';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
-import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard, Field } from '../../components/ui';
+import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard, Field, Modal } from '../../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -232,6 +237,11 @@ function UsersTab() {
     onSuccess: () => alert('Sessions révoquées : cet utilisateur devra se reconnecter.'),
     onError: (e) => alert(apiErrorMessage(e)),
   });
+  const resetPasswordMut = useMutation({
+    mutationFn: platformResetPassword,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -287,6 +297,19 @@ function UsersTab() {
                 <td className="table-cell text-right">
                   <div className="flex justify-end gap-1.5">
                     <button
+                      title="Réinitialiser le mot de passe (sans email)"
+                      onClick={() => {
+                        if (confirm(`Générer un nouveau mot de passe temporaire pour ${u.name} ? Ses sessions actives seront déconnectées.`)) {
+                          resetPasswordMut.mutate(u.id, {
+                            onSuccess: (res) => setResetResult({ user: u, tempPassword: res.tempPassword }),
+                          });
+                        }
+                      }}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
+                    >
+                      <KeyRound className="h-3.5 w-3.5" />
+                    </button>
+                    <button
                       title="Déconnecter de toutes les sessions"
                       onClick={() => { if (confirm(`Forcer la déconnexion de ${u.name} ?`)) logoutMut.mutate(u.id); }}
                       className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
@@ -315,7 +338,63 @@ function UsersTab() {
           </tbody>
         </table>
       </div>
+      {resetResult && (
+        <PlatformResetPasswordModal
+          user={resetResult.user}
+          tempPassword={resetResult.tempPassword}
+          onClose={() => setResetResult(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Affiche le mot de passe temporaire généré UNE SEULE FOIS (jamais stocké en
+ * clair). Débloque un compte (page de connexion) sans dépendre de l'envoi
+ * d'email, même si le tenant concerné n'a plus d'administrateur actif.
+ */
+function PlatformResetPasswordModal({
+  user,
+  tempPassword,
+  onClose,
+}: {
+  user: PlatformUser;
+  tempPassword: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Presse-papier indisponible : copie manuelle.
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Mot de passe temporaire" size="sm">
+      <p className="text-sm text-content-muted">
+        Nouveau mot de passe pour <b className="text-content">{user.name}</b> ({user.email}) —{' '}
+        {user.tenantName}. Transmettez-le vous-même (WhatsApp, SMS…) — il ne sera plus affiché après
+        fermeture de cette fenêtre.
+      </p>
+      <div className="mt-4 flex items-center gap-2 rounded-xl border bg-surface-2 p-3">
+        <span className="flex-1 select-all font-mono text-lg font-bold tracking-wider text-content">{tempPassword}</span>
+        <button onClick={copy} className="btn-ghost h-9 w-9 rounded-lg p-0" title="Copier">
+          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+      <p className="mt-3 text-xs text-content-faint">
+        Ses sessions actives ont été déconnectées ; il devra se reconnecter avec ce mot de passe.
+      </p>
+      <Button className="mt-5 w-full" onClick={onClose}>
+        J'ai noté le mot de passe
+      </Button>
+    </Modal>
   );
 }
 

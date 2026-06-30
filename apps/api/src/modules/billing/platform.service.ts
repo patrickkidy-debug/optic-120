@@ -2,6 +2,7 @@ import { SubscriptionStatus, SubInvoiceStatus } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { invalidateOperatorCache, isEnvOperator, getOperatorEmails } from '../../lib/operators.js';
+import { hashPassword, generateTempPassword } from '../../lib/password.js';
 
 /* --------------------- Équipe (opérateurs de la console) --------------------- */
 
@@ -143,6 +144,31 @@ export async function setUserActiveCrossTenant(userId: string, isActive: boolean
     });
   }
   return { tenantId: user.tenantId };
+}
+
+/**
+ * Réinitialisation de mot de passe sans email, depuis la console fondateur :
+ * débloque un compte même si son tenant n'a plus aucun administrateur actif
+ * pour le faire lui-même (ex. fondateur testant son propre compte, client
+ * dont le seul admin est hors-jeu...).
+ */
+export async function resetUserPasswordCrossTenant(userId: string): Promise<{ tenantId: string; tempPassword: string }> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw notFound('Utilisateur introuvable');
+
+  const tempPassword = generateTempPassword();
+  const passwordHash = await hashPassword(tempPassword);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+  return { tenantId: user.tenantId, tempPassword };
 }
 
 /** Révoque toutes les sessions actives d'un utilisateur (déconnexion forcée immédiate). */

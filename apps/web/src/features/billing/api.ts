@@ -307,3 +307,8 @@ export async function setUserActive(id: string, isActive: boolean): Promise<void
 export async function forceLogoutUser(id: string): Promise<void> {
   await api.post(`/platform/users/${id}/force-logout`);
 }
+/** Réinitialise le mot de passe d'un utilisateur, sans email (console fondateur). */
+export async function platformResetPassword(id: string): Promise<{ tempPassword: string }> {
+  const { data } = await api.post<{ tempPassword: string }>(`/platform/users/${id}/reset-password`);
+  return data;
+}

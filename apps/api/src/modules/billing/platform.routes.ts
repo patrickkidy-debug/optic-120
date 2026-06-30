@@ -228,4 +228,20 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     });
     return reply.send({ ok: true });
   });
+
+  // Débloque un compte (page de connexion, mot de passe oublié...) même sans
+  // admin actif côté tenant — sans dépendre de l'envoi d'email.
+  app.post('/users/:id/reset-password', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { tenantId, tempPassword } = await platform.resetUserPasswordCrossTenant(id);
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_USER_PASSWORD_RESET',
+      entity: 'User',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ tempPassword });
+  });
 }
