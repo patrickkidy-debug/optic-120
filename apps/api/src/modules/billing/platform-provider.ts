@@ -1,4 +1,4 @@
-import { env, appOrigin } from '../../config/env.js';
+import { env, appOrigin, isProd } from '../../config/env.js';
 import type { PaymentProvider } from '../payments/payment-provider.interface.js';
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
 import { PayTechProvider } from '../payments/providers/paytech.provider.js';
@@ -33,9 +33,19 @@ export function resolvePlatformProvider(): PaymentProvider {
       cancelUrl: `${appOrigin}/parametres/abonnement`,
     });
   }
+  // 3) Aucun fournisseur réel configuré. En PRODUCTION, on échoue volontairement
+  //    (fail-closed) : sans paiement réel, un abonnement ne doit JAMAIS pouvoir
+  //    être activé. La simulation reste réservée au développement/tests.
+  if (isProd) {
+    throw new Error(
+      'Aucun fournisseur de paiement configuré : définissez MONEROO_SECRET_KEY (ou PayTech) en production.',
+    );
+  }
   return new SimulatedPaymentProvider();
 }
 
 export function isPlatformSimulation(): boolean {
+  // Jamais de simulation en production : seul un paiement réel active un abonnement.
+  if (isProd) return false;
   return !env.MONEROO_SECRET_KEY && !(env.PAYTECH_API_KEY && env.PAYTECH_API_SECRET);
 }

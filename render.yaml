@@ -61,3 +61,10 @@ services:
         value: OculoSaaS <no-reply@oculosaas.africa>
       - key: PLATFORM_ADMIN_EMAILS
         sync: false # ton email admin, ex. patrickkidy@gmail.com
+      # --- Paiement des abonnements (Moneroo) ---
+      # OBLIGATOIRE en production : sans clé réelle, l'API refuse d'activer un
+      # abonnement (fail-closed) — aucun accès gratuit possible.
+      - key: MONEROO_SECRET_KEY
+        sync: false # clé secrète Moneroo (dashboard Moneroo > API)
+      - key: MONEROO_WEBHOOK_SECRET
+        sync: false # secret du webhook Moneroo (vérification des notifications)

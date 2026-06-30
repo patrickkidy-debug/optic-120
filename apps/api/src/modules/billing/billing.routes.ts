@@ -3,6 +3,8 @@ import { subscribeSchema, subscriptionPaySchema, PaymentStatus } from '@oculo/sh
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
+import { notFound } from '../../lib/http-error.js';
+import { isProd } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
 import { resolvePlatformProvider } from './platform-provider.js';
@@ -109,6 +111,10 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/payments/:id/simulate-callback', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
+    // Confirmation simulée : strictement réservée au développement/tests. En
+    // production, seul un paiement réel (webhook Moneroo/PayTech) peut activer un
+    // abonnement — sinon n'importe quel gérant débloquerait son accès sans payer.
+    if (isProd) throw notFound('Ressource introuvable');
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { status?: PaymentStatus };
     await billing.getPaymentStatus(req.auth!.tenantId, id); // vérifie l'appartenance

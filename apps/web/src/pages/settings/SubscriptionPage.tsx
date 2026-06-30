@@ -77,9 +77,17 @@ export function SubscriptionPage() {
   const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: getPlans });
   const { data: invoices } = useQuery({ queryKey: ['invoices'], queryFn: getInvoices });
 
-  // Dès qu'on constate un abonnement non suspendu, on lève la garde.
+  // On ne lève la garde que si l'abonnement donne RÉELLEMENT accès : statut
+  // actif ET période en cours non expirée. Un statut "TRIALING" (en attente de
+  // paiement, période déjà expirée) ne doit jamais débloquer le dashboard,
+  // sinon l'utilisateur accéderait à son espace sans avoir payé.
   useEffect(() => {
-    if (sub && sub.status !== 'SUSPENDED' && sub.status !== 'CANCELLED') setSuspended(false);
+    const hasAccess =
+      sub != null &&
+      sub.status !== 'SUSPENDED' &&
+      sub.status !== 'CANCELLED' &&
+      new Date(sub.currentPeriodEnd).getTime() > Date.now();
+    if (hasAccess) setSuspended(false);
   }, [sub, setSuspended]);
 
   // Retour d'une redirection plein écran vers Moneroo (forfait payant choisi
