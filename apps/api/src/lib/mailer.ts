@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 import { logger } from './logger.js';
 
@@ -25,24 +26,17 @@ class ConsoleMailer implements Mailer {
   }
 }
 
-/**
- * Driver SMTP (production). Chargé dynamiquement pour ne pas imposer
- * `nodemailer` en développement. Branché dès que MAIL_DRIVER=smtp.
- */
+/** Driver SMTP (production). Branché dès que MAIL_DRIVER=smtp. */
 class SmtpMailer implements Mailer {
+  private transport = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_PORT === 465,
+    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } : undefined,
+  });
+
   async send(msg: MailMessage): Promise<void> {
-    // Import indirect : `nodemailer` reste une dépendance optionnelle (prod uniquement).
-    const moduleName = 'nodemailer';
-    const nodemailer = (await import(moduleName)) as {
-      createTransport: (opts: unknown) => { sendMail: (m: unknown) => Promise<unknown> };
-    };
-    const transport = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } : undefined,
-    });
-    await transport.sendMail({
+    await this.transport.sendMail({
       from: env.MAIL_FROM,
       to: msg.to,
       subject: msg.subject,
