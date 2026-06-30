@@ -15,6 +15,11 @@
   body,
   #root {
     height: 100%;
+    /* Garde-fou : empêche tout débordement horizontal accidentel (élément
+       décoratif mal positionné, etc.) de créer un scroll latéral ou de
+       couper du contenu sur petits écrans. */
+    max-width: 100%;
+    overflow-x: hidden;
   }
   body {
     margin: 0;
