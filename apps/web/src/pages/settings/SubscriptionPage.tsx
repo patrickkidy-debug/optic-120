@@ -104,11 +104,12 @@ export function SubscriptionPage() {
       try {
         const s = await billingPaymentStatus(pending.paymentId);
         if (s.status === 'SUCCESS') {
-          trackPixelEvent('Purchase', {
-            value: pending.amount,
-            currency: 'XOF',
-            content_name: pending.planName,
-          });
+          // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+          trackPixelEvent(
+            'Purchase',
+            { value: pending.amount, currency: 'XOF', content_name: pending.planName },
+            `purchase_${pending.paymentId}`,
+          );
           qc.invalidateQueries({ queryKey: ['subscription'] });
           setSuspended(false);
           clearInterval(iv);
@@ -137,13 +138,14 @@ export function SubscriptionPage() {
     // Moneroo : redirection automatique vers le checkout sécurisé.
     if (plan.code === 'STANDARD' || plan.code === 'PREMIUM') {
       setAutoLaunch(true);
-      trackPixelEvent('InitiateCheckout', {
-        value: plan.priceMonthly,
-        currency: 'XOF',
-        content_name: plan.name,
-      });
       subscribe(plan.id, 'WAVE')
         .then((res) => {
+          // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+          trackPixelEvent(
+            'InitiateCheckout',
+            { value: plan.priceMonthly, currency: 'XOF', content_name: plan.name },
+            `checkout_${res.paymentId}`,
+          );
           if (res.redirectUrl) {
             // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
             sessionStorage.setItem(
@@ -359,12 +361,16 @@ function BillingPaymentModal({
   const purchaseTracked = useRef(false);
 
   const payMut = useMutation({
-    mutationFn: (method: PaymentMethod) => {
-      trackPixelEvent('InitiateCheckout', { value: target.amount, currency: 'XOF', content_name: target.label });
-      return target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method);
-    },
+    mutationFn: (method: PaymentMethod) =>
+      target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
+      // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+      trackPixelEvent(
+        'InitiateCheckout',
+        { value: target.amount, currency: 'XOF', content_name: target.label },
+        `checkout_${res.paymentId}`,
+      );
       setIsSimulation(res.simulation);
       // PayTech : redirection vers le checkout hébergé, puis on attend la
       // confirmation par IPN (polling du statut en arrière-plan).
@@ -395,10 +401,15 @@ function BillingPaymentModal({
   }, [phase, paymentId]);
 
   useEffect(() => {
-    if (phase !== 'done' || purchaseTracked.current) return;
+    if (phase !== 'done' || purchaseTracked.current || !paymentId) return;
     purchaseTracked.current = true;
-    trackPixelEvent('Purchase', { value: target.amount, currency: 'XOF', content_name: target.label });
-  }, [phase, target]);
+    // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+    trackPixelEvent(
+      'Purchase',
+      { value: target.amount, currency: 'XOF', content_name: target.label },
+      `purchase_${paymentId}`,
+    );
+  }, [phase, target, paymentId]);
 
   return (
     <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">

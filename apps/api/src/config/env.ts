@@ -64,6 +64,13 @@ const envSchema = z.object({
 
   // Emails des opérateurs de la plateforme (console SaaS cross-tenant), séparés par des virgules.
   PLATFORM_ADMIN_EMAILS: z.string().optional().default(''),
+
+  // Meta Conversions API (suivi serveur, fiable même avec bloqueurs de pub).
+  // Tant que META_CAPI_ACCESS_TOKEN est vide → envoi désactivé (no-op silencieux).
+  META_PIXEL_ID: z.string().optional().default('1021383347367662'),
+  META_CAPI_ACCESS_TOKEN: z.string().optional().default(''),
+  // Code de test (onglet « Test Events » du gestionnaire d'évènements Meta).
+  META_CAPI_TEST_EVENT_CODE: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

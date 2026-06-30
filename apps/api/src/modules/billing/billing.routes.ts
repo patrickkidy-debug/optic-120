@@ -1,10 +1,22 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { subscribeSchema, subscriptionPaySchema, PaymentStatus } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
+import type { CapiContext } from './billing.service.js';
 import { resolvePlatformProvider } from './platform-provider.js';
+
+/** Contexte Meta CAPI à partir de la requête : IP/UA + cookies posés par le Pixel navigateur. */
+function capiContext(req: FastifyRequest): CapiContext {
+  const cookies = req.cookies as Record<string, string | undefined>;
+  return {
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    fbp: cookies._fbp,
+    fbc: cookies._fbc,
+  };
+}
 
 /** Routes d'abonnement accessibles au tenant (préfixe /billing). */
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
@@ -47,6 +59,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       input.planId,
       input.method,
       input.customerPhone,
+      capiContext(req),
     );
     await recordAudit({
       tenantId: req.auth!.tenantId,
@@ -77,7 +90,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   app.post('/invoices/:id/pay', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = subscriptionPaySchema.parse(req.body);
-    const result = await billing.payInvoice(req.auth!.tenantId, id, input.method, input.customerPhone);
+    const result = await billing.payInvoice(req.auth!.tenantId, id, input.method, input.customerPhone, capiContext(req));
     return reply.status(201).send(result);
   });
 

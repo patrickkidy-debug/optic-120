@@ -771,6 +771,10 @@ model SubscriptionPayment {
   amount      Decimal             @db.Decimal(12, 2)
   currency    String              @default("XOF")
   rawPayload  Json?
+  // Contexte Meta Conversions API capturé à l'initiation (ip/UA/fbp/fbc),
+  // réutilisé à la confirmation (souvent asynchrone, via webhook) pour un
+  // évènement Purchase correctement attribué.
+  capiContext Json?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 

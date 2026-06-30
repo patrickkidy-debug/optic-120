@@ -18,7 +18,15 @@ export function trackPixelPageView(): void {
  * InitiateCheckout, Purchase…). `params` suit les paramètres standard Meta
  * (value, currency, content_name…) pour permettre l'optimisation des
  * campagnes publicitaires sur ces conversions.
+ *
+ * `eventId`, quand fourni, doit être identique à celui envoyé en parallèle à
+ * la Meta Conversions API (serveur) pour le même évènement, afin que Meta
+ * déduplique les deux signaux au lieu de compter la conversion deux fois.
  */
-export function trackPixelEvent(name: string, params?: Record<string, unknown>): void {
-  window.fbq?.('track', name, params);
+export function trackPixelEvent(name: string, params?: Record<string, unknown>, eventId?: string): void {
+  if (eventId) {
+    window.fbq?.('track', name, params, { eventID: eventId });
+  } else {
+    window.fbq?.('track', name, params);
+  }
 }

@@ -29,8 +29,9 @@ export function SignupPage() {
     setServerError('');
     try {
       const isPaid = plan === 'STANDARD' || plan === 'PREMIUM';
-      await signup({ ...values, plan: isPaid || plan === 'TRIAL' ? (plan as SignupInput['plan']) : undefined });
-      trackPixelEvent('CompleteRegistration', { content_name: plan ?? 'TRIAL', status: true });
+      const user = await signup({ ...values, plan: isPaid || plan === 'TRIAL' ? (plan as SignupInput['plan']) : undefined });
+      // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
+      trackPixelEvent('CompleteRegistration', { content_name: plan ?? 'TRIAL', status: true }, `registration_${user.id}`);
       // Forfait payant → page abonnement (le paiement Moneroo se lance auto) ;
       // sinon (Découverte/essai) → tableau de bord.
       navigate(isPaid ? `/parametres/abonnement?plan=${plan}` : '/dashboard');

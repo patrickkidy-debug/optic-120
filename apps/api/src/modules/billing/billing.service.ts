@@ -3,8 +3,18 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
+import { sendConversionEvent } from '../../lib/meta-capi.js';
+import { appOrigin } from '../../config/env.js';
 
 const DAY = 24 * 60 * 60 * 1000;
+
+/** Contexte Meta Conversions API capturé côté route (ip/UA/cookies du Pixel). */
+export interface CapiContext {
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+}
 
 function addOneMonth(from: Date): Date {
   const d = new Date(from);
@@ -147,6 +157,7 @@ export async function subscribe(
   planId: string,
   method: PaymentMethod,
   customerPhone: string | undefined,
+  capiContext?: CapiContext,
 ) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
@@ -169,7 +180,7 @@ export async function subscribe(
     },
   });
 
-  return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone);
+  return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone, capiContext);
 }
 
 export async function payInvoice(
@@ -177,8 +188,9 @@ export async function payInvoice(
   invoiceId: string,
   method: PaymentMethod,
   customerPhone: string | undefined,
+  capiContext?: CapiContext,
 ) {
-  return initiateInvoicePayment(tenantId, invoiceId, method, customerPhone);
+  return initiateInvoicePayment(tenantId, invoiceId, method, customerPhone, capiContext);
 }
 
 /**
@@ -264,6 +276,7 @@ async function initiateInvoicePayment(
   invoiceId: string,
   method: PaymentMethod,
   customerPhone: string | undefined,
+  capiContext?: CapiContext,
 ) {
   const invoice = await prisma.subscriptionInvoice.findFirst({
     where: { id: invoiceId, tenantId },
@@ -278,6 +291,10 @@ async function initiateInvoicePayment(
     orderBy: { createdAt: 'asc' },
     select: { email: true },
   });
+  const plan = await prisma.subscriptionPlan.findUnique({
+    where: { id: invoice.planId },
+    select: { name: true },
+  });
 
   const payment = await prisma.subscriptionPayment.create({
     data: {
@@ -287,6 +304,7 @@ async function initiateInvoicePayment(
       amount: invoice.amount,
       currency: invoice.currency,
       status: PaymentStatus.PENDING,
+      capiContext: capiContext ? (capiContext as object) : undefined,
     },
   });
 
@@ -305,6 +323,21 @@ async function initiateInvoicePayment(
   await prisma.subscriptionPayment.update({
     where: { id: payment.id },
     data: { provider: provider.name, providerRef: result.providerRef, status: result.status },
+  });
+
+  void sendConversionEvent({
+    eventName: 'InitiateCheckout',
+    eventId: `checkout_${payment.id}`,
+    eventSourceUrl: `${appOrigin}/parametres/abonnement`,
+    user: {
+      email: owner?.email,
+      externalId: tenantId,
+      ipAddress: capiContext?.ipAddress,
+      userAgent: capiContext?.userAgent,
+      fbp: capiContext?.fbp,
+      fbc: capiContext?.fbc,
+    },
+    customData: { value: Number(invoice.amount), currency: invoice.currency, content_name: plan?.name },
   });
 
   const isMobile = MOBILE_MONEY_METHODS.includes(method);
@@ -332,20 +365,21 @@ export async function settleSubscriptionPayment(
   status: PaymentStatus,
   raw: unknown,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.subscriptionPayment.findUnique({
       where: { id: paymentId },
       include: { invoice: true },
     });
     if (!payment) return null;
     const alreadyPaid = payment.invoice.status === SubInvoiceStatus.PAID;
+    const justPaid = status === PaymentStatus.SUCCESS && !alreadyPaid;
 
     await tx.subscriptionPayment.update({
       where: { id: paymentId },
       data: { status, rawPayload: (raw ?? undefined) as object | undefined },
     });
 
-    if (status === PaymentStatus.SUCCESS && !alreadyPaid) {
+    if (justPaid) {
       const now = new Date();
       await tx.subscriptionInvoice.update({
         where: { id: payment.invoiceId },
@@ -375,8 +409,43 @@ export async function settleSubscriptionPayment(
         data: { status: SubInvoiceStatus.FAILED },
       });
     }
-    return { invoiceId: payment.invoiceId, status };
+    return { invoiceId: payment.invoiceId, status, payment, justPaid };
   });
+
+  // Évènement Purchase (Meta CAPI) : déclenché une seule fois (idempotent via
+  // `justPaid`), quel que soit le chemin de confirmation (webhook, simulation,
+  // confirmation manuelle) — réutilise le contexte capturé à l'initiation.
+  if (result?.justPaid) {
+    const { payment } = result;
+    const [owner, plan] = await Promise.all([
+      prisma.user.findFirst({
+        where: { tenantId: payment.tenantId },
+        orderBy: { createdAt: 'asc' },
+        select: { email: true },
+      }),
+      prisma.subscriptionPlan.findUnique({
+        where: { id: payment.invoice.planId },
+        select: { name: true },
+      }),
+    ]);
+    const ctx = (payment.capiContext ?? {}) as CapiContext;
+    void sendConversionEvent({
+      eventName: 'Purchase',
+      eventId: `purchase_${payment.id}`,
+      eventSourceUrl: `${appOrigin}/parametres/abonnement`,
+      user: {
+        email: owner?.email,
+        externalId: payment.tenantId,
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+        fbp: ctx.fbp,
+        fbc: ctx.fbc,
+      },
+      customData: { value: Number(payment.amount), currency: payment.currency, content_name: plan?.name },
+    });
+  }
+
+  return result ? { invoiceId: result.invoiceId, status: result.status } : null;
 }
 
 export async function listInvoices(tenantId: string) {

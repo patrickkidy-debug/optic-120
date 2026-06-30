@@ -16,6 +16,8 @@ import { REFRESH_COOKIE, setRefreshCookie, clearRefreshCookie } from './cookies.
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requestMeta } from '../../lib/audit.js';
 import { unauthorized } from '../../lib/http-error.js';
+import { sendConversionEvent } from '../../lib/meta-capi.js';
+import { appOrigin } from '../../config/env.js';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Limiteur renforcé sur les routes sensibles (anti brute-force).
@@ -30,6 +32,23 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       requestMeta(req),
     );
     setRefreshCookie(reply, refreshToken);
+
+    const cookies = req.cookies as Record<string, string | undefined>;
+    void sendConversionEvent({
+      eventName: 'CompleteRegistration',
+      eventId: `registration_${user.id}`,
+      eventSourceUrl: `${appOrigin}/signup`,
+      user: {
+        email: user.email,
+        externalId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        fbp: cookies._fbp,
+        fbc: cookies._fbc,
+      },
+      customData: { content_name: input.plan ?? 'TRIAL' },
+    });
+
     return reply.status(201).send({ accessToken, user });
   });
 
