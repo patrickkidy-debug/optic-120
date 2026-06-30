@@ -43,7 +43,10 @@ export interface NavGroup {
 export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.main',
-    items: [{ to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, permission: 'dashboard.view' }],
+    items: [
+      { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+      { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
+    ],
   },
   {
     titleKey: 'nav.optics',
@@ -77,7 +80,6 @@ export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.settings',
     items: [
-      { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
       { to: '/parametres/roles', labelKey: 'nav.roles', icon: ShieldHalf, permission: 'rbac.roles.view' },
       { to: '/parametres/utilisateurs', labelKey: 'nav.users', icon: Users, permission: 'rbac.users.view' },
       { to: '/parametres/magasins', labelKey: 'nav.branches', icon: Store, permission: 'settings.branches.view' },

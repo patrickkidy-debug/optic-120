@@ -16,6 +16,7 @@ import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
 import { StatCard, PageLoader, EmptyState, Badge } from '../components/ui';
+import { TrialCountdownCard } from '../components/TrialCountdownCard';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
@@ -100,6 +101,8 @@ export function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
       </div>
+
+      <TrialCountdownCard />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Banknote} label={t('dashboard.todayRevenue')} value={formatCurrency(data.todayRevenue)} tone="primary" />
