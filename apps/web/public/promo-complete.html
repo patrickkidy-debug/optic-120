@@ -361,7 +361,7 @@
     </div>
   </div>
 
-  <audio id="vo" src="oculosaas-voix-synchro.mp3" preload="auto"></audio>
+  <!-- Fichiers audio scène par scène préchargés en JavaScript -->
   <div id="recMsg"></div>
   <div class="controls" id="controls">
     <button id="replay">↻ Rejouer</button>
@@ -371,38 +371,139 @@
   </div>
 
 <script>
+  // Mode "embed" (intégration iframe sur la landing) : masque les contrôles et
+  // la barre de progression pour ne montrer que l'animation.
+  const EMBED = new URLSearchParams(location.search).has('embed');
+  if (EMBED) {
+    document.documentElement.classList.add('embed');
+    const ctrl = document.getElementById('controls');
+    if (ctrl) ctrl.style.display = 'none';
+  }
+
   const stage=document.getElementById('stage');
   function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='translate(-50%,-50%) scale('+s+')';}
   addEventListener('resize',fit);document.addEventListener('fullscreenchange',()=>setTimeout(fit,60));fit();
 
   const scenes=[...document.querySelectorAll('[data-scene]')];
+  
+  // Durées par défaut (si les fichiers audios personnalisés ne sont pas générés)
   const DUR=[5000,7000,6500,6500,6500,5500,6500,6500,7000,6000,6500];
-  const TOTAL=DUR.reduce((a,b)=>a+b,0);
-  const OFFSET=DUR.map((_,k)=>DUR.slice(0,k).reduce((a,b)=>a+b,0));
+  let TOTAL=DUR.reduce((a,b)=>a+b,0);
+  let OFFSET=DUR.map((_,k)=>DUR.slice(0,k).reduce((a,b)=>a+b,0));
   const progress=document.getElementById('progress');
   let cur=-1,sceneStart=0,paused=false,pauseStart=0;
-  const vo=document.getElementById('vo');
-  function voPlay(){try{vo.currentTime=0;vo.play().catch(()=>{});}catch(e){}}
+
+  // Création des éléments audios pour chaque scène
+  const audios = Array.from({length: 11}, (_, i) => {
+    const a = new Audio(`audio/scene_${i+1}.mp3`);
+    a.preload = "auto";
+    return a;
+  });
+
+  // Chargement et décodage dynamique des durées audio réelles
+  async function initDurations() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const promises = audios.map((a, i) => {
+        return fetch(a.src)
+          .then(res => {
+            if (!res.ok) throw new Error();
+            return res.arrayBuffer();
+          })
+          .then(buf => audioCtx.decodeAudioData(buf))
+          .then(audioBuf => {
+            // Durée réelle de l'audio + 800ms de marge visuelle à la fin de la scène
+            DUR[i] = Math.round(audioBuf.duration * 1000) + 800;
+          })
+          .catch(() => {
+            console.log(`[Audio] Scène ${i+1} absente ou erreur. Utilisation du timing par défaut (${DUR[i]}ms).`);
+          });
+      });
+      await Promise.all(promises);
+      TOTAL=DUR.reduce((a,b)=>a+b,0);
+      OFFSET=DUR.map((_,k)=>DUR.slice(0,k).reduce((a,b)=>a+b,0));
+      console.log("[Audio] Durées synchronisées :", DUR);
+    } catch (e) {
+      console.error("[Audio] Échec de l'initialisation des durées :", e);
+    }
+  }
+
+  function playSceneAudio(n) {
+    audios.forEach((a, i) => {
+      a.pause();
+      a.currentTime = 0;
+    });
+    if (n >= 0 && n < audios.length) {
+      try {
+        audios[n].currentTime = 0;
+        if (!paused) {
+          audios[n].play().catch(()=>{});
+        }
+      } catch (e) {}
+    }
+  }
 
   function fmt(n){return n>=1000?n.toLocaleString('fr-FR'):n;}
   function counters(sc){sc.querySelectorAll('[data-count]').forEach(el=>{const tg=+el.dataset.count,t0=performance.now(),d=1300;
     (function tk(now){const p=Math.min(1,(now-t0)/d);el.textContent=fmt(Math.round(tg*(1-Math.pow(1-p,3))));if(p<1)requestAnimationFrame(tk);})(t0);});}
-  function show(n,now){scenes.forEach((s,i)=>s.classList.toggle('scene--active',i===n));counters(scenes[n]);cur=n;sceneStart=now;if(n===0)voPlay();}
+  
+  function show(n,now){
+    scenes.forEach((s,i)=>s.classList.toggle('scene--active',i===n));
+    counters(scenes[n]);
+    cur=n;
+    sceneStart=now;
+    playSceneAudio(n);
+  }
+
   function frame(now){
     if(paused){requestAnimationFrame(frame);return;}
     let inS=now-sceneStart;
-    if(inS>=DUR[cur]){show((cur+1)%scenes.length,now);inS=0;}
+    if(inS>=DUR[cur]){
+      show((cur+1)%scenes.length,now);
+      inS=0;
+    }
     progress.style.width=((OFFSET[cur]+Math.min(inS,DUR[cur]))/TOTAL*100)+'%';
     requestAnimationFrame(frame);
   }
-  function play(){show(0,performance.now());progress.style.width='0%';}
-  document.getElementById('replay').onclick=()=>{paused=false;document.getElementById('toggle').textContent='⏸ Pause';play();};
-  document.getElementById('toggle').onclick=e=>{paused=!paused;if(paused){pauseStart=performance.now();vo.pause();}else{sceneStart+=performance.now()-pauseStart;vo.play().catch(()=>{});}e.target.textContent=paused?'▶ Lire':'⏸ Pause';};
-  // Démarre la voix dès la première interaction (autoplay audio bloqué sinon).
-  document.addEventListener('pointerdown',()=>{ if(vo.paused) play(); },{once:true});
+
+  function play(){
+    show(0,performance.now());
+    progress.style.width='0%';
+  }
+
+  document.getElementById('replay').onclick=()=>{
+    paused=false;
+    document.getElementById('toggle').textContent='⏸ Pause';
+    play();
+  };
+
+  document.getElementById('toggle').onclick=e=>{
+    paused=!paused;
+    if(paused){
+      pauseStart=performance.now();
+      if (cur >= 0 && audios[cur]) audios[cur].pause();
+    }else{
+      sceneStart+=performance.now()-pauseStart;
+      if (cur >= 0 && audios[cur]) audios[cur].play().catch(()=>{});
+    }
+    e.target.textContent=paused?'▶ Lire':'⏸ Pause';
+  };
+
+  // Chargement initial
+  initDurations().then(() => {
+    play();
+    requestAnimationFrame(frame);
+  });
+
+  // Permet de forcer la lecture de l'audio si l'autoplay a été bloqué par le navigateur
+  document.addEventListener('pointerdown',()=>{
+    paused=false;
+    document.getElementById('toggle').textContent='⏸ Pause';
+    play();
+  },{once:true});
+
   function toggleFull(){const el=document.documentElement;if(!document.fullscreenElement)(el.requestFullscreen||el.webkitRequestFullscreen).call(el);else (document.exitFullscreen||document.webkitExitFullscreen).call(document);}
   document.getElementById('full').onclick=toggleFull;
-  play();requestAnimationFrame(frame);
 
   // Téléchargement (capture navigateur) -> MP4 si supporté, sinon WebM
   const recMsg=document.getElementById('recMsg'),controlsEl=document.getElementById('controls');

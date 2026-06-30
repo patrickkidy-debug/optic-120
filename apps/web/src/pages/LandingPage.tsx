@@ -20,7 +20,6 @@ import {
   HeartPulse,
   Star,
   Quote,
-  Volume2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -250,40 +249,22 @@ function RotatingWord({ words }: { words: string[] }) {
 }
 
 /**
- * Vidéo de démonstration sous le CTA principal : lecture automatique
- * silencieuse (seul moyen autorisé par les navigateurs pour l'autoplay),
- * avec un bouton pour activer le son à la demande.
+ * Présentation animée (motion design) sous le CTA principal. On intègre
+ * directement la présentation HTML/CSS animée (`/promo-complete.html`) via une
+ * iframe : les scènes s'enchaînent automatiquement avec leurs animations, le
+ * son est joué par la présentation elle-même. Plus net et plus stylé qu'un MP4.
  */
 function DemoVideo() {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-
   return (
-    <div className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-line shadow-card-lg">
-      <video
-        ref={ref}
-        className="aspect-video w-full bg-black"
-        src="/oculosaas-presentation-complete.mp4"
-        poster="/og-image.png"
-        autoPlay
-        muted={muted}
-        loop
-        playsInline
-        preload="metadata"
-        controls={!muted}
+    <div className="relative mx-auto mt-10 aspect-video max-w-3xl overflow-hidden rounded-2xl border border-line shadow-card-lg">
+      <iframe
+        title="Présentation animée OculoSaaS"
+        src="/promo-complete.html?embed=1"
+        className="h-full w-full bg-black"
+        loading="lazy"
+        allow="autoplay; fullscreen"
+        style={{ border: 0 }}
       />
-      {muted && (
-        <button
-          type="button"
-          onClick={() => {
-            setMuted(false);
-            ref.current?.play().catch(() => {});
-          }}
-          className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/85"
-        >
-          <Volume2 className="h-4 w-4" /> Activer le son
-        </button>
-      )}
     </div>
   );
 }
