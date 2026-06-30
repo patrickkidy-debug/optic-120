@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { roleCreateSchema, roleUpdateSchema, PERMISSIONS } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
+import { requirePermission, requirePlanFeature } from '../../middlewares/rbac-guard.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as rbac from './rbac.service.js';
 
 export async function rbacRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
+  app.addHook('preHandler', requirePlanFeature('rolesPermissions'));
 
   // Catalogue des permissions (groupé par module pour l'UI).
   app.get('/permissions', { preHandler: requirePermission('rbac.roles.view') }, async (_req, reply) => {

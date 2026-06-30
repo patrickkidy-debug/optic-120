@@ -245,7 +245,9 @@ export type PremiumFeature =
   | 'advancedReports'
   | 'multiBranch'
   | 'stockTransfer'
-  | 'pdfExport';
+  | 'pdfExport'
+  | 'insurance'
+  | 'rolesPermissions';
 
 export function planHasFeature(planCode: string, _feature: PremiumFeature): boolean {
   return planCode !== 'TRIAL';
@@ -256,6 +258,8 @@ export const PREMIUM_FEATURE_LABELS: Record<PremiumFeature, string> = {
   multiBranch: 'Multi-magasins',
   stockTransfer: 'Transferts de stock entre magasins',
   pdfExport: 'Export PDF des rapports',
+  insurance: 'Gestion des assurances',
+  rolesPermissions: 'Rôles & permissions personnalisés',
 };
 
 /* ============================================================

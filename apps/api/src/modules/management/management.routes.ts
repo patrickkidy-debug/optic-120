@@ -11,7 +11,7 @@ import {
   SaleType,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
+import { requirePermission, requirePlanFeature } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
 
 function toDate(v?: string | null): Date | null {
@@ -168,6 +168,8 @@ async function suppliersRoutes(app: FastifyInstance) {
 }
 
 async function insurersRoutes(app: FastifyInstance) {
+  app.addHook('preHandler', requirePlanFeature('insurance'));
+
   app.get('/', { preHandler: requirePermission('insurance.view') }, async (req, reply) => {
     const insurers = await req.db!.insurer.findMany({ orderBy: { createdAt: 'desc' }, take: 300 });
     return reply.send({ insurers });

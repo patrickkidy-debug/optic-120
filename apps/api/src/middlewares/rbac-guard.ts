@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { planHasFeature, type PremiumFeature } from '@oculo/shared-types';
 import { forbidden, unauthorized } from '../lib/http-error.js';
 
 /**
@@ -23,6 +24,21 @@ export function requireAnyPermission(...permissions: string[]) {
     if (!req.auth) throw unauthorized();
     if (!permissions.some((p) => req.auth!.permissions.has(p))) {
       throw forbidden(`Permission requise : ${permissions.join(' ou ')}`);
+    }
+  };
+}
+
+/**
+ * Fabrique un preHandler qui exige une fonctionnalité réservée aux offres
+ * payantes (Standard/Premium). Renvoie 403 (et NON 402 : un 402 déclenche
+ * côté frontend la suspension globale de tout l'espace, pas le verrouillage
+ * d'une seule section). À utiliser APRÈS requireAuth.
+ */
+export function requirePlanFeature(feature: PremiumFeature) {
+  return async function planFeatureGuard(req: FastifyRequest, _reply: FastifyReply): Promise<void> {
+    if (!req.auth) throw unauthorized();
+    if (!planHasFeature(req.auth.planCode ?? 'TRIAL', feature)) {
+      throw forbidden("Fonctionnalité réservée à l'offre Standard ou supérieure");
     }
   };
 }

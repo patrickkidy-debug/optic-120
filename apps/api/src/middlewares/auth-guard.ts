@@ -67,6 +67,7 @@ export async function requireAuth(req: FastifyRequest, _reply: FastifyReply): Pr
   const sub = await getSubscriptionStatus(user.tenantId);
   if (sub) {
     ctx.subscriptionStatus = sub.status;
+    ctx.planCode = sub.planCode;
     // Blocage si l'abonnement est suspendu/annulé OU si la période (essai ou
     // payée) est expirée → « essai gratuit puis blocage tant que pas payé ».
     const expired = sub.currentPeriodEnd.getTime() < Date.now();

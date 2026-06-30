@@ -12,6 +12,8 @@ import {
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader } from '../../components/ui';
+import { useSubscriptionPlan } from '../../features/billing/useSubscriptionPlan';
+import { FeatureLockScreen } from '../../components/FeatureLockScreen';
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: 'Tableau de bord',
@@ -44,8 +46,9 @@ export function RolesPage() {
   const canUpdate = usePermission('rbac.roles.update');
   const canDelete = usePermission('rbac.roles.delete');
 
-  const { data: roles, isLoading } = useQuery({ queryKey: ['roles'], queryFn: listRoles });
-  const { data: perms } = useQuery({ queryKey: ['permissions'], queryFn: listPermissions });
+  const { hasFeature } = useSubscriptionPlan();
+  const { data: roles, isLoading } = useQuery({ queryKey: ['roles'], queryFn: listRoles, enabled: hasFeature('rolesPermissions') });
+  const { data: perms } = useQuery({ queryKey: ['permissions'], queryFn: listPermissions, enabled: hasFeature('rolesPermissions') });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Set<string>>(new Set());
@@ -83,6 +86,15 @@ export function RolesPage() {
       else next.add(key);
       return next;
     });
+  }
+
+  if (!hasFeature('rolesPermissions')) {
+    return (
+      <div>
+        <PageHeader title="Rôles & permissions" subtitle="Définissez les accès de votre équipe" />
+        <FeatureLockScreen feature="rolesPermissions" />
+      </div>
+    );
   }
 
   if (isLoading || !roles) return <PageLoader />;
