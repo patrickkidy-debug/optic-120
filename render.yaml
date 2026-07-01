@@ -68,3 +68,13 @@ services:
         sync: false # clé secrète Moneroo (dashboard Moneroo > API)
       - key: MONEROO_WEBHOOK_SECRET
         sync: false # secret du webhook Moneroo (vérification des notifications)
+      # --- Publicité Facebook : API de Conversion (CAPI) ---
+      # Le pixel a déjà une valeur par défaut ; il suffit de fournir le jeton
+      # d'accès (Events Manager > Paramètres > API de conversion) pour activer
+      # l'envoi serveur, dédupliqué avec le Pixel navigateur via event_id.
+      - key: META_PIXEL_ID
+        value: "1247725803989922"
+      - key: META_CAPI_ACCESS_TOKEN
+        sync: false # jeton d'accès CAPI (Events Manager > API de conversion)
+      - key: META_CAPI_TEST_EVENT_CODE
+        sync: false # facultatif : code de test pour "Événements de test"
