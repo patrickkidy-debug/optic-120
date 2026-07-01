@@ -20,6 +20,7 @@ import {
   HeartPulse,
   Star,
   Quote,
+  Maximize2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -253,18 +254,32 @@ function RotatingWord({ words }: { words: string[] }) {
  * directement la présentation HTML/CSS animée (`/promo-complete.html`) via une
  * iframe : les scènes s'enchaînent automatiquement avec leurs animations, le
  * son est joué par la présentation elle-même. Plus net et plus stylé qu'un MP4.
+ * Le lien « Plein écran » ouvre la version complète (contrôles de lecture,
+ * plein écran et téléchargement de la vidéo).
  */
 function DemoVideo() {
   return (
-    <div className="relative mx-auto mt-10 aspect-video max-w-3xl overflow-hidden rounded-2xl border border-line shadow-card-lg">
-      <iframe
-        title="Présentation animée OculoSaaS"
-        src="/promo-complete.html?embed=1"
-        className="h-full w-full bg-black"
-        loading="lazy"
-        allow="autoplay; fullscreen"
-        style={{ border: 0 }}
-      />
+    <div className="mx-auto mt-10 max-w-3xl">
+      <div className="relative aspect-video overflow-hidden rounded-2xl border border-line shadow-card-lg">
+        <iframe
+          title="Présentation animée OculoSaaS"
+          src="/promo-complete.html?embed=1"
+          className="h-full w-full bg-black"
+          loading="lazy"
+          allow="autoplay; fullscreen"
+          style={{ border: 0 }}
+        />
+      </div>
+      <div className="mt-3 text-center">
+        <a
+          href="/promo-complete.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-content-muted transition hover:text-primary"
+        >
+          <Maximize2 className="h-4 w-4" /> Voir en plein écran &amp; télécharger la vidéo
+        </a>
+      </div>
     </div>
   );
 }
