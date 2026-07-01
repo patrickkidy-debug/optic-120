@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { loginSchema, type LoginInput } from '@oculo/shared-types';
-import { login, loginTwoFactor } from '../../features/auth/api';
+import { loginSchema, type LoginInput, type EstablishmentChoice } from '@oculo/shared-types';
+import { login, loginTwoFactor, loginSelectTenant } from '../../features/auth/api';
 import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { AuthLayout } from './AuthLayout';
@@ -18,6 +18,9 @@ export function LoginPage() {
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [establishments, setEstablishments] = useState<EstablishmentChoice[] | null>(null);
+  const [selectionToken, setSelectionToken] = useState('');
+  const [selecting, setSelecting] = useState(false);
   const google = useGoogleAuthFlow('/dashboard');
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
@@ -32,6 +35,11 @@ export function LoginPage() {
     setServerError('');
     try {
       const res = await login(values);
+      if ('chooseEstablishment' in res) {
+        setEstablishments(res.chooseEstablishment);
+        setSelectionToken(res.selectionToken);
+        return;
+      }
       if ('twoFactorRequired' in res) {
         setChallenge(res.challenge);
         return;
@@ -39,6 +47,24 @@ export function LoginPage() {
       navigate('/dashboard');
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Connexion impossible'));
+    }
+  }
+
+  async function onSelectEstablishment(tenantId: string) {
+    setServerError('');
+    setSelecting(true);
+    try {
+      const res = await loginSelectTenant(selectionToken, tenantId);
+      if ('twoFactorRequired' in res) {
+        setEstablishments(null);
+        setChallenge(res.challenge);
+        return;
+      }
+      navigate('/dashboard');
+    } catch (e) {
+      setServerError(apiErrorMessage(e, 'Connexion impossible'));
+    } finally {
+      setSelecting(false);
     }
   }
 
@@ -55,6 +81,47 @@ export function LoginPage() {
     } finally {
       setVerifying(false);
     }
+  }
+
+  // Étape intermédiaire (multi-établissement) : choix de l'établissement.
+  if (establishments) {
+    return (
+      <AuthLayout
+        title="Choisissez votre établissement"
+        subtitle="Votre email gère plusieurs établissements"
+      >
+        <div className="space-y-3">
+          {establishments.map((e) => (
+            <button
+              key={e.tenantId}
+              type="button"
+              disabled={selecting}
+              onClick={() => void onSelectEstablishment(e.tenantId)}
+              className="flex w-full items-center justify-between rounded-xl border border-line bg-surface-2 px-4 py-3 text-left transition hover:border-primary hover:bg-surface-3 disabled:opacity-50"
+            >
+              <span className="font-semibold text-content">{e.tenantName}</span>
+              <span className="text-content-muted">→</span>
+            </button>
+          ))}
+          {serverError && (
+            <div className="rounded-xl bg-[color:var(--danger)]/12 px-3 py-2 text-sm text-danger">
+              {serverError}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setEstablishments(null);
+              setSelectionToken('');
+              setServerError('');
+            }}
+            className="w-full text-center text-sm text-content-muted hover:text-content"
+          >
+            ← Retour
+          </button>
+        </div>
+      </AuthLayout>
+    );
   }
 
   // Étape 2 : saisie du code de vérification (2FA).

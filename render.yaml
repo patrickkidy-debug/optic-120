@@ -55,10 +55,21 @@ services:
         value: "30"
       - key: ENCRYPTION_KEY
         generateValue: true # Render génère une valeur ; le code en dérive une clé AES-256 (lib/crypto.ts)
+      # --- Envoi d'emails (confirmation, réinitialisation, notifications) ---
+      # Passe MAIL_DRIVER à "smtp" et renseigne les identifiants ci-dessous pour
+      # que les emails partent réellement (sinon mode console = rien n'est envoyé).
       - key: MAIL_DRIVER
-        value: console
+        value: console # → "smtp" en production
       - key: MAIL_FROM
-        value: OculoSaaS <no-reply@oculosaas.africa>
+        value: OculoSaaS <no-reply@oculosaas.africa> # nom d'affichage ; l'adresse réelle est alignée sur SMTP_USER
+      - key: SMTP_HOST
+        sync: false # ex. smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false # ex. ton adresse Gmail
+      - key: SMTP_PASSWORD
+        sync: false # mot de passe d'application (Gmail App Password), pas le mot de passe du compte
       - key: PLATFORM_ADMIN_EMAILS
         sync: false # ton email admin, ex. patrickkidy@gmail.com
       # --- Paiement des abonnements (Moneroo) ---

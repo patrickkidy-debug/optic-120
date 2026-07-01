@@ -542,6 +542,19 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** Un même email peut gérer plusieurs établissements : choix à la connexion. */
+export interface EstablishmentChoice {
+  tenantId: string;
+  tenantName: string;
+}
+
+/** 2ᵉ étape de connexion quand l'email correspond à plusieurs établissements. */
+export const loginSelectSchema = z.object({
+  selectionToken: z.string().min(10),
+  tenantId: z.string().min(1),
+});
+export type LoginSelectInput = z.infer<typeof loginSelectSchema>;
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });

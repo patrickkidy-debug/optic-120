@@ -4,11 +4,18 @@ import type {
   LoginInput,
   ProfileUpdateInput,
   GoogleSignupInput,
+  EstablishmentChoice,
 } from '@oculo/shared-types';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
-import { signAccessToken, signTwoFactorChallenge, verifyTwoFactorChallenge } from '../../lib/jwt.js';
+import {
+  signAccessToken,
+  signTwoFactorChallenge,
+  verifyTwoFactorChallenge,
+  signLoginSelection,
+  verifyLoginSelection,
+} from '../../lib/jwt.js';
 import { generateTotpSecret, otpauthURL, qrDataUrl, verifyTotp } from '../../lib/totp.js';
 import { encryptSecret, decryptSecret } from '../../lib/crypto.js';
 import {
@@ -163,8 +170,11 @@ export interface SessionResult {
   user: AuthUser;
 }
 
-/** Résultat de login : soit une session, soit un défi 2FA à compléter. */
+/** Résultat de login : session, défi 2FA, ou choix d'établissement (multi-tenant). */
 export type LoginResult = SessionResult | { twoFactorRequired: true; challenge: string };
+export type LoginOrSelect =
+  | LoginResult
+  | { chooseEstablishment: EstablishmentChoice[]; selectionToken: string };
 
 interface NewTenantAdmin {
   tenantName: string;
@@ -248,9 +258,10 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
 
 /** Inscription classique (email + mot de passe) d'une nouvelle entreprise. */
 export async function signupTenant(input: SignupInput, meta: RequestMeta): Promise<SessionResult> {
-  const existing = await prisma.user.findFirst({ where: { email: input.adminEmail } });
-  if (existing) throw conflict('Un compte existe déjà avec cet email');
-
+  // Multi-établissement : un même email peut créer plusieurs établissements
+  // (l'unicité de l'email est garantie PAR établissement, pas globalement). On
+  // ne bloque donc pas si l'email existe déjà dans un autre établissement — la
+  // connexion proposera de choisir l'établissement.
   const passwordHash = await hashPassword(input.adminPassword);
   const userId = await createTenantWithAdmin({
     tenantName: input.tenantName,
@@ -300,11 +311,13 @@ export async function loginWithGoogle(
 
   let found = await prisma.user.findFirst({ where: { googleId: profile.googleId }, include: USER_INCLUDE });
   if (!found) {
-    const byEmail = await prisma.user.findFirst({ where: { email: profile.email }, include: USER_INCLUDE });
-    if (byEmail) {
+    // Liaison auto par email UNIQUEMENT si l'email est présent dans un seul
+    // établissement (sinon ambigu en multi-tenant → on propose l'inscription).
+    const byEmail = await prisma.user.findMany({ where: { email: profile.email }, include: USER_INCLUDE });
+    if (byEmail.length === 1) {
       found = await prisma.user.update({
-        where: { id: byEmail.id },
-        data: { googleId: profile.googleId, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date() },
+        where: { id: byEmail[0].id },
+        data: { googleId: profile.googleId, emailVerifiedAt: byEmail[0].emailVerifiedAt ?? new Date() },
         include: USER_INCLUDE,
       });
     }
@@ -336,12 +349,10 @@ export async function loginWithGoogle(
 export async function signupWithGoogle(input: GoogleSignupInput, meta: RequestMeta): Promise<SessionResult> {
   const profile = await verifyGoogleIdToken(input.idToken);
 
+  // Un compte Google (googleId) reste lié à UN seul établissement. En revanche
+  // l'email peut déjà exister ailleurs (multi-établissement) : on l'autorise.
   const existingByGoogle = await prisma.user.findFirst({ where: { googleId: profile.googleId } });
-  if (existingByGoogle) throw conflict('Ce compte Google est déjà lié à un compte existant');
-  const existingByEmail = await prisma.user.findFirst({ where: { email: profile.email } });
-  if (existingByEmail) {
-    throw conflict('Un compte existe déjà avec cet email — connectez-vous avec Google depuis la page de connexion.');
-  }
+  if (existingByGoogle) throw conflict('Ce compte Google est déjà lié à un établissement existant');
 
   const passwordHash = await hashPassword(generateResetToken());
   const userId = await createTenantWithAdmin({
@@ -375,60 +386,120 @@ export async function signupWithGoogle(input: GoogleSignupInput, meta: RequestMe
   return { ...session, user: buildAuthUser(user) };
 }
 
-/** Connexion par email OU nom d'utilisateur + mot de passe, avec verrouillage. */
-export async function login(input: LoginInput, meta: RequestMeta): Promise<LoginResult> {
-  const found = await prisma.user.findFirst({
+type UserWithCtxRow = NonNullable<UserWithCtx>;
+
+/** Finalise une connexion réussie : renvoie un défi 2FA si activé, sinon la session. */
+async function finalizeLogin(user: UserWithCtxRow, meta: RequestMeta): Promise<LoginResult> {
+  // 2FA active : on n'ouvre PAS de session ; on renvoie un défi à compléter.
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    await recordAudit({ tenantId: user.tenantId, userId: user.id, action: 'LOGIN_2FA_REQUIRED', ...meta });
+    return { twoFactorRequired: true, challenge: await signTwoFactorChallenge(user.id) };
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  await recordAudit({ tenantId: user.tenantId, userId: user.id, action: 'LOGIN_SUCCESS', ...meta });
+  const session = await issueSession(user, meta);
+  return { ...session, user: buildAuthUser(user) };
+}
+
+/** Incrémente le compteur d'échec d'un compte et le verrouille au seuil atteint. */
+async function registerFailedAttempt(user: UserWithCtxRow, meta: RequestMeta): Promise<void> {
+  const failed = user.failedLoginCount + 1;
+  const reachedLimit = failed >= env.MAX_FAILED_LOGINS;
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      failedLoginCount: reachedLimit ? 0 : failed,
+      lockedUntil: reachedLimit ? new Date(Date.now() + env.ACCOUNT_LOCK_MINUTES * 60 * 1000) : null,
+    },
+  });
+  await recordAudit({
+    tenantId: user.tenantId,
+    userId: user.id,
+    action: reachedLimit ? 'LOGIN_LOCKED' : 'LOGIN_FAILED',
+    ...meta,
+  });
+}
+
+/**
+ * Connexion par email OU nom d'utilisateur + mot de passe, avec verrouillage.
+ * Multi-tenant : un même email peut exister dans plusieurs établissements. On
+ * valide le mot de passe contre chaque compte correspondant ; si plusieurs
+ * établissements correspondent, on renvoie la liste pour que l'utilisateur
+ * choisisse (2ᵉ étape sécurisée via `loginSelectTenant`).
+ */
+export async function login(input: LoginInput, meta: RequestMeta): Promise<LoginOrSelect> {
+  const candidates = await prisma.user.findMany({
     where: { OR: [{ email: input.identifier }, { username: input.identifier }] },
     include: USER_INCLUDE,
   });
+  // Réponse identique si aucun compte (anti-énumération).
+  if (candidates.length === 0) throw unauthorized('Identifiants invalides');
 
-  // Réponse identique si l'utilisateur n'existe pas (anti-énumération).
-  if (!found) throw unauthorized('Identifiants invalides');
-
-  if (found.lockedUntil && found.lockedUntil > new Date()) {
-    throw locked('Compte temporairement verrouillé suite à trop de tentatives. Réessayez plus tard.');
+  const now = new Date();
+  const matched: UserWithCtxRow[] = [];
+  let anyLocked = false;
+  for (const c of candidates) {
+    if (!c.isActive) continue;
+    if (c.lockedUntil && c.lockedUntil > now) {
+      anyLocked = true;
+      continue; // compte verrouillé : exclu de la connexion
+    }
+    // eslint-disable-next-line no-await-in-loop
+    if (await verifyPassword(c.passwordHash, input.password)) matched.push(c);
   }
-  if (!found.isActive) throw unauthorized('Compte désactivé');
 
-  const ok = await verifyPassword(found.passwordHash, input.password);
-  if (!ok) {
-    const failed = found.failedLoginCount + 1;
-    const reachedLimit = failed >= env.MAX_FAILED_LOGINS;
-    await prisma.user.update({
-      where: { id: found.id },
-      data: {
-        failedLoginCount: reachedLimit ? 0 : failed,
-        lockedUntil: reachedLimit
-          ? new Date(Date.now() + env.ACCOUNT_LOCK_MINUTES * 60 * 1000)
-          : null,
-      },
-    });
-    await recordAudit({
-      tenantId: found.tenantId,
-      userId: found.id,
-      action: reachedLimit ? 'LOGIN_LOCKED' : 'LOGIN_FAILED',
-      ...meta,
-    });
+  if (matched.length === 0) {
+    // Mot de passe faux pour tous : on incrémente les compteurs d'échec.
+    const active = candidates.filter((c) => c.isActive && !(c.lockedUntil && c.lockedUntil > now));
+    await Promise.all(active.map((c) => registerFailedAttempt(c, meta)));
+    if (active.length === 0 && anyLocked) {
+      throw locked('Compte temporairement verrouillé suite à trop de tentatives. Réessayez plus tard.');
+    }
     throw unauthorized('Identifiants invalides');
   }
 
-  // Mot de passe correct : on réinitialise les compteurs d'échec.
-  await prisma.user.update({
-    where: { id: found.id },
+  // Comptes validés : on remet à zéro leurs compteurs d'échec.
+  await prisma.user.updateMany({
+    where: { id: { in: matched.map((m) => m.id) } },
     data: { failedLoginCount: 0, lockedUntil: null },
   });
 
-  // 2FA active : on n'ouvre PAS de session ; on renvoie un défi à compléter.
-  if (found.twoFactorEnabled && found.twoFactorSecret) {
-    await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_2FA_REQUIRED', ...meta });
-    return { twoFactorRequired: true, challenge: await signTwoFactorChallenge(found.id) };
+  if (matched.length === 1) {
+    return finalizeLogin(matched[0], meta);
   }
 
-  await prisma.user.update({ where: { id: found.id }, data: { lastLoginAt: new Date() } });
-  await recordAudit({ tenantId: found.tenantId, userId: found.id, action: 'LOGIN_SUCCESS', ...meta });
+  // Plusieurs établissements pour ce compte : on demande lequel activer.
+  const selectionToken = await signLoginSelection(matched.map((m) => m.id));
+  return {
+    chooseEstablishment: matched
+      .map((m) => ({ tenantId: m.tenantId, tenantName: m.tenant.name }))
+      .sort((a, b) => a.tenantName.localeCompare(b.tenantName)),
+    selectionToken,
+  };
+}
 
-  const session = await issueSession(found, meta);
-  return { ...session, user: buildAuthUser(found) };
+/**
+ * 2ᵉ étape de connexion multi-établissement : échange le jeton de sélection +
+ * l'établissement choisi contre une session (ou un défi 2FA). La sélection est
+ * bornée aux comptes dont le mot de passe a déjà été validé à l'étape 1.
+ */
+export async function loginSelectTenant(
+  selectionToken: string,
+  tenantId: string,
+  meta: RequestMeta,
+): Promise<LoginResult> {
+  let eligibleIds: string[];
+  try {
+    eligibleIds = await verifyLoginSelection(selectionToken);
+  } catch {
+    throw unauthorized('Session de sélection expirée. Reconnectez-vous.');
+  }
+  const user = await prisma.user.findFirst({
+    where: { id: { in: eligibleIds }, tenantId },
+    include: USER_INCLUDE,
+  });
+  if (!user || !user.isActive) throw unauthorized('Établissement invalide');
+  return finalizeLogin(user, meta);
 }
 
 /** 2ᵉ étape de connexion : valide le code TOTP et ouvre la session. */
@@ -576,38 +647,54 @@ export async function logout(token: string | undefined): Promise<void> {
 
 /** Demande de réinitialisation : réponse silencieuse, email via mailer pluggable. */
 export async function forgotPassword(email: string, meta: RequestMeta): Promise<void> {
-  const user = await prisma.user.findFirst({ where: { email } });
-  if (!user) return; // ne révèle pas l'existence du compte
+  // Multi-tenant : l'email peut correspondre à plusieurs établissements. On
+  // génère un lien de réinitialisation PAR compte et on envoie un seul email
+  // regroupant les liens (par établissement).
+  const users = await prisma.user.findMany({ where: { email }, include: { tenant: true } });
+  if (users.length === 0) return; // ne révèle pas l'existence du compte
 
-  const token = generateResetToken();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      resetTokenHash: hashRefreshToken(token),
-      resetTokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
-    },
-  });
+  const links: { tenantName: string; link: string }[] = [];
+  const expires = new Date(Date.now() + 15 * 60 * 1000);
+  for (const user of users) {
+    const token = generateResetToken();
+    // eslint-disable-next-line no-await-in-loop
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetTokenHash: hashRefreshToken(token), resetTokenExpiresAt: expires },
+    });
+    links.push({ tenantName: user.tenant.name, link: `${appOrigin}/reset-password?token=${token}` });
+    // eslint-disable-next-line no-await-in-loop
+    await recordAudit({
+      tenantId: user.tenantId,
+      userId: user.id,
+      action: 'PASSWORD_RESET_REQUESTED',
+      ...meta,
+    });
+  }
 
-  const link = `${appOrigin}/reset-password?token=${token}`;
-  // Non bloquant : un email qui échoue ne doit pas faire échouer la requête
-  // (et ne doit pas révéler si l'envoi a réussi — anti-énumération).
+  const single = links.length === 1;
+  const textBody = single
+    ? `Bonjour,\n\nVous avez demandé à réinitialiser votre mot de passe.\nCliquez sur ce lien (valable 15 minutes) :\n${links[0].link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`
+    : `Bonjour,\n\nVotre email gère plusieurs établissements. Choisissez celui dont vous voulez réinitialiser le mot de passe (liens valables 15 minutes) :\n\n${links
+        .map((l) => `• ${l.tenantName} : ${l.link}`)
+        .join('\n')}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`;
+  const htmlBody = single
+    ? `<p>Bonjour,</p><p>Vous avez demandé à réinitialiser votre mot de passe.</p><p><a href="${links[0].link}">Réinitialiser mon mot de passe</a> (valable 15 minutes)</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`
+    : `<p>Bonjour,</p><p>Votre email gère plusieurs établissements. Choisissez celui dont vous voulez réinitialiser le mot de passe (liens valables 15 minutes) :</p><ul>${links
+        .map((l) => `<li><a href="${l.link}">${l.tenantName}</a></li>`)
+        .join('')}</ul><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`;
+
+  // Non bloquant : un email qui échoue ne doit pas faire échouer la requête.
   try {
     await mailer.send({
       to: email,
       subject: 'Réinitialisation de votre mot de passe OculoSaaS',
-      text: `Bonjour,\n\nVous avez demandé à réinitialiser votre mot de passe.\nCliquez sur ce lien (valable 15 minutes) :\n${link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`,
-      html: `<p>Bonjour,</p><p>Vous avez demandé à réinitialiser votre mot de passe.</p><p><a href="${link}">Réinitialiser mon mot de passe</a> (valable 15 minutes)</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`,
+      text: textBody,
+      html: htmlBody,
     });
   } catch (err) {
-    logger.error({ err }, "Envoi email de réinitialisation échoué");
+    logger.error({ err }, 'Envoi email de réinitialisation échoué');
   }
-
-  await recordAudit({
-    tenantId: user.tenantId,
-    userId: user.id,
-    action: 'PASSWORD_RESET_REQUESTED',
-    ...meta,
-  });
 }
 
 /** Réinitialise le mot de passe et invalide toutes les sessions actives. */

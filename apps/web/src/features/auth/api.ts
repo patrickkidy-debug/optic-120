@@ -1,4 +1,11 @@
-import type { AuthUser, SignupInput, LoginInput, ProfileUpdateInput, GoogleSignupInput } from '@oculo/shared-types';
+import type {
+  AuthUser,
+  SignupInput,
+  LoginInput,
+  ProfileUpdateInput,
+  GoogleSignupInput,
+  EstablishmentChoice,
+} from '@oculo/shared-types';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 
@@ -7,13 +14,39 @@ interface AuthResponse {
   user: AuthUser;
 }
 
-export type LoginOutcome = { twoFactorRequired: true; challenge: string } | { user: AuthUser };
+export type LoginOutcome =
+  | { twoFactorRequired: true; challenge: string }
+  | { chooseEstablishment: EstablishmentChoice[]; selectionToken: string }
+  | { user: AuthUser };
+
+type LoginApiResponse = AuthResponse & {
+  twoFactorRequired?: boolean;
+  challenge?: string;
+  chooseEstablishment?: EstablishmentChoice[];
+  selectionToken?: string;
+};
 
 export async function login(input: LoginInput): Promise<LoginOutcome> {
-  const { data } = await api.post<AuthResponse & { twoFactorRequired?: boolean; challenge?: string }>(
-    '/auth/login',
-    input,
-  );
+  const { data } = await api.post<LoginApiResponse>('/auth/login', input);
+  if (data.chooseEstablishment && data.selectionToken) {
+    return { chooseEstablishment: data.chooseEstablishment, selectionToken: data.selectionToken };
+  }
+  if (data.twoFactorRequired && data.challenge) {
+    return { twoFactorRequired: true, challenge: data.challenge };
+  }
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return { user: data.user };
+}
+
+/** 2ᵉ étape multi-établissement : choisit l'établissement à activer. */
+export async function loginSelectTenant(
+  selectionToken: string,
+  tenantId: string,
+): Promise<LoginOutcome> {
+  const { data } = await api.post<LoginApiResponse>('/auth/login/select', {
+    selectionToken,
+    tenantId,
+  });
   if (data.twoFactorRequired && data.challenge) {
     return { twoFactorRequired: true, challenge: data.challenge };
   }

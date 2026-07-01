@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
+import { verifyMailerConnection } from './lib/mailer.js';
 
 const app = await buildApp();
 
@@ -11,6 +12,8 @@ const port = Number(process.env.PORT) || env.API_PORT;
 try {
   await app.listen({ port, host: '0.0.0.0' });
   logger.info(`🚀 API OculoSaaS démarrée sur le port ${port}`);
+  // Contrôle de la config email au démarrage (non bloquant).
+  void verifyMailerConnection();
 } catch (err) {
   logger.error(err);
   process.exit(1);

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   signupSchema,
   loginSchema,
+  loginSelectSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyEmailSchema,
@@ -57,6 +58,28 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/login', strictLimit, async (req, reply) => {
     const input = loginSchema.parse(req.body);
     const result = await authService.login(input, requestMeta(req));
+    // Multi-établissement : l'email correspond à plusieurs établissements.
+    if ('chooseEstablishment' in result) {
+      return reply.send({
+        chooseEstablishment: result.chooseEstablishment,
+        selectionToken: result.selectionToken,
+      });
+    }
+    if ('twoFactorRequired' in result) {
+      return reply.send({ twoFactorRequired: true, challenge: result.challenge });
+    }
+    setRefreshCookie(reply, result.refreshToken);
+    return reply.send({ accessToken: result.accessToken, user: result.user });
+  });
+
+  // 2ᵉ étape multi-établissement : choix de l'établissement à activer.
+  app.post('/login/select', strictLimit, async (req, reply) => {
+    const input = loginSelectSchema.parse(req.body);
+    const result = await authService.loginSelectTenant(
+      input.selectionToken,
+      input.tenantId,
+      requestMeta(req),
+    );
     if ('twoFactorRequired' in result) {
       return reply.send({ twoFactorRequired: true, challenge: result.challenge });
     }

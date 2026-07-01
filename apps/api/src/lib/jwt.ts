@@ -46,3 +46,25 @@ export async function verifyTwoFactorChallenge(token: string): Promise<string> {
   if (payload.typ !== '2fa') throw new Error('Jeton 2FA invalide');
   return String(payload.sub);
 }
+
+/**
+ * Jeton court (5 min) listant les comptes (un par établissement) dont le mot de
+ * passe a été validé, quand un même email gère plusieurs établissements. Échangé
+ * contre une session une fois l'établissement choisi — la sélection est bornée à
+ * ces comptes-là (impossible de choisir un établissement non authentifié).
+ */
+export async function signLoginSelection(userIds: string[]): Promise<string> {
+  return new SignJWT({ typ: 'select', uids: userIds })
+    .setProtectedHeader({ alg: ALG })
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(secret);
+}
+
+export async function verifyLoginSelection(token: string): Promise<string[]> {
+  const { payload } = await jwtVerify(token, secret, { algorithms: [ALG] });
+  if (payload.typ !== 'select' || !Array.isArray(payload.uids)) {
+    throw new Error('Jeton de sélection invalide');
+  }
+  return (payload.uids as unknown[]).map(String);
+}
