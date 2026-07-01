@@ -6,7 +6,9 @@
 <title>OculoSaaS — Présentation complète</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet" />
+<!-- Chargement non bloquant des polices (media=print puis activation à l'onload). -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet" /></noscript>
 <style>
   :root{
     --bg:#070b14; --ink:#eef2fb; --muted:#9aa7c2; --faint:#5b6b88;
@@ -393,8 +395,10 @@
   const progress=document.getElementById('progress');
   let cur=-1,sceneStart=0,paused=false,pauseStart=0;
 
-  // Création des éléments audios pour chaque scène
-  const audios = Array.from({length: 11}, (_, i) => {
+  // Création des éléments audios pour chaque scène. En mode "embed" (intégration
+  // silencieuse sur la landing), on n'en crée aucun : cela évite 11 requêtes
+  // réseau inutiles et accélère nettement le chargement de la page d'accueil.
+  const audios = EMBED ? [] : Array.from({length: 11}, (_, i) => {
     const a = new Audio(`audio/scene_${i+1}.mp3`);
     a.preload = "auto";
     return a;
@@ -489,11 +493,18 @@
     e.target.textContent=paused?'▶ Lire':'⏸ Pause';
   };
 
-  // Chargement initial
-  initDurations().then(() => {
+  // Chargement initial. En mode "embed", on démarre immédiatement avec les
+  // durées par défaut (aucun audio à charger) ; sinon on synchronise d'abord
+  // les durées sur les fichiers audio réels.
+  if (EMBED) {
     play();
     requestAnimationFrame(frame);
-  });
+  } else {
+    initDurations().then(() => {
+      play();
+      requestAnimationFrame(frame);
+    });
+  }
 
   // Permet de forcer la lecture de l'audio si l'autoplay a été bloqué par le navigateur
   document.addEventListener('pointerdown',()=>{
