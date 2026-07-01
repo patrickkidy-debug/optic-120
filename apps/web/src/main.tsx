@@ -10,7 +10,6 @@ import { applyTheme, getStoredTheme, watchSystemTheme } from './lib/theme';
 import { useAuthStore } from './store/auth';
 import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
-import { BrandSplash } from './components/BrandSplash';
 import { trackPixelPageView } from './lib/pixel';
 
 applyTheme(getStoredTheme());
@@ -25,8 +24,6 @@ router.subscribe((state) => {
 });
 
 function Root() {
-  const status = useAuthStore((s) => s.status);
-
   useEffect(() => {
     const unwatch = watchSystemTheme(() => useUIStore.getState().theme);
     void refreshSession().then((token) => {
@@ -35,7 +32,10 @@ function Root() {
     return unwatch;
   }, []);
 
-  if (status === 'loading') return <BrandSplash />;
+  // On rend l'app immédiatement : les pages publiques (accueil, connexion,
+  // inscription) s'affichent sans attendre la vérification de session (qui,
+  // sur un serveur endormi, peut prendre plusieurs secondes). Seules les routes
+  // protégées patientent derrière le splash (voir RequireAuth).
   return <RouterProvider router={router} />;
 }
 

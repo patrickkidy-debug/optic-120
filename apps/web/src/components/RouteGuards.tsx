@@ -4,12 +4,16 @@ import { ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { LockScreen } from './LockScreen';
 import { SuspensionGate } from './SuspensionGate';
+import { BrandSplash } from './BrandSplash';
 
 export function RequireAuth() {
   const status = useAuthStore((s) => s.status);
   const locked = useAuthStore((s) => s.locked);
   const suspended = useAuthStore((s) => s.suspended);
 
+  // Vérification de session en cours : seules les routes protégées patientent
+  // (les pages publiques, elles, s'affichent immédiatement — voir main.tsx).
+  if (status === 'loading') return <BrandSplash />;
   if (status === 'unauthenticated') return <Navigate to="/login" replace />;
   if (locked) return <LockScreen />;
   if (suspended) return <SuspensionGate />;
