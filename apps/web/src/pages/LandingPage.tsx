@@ -412,8 +412,8 @@ export function LandingPage() {
                   </span>
                 </span>
                 <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
-                  La gestion <span className="text-gradient">premium</span> de votre optique &amp;
-                  clinique.
+                  La gestion <span className="text-gradient">premium</span> de votre magasin
+                  d'optique et de votre clinique.
                 </h1>
                 <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
                   La plateforme tout-en-un conçue pour les opticiens et ophtalmologues : caisse,
