@@ -109,13 +109,19 @@ export async function migrateToPaidOnly() {
   const tenantExclusion = protectedTenantIds.length > 0 ? { notIn: protectedTenantIds } : undefined;
 
   // 2) Garantir un accès permanent à l'administrateur principal : abonnement
-  //    ACTIVE + période très lointaine. Rejoué à chaque déploiement pour qu'il
-  //    ne soit jamais suspendu par erreur.
+  //    ACTIVE + période très lointaine + offre GROWTH (sans paiement). Rejoué à
+  //    chaque déploiement pour qu'il ne soit jamais suspendu par erreur.
   if (protectedTenantIds.length > 0) {
     const farFuture = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
+    const growth = await prisma.subscriptionPlan.findFirst({ where: { code: 'GROWTH' } });
     await prisma.subscription.updateMany({
       where: { tenantId: { in: protectedTenantIds } },
-      data: { status: 'ACTIVE', currentPeriodEnd: farFuture, trialEndsAt: null },
+      data: {
+        status: 'ACTIVE',
+        currentPeriodEnd: farFuture,
+        trialEndsAt: null,
+        ...(growth ? { planId: growth.id } : {}),
+      },
     });
   }
 
