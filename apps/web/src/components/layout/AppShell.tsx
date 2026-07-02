@@ -1,20 +1,32 @@
 import { Suspense, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { EmailVerifyBanner } from '../EmailVerifyBanner';
 import { TrialBanner } from '../TrialBanner';
+import { SupportChatWidget } from '../SupportChatWidget';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
 import { prefetchRoute } from '../../lib/routePrefetch';
+
+/** Pages importantes où afficher la bulle d'assistance (support intégré). */
+const SUPPORT_CHAT_PAGES = new Set([
+  '/dashboard',
+  '/optique/caisse',
+  '/optique/clients',
+  '/optique/stock',
+  '/parametres/abonnement',
+]);
 
 const IDLE_MS = 10 * 60 * 1000; // verrouillage après 10 min d'inactivité
 
 export function AppShell() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebar = useUIStore((s) => s.setSidebar);
+  const { pathname } = useLocation();
+  const showSupportChat = SUPPORT_CHAT_PAGES.has(pathname);
 
   // Préchargement en tâche de fond (quand le navigateur est libre) des pages les
   // plus consultées → premières navigations instantanées, sans gêner le rendu.
@@ -78,6 +90,8 @@ export function AppShell() {
           </Suspense>
         </main>
       </div>
+
+      {showSupportChat && <SupportChatWidget />}
     </div>
   );
 }
