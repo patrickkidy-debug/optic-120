@@ -734,12 +734,27 @@ export const cashCloseSchema = z.object({
 });
 export type CashCloseInput = z.infer<typeof cashCloseSchema>;
 
+/**
+ * Validation d'une image reçue en data URL base64 (redimensionnée côté client)
+ * ou d'une URL https, ou d'une chaîne vide (pour retirer). Formats matriciels
+ * uniquement — le SVG est refusé (risque XSS s'il était rendu en ligne).
+ * ~3 Mo de chaîne ≈ image ~2 Mo après encodage base64.
+ */
+const IMAGE_DATA_URL_RE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i;
+export const imageDataString = z
+  .string()
+  .max(3_000_000, 'Image trop volumineuse (max ~2 Mo)')
+  .refine(
+    (v) => v === '' || IMAGE_DATA_URL_RE.test(v) || /^https:\/\/\S+$/i.test(v),
+    'Image invalide (formats acceptés : PNG, JPEG, WebP, GIF)',
+  );
+
 /** Coordonnées d'encaissement manuel de la boutique (QR + numéro Mobile Money). */
 export const collectInfoSchema = z.object({
   network: z.string().max(40).optional().default(''),
   number: z.string().max(40).optional().default(''),
   name: z.string().max(120).optional().default(''),
-  qr: z.string().optional().default(''),
+  qr: imageDataString.optional().default(''),
 });
 export type CollectInfoInput = z.infer<typeof collectInfoSchema>;
 
@@ -948,11 +963,7 @@ export type UserActiveInput = z.infer<typeof userActiveSchema>;
 /* --- Profil & image de marque --- */
 
 // Image en data URL (base64) redimensionnée côté client, ou chaîne vide pour retirer.
-const imageData = z
-  .string()
-  .max(2_000_000, 'Image trop volumineuse')
-  .refine((v) => v === '' || v.startsWith('data:image/') || v.startsWith('http'), 'Image invalide')
-  .optional();
+const imageData = imageDataString.optional();
 
 export const profileUpdateSchema = z.object({
   firstName: z.string().min(1).max(80).optional(),

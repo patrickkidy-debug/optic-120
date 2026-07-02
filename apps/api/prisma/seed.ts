@@ -119,23 +119,25 @@ export async function migrateToPaidOnly() {
     });
   }
 
-  // 3) Bloquer immédiatement tous les essais encore actifs (hors admin). Le
-  //    filtre `currentPeriodEnd > now` rend l'opération auto-limitée : une fois
-  //    bloqués, les essais ne sont plus reciblés aux déploiements suivants.
+  // 3) Bloquer uniquement les ANCIENS essais longs (plusieurs jours) hérités du
+  //    modèle précédent. Le nouvel essai gratuit de 2 h (accès complet) doit être
+  //    préservé : on ne cible donc que les périodes finissant à plus de 6 h.
+  const LONG_TRIAL_CUTOFF = new Date(Date.now() + 6 * 60 * 60 * 1000);
   const blocked = await prisma.subscription.updateMany({
     where: {
       status: 'TRIALING',
-      currentPeriodEnd: { gt: new Date() },
+      currentPeriodEnd: { gt: LONG_TRIAL_CUTOFF },
       ...(tenantExclusion ? { tenantId: tenantExclusion } : {}),
     },
     data: { currentPeriodEnd: new Date(Date.now() - 1000), trialEndsAt: null },
   });
 
-  // 4) Déconnexion forcée : révoquer les sessions actives des utilisateurs des
-  //    tenants encore en essai (hors compte administrateur principal).
+  // 4) Déconnexion forcée : révoquer les sessions des utilisateurs des tenants
+  //    encore en ANCIEN essai long (hors compte admin, hors nouveaux essais 2 h).
   const trialTenants = await prisma.subscription.findMany({
     where: {
       status: 'TRIALING',
+      currentPeriodEnd: { gt: LONG_TRIAL_CUTOFF },
       ...(tenantExclusion ? { tenantId: tenantExclusion } : {}),
     },
     select: { tenantId: true },

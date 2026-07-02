@@ -40,6 +40,9 @@ export async function listPlans(activeOnly = true) {
  * il n'y a plus d'essai gratuit, l'accès au dashboard reste interdit tant que
  * le paiement n'est pas confirmé (settleSubscriptionPayment).
  */
+/** Durée de l'essai gratuit offert à l'inscription (accès complet au dashboard). */
+export const TRIAL_DURATION_MS = 2 * 60 * 60 * 1000; // 2 heures
+
 export async function ensurePendingSubscription(
   tx: Prisma.TransactionClient | PrismaClient,
   tenantId: string,
@@ -47,17 +50,22 @@ export async function ensurePendingSubscription(
 ): Promise<void> {
   const existing = await tx.subscription.findUnique({ where: { tenantId } });
   if (existing) return;
+  // Essai gratuit de 2 h sur l'offre Standard (accès complet à toutes les
+  // fonctionnalités), puis blocage jusqu'au paiement de l'abonnement.
   const plan =
+    (await tx.subscriptionPlan.findFirst({ where: { code: 'STANDARD', isActive: true } })) ??
     (await tx.subscriptionPlan.findFirst({ where: { code: planCode ?? 'STARTER' } })) ??
     (await tx.subscriptionPlan.findFirst({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }));
   if (!plan) return;
+  const trialEnd = new Date(Date.now() + TRIAL_DURATION_MS);
   await tx.subscription.create({
     data: {
       tenantId,
       planId: plan.id,
       status: SubscriptionStatus.TRIALING,
-      currentPeriodEnd: new Date(Date.now() - 1000),
-      trialEndsAt: null,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: trialEnd,
+      trialEndsAt: trialEnd,
     },
   });
 }

@@ -1,9 +1,21 @@
+/** Formats matriciels acceptés (le SVG est refusé : risque de script embarqué). */
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+/** Taille max du fichier source AVANT redimensionnement. */
+const MAX_INPUT_BYTES = 10 * 1024 * 1024; // 10 Mo
+
 /**
  * Lit un fichier image, le redimensionne (max `maxSize` px sur le plus grand
  * côté) et renvoie une data URL compacte. PNG conservé (transparence des logos),
- * sinon JPEG. Évite de stocker des images volumineuses en base.
+ * sinon JPEG. Valide le type et la taille en amont pour un upload robuste.
  */
 export async function fileToResizedDataUrl(file: File, maxSize = 256): Promise<string> {
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    throw new Error('Format non supporté. Utilisez une image PNG, JPEG, WebP ou GIF.');
+  }
+  if (file.size > MAX_INPUT_BYTES) {
+    throw new Error('Fichier trop volumineux (10 Mo maximum).');
+  }
+
   const source = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);

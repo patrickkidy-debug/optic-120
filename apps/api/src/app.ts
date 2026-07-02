@@ -26,7 +26,13 @@ import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { supportRoutes } from './modules/support/support.routes.js';
 
 export async function buildApp() {
-  const app = Fastify({ logger: false, trustProxy: true });
+  const app = Fastify({
+    logger: false,
+    trustProxy: true,
+    // Les images (logo, photo de profil, QR d'encaissement) transitent en base64
+    // dans le corps JSON : la limite par défaut de 1 Mo ferait échouer ces uploads.
+    bodyLimit: 6 * 1024 * 1024, // 6 Mo
+  });
 
   app.setErrorHandler(errorHandler);
 
