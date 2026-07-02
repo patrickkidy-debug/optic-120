@@ -218,6 +218,54 @@ export function SubscriptionPage() {
         </div>
       )}
 
+      {(() => {
+        const standard = plans?.find((p) => p.code === 'STANDARD');
+        const needsActivation =
+          !!sub && (sub.status !== 'ACTIVE' || new Date(sub.currentPeriodEnd).getTime() <= Date.now());
+        if (!standard || !needsActivation || !canManage) return null;
+        const trialEnded = sub!.status === 'TRIALING';
+        return (
+          <div className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">
+                  <Sparkles className="h-3.5 w-3.5" /> Offre recommandée
+                </span>
+                <h3 className="mt-3 font-display text-2xl font-extrabold text-content">
+                  Continuez avec l'offre {standard.name}
+                </h3>
+                <p className="mt-1 max-w-xl text-sm text-content-muted">
+                  {trialEnded
+                    ? "Votre essai gratuit est terminé. Gardez l'accès complet à toutes les fonctionnalités de votre espace."
+                    : "Réglez votre abonnement pour retrouver l'accès complet à votre espace."}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-content">
+                  {standard.features.slice(0, 4).map((f) => (
+                    <span key={f} className="inline-flex items-center gap-1.5">
+                      <Check className="h-4 w-4 shrink-0 text-primary" /> {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="shrink-0 text-center">
+                <div className="font-display text-3xl font-extrabold text-gradient">
+                  {formatCurrency(standard.priceMonthly)}
+                </div>
+                <div className="text-xs text-content-muted">par mois</div>
+                <Button
+                  className="mt-3 w-full px-6 shadow-glow sm:w-auto"
+                  onClick={() =>
+                    setPayFor({ kind: 'plan', id: standard.id, label: standard.name, amount: standard.priceMonthly })
+                  }
+                >
+                  Activer l'offre {standard.name}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <h3 className="mb-3 font-display text-lg font-bold text-content">Nos offres</h3>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {plans?.map((p) => (
