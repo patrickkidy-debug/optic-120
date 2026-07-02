@@ -223,7 +223,7 @@ export function SubscriptionPage() {
         const needsActivation =
           !!sub && (sub.status !== 'ACTIVE' || new Date(sub.currentPeriodEnd).getTime() <= Date.now());
         if (!standard || !needsActivation || !canManage) return null;
-        const trialEnded = sub!.status === 'TRIALING';
+        const expired = new Date(sub!.currentPeriodEnd).getTime() <= Date.now();
         return (
           <div className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -235,9 +235,9 @@ export function SubscriptionPage() {
                   Continuez avec l'offre {standard.name}
                 </h3>
                 <p className="mt-1 max-w-xl text-sm text-content-muted">
-                  {trialEnded
+                  {expired
                     ? "Votre essai gratuit est terminé. Gardez l'accès complet à toutes les fonctionnalités de votre espace."
-                    : "Réglez votre abonnement pour retrouver l'accès complet à votre espace."}
+                    : "Activez dès maintenant pour continuer sans interruption après votre essai gratuit."}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-content">
                   {standard.features.slice(0, 4).map((f) => (

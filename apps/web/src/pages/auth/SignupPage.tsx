@@ -18,13 +18,14 @@ export function SignupPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  // Offre présélectionnée depuis la landing — Starter par défaut. Plus d'essai
-  // gratuit : toute inscription mène au paiement avant l'accès au dashboard.
+  // Offre présélectionnée depuis la landing — Starter par défaut. L'inscription
+  // mène DIRECTEMENT au dashboard : l'utilisateur profite de 2 h d'accès complet
+  // (essai gratuit) avant d'être redirigé vers le paiement de l'abonnement.
   const rawPlan = params.get('plan');
   const plan: SignupInput['plan'] = (VALID_PLANS as string[]).includes(rawPlan ?? '')
     ? (rawPlan as SignupInput['plan'])
     : 'STARTER';
-  const redirectTo = `/parametres/abonnement?plan=${plan}`;
+  const redirectTo = '/dashboard';
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
@@ -45,8 +46,8 @@ export function SignupPage() {
       const user = await signup({ ...values, plan });
       // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
       trackPixelEvent('CompleteRegistration', { content_name: plan, status: true }, `registration_${user.id}`);
-      // Toujours vers la page d'abonnement : le paiement Moneroo se lance
-      // automatiquement, l'accès au dashboard n'est débloqué qu'après paiement.
+      // Accès immédiat au dashboard : 2 h d'essai gratuit sans interruption, puis
+      // blocage + écran de paiement (offre Standard mise en avant) à l'expiration.
       navigate(redirectTo);
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Création impossible'));
