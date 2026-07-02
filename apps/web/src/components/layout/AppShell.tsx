@@ -7,12 +7,26 @@ import { EmailVerifyBanner } from '../EmailVerifyBanner';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
+import { prefetchRoute } from '../../lib/routePrefetch';
 
 const IDLE_MS = 10 * 60 * 1000; // verrouillage après 10 min d'inactivité
 
 export function AppShell() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebar = useUIStore((s) => s.setSidebar);
+
+  // Préchargement en tâche de fond (quand le navigateur est libre) des pages les
+  // plus consultées → premières navigations instantanées, sans gêner le rendu.
+  useEffect(() => {
+    const ric =
+      window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1200));
+    const id = ric(() => {
+      ['/dashboard', '/optique/caisse', '/optique/ventes', '/optique/clients'].forEach(
+        prefetchRoute,
+      );
+    });
+    return () => window.cancelIdleCallback?.(id as number);
+  }, []);
 
   useEffect(() => {
     let timer: number;

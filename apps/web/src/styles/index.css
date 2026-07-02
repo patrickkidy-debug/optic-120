@@ -295,12 +295,17 @@
       linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
     background-size: 32px 32px;
   }
-  /* Halos lumineux animés en arrière-plan (remplace le shader WebGL) */
+  /* Halos lumineux animés en arrière-plan (remplace le shader WebGL). Promu sur
+     sa propre couche GPU (will-change + translateZ) : le flou coûteux est
+     rasterisé une seule fois et seulement déplacé — animation fluide, zéro
+     re-rendu du flou à chaque frame. */
   .glow-blob {
     position: absolute;
     border-radius: 9999px;
     filter: blur(120px);
     opacity: 0.5;
+    transform: translateZ(0);
+    will-change: transform;
     animation: glowdrift 16s ease-in-out infinite;
   }
   @keyframes glowdrift {

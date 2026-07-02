@@ -7,6 +7,7 @@ import { Logo } from '../Logo';
 import { useAuthStore } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { lowStockCount } from '../../features/optique/api';
+import { prefetchRoute } from '../../lib/routePrefetch';
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -59,6 +60,8 @@ export function Sidebar() {
                       key={it.to}
                       to={it.to}
                       onClick={() => setSidebar(false)}
+                      onMouseEnter={() => prefetchRoute(it.to)}
+                      onFocus={() => prefetchRoute(it.to)}
                       className={({ isActive }) => clsx('nav-link', isActive && 'nav-link-active')}
                     >
                       {({ isActive }) => (

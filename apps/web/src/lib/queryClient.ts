@@ -5,7 +5,12 @@ export const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 20_000,
+      // Fraîcheur : données considérées « à jour » 30 s → pas de refetch au
+      // changement de page dans cet intervalle (navigations instantanées).
+      staleTime: 30_000,
+      // Conservation en cache 10 min : revenir sur une page affiche aussitôt
+      // les données en cache (rafraîchies en arrière-plan si périmées).
+      gcTime: 10 * 60_000,
     },
   },
 });
