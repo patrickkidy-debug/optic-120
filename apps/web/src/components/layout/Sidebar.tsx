@@ -24,7 +24,8 @@ export function Sidebar() {
   });
 
   const isOperator = user?.isPlatformOperator ?? false;
-  const can = (perm?: string) => !perm || (user?.permissions.includes(perm) ?? false);
+  // Le fondateur / opérateur voit toutes les sections (aucune restriction).
+  const can = (perm?: string) => !perm || isOperator || (user?.permissions.includes(perm) ?? false);
 
   return (
     <nav className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">

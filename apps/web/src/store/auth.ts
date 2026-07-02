@@ -31,10 +31,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setSuspended: (suspended) => set({ suspended }),
   clear: () =>
     set({ accessToken: null, user: null, status: 'unauthenticated', locked: false, suspended: false }),
-  hasPermission: (perm) => get().user?.permissions.includes(perm) ?? false,
+  // Le fondateur / opérateur plateforme n'a aucune restriction : toutes permissions accordées.
+  hasPermission: (perm) => {
+    const u = get().user;
+    return !!u && (u.isPlatformOperator || u.permissions.includes(perm));
+  },
 }));
 
 /** Hook utilitaire de vérification de permission pour masquer l'UI. */
 export function usePermission(perm: string): boolean {
-  return useAuthStore((s) => s.user?.permissions.includes(perm) ?? false);
+  return useAuthStore((s) => !!s.user && (s.user.isPlatformOperator || s.user.permissions.includes(perm)));
 }

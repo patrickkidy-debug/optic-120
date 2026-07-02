@@ -29,7 +29,7 @@ import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensurePendingSubscription } from '../billing/billing.service.js';
 import { env, appOrigin } from '../../config/env.js';
-import { isOperatorEmail } from '../../lib/operators.js';
+import { isOperatorEmail, isFounderEmail } from '../../lib/operators.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
 
 interface RequestMeta {
@@ -262,6 +262,14 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
   // (l'unicité de l'email est garantie PAR établissement, pas globalement). On
   // ne bloque donc pas si l'email existe déjà dans un autre établissement — la
   // connexion proposera de choisir l'établissement.
+  // Exception : l'email du fondateur (accès total) est réservé — on empêche
+  // toute usurpation par inscription mot de passe une fois qu'il est utilisé.
+  if (isFounderEmail(input.adminEmail)) {
+    const exists = await prisma.user.findFirst({
+      where: { email: { equals: input.adminEmail, mode: 'insensitive' } },
+    });
+    if (exists) throw conflict('Cet email est réservé.');
+  }
   const passwordHash = await hashPassword(input.adminPassword);
   const userId = await createTenantWithAdmin({
     tenantName: input.tenantName,

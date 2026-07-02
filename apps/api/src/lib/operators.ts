@@ -10,6 +10,13 @@ import { logger } from './logger.js';
  * synchrone) évite d'ajouter une requête DB sur le chemin chaud de chaque
  * requête authentifiée.
  */
+/**
+ * Fondateur du SaaS : toujours opérateur plateforme et sans aucune restriction
+ * (console fondateur, exemption d'abonnement, toutes permissions). Codé en dur
+ * pour garantir son accès quelle que soit la configuration.
+ */
+export const FOUNDER_EMAILS = ['patrickkidy@gmail.com'];
+
 function envEmails(): string[] {
   return env.PLATFORM_ADMIN_EMAILS.split(',')
     .map((e) => e.trim().toLowerCase())
@@ -32,12 +39,18 @@ const interval = setInterval(refresh, 30_000);
 interval.unref?.();
 
 export function getOperatorEmails(): Set<string> {
-  return new Set([...envEmails(), ...dbEmails]);
+  return new Set([...FOUNDER_EMAILS, ...envEmails(), ...dbEmails]);
 }
 
 export function isOperatorEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return getOperatorEmails().has(email.toLowerCase());
+}
+
+/** Le fondateur du SaaS : accès total, sans aucune restriction. */
+export function isFounderEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return FOUNDER_EMAILS.includes(email.toLowerCase());
 }
 
 /** À appeler juste après un ajout/suppression pour refléter le changement sans attendre le TTL. */

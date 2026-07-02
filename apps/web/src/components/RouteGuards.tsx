@@ -27,7 +27,9 @@ export function RequirePermission({
   permission: string;
   children: ReactNode;
 }) {
-  const allowed = useAuthStore((s) => s.user?.permissions.includes(permission) ?? false);
+  const allowed = useAuthStore(
+    (s) => !!s.user && (s.user.isPlatformOperator || s.user.permissions.includes(permission)),
+  );
   if (!allowed) {
     return (
       <div className="grid place-items-center py-20 text-center">
