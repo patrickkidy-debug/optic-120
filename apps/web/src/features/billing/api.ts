@@ -139,6 +139,14 @@ export async function platformSuspend(tenantId: string) {
 export async function platformReactivate(tenantId: string) {
   await api.post(`/platform/subscriptions/${tenantId}/reactivate`);
 }
+/** Active/prolonge manuellement un abonnement (paiement reçu en direct, sans passerelle). */
+export async function platformActivate(
+  tenantId: string,
+  months = 1,
+  planCode?: string,
+) {
+  await api.post(`/platform/subscriptions/${tenantId}/activate`, { months, planCode });
+}
 export async function runBilling() {
   const { data } = await api.post<{ markedPastDue: number; suspended: number }>('/platform/billing/run');
   return data;

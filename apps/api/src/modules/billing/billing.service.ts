@@ -551,10 +551,97 @@ export async function listAllSubscriptions() {
 export async function setSubscriptionStatus(tenantId: string, status: SubscriptionStatus) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
+  // Réactiver un abonnement dont la période est expirée doit RÉELLEMENT rendre
+  // l'accès : sinon status=ACTIVE mais currentPeriodEnd < now → toujours bloqué.
+  const now = new Date();
+  const reactivatingExpired =
+    status === SubscriptionStatus.ACTIVE && sub.currentPeriodEnd.getTime() < now.getTime();
   await prisma.subscription.update({
     where: { tenantId },
-    data: { status, cancelledAt: status === SubscriptionStatus.CANCELLED ? new Date() : null },
+    data: {
+      status,
+      cancelledAt: status === SubscriptionStatus.CANCELLED ? now : null,
+      ...(reactivatingExpired
+        ? { currentPeriodStart: now, currentPeriodEnd: addOneMonth(now), trialEndsAt: null }
+        : {}),
+    },
   });
+  return getSubscription(tenantId);
+}
+
+/**
+ * Active/prolonge MANUELLEMENT un abonnement depuis la console fondateur, sans
+ * passerelle de paiement (le client a réglé en direct : espèces, Mobile Money
+ * sur le compte de l'éditeur…). Permet d'intégrer ses premiers clients sans
+ * attendre la configuration Moneroo. Enregistre une facture payée pour la
+ * traçabilité comptable (tableau de bord finances).
+ */
+export async function activateSubscriptionManually(
+  tenantId: string,
+  months = 1,
+  planCode?: string,
+) {
+  const sub = await prisma.subscription.findUnique({ where: { tenantId }, include: { plan: true } });
+  if (!sub) throw notFound('Abonnement introuvable');
+  const m = Math.min(Math.max(Math.round(months) || 1, 1), 36);
+
+  let planId = sub.planId;
+  let plan = sub.plan;
+  if (planCode && planCode !== sub.plan.code) {
+    const p = await prisma.subscriptionPlan.findFirst({ where: { code: planCode, isActive: true } });
+    if (!p) throw badRequest('Offre invalide');
+    planId = p.id;
+    plan = p;
+  }
+
+  const now = new Date();
+  // Prolonge si encore actif, sinon repart de maintenant.
+  const base = sub.currentPeriodEnd > now ? sub.currentPeriodEnd : now;
+  const end = new Date(base);
+  end.setMonth(end.getMonth() + m);
+  const amount = Number(plan.priceMonthly) * m;
+
+  await prisma.$transaction(async (tx) => {
+    const invoice = await tx.subscriptionInvoice.create({
+      data: {
+        tenantId,
+        subscriptionId: sub.id,
+        planId,
+        number: await nextInvoiceNumber(tenantId),
+        amount,
+        currency: plan.currency,
+        status: SubInvoiceStatus.PAID,
+        periodStart: now,
+        periodEnd: end,
+        dueDate: now,
+        paidAt: now,
+      },
+    });
+    await tx.subscriptionPayment.create({
+      data: {
+        tenantId,
+        invoiceId: invoice.id,
+        method: PaymentMethod.CASH,
+        amount,
+        currency: plan.currency,
+        status: PaymentStatus.SUCCESS,
+        provider: 'manual',
+        providerRef: `GRANT-${invoice.number}`,
+      },
+    });
+    await tx.subscription.update({
+      where: { tenantId },
+      data: {
+        planId,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: now,
+        currentPeriodEnd: end,
+        trialEndsAt: null,
+        cancelledAt: null,
+      },
+    });
+  });
+
   return getSubscription(tenantId);
 }
 

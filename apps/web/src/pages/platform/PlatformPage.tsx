@@ -42,6 +42,7 @@ import {
   listAllSubscriptions,
   platformSuspend,
   platformReactivate,
+  platformActivate,
   runBilling,
   getPlatformStats,
   listPlatformUsers,
@@ -169,6 +170,19 @@ function SubscriptionsTab() {
   };
   const suspendMut = useMutation({ mutationFn: platformSuspend, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
   const reactivateMut = useMutation({ mutationFn: platformReactivate, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
+  const activateMut = useMutation({
+    mutationFn: ({ tenantId, months }: { tenantId: string; months: number }) => platformActivate(tenantId, months),
+    onSuccess: invalidate,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const now = Date.now();
+  const promptActivate = (tenantId: string, tenantName: string) => {
+    const raw = window.prompt(`Activer l'abonnement de « ${tenantName} » pour combien de mois ? (paiement reçu en direct)`, '1');
+    if (raw == null) return;
+    const months = Number(raw);
+    if (!Number.isFinite(months) || months < 1) return alert('Nombre de mois invalide.');
+    activateMut.mutate({ tenantId, months });
+  };
 
   if (isLoading) return <PageLoader />;
   if (!data || data.length === 0) return <EmptyState icon={Server} title="Aucun abonnement" />;
@@ -203,15 +217,29 @@ function SubscriptionsTab() {
               <td className="table-cell"><Badge tone={STATUS[s.status]?.tone ?? 'neutral'}>{STATUS[s.status]?.label ?? s.status}</Badge></td>
               <td className="table-cell text-content-muted">{formatDate(s.currentPeriodEnd)}</td>
               <td className="table-cell text-right">
-                {s.status === 'SUSPENDED' ? (
-                  <button onClick={() => reactivateMut.mutate(s.tenantId)} className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success">
-                    <Play className="h-3.5 w-3.5" /> Réactiver
-                  </button>
-                ) : (
-                  <button onClick={() => { if (confirm(`Suspendre ${s.tenantName} ?`)) suspendMut.mutate(s.tenantId); }} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger">
-                    <Pause className="h-3.5 w-3.5" /> Suspendre
-                  </button>
-                )}
+                {(() => {
+                  const hasAccess = s.status === 'ACTIVE' && new Date(s.currentPeriodEnd).getTime() > now;
+                  return (
+                    <div className="flex justify-end gap-2">
+                      {hasAccess ? (
+                        <button onClick={() => { if (confirm(`Suspendre ${s.tenantName} ?`)) suspendMut.mutate(s.tenantId); }} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger">
+                          <Pause className="h-3.5 w-3.5" /> Suspendre
+                        </button>
+                      ) : (
+                        <>
+                          {s.status === 'SUSPENDED' && (
+                            <button onClick={() => reactivateMut.mutate(s.tenantId)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted">
+                              <Play className="h-3.5 w-3.5" /> Réactiver
+                            </button>
+                          )}
+                          <button onClick={() => promptActivate(s.tenantId, s.tenantName)} className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success">
+                            <BadgeCheck className="h-3.5 w-3.5" /> Activer
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </td>
             </tr>
           ))}

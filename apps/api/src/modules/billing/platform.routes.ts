@@ -100,6 +100,22 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ subscription: sub });
   });
 
+  // Activation MANUELLE (paiement reçu en direct) : rend l'accès sans Moneroo.
+  app.post('/subscriptions/:tenantId/activate', async (req, reply) => {
+    const { tenantId } = req.params as { tenantId: string };
+    const { months, planCode } = (req.body ?? {}) as { months?: number; planCode?: string };
+    const sub = await billing.activateSubscriptionManually(tenantId, months ?? 1, planCode);
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_ACTIVATE_MANUAL',
+      entity: 'Subscription',
+      metadata: { months: months ?? 1, planCode },
+      ...requestMeta(req),
+    });
+    return reply.send({ subscription: sub });
+  });
+
   // Déclenche le cycle de facturation (past-due / suspension).
   app.post('/billing/run', async (_req, reply) => {
     const result = await billing.runBillingCycle();
