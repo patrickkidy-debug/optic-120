@@ -16,6 +16,7 @@ import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
 import { StatCard, PageLoader, EmptyState, Badge } from '../components/ui';
+import { ForecastPanel } from '../components/ForecastPanel';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
@@ -112,6 +113,8 @@ export function DashboardPage() {
           tone={data.lowStockCount > 0 ? 'danger' : 'primary'}
         />
       </div>
+
+      <ForecastPanel />
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">

@@ -356,3 +356,23 @@ export async function listRenewals(): Promise<Renewal[]> {
   const { data } = await api.get<{ renewals: Renewal[] }>('/optique/renewals');
   return data.renewals;
 }
+
+/* ---------------- IA prédictive (dashboard) ---------------- */
+export interface ForecastData {
+  hasEnoughData: boolean;
+  history: { date: string; revenue: number }[];
+  forecast: { date: string; revenue: number }[];
+  actualMonthRevenue: number;
+  projectedMonthRevenue: number;
+  lastMonthRevenue: number;
+  trendPct: number;
+  next7Total: number;
+  bestWeekday: { label: string; avg: number } | null;
+  stockRisks: { product: string; stock: number; daysLeft: number }[];
+}
+export async function getForecast(branchId?: string): Promise<ForecastData> {
+  const { data } = await api.get<{ forecast: ForecastData }>('/dashboard/forecast', {
+    params: branchId ? { branchId } : {},
+  });
+  return data.forecast;
+}
