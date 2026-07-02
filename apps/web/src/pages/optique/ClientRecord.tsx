@@ -216,6 +216,22 @@ function PrescriptionForm({
         <Field label="Type de verres"><input className="input" placeholder="Progressifs…" {...register('lensType')} /></Field>
         <Field label="Prescripteur"><input className="input" {...register('prescriberName')} /></Field>
       </div>
+
+      {/* Mesures avancées de montage */}
+      <details className="rounded-xl border border-line bg-surface-2/40 px-3 py-2">
+        <summary className="cursor-pointer select-none text-sm font-semibold text-content-muted">
+          Mesures avancées de montage (optionnel)
+        </summary>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Field label="Hauteur OD (mm)"><input className="input" placeholder="18" {...register('odHeight')} /></Field>
+          <Field label="Hauteur OG (mm)"><input className="input" placeholder="18" {...register('ogHeight')} /></Field>
+          <Field label="EP près OD (mm)"><input className="input" placeholder="29" {...register('odNearPd')} /></Field>
+          <Field label="EP près OG (mm)"><input className="input" placeholder="29" {...register('ogNearPd')} /></Field>
+          <Field label="Vertex (mm)"><input className="input" placeholder="12" {...register('vertex')} /></Field>
+          <Field label="Angle pantoscopique (°)"><input className="input" placeholder="8" {...register('pantoTilt')} /></Field>
+        </div>
+      </details>
+
       <Field label="Notes"><input className="input" {...register('notes')} /></Field>
 
       {error && <p className="text-sm text-danger">{error}</p>}

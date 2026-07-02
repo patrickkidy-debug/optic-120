@@ -10,16 +10,32 @@
   }
   html {
     scroll-behavior: smooth;
+    /* iOS : évite le redimensionnement auto du texte et le flash gris au tap. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   html,
   body,
   #root {
     height: 100%;
+    /* iOS Safari : la barre d'adresse fausse 100vh → on complète avec la hauteur
+       de fenêtre dynamique (dvh) quand elle est supportée. */
+    min-height: 100dvh;
     /* Garde-fou : empêche tout débordement horizontal accidentel (élément
        décoratif mal positionné, etc.) de créer un scroll latéral ou de
        couper du contenu sur petits écrans. */
     max-width: 100%;
     overflow-x: hidden;
+  }
+  /* iOS : les champs de police < 16px déclenchent un zoom au focus. On force
+     16px sur mobile pour l'éviter (et améliorer la lisibilité tactile). */
+  @media (max-width: 640px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
   body {
     margin: 0;

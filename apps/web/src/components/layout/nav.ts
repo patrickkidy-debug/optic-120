@@ -21,6 +21,8 @@ import {
   Crown,
   Server,
   LifeBuoy,
+  Glasses,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -57,6 +59,8 @@ export const NAV: NavGroup[] = [
       { to: '/optique/caisse', labelKey: 'nav.pos', icon: ShoppingCart, permission: 'optique.sales.create' },
       { to: '/optique/ventes', labelKey: 'nav.sales', icon: ReceiptText, permission: 'optique.sales.view' },
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
+      { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view' },
+      { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },
     ],
   },
   {

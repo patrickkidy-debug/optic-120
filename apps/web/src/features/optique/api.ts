@@ -277,3 +277,61 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   const { data } = await api.get<{ admin: AdminDashboardData }>('/dashboard/admin');
   return data.admin;
 }
+
+/* ---------------- Commandes de verres (labo) & SAV ---------------- */
+import type {
+  LensOrderCreateInput,
+  LensOrderStatus,
+  RepairCreateInput,
+  RepairStatus,
+} from '@oculo/shared-types';
+
+export interface LensOrder {
+  id: string;
+  number: string;
+  customerId: string | null;
+  customer: { firstName: string; lastName: string } | null;
+  supplierName: string | null;
+  description: string;
+  status: LensOrderStatus;
+  expectedAt: string | null;
+  cost: string | number | null;
+  notes: string | null;
+  createdAt: string;
+}
+export async function listLensOrders(status?: string): Promise<LensOrder[]> {
+  const { data } = await api.get<{ orders: LensOrder[] }>('/optique/lens-orders', {
+    params: status ? { status } : {},
+  });
+  return data.orders;
+}
+export async function createLensOrder(input: LensOrderCreateInput): Promise<void> {
+  await api.post('/optique/lens-orders', input);
+}
+export async function setLensOrderStatus(id: string, status: LensOrderStatus): Promise<void> {
+  await api.patch(`/optique/lens-orders/${id}`, { status });
+}
+
+export interface Repair {
+  id: string;
+  number: string;
+  customerId: string | null;
+  customer: { firstName: string; lastName: string } | null;
+  description: string;
+  status: RepairStatus;
+  cost: string | number | null;
+  notes: string | null;
+  createdAt: string;
+}
+export async function listRepairs(status?: string): Promise<Repair[]> {
+  const { data } = await api.get<{ repairs: Repair[] }>('/optique/repairs', {
+    params: status ? { status } : {},
+  });
+  return data.repairs;
+}
+export async function createRepair(input: RepairCreateInput): Promise<void> {
+  await api.post('/optique/repairs', input);
+}
+export async function setRepairStatus(id: string, status: RepairStatus): Promise<void> {
+  await api.patch(`/optique/repairs/${id}`, { status });
+}

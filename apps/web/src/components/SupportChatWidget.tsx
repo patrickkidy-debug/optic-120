@@ -37,7 +37,13 @@ export function SupportChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 print:hidden">
+    <div
+      className="fixed z-50 print:hidden"
+      style={{
+        bottom: 'max(1.25rem, env(safe-area-inset-bottom))',
+        right: 'max(1.25rem, env(safe-area-inset-right))',
+      }}
+    >
       {open ? (
         <div className="flex w-[min(92vw,360px)] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card-lg">
           {/* En-tête */}

@@ -47,6 +47,8 @@ const PosPage = lazy(() => named(import('./pages/optique/PosPage'), 'PosPage'));
 const SalesPage = lazy(() => named(import('./pages/optique/SalesPage'), 'SalesPage')) as LazyExoticComponent<
   ComponentType<{ kind: 'SALE' | 'QUOTE' }>
 >;
+const LensOrdersPage = lazy(() => named(import('./pages/optique/LensOrdersPage'), 'LensOrdersPage'));
+const RepairsPage = lazy(() => named(import('./pages/optique/RepairsPage'), 'RepairsPage'));
 const RolesPage = lazy(() => named(import('./pages/settings/RolesPage'), 'RolesPage'));
 const UsersPage = lazy(() => named(import('./pages/settings/UsersPage'), 'UsersPage'));
 const BranchesPage = lazy(() => named(import('./pages/settings/BranchesPage'), 'BranchesPage'));
@@ -108,6 +110,8 @@ export const router = createBrowserRouter([
           { path: '/optique/caisse', element: perm('optique.sales.create', <PosPage />) },
           { path: '/optique/ventes', element: perm('optique.sales.view', <SalesPage kind="SALE" />) },
           { path: '/optique/devis', element: perm('optique.quotes.view', <SalesPage kind="QUOTE" />) },
+          { path: '/optique/commandes-verres', element: perm('optique.sales.view', <LensOrdersPage />) },
+          { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
           { path: '/parametres/roles', element: perm('rbac.roles.view', <RolesPage />) },
           { path: '/parametres/utilisateurs', element: perm('rbac.users.view', <UsersPage />) },
           { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },

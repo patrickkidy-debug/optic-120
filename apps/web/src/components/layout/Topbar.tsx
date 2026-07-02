@@ -155,7 +155,10 @@ function UserMenu() {
 export function Topbar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-bg/80 px-4 backdrop-blur-md">
+    <header
+      className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-bg/80 px-4 backdrop-blur-md"
+      style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(4rem + env(safe-area-inset-top))' }}
+    >
       <button onClick={toggleSidebar} className="btn-ghost h-9 w-9 rounded-xl p-0 lg:hidden">
         <Menu className="h-5 w-5" />
       </button>

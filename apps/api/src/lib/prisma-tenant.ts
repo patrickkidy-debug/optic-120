@@ -27,6 +27,8 @@ const TENANT_MODELS = new Set<string>([
   'Expense',
   'Supplier',
   'Insurer',
+  'LensOrder',
+  'Repair',
 ]);
 
 /**

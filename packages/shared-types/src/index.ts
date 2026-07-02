@@ -659,8 +659,41 @@ export const prescriptionCreateSchema = z.object({
   pupillaryDistance: z.string().max(40).optional().or(z.literal('')),
   lensType: z.string().max(60).optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  // Mesures avancées de montage
+  odHeight: opt,
+  ogHeight: opt,
+  odNearPd: opt,
+  ogNearPd: opt,
+  vertex: opt,
+  pantoTilt: opt,
 });
 export type PrescriptionCreateInput = z.infer<typeof prescriptionCreateSchema>;
+
+/* --- Commandes de verres (laboratoire) & SAV / réparations --- */
+export const LENS_ORDER_STATUSES = ['ORDERED', 'RECEIVED', 'MOUNTED', 'DELIVERED', 'CANCELLED'] as const;
+export type LensOrderStatus = (typeof LENS_ORDER_STATUSES)[number];
+export const REPAIR_STATUSES = ['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED'] as const;
+export type RepairStatus = (typeof REPAIR_STATUSES)[number];
+
+export const lensOrderCreateSchema = z.object({
+  customerId: z.string().uuid().optional().or(z.literal('')),
+  supplierName: z.string().max(120).optional().or(z.literal('')),
+  description: z.string().trim().min(2).max(400),
+  expectedAt: z.string().optional().or(z.literal('')),
+  cost: z.coerce.number().min(0).optional(),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type LensOrderCreateInput = z.infer<typeof lensOrderCreateSchema>;
+export const lensOrderStatusSchema = z.object({ status: z.enum(LENS_ORDER_STATUSES) });
+
+export const repairCreateSchema = z.object({
+  customerId: z.string().uuid().optional().or(z.literal('')),
+  description: z.string().trim().min(2).max(400),
+  cost: z.coerce.number().min(0).optional(),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type RepairCreateInput = z.infer<typeof repairCreateSchema>;
+export const repairStatusSchema = z.object({ status: z.enum(REPAIR_STATUSES) });
 
 export const branchCreateSchema = z.object({
   name: z.string().min(2).max(120),

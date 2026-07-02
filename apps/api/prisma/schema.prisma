@@ -50,6 +50,8 @@ model Tenant {
   expenses      Expense[]
   suppliers     Supplier[]
   insurers      Insurer[]
+  lensOrders    LensOrder[]
+  repairs       Repair[]
   subscription  Subscription?
   subInvoices   SubscriptionInvoice[]
 }
@@ -260,17 +262,20 @@ model StockMovement {
 /* ---------------- CUSTOMERS / SALES ---------------- */
 
 model Customer {
-  id        String   @id @default(uuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  firstName String
-  lastName  String
-  phone     String?
-  email     String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  phone         String?
+  email         String?
+  loyaltyPoints Int      @default(0)
+  createdAt     DateTime @default(now())
 
   sales         Sale[]
   prescriptions OpticalPrescription[]
+  lensOrders    LensOrder[]
+  repairs       Repair[]
 
   @@index([tenantId])
 }
@@ -294,6 +299,13 @@ model OpticalPrescription {
   pupillaryDistance String?
   lensType          String?
   notes             String?
+  // Mesures avancées de montage
+  odHeight          String? // hauteur de montage OD (mm)
+  ogHeight          String? // hauteur de montage OG (mm)
+  odNearPd          String? // écart pupillaire de près OD (mm)
+  ogNearPd          String? // écart pupillaire de près OG (mm)
+  vertex            String? // distance verre-œil (mm)
+  pantoTilt         String? // angle pantoscopique (°)
   createdById       String?
   createdAt         DateTime @default(now())
 
@@ -304,6 +316,23 @@ model OpticalPrescription {
 enum SaleType {
   QUOTE
   SALE
+  RETURN
+}
+
+enum LensOrderStatus {
+  ORDERED
+  RECEIVED
+  MOUNTED
+  DELIVERED
+  CANCELLED
+}
+
+enum RepairStatus {
+  RECEIVED
+  IN_PROGRESS
+  READY
+  DELIVERED
+  CANCELLED
 }
 
 enum SaleStatus {
@@ -334,6 +363,10 @@ model Sale {
   totalAmount     Decimal    @db.Decimal(12, 2)
   paidAmount      Decimal    @default(0) @db.Decimal(12, 2)
   currency        String     @default("XOF")
+  // Retour/avoir : référence la vente d'origine remboursée.
+  originalSaleId  String?
+  originalSale    Sale?      @relation("SaleReturns", fields: [originalSaleId], references: [id])
+  returns         Sale[]     @relation("SaleReturns")
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -357,6 +390,50 @@ model SaleItem {
   lineTotal Decimal @db.Decimal(12, 2)
 
   @@index([saleId])
+}
+
+/** Commande de verres/montures auprès d'un laboratoire ou fournisseur. */
+model LensOrder {
+  id           String          @id @default(uuid())
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number       String
+  customerId   String?
+  customer     Customer?       @relation(fields: [customerId], references: [id])
+  supplierName String?
+  description  String // ex. « Verres progressifs 1.6 anti-reflet »
+  status       LensOrderStatus @default(ORDERED)
+  expectedAt   DateTime?
+  cost         Decimal?        @db.Decimal(12, 2)
+  notes        String?
+  createdById  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+}
+
+/** Réparation / SAV d'une monture ou d'un équipement. */
+model Repair {
+  id          String       @id @default(uuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number      String
+  customerId  String?
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  description String
+  status      RepairStatus @default(RECEIVED)
+  cost        Decimal?     @db.Decimal(12, 2)
+  notes       String?
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
 }
 
 /* ---------------- PAYMENTS (CinetPay-ready) ---------------- */
