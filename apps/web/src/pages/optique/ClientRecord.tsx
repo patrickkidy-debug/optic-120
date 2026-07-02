@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Glasses, Plus, Printer, ReceiptText, FileText } from 'lucide-react';
+import { Glasses, Plus, Printer, ReceiptText, FileText, Star } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
 import { getCustomer, createPrescription, type Prescription } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
@@ -42,6 +42,9 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
               <h3 className="font-display text-lg font-bold text-content">{customer.firstName} {customer.lastName}</h3>
               <p className="text-sm text-content-muted">
                 {customer.phone ?? '—'}{customer.email ? ` · ${customer.email}` : ''}
+              </p>
+              <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-0.5 text-xs font-bold text-white">
+                <Star className="h-3.5 w-3.5" /> {customer.loyaltyPoints ?? 0} points de fidélité
               </p>
             </div>
             <div className="flex items-center gap-2">

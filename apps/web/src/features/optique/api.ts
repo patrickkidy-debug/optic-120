@@ -97,6 +97,7 @@ export interface Customer {
   lastName: string;
   phone?: string | null;
   email?: string | null;
+  loyaltyPoints?: number;
 }
 
 export async function listCustomers(search?: string): Promise<Customer[]> {
@@ -183,7 +184,7 @@ export interface SaleDetailItem {
 export interface SaleDetail {
   id: string;
   number: string;
-  type: 'SALE' | 'QUOTE';
+  type: 'SALE' | 'QUOTE' | 'RETURN';
   status: string;
   subtotal: string;
   discountAmount: string;
@@ -334,4 +335,24 @@ export async function createRepair(input: RepairCreateInput): Promise<void> {
 }
 export async function setRepairStatus(id: string, status: RepairStatus): Promise<void> {
   await api.patch(`/optique/repairs/${id}`, { status });
+}
+
+/* ---------------- Retours & avoirs ---------------- */
+export async function createSaleReturn(saleId: string): Promise<void> {
+  await api.post(`/sales/${saleId}/return`);
+}
+
+/* ---------------- Rappels de renouvellement ---------------- */
+export interface Renewal {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  email?: string | null;
+  renewPrescription: boolean;
+  reorder: boolean;
+}
+export async function listRenewals(): Promise<Renewal[]> {
+  const { data } = await api.get<{ renewals: Renewal[] }>('/optique/renewals');
+  return data.renewals;
 }

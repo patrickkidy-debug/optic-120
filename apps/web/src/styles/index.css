@@ -354,3 +354,26 @@
     }
   }
 }
+
+/* Impression : n'imprime que la zone marquée .print-area (ex. étiquettes). */
+@media print {
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+  .print-area {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .print-hide {
+    display: none !important;
+  }
+}

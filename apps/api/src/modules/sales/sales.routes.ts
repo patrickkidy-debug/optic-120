@@ -93,6 +93,21 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ sale });
   });
 
+  // Retour / avoir : rembourse une vente et réapprovisionne le stock.
+  app.post('/:id/return', { preHandler: requirePermission('optique.sales.refund') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const sale = await salesService.createReturn(req.auth!.tenantId, id, req.auth!.userId);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'SALE_RETURNED',
+      entity: 'Sale',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.status(201).send({ sale });
+  });
+
   app.post('/:id/payments', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = paymentCreateSchema.parse(req.body);

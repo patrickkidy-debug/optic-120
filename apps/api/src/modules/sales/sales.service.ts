@@ -127,9 +127,107 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
           },
         });
       }
+
+      // Fidélité : 1 point par tranche de LOYALTY_POINT_PER FCFA dépensés.
+      if (input.customerId) {
+        const pts = Math.floor(total / LOYALTY_POINT_PER);
+        if (pts > 0) {
+          await tx.customer.update({
+            where: { id: input.customerId },
+            data: { loyaltyPoints: { increment: pts } },
+          });
+        }
+      }
     }
 
     return sale;
+  });
+}
+
+/** Fidélité : 1 point gagné par tranche de FCFA dépensés (1 point = 25 FCFA de remise). */
+export const LOYALTY_POINT_PER = 1000;
+
+/**
+ * Crée un retour / avoir pour une vente : réapprovisionne le stock, enregistre
+ * une vente de type RETURN liée à l'originale et annule les points de fidélité
+ * correspondants. Retour total (toute la vente) pour rester simple et fiable.
+ */
+export async function createReturn(tenantId: string, saleId: string, userId: string) {
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findFirst({
+      where: { id: saleId, tenantId, type: SaleType.SALE },
+      include: { items: true },
+    });
+    if (!sale) throw notFound('Vente introuvable');
+    if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente annulée');
+    const already = await tx.sale.count({ where: { tenantId, originalSaleId: sale.id } });
+    if (already > 0) throw conflict('Un retour existe déjà pour cette vente');
+
+    const number = await nextNumber(tx, tenantId, SaleType.RETURN);
+    const ret = await tx.sale.create({
+      data: {
+        tenantId,
+        branchId: sale.branchId,
+        customerId: sale.customerId,
+        cashierId: userId,
+        number,
+        type: SaleType.RETURN,
+        status: SaleStatus.PAID,
+        originalSaleId: sale.id,
+        subtotal: sale.subtotal,
+        discountAmount: sale.discountAmount,
+        taxAmount: sale.taxAmount,
+        insuranceAmount: sale.insuranceAmount,
+        totalAmount: sale.totalAmount,
+        paidAmount: sale.totalAmount,
+        items: {
+          create: sale.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            lineTotal: i.lineTotal,
+          })),
+        },
+      },
+      include: { items: { include: { product: true } }, customer: true },
+    });
+
+    // Réapprovisionne le stock des articles retournés.
+    for (const i of sale.items) {
+      const item = await tx.stockItem.findFirst({
+        where: { productId: i.productId, branchId: sale.branchId, tenantId },
+      });
+      if (item) {
+        await tx.stockItem.update({
+          where: { id: item.id },
+          data: { quantity: item.quantity + i.quantity },
+        });
+        await tx.stockMovement.create({
+          data: {
+            tenantId,
+            stockItemId: item.id,
+            type: StockMovementType.RETURN_IN,
+            quantity: i.quantity,
+            reason: `Retour ${number}`,
+            saleId: ret.id,
+            createdById: userId,
+          },
+        });
+      }
+    }
+
+    // Annule les points de fidélité gagnés sur la vente d'origine.
+    if (sale.customerId) {
+      const pts = Math.floor(Number(sale.totalAmount) / LOYALTY_POINT_PER);
+      if (pts > 0) {
+        await tx.customer.update({
+          where: { id: sale.customerId },
+          data: { loyaltyPoints: { decrement: pts } },
+        });
+      }
+    }
+
+    return ret;
   });
 }
 

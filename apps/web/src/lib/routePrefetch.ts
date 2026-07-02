@@ -17,6 +17,8 @@ const loaders: Record<string, () => Promise<unknown>> = {
   '/optique/devis': () => import('../pages/optique/SalesPage'),
   '/optique/commandes-verres': () => import('../pages/optique/LensOrdersPage'),
   '/optique/reparations': () => import('../pages/optique/RepairsPage'),
+  '/optique/renouvellements': () => import('../pages/optique/RenewalsPage'),
+  '/optique/etiquettes': () => import('../pages/optique/LabelsPage'),
   '/parametres/roles': () => import('../pages/settings/RolesPage'),
   '/parametres/utilisateurs': () => import('../pages/settings/UsersPage'),
   '/parametres/magasins': () => import('../pages/settings/BranchesPage'),

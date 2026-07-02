@@ -6,6 +6,7 @@ import {
   FileText,
   XCircle,
   ArrowRightLeft,
+  Undo2,
   Download,
   Plus,
   Trash2,
@@ -15,6 +16,7 @@ import {
   listSales,
   cancelSale,
   convertQuote,
+  createSaleReturn,
   getSale,
   getStock,
   listCustomers,
@@ -49,6 +51,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const canCancel = usePermission('optique.sales.cancel');
   const canConvert = usePermission('optique.quotes.convert');
   const canQuote = usePermission('optique.quotes.create');
+  const canRefund = usePermission('optique.sales.refund');
   const user = useAuthStore((s) => s.user);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -68,6 +71,14 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sales'] });
       alert('Devis converti en vente.');
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const returnMut = useMutation({
+    mutationFn: createSaleReturn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sales'] });
+      alert('Retour enregistré : stock réapprovisionné et avoir créé.');
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -175,6 +186,18 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                           title="Convertir en vente"
                         >
                           <ArrowRightLeft className="h-3.5 w-3.5" /> Convertir
+                        </button>
+                      )}
+                      {!isQuote && canRefund && s.status !== 'CANCELLED' && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Enregistrer un retour / avoir pour la vente ${s.number} ? Le stock sera réapprovisionné.`))
+                              returnMut.mutate(s.id);
+                          }}
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-accent"
+                          title="Retour / avoir"
+                        >
+                          <Undo2 className="h-3.5 w-3.5" /> Retour
                         </button>
                       )}
                       {!isQuote && canCancel && s.status !== 'CANCELLED' && (

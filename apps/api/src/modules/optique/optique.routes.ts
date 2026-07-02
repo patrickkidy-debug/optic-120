@@ -107,4 +107,44 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
     if (res.count === 0) throw notFound('Réparation introuvable');
     return reply.send({ ok: true, status });
   });
+
+  /* -------------------- Rappels de renouvellement -------------------- */
+  app.get('/renewals', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const MONTH = 30 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const rxCutoff = new Date(now - 18 * MONTH); // ordonnance de plus de 18 mois
+    const saleCutoff = new Date(now - 12 * MONTH); // aucun achat depuis 12 mois
+
+    const rxGrouped = await req.db!.opticalPrescription.groupBy({
+      by: ['customerId'],
+      _max: { date: true },
+    });
+    const rxDue = new Set(
+      rxGrouped.filter((g) => g._max.date && g._max.date < rxCutoff).map((g) => g.customerId),
+    );
+
+    const saleGrouped = await req.db!.sale.groupBy({
+      by: ['customerId'],
+      where: { type: 'SALE', customerId: { not: null } },
+      _max: { createdAt: true },
+    });
+    const saleDue = new Set(
+      saleGrouped
+        .filter((g) => g.customerId && g._max.createdAt && g._max.createdAt < saleCutoff)
+        .map((g) => g.customerId as string),
+    );
+
+    const ids = [...new Set([...rxDue, ...saleDue])];
+    if (ids.length === 0) return reply.send({ renewals: [] });
+    const customers = await req.db!.customer.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, firstName: true, lastName: true, phone: true, email: true },
+    });
+    const renewals = customers.map((c) => ({
+      ...c,
+      renewPrescription: rxDue.has(c.id),
+      reorder: saleDue.has(c.id),
+    }));
+    return reply.send({ renewals });
+  });
 }

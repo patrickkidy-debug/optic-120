@@ -25,6 +25,7 @@ export type StockMovementType = (typeof StockMovementType)[keyof typeof StockMov
 export const SaleType = {
   QUOTE: 'QUOTE',
   SALE: 'SALE',
+  RETURN: 'RETURN',
 } as const;
 export type SaleType = (typeof SaleType)[keyof typeof SaleType];
 

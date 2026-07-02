@@ -23,6 +23,8 @@ import {
   LifeBuoy,
   Glasses,
   Wrench,
+  BellRing,
+  Barcode,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -61,6 +63,8 @@ export const NAV: NavGroup[] = [
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
       { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view' },
       { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },
+      { to: '/optique/renouvellements', labelKey: 'nav.renewals', icon: BellRing, permission: 'optique.customers.view' },
+      { to: '/optique/etiquettes', labelKey: 'nav.labels', icon: Barcode, permission: 'optique.products.view' },
     ],
   },
   {

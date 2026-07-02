@@ -1,0 +1,15 @@
+declare module 'jsbarcode' {
+  interface JsBarcodeOptions {
+    format?: string;
+    width?: number;
+    height?: number;
+    displayValue?: boolean;
+    fontSize?: number;
+    margin?: number;
+    background?: string;
+    lineColor?: string;
+    text?: string;
+  }
+  const JsBarcode: (element: Element | string, data: string, options?: JsBarcodeOptions) => void;
+  export default JsBarcode;
+}
