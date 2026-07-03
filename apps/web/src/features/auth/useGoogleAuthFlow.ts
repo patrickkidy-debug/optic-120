@@ -41,12 +41,12 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
     }
   }
 
-  async function completeSignup(tenantName: string, branchName: string) {
+  async function completeSignup(tenantName: string, branchName: string, whatsapp: string) {
     if (step.kind !== 'needsSignup') return;
     setError('');
     setLoading(true);
     try {
-      await googleSignup({ idToken: step.idToken, tenantName, branchName, plan: plan ?? 'STARTER' });
+      await googleSignup({ idToken: step.idToken, tenantName, branchName, whatsapp, plan: plan ?? 'STARTER' });
       navigate(redirectTo);
     } catch (e) {
       setError(apiErrorMessage(e, 'Inscription impossible'));

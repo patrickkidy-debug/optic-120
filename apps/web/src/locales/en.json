@@ -80,6 +80,8 @@
     "branchName": "Main branch",
     "firstName": "First name",
     "lastName": "Last name",
+    "whatsapp": "WhatsApp number",
+    "whatsappHint": "So we can support and reach you",
     "username": "Username (optional)",
     "forgotTitle": "Reset password",
     "forgotSubtitle": "Enter your email, we'll send you a link",

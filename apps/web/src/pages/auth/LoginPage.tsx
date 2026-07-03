@@ -10,6 +10,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { WhatsappField } from '../../components/WhatsappField';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -24,6 +25,7 @@ export function LoginPage() {
   const google = useGoogleAuthFlow('/dashboard');
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
+  const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const {
     register,
@@ -163,7 +165,7 @@ export function LoginPage() {
     return (
       <AuthLayout title="Finalisez votre inscription" subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
         <form
-          onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName); }}
+          onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName, googleWhatsapp); }}
           className="space-y-4"
         >
           <Field label="Email Google">
@@ -175,8 +177,12 @@ export function LoginPage() {
           <Field label="Magasin principal">
             <input className="input" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
           </Field>
+          <Field label={t('auth.whatsapp')}>
+            <WhatsappField value={googleWhatsapp} onChange={setGoogleWhatsapp} />
+            <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
+          </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
-          <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2} className="w-full">
+          <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2 || googleWhatsapp.trim().length < 8} className="w-full">
             Créer mon compte
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">

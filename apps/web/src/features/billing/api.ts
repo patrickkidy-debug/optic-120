@@ -122,6 +122,7 @@ export interface PlatformSub {
   tenantId: string;
   tenantName: string;
   tenantSlug: string;
+  whatsapp: string | null;
   status: string;
   planName: string;
   planCode: string;

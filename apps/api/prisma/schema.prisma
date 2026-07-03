@@ -23,6 +23,9 @@ model Tenant {
   name          String
   slug          String       @unique
   logoUrl       String?
+  // Numéro WhatsApp du responsable de l'établissement, collecté à l'inscription
+  // (obligatoire côté formulaire) pour permettre au fondateur de le contacter.
+  whatsappPhone String?
   status        TenantStatus @default(ACTIVE)
   currency      String       @default("XOF")
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.

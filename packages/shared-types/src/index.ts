@@ -508,12 +508,60 @@ const passwordSchema = z
   .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
   .max(128);
 
+/**
+ * Pays d'Afrique de l'Ouest (CEDEAO + Mauritanie) avec leur indicatif
+ * téléphonique international. Sert de source unique au sélecteur d'indicatif du
+ * formulaire d'inscription ET à la validation du numéro WhatsApp.
+ */
+export const WEST_AFRICA_COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', dial: '+229', flag: '🇧🇯' },
+  { code: 'BF', name: 'Burkina Faso', dial: '+226', flag: '🇧🇫' },
+  { code: 'CV', name: 'Cap-Vert', dial: '+238', flag: '🇨🇻' },
+  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮' },
+  { code: 'GM', name: 'Gambie', dial: '+220', flag: '🇬🇲' },
+  { code: 'GH', name: 'Ghana', dial: '+233', flag: '🇬🇭' },
+  { code: 'GN', name: 'Guinée', dial: '+224', flag: '🇬🇳' },
+  { code: 'GW', name: 'Guinée-Bissau', dial: '+245', flag: '🇬🇼' },
+  { code: 'LR', name: 'Libéria', dial: '+231', flag: '🇱🇷' },
+  { code: 'ML', name: 'Mali', dial: '+223', flag: '🇲🇱' },
+  { code: 'MR', name: 'Mauritanie', dial: '+222', flag: '🇲🇷' },
+  { code: 'NE', name: 'Niger', dial: '+227', flag: '🇳🇪' },
+  { code: 'NG', name: 'Nigéria', dial: '+234', flag: '🇳🇬' },
+  { code: 'SN', name: 'Sénégal', dial: '+221', flag: '🇸🇳' },
+  { code: 'SL', name: 'Sierra Leone', dial: '+232', flag: '🇸🇱' },
+  { code: 'TG', name: 'Togo', dial: '+228', flag: '🇹🇬' },
+] as const;
+
+/** Indicatifs acceptés (dérivés de WEST_AFRICA_COUNTRIES). */
+export const WEST_AFRICA_DIAL_CODES = WEST_AFRICA_COUNTRIES.map((c) => c.dial);
+
+/**
+ * Numéro WhatsApp du responsable (obligatoire à l'inscription). Doit porter
+ * l'indicatif international d'un pays d'Afrique de l'Ouest (CEDEAO + Mauritanie),
+ * suivi de 5 à 12 chiffres. Espaces / tirets / points / parenthèses tolérés.
+ */
+export const whatsappSchema = z
+  .string()
+  .trim()
+  .min(8, 'Numéro WhatsApp requis')
+  .max(24, 'Numéro WhatsApp trop long')
+  .refine(
+    (v) => {
+      const cleaned = v.replace(/[\s().-]/g, '');
+      if (!/^\+\d{8,15}$/.test(cleaned)) return false;
+      return WEST_AFRICA_DIAL_CODES.some((d) => cleaned.startsWith(d));
+    },
+    "Indicatif d'Afrique de l'Ouest requis (ex : +221 77 123 45 67)",
+  );
+
 export const signupSchema = z.object({
   tenantName: z.string().min(2).max(120),
   branchName: z.string().min(2).max(120).default('Magasin principal'),
   adminFirstName: z.string().min(1).max(80),
   adminLastName: z.string().min(1).max(80),
   adminEmail: z.string().email(),
+  // Numéro WhatsApp obligatoire : permet au fondateur de contacter le client.
+  whatsapp: whatsappSchema,
   adminUsername: z.string().min(3).max(40).optional(),
   adminPassword: passwordSchema,
   // Offre choisie (présélectionnée à Starter si absente) — aucun essai
@@ -533,6 +581,8 @@ export const googleSignupSchema = z.object({
   idToken: z.string().min(20),
   tenantName: z.string().min(2).max(120),
   branchName: z.string().min(2).max(120).default('Magasin principal'),
+  // Numéro WhatsApp obligatoire, comme pour l'inscription par mot de passe.
+  whatsapp: whatsappSchema,
   plan: z.enum(['STARTER', 'STANDARD', 'GROWTH']).default(DEFAULT_PLAN_CODE),
 });
 export type GoogleSignupInput = z.infer<typeof googleSignupSchema>;

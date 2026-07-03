@@ -541,13 +541,17 @@ export async function listAllUsers(limit = 200) {
 
 export async function listAllSubscriptions() {
   const subs = await prisma.subscription.findMany({
-    include: { plan: true, tenant: { select: { id: true, name: true, slug: true } } },
+    include: {
+      plan: true,
+      tenant: { select: { id: true, name: true, slug: true, whatsappPhone: true } },
+    },
     orderBy: { createdAt: 'desc' },
   });
   return subs.map((s) => ({
     tenantId: s.tenantId,
     tenantName: s.tenant.name,
     tenantSlug: s.tenant.slug,
+    whatsapp: s.tenant.whatsappPhone,
     status: s.status,
     planName: s.plan.name,
     planCode: s.plan.code,

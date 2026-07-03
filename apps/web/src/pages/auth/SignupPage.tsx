@@ -11,6 +11,7 @@ import { trackPixelEvent } from '../../lib/pixel';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { WhatsappField } from '../../components/WhatsappField';
 
 const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
 
@@ -29,12 +30,14 @@ export function SignupPage() {
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
+  const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const [serverError, setServerError] = useState('');
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setValue,
+    formState: { errors, isSubmitting, isSubmitted },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
     defaultValues: { branchName: 'Magasin principal' },
@@ -59,7 +62,7 @@ export function SignupPage() {
     return (
       <AuthLayout title="Finalisez votre inscription" subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
         <form
-          onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName); }}
+          onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName, googleWhatsapp); }}
           className="space-y-4"
         >
           <Field label="Email Google">
@@ -71,8 +74,12 @@ export function SignupPage() {
           <Field label="Magasin principal">
             <input className="input" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
           </Field>
+          <Field label={t('auth.whatsapp')}>
+            <WhatsappField value={googleWhatsapp} onChange={setGoogleWhatsapp} />
+            <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
+          </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
-          <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2} className="w-full">
+          <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2 || googleWhatsapp.trim().length < 8} className="w-full">
             Créer mon compte
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">
@@ -143,6 +150,17 @@ export function SignupPage() {
         <Field label={t('auth.email')}>
           <input className="input" type="email" placeholder="vous@etablissement.sn" {...register('adminEmail')} />
           {errors.adminEmail && <p className="mt-1 text-xs text-danger">{errors.adminEmail.message}</p>}
+        </Field>
+        <Field label={t('auth.whatsapp')}>
+          <WhatsappField
+            value=""
+            onChange={(v) => setValue('whatsapp', v, { shouldValidate: isSubmitted })}
+          />
+          {errors.whatsapp ? (
+            <p className="mt-1 text-xs text-danger">{errors.whatsapp.message}</p>
+          ) : (
+            <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
+          )}
         </Field>
         <Field label={t('auth.password')}>
           <input className="input" type="password" placeholder="Au moins 8 caractères" {...register('adminPassword')} />

@@ -37,6 +37,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  MessageCircle,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -67,6 +68,12 @@ import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard, Field, Modal } from '../../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
+
+/** Construit un lien wa.me à partir d'un numéro saisi librement (garde le + international). */
+function waLink(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, '');
+  return `https://wa.me/${digits}`;
+}
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
   TRIALING: { label: 'Essai', tone: 'info' },
@@ -193,6 +200,7 @@ function SubscriptionsTab() {
         <thead>
           <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
             <th className="table-cell font-semibold">Établissement</th>
+            <th className="table-cell font-semibold">WhatsApp</th>
             <th className="table-cell font-semibold">Offre</th>
             <th className="table-cell font-semibold">Statut</th>
             <th className="table-cell font-semibold">Échéance</th>
@@ -212,6 +220,22 @@ function SubscriptionsTab() {
                     <div className="text-xs text-content-faint">{s.tenantSlug}</div>
                   </div>
                 </div>
+              </td>
+              <td className="table-cell">
+                {s.whatsapp ? (
+                  <a
+                    href={waLink(s.whatsapp)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366]/12 px-2 py-1 text-xs font-medium text-[#128C7E] hover:bg-[#25D366]/20"
+                    title="Contacter sur WhatsApp"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {s.whatsapp}
+                  </a>
+                ) : (
+                  <span className="text-xs text-content-faint">—</span>
+                )}
               </td>
               <td className="table-cell text-content-muted">{s.planName}</td>
               <td className="table-cell"><Badge tone={STATUS[s.status]?.tone ?? 'neutral'}>{STATUS[s.status]?.label ?? s.status}</Badge></td>

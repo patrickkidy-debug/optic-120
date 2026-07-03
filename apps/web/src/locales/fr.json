@@ -80,6 +80,8 @@
     "branchName": "Magasin principal",
     "firstName": "Prénom",
     "lastName": "Nom",
+    "whatsapp": "Numéro WhatsApp",
+    "whatsappHint": "Pour vous accompagner et vous contacter",
     "username": "Nom d'utilisateur (optionnel)",
     "forgotTitle": "Réinitialiser le mot de passe",
     "forgotSubtitle": "Saisissez votre email, nous vous enverrons un lien",

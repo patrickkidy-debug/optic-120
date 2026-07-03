@@ -184,6 +184,8 @@ interface NewTenantAdmin {
   passwordHash: string;
   firstName: string;
   lastName: string;
+  /** Numéro WhatsApp du responsable (contact fondateur). */
+  whatsapp: string;
   plan?: 'STARTER' | 'STANDARD' | 'GROWTH';
   /** Vrai pour Google (email déjà vérifié par Google) : saute notre propre vérification. */
   emailVerifiedNow?: boolean;
@@ -208,7 +210,7 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
 
   return prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
-      data: { name: opts.tenantName, slug },
+      data: { name: opts.tenantName, slug, whatsappPhone: opts.whatsapp },
     });
     const branch = await tx.branch.create({
       data: { tenantId: tenant.id, name: opts.branchName, city: '' },
@@ -242,6 +244,7 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
         passwordHash: opts.passwordHash,
         firstName: opts.firstName,
         lastName: opts.lastName,
+        phone: opts.whatsapp,
         roleId: adminRoleId,
         branches: { create: { branchId: branch.id } },
         emailVerifiedAt: opts.emailVerifiedNow ? new Date() : undefined,
@@ -279,6 +282,7 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
     passwordHash,
     firstName: input.adminFirstName,
     lastName: input.adminLastName,
+    whatsapp: input.whatsapp,
     plan: input.plan,
   });
 
@@ -370,6 +374,7 @@ export async function signupWithGoogle(input: GoogleSignupInput, meta: RequestMe
     passwordHash,
     firstName: profile.firstName,
     lastName: profile.lastName,
+    whatsapp: input.whatsapp,
     plan: input.plan,
     emailVerifiedNow: true,
   });
