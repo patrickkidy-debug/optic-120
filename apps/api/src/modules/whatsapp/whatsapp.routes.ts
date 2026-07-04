@@ -45,6 +45,16 @@ export async function whatsappWebhookRoutes(app: FastifyInstance): Promise<void>
     },
   );
 
+  // Diagnostic (protégé par le verify token) : état de config + activité, sans
+  // exposer aucun secret. Ex : /webhooks/whatsapp/debug?key=oculosaas-verify-token
+  app.get('/whatsapp/debug', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    if (q.key !== env.WHATSAPP_VERIFY_TOKEN) {
+      return reply.code(403).send({ error: 'forbidden' });
+    }
+    return reply.send(await whatsapp.getDebugInfo());
+  });
+
   // Handshake de vérification de l'abonnement (Meta appelle en GET une fois).
   app.get('/whatsapp', async (req, reply) => {
     const q = req.query as Record<string, string | undefined>;
@@ -60,6 +70,7 @@ export async function whatsappWebhookRoutes(app: FastifyInstance): Promise<void>
   // Réception des messages entrants. On répond 200 tout de suite (Meta réessaie
   // si la réponse tarde) puis on traite en tâche de fond.
   app.post('/whatsapp', async (req, reply) => {
+    whatsapp.recordWebhookHit();
     if (!verifySignature(req)) {
       return reply.code(401).send({ error: 'invalid signature' });
     }
