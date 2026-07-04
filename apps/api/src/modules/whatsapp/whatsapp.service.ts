@@ -193,12 +193,16 @@ export async function subscribeApp(wabaId: string) {
 
 /** État de configuration + activité, sans exposer aucun secret. */
 export async function getDebugInfo() {
-  const [contacts, messages, last] = await Promise.all([
+  const [contacts, messages, last, lastContact] = await Promise.all([
     prisma.whatsappContact.count(),
     prisma.whatsappMessage.count(),
     prisma.whatsappMessage.findFirst({
       orderBy: { createdAt: 'desc' },
       select: { role: true, text: true, createdAt: true },
+    }),
+    prisma.whatsappContact.findFirst({
+      orderBy: { lastMessageAt: 'desc' },
+      select: { phone: true, profileName: true },
     }),
   ]);
   const pid = env.WHATSAPP_PHONE_NUMBER_ID;
@@ -219,6 +223,8 @@ export async function getDebugInfo() {
     db: {
       contacts,
       messages,
+      lastContactPhone: lastContact?.phone ?? null,
+      lastContactName: lastContact?.profileName ?? null,
       lastMessage: last ? { role: last.role, at: last.createdAt, preview: last.text.slice(0, 60) } : null,
     },
     lastError,
