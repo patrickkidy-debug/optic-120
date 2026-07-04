@@ -25,6 +25,7 @@ import { billingRoutes, billingWebhookRoutes } from './modules/billing/billing.r
 import { platformRoutes } from './modules/billing/platform.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { supportRoutes } from './modules/support/support.routes.js';
+import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -79,6 +80,7 @@ export async function buildApp() {
   await app.register(platformRoutes, { prefix: '/platform' });
   await app.register(settingsRoutes, { prefix: '/settings' });
   await app.register(supportRoutes, { prefix: '/support' });
+  await app.register(whatsappWebhookRoutes, { prefix: '/webhooks' });
 
   return app;
 }

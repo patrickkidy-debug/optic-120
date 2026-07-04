@@ -888,3 +888,42 @@ model PlatformOperator {
   addedById String?
   createdAt DateTime @default(now())
 }
+
+/* ---------------- CHATBOT WHATSAPP ---------------- */
+
+/// Prospect ayant écrit au chatbot commercial WhatsApp. Cross-tenant : ce sont
+/// des leads du fondateur, non rattachés à un établissement. Alimenté par le
+/// webhook WhatsApp Cloud API (module whatsapp) via le client Prisma système.
+model WhatsappContact {
+  id            String            @id @default(uuid())
+  /// Numéro au format wa_id (ex. "2250596609036", sans « + »).
+  phone         String            @unique
+  /// Nom du profil WhatsApp du prospect (fourni par Meta).
+  profileName   String?
+  /// true = le fondateur a repris la main → le bot n'auto-répond plus à ce contact.
+  botPaused     Boolean           @default(false)
+  lastMessageAt DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  messages      WhatsappMessage[]
+
+  @@index([lastMessageAt])
+}
+
+/// Un message de la conversation (entrant ou réponse du bot). Sert de mémoire
+/// pour poser les questions de qualification une par une, dans l'ordre.
+model WhatsappMessage {
+  id          String          @id @default(uuid())
+  contactId   String
+  contact     WhatsappContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  /// 'user' (prospect) | 'assistant' (bot).
+  role        String
+  text        String
+  /// Identifiant Meta du message entrant (déduplication des redistributions).
+  waMessageId String?
+  createdAt   DateTime        @default(now())
+
+  @@index([contactId, createdAt])
+  @@index([waMessageId])
+}

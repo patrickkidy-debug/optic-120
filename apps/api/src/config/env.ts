@@ -75,6 +75,25 @@ const envSchema = z.object({
   // « Se connecter avec Google » — Client ID OAuth (Google Cloud Console).
   // Tant qu'il est vide, les routes /auth/google répondent une erreur claire.
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
+
+  // ===== Chatbot WhatsApp (assistant commercial IA) =====
+  // Meta WhatsApp Cloud API. Tant que WHATSAPP_ACCESS_TOKEN ou
+  // WHATSAPP_PHONE_NUMBER_ID (ou ANTHROPIC_API_KEY) sont vides → le bot est
+  // inactif : le webhook accepte les messages mais n'auto-répond pas.
+  // Jeton choisi librement, à recopier à l'identique dans la console Meta lors
+  // de l'abonnement au webhook (handshake de vérification).
+  WHATSAPP_VERIFY_TOKEN: z.string().default('oculosaas-verify-token'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(''),
+  // Secret de l'application Meta (App Secret) — vérifie la signature
+  // X-Hub-Signature-256 des webhooks. Vide → vérification désactivée (dev).
+  WHATSAPP_APP_SECRET: z.string().optional().default(''),
+  WHATSAPP_GRAPH_VERSION: z.string().default('v21.0'),
+
+  // Moteur IA du chatbot (Anthropic Claude). Vide → bot inactif.
+  ANTHROPIC_API_KEY: z.string().optional().default(''),
+  // Modèle économique et rapide, très bon en français — adapté à un bot commercial.
+  ANTHROPIC_MODEL: z.string().default('claude-haiku-4-5-20251001'),
 });
 
 const parsed = envSchema.safeParse(process.env);
