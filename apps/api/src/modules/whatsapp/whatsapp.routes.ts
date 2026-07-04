@@ -55,6 +55,19 @@ export async function whatsappWebhookRoutes(app: FastifyInstance): Promise<void>
     return reply.send(await whatsapp.getDebugInfo());
   });
 
+  // Abonne le WABA à l'application (réception des webhooks messages). Protégé
+  // par le verify token. Ex : POST /webhooks/whatsapp/subscribe?key=...&waba=...
+  app.post('/whatsapp/subscribe', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    if (q.key !== env.WHATSAPP_VERIFY_TOKEN) {
+      return reply.code(403).send({ error: 'forbidden' });
+    }
+    if (!q.waba) {
+      return reply.code(400).send({ error: 'paramètre waba manquant' });
+    }
+    return reply.send(await whatsapp.subscribeApp(q.waba));
+  });
+
   // Handshake de vérification de l'abonnement (Meta appelle en GET une fois).
   app.get('/whatsapp', async (req, reply) => {
     const q = req.query as Record<string, string | undefined>;

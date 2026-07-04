@@ -155,6 +155,40 @@ export async function processWebhook(body: unknown): Promise<void> {
   }
 }
 
+/* ---------- Abonnement du WABA à l'application ---------- */
+
+function safeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * Abonne le compte WhatsApp Business (WABA) à cette application pour la
+ * réception des webhooks `messages`, puis renvoie l'état d'abonnement actuel.
+ * Sans cet abonnement, Meta ne transmet aucun message entrant au serveur.
+ */
+export async function subscribeApp(wabaId: string) {
+  const base = `https://graph.facebook.com/${env.WHATSAPP_GRAPH_VERSION}/${wabaId}/subscribed_apps`;
+  const headers = {
+    Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+    'content-type': 'application/json',
+  };
+
+  const postRes = await fetch(base, { method: 'POST', headers });
+  const postBody = safeJson(await postRes.text());
+
+  const getRes = await fetch(base, { headers });
+  const currentBody = safeJson(await getRes.text());
+
+  return {
+    subscribe: { status: postRes.status, body: postBody },
+    current: { status: getRes.status, body: currentBody },
+  };
+}
+
 /* ---------- Diagnostic (endpoint /webhooks/whatsapp/debug) ---------- */
 
 /** État de configuration + activité, sans exposer aucun secret. */
