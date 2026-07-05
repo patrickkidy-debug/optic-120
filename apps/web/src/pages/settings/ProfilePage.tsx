@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -64,6 +64,8 @@ export function ProfilePage() {
   const setTheme = useUIStore((s) => s.setTheme);
   const locale = useUIStore((s) => s.locale);
   const setLocale = useUIStore((s) => s.setLocale);
+  const supportHidden = useUIStore((s) => s.supportWidgetHidden);
+  const setSupportHidden = useUIStore((s) => s.setSupportWidgetHidden);
 
   const canBranding = usePermission('settings.branches.update');
   const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding, enabled: canBranding });
@@ -284,6 +286,19 @@ export function ProfilePage() {
               </button>
             ))}
           </div>
+
+          <div className="mt-6 flex items-center gap-2">
+            <LifeBuoy className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-content">Bouton d'aide</h3>
+          </div>
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-content-muted">
+            <input
+              type="checkbox"
+              checked={!supportHidden}
+              onChange={(e) => setSupportHidden(!e.target.checked)}
+            />
+            Afficher le bouton « Besoin d'aide ? » flottant
+          </label>
         </div>
 
         {/* Sécurité — Mot de passe */}

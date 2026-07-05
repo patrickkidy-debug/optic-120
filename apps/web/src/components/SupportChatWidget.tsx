@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { createSupportTicket } from '../features/support/api';
 import { apiErrorMessage } from '../lib/api';
 import { useAuthStore } from '../store/auth';
+import { useUIStore } from '../store/ui';
 
 /**
  * Bulle de discussion flottante (assistance intégrée). L'utilisateur écrit un
@@ -16,6 +17,11 @@ export function SupportChatWidget() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const firstName = useAuthStore((s) => s.user?.firstName);
+  const hidden = useUIStore((s) => s.supportWidgetHidden);
+  const setHidden = useUIStore((s) => s.setSupportWidgetHidden);
+
+  // L'utilisateur a choisi de retirer le bouton d'aide (réactivable dans Réglages).
+  if (hidden) return null;
 
   async function send() {
     const text = message.trim();
@@ -112,14 +118,27 @@ export function SupportChatWidget() {
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Ouvrir l'assistance"
-          className="group flex items-center gap-2 rounded-full bg-brand px-4 py-3.5 text-white shadow-card-lg transition hover:-translate-y-0.5 hover:shadow-glow"
-        >
-          <MessageCircle className="h-6 w-6" />
-          <span className="hidden text-sm font-semibold sm:inline">Besoin d'aide ?</span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Ouvrir l'assistance"
+            className="group flex items-center gap-2 rounded-full bg-brand px-4 py-3.5 text-white shadow-card-lg transition hover:-translate-y-0.5 hover:shadow-glow"
+          >
+            <MessageCircle className="h-6 w-6" />
+            <span className="hidden text-sm font-semibold sm:inline">Besoin d'aide ?</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setHidden(true);
+            }}
+            aria-label="Masquer le bouton d'aide"
+            title="Masquer (réactivable dans Réglages → Apparence)"
+            className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border border-line bg-surface text-content-muted shadow-card transition hover:text-danger"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
       )}
     </div>
   );
