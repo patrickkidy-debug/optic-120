@@ -11,6 +11,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Banknote,
 } from 'lucide-react';
 import {
   listSales,
@@ -24,6 +25,7 @@ import {
   type SaleListItem,
 } from '../../features/optique/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
+import { PaymentModal } from './PosPage';
 import { VAT_RATE } from '@oculo/shared-types';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
@@ -52,9 +54,11 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const canConvert = usePermission('optique.quotes.convert');
   const canQuote = usePermission('optique.quotes.create');
   const canRefund = usePermission('optique.sales.refund');
+  const canPay = usePermission('optique.sales.create');
   const user = useAuthStore((s) => s.user);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales', kind],
@@ -183,6 +187,24 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         )}
                         PDF
                       </button>
+                      {!isQuote &&
+                        canPay &&
+                        s.status !== 'CANCELLED' &&
+                        Number(s.totalAmount) - Number(s.paidAmount) > 0 && (
+                          <button
+                            onClick={() =>
+                              setPaySale({
+                                id: s.id,
+                                due: Number(s.totalAmount) - Number(s.paidAmount),
+                                number: s.number,
+                              })
+                            }
+                            className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
+                            title="Encaisser le solde"
+                          >
+                            <Banknote className="h-3.5 w-3.5" /> Encaisser
+                          </button>
+                        )}
                       {isQuote && canConvert && s.status !== 'CANCELLED' && (
                         <button
                           onClick={() => convertMut.mutate(s.id)}
@@ -231,6 +253,18 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
             setQuoteOpen(false);
             qc.invalidateQueries({ queryKey: ['sales'] });
             if (confirm('Devis créé. Télécharger le PDF ?')) handleDownload(saleId);
+          }}
+        />
+      )}
+
+      {paySale && (
+        <PaymentModal
+          sale={paySale}
+          onPaidLabel="Terminer"
+          onClose={() => setPaySale(null)}
+          onPaid={() => {
+            setPaySale(null);
+            qc.invalidateQueries({ queryKey: ['sales'] });
           }}
         />
       )}

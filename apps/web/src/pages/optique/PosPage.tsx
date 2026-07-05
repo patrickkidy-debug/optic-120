@@ -246,23 +246,32 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PaymentModal({
+export function PaymentModal({
   sale,
   onClose,
   onPaid,
+  onPaidLabel,
 }: {
   sale: { id: string; due: number; number: string };
   onClose: () => void;
   onPaid: () => void;
+  onPaidLabel?: string;
 }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
+  const [amount, setAmount] = useState<number>(sale.due);
+  const [settled, setSettled] = useState(0);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [phase, setPhase] = useState<'choose' | 'collect' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
   const [instruction, setInstruction] = useState<string | null>(null);
   const { data: collect } = useQuery({ queryKey: ['collect-info'], queryFn: getCollectInfo });
+
+  // Montant à encaisser maintenant : borné à [1, solde dû]. S'il est inférieur
+  // au solde, c'est un encaissement échelonné (acompte / tranche).
+  const payNow = Math.min(Math.max(1, Math.round(amount || 0)), sale.due);
+  const remainingAfter = sale.due - payNow;
 
   async function downloadInvoice() {
     try {
@@ -281,7 +290,8 @@ function PaymentModal({
   }
 
   const payMut = useMutation({
-    mutationFn: (m: PaymentMethod) => addPayment(sale.id, { method: m, amount: sale.due }),
+    mutationFn: (m: PaymentMethod) => addPayment(sale.id, { method: m, amount: payNow }),
+    onMutate: () => setSettled(payNow),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
       setInstruction(res.instruction ?? null);
@@ -319,6 +329,24 @@ function PaymentModal({
 
       {phase === 'choose' && (
         <>
+          <label className="mb-3 block text-sm">
+            <span className="text-content-muted">Montant encaissé maintenant</span>
+            <input
+              type="number"
+              min={1}
+              max={sale.due}
+              className="input mt-1 text-right font-semibold"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+            />
+            {remainingAfter > 0 ? (
+              <span className="mt-1 block text-xs text-warning">
+                Encaissement échelonné — reste {formatCurrency(remainingAfter)} après ce paiement.
+              </span>
+            ) : (
+              <span className="mt-1 block text-xs text-content-faint">Paiement intégral du solde.</span>
+            )}
+          </label>
           <p className="mb-2 text-sm text-content-muted">{t('pos.chooseMethod')}</p>
           <div className="grid grid-cols-2 gap-2">
             {METHODS.map((m) => (
@@ -406,12 +434,22 @@ function PaymentModal({
       {phase === 'done' && (
         <div className="py-6 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-          <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.paid')}</p>
+          {sale.due - settled > 0 ? (
+            <>
+              <p className="mt-3 font-display text-lg font-bold text-content">Encaissement enregistré</p>
+              <p className="mt-1 text-sm text-content-muted">
+                Reçu {formatCurrency(settled)} · reste{' '}
+                <span className="font-semibold text-warning">{formatCurrency(sale.due - settled)}</span>
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.paid')}</p>
+          )}
           <div className="mt-5 flex justify-center gap-2">
             <Button variant="outline" onClick={downloadInvoice}>
               {t('sales.print')}
             </Button>
-            <Button onClick={onPaid}>{t('pos.newSale')}</Button>
+            <Button onClick={onPaid}>{onPaidLabel ?? t('pos.newSale')}</Button>
           </div>
         </div>
       )}
