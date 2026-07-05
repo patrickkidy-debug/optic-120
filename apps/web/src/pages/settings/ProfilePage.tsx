@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye } from 'lucide-react';
+import clsx from 'clsx';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -128,10 +130,39 @@ export function ProfilePage() {
     void i18n.changeLanguage(l);
   }
 
+  // Onglets de la section Réglages (les onglets marque/documents sont réservés
+  // aux gestionnaires). L'onglet actif est mémorisé dans l'URL (?tab=…).
+  const [params, setParams] = useSearchParams();
+  const TABS = [
+    { key: 'profil', label: 'Mon profil', icon: User, show: true },
+    { key: 'marque', label: 'Image de marque', icon: Building2, show: canBranding },
+    { key: 'documents', label: 'Personnalisation des documents', icon: FileText, show: canBranding },
+  ].filter((tb) => tb.show);
+  const requested = params.get('tab') ?? 'profil';
+  const active = TABS.some((tb) => tb.key === requested) ? requested : 'profil';
+
   return (
     <div>
-      <PageHeader title={t('settings.title')} subtitle={t('nav.profile')} />
+      <PageHeader title="Réglages" subtitle={t('nav.profile')} />
 
+      <div className="mb-5 flex flex-wrap gap-1 border-b">
+        {TABS.map((tb) => (
+          <button
+            key={tb.key}
+            onClick={() => setParams({ tab: tb.key }, { replace: true })}
+            className={clsx(
+              'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition',
+              active === tb.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-content-muted hover:text-content',
+            )}
+          >
+            <tb.icon className="h-4 w-4" /> {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {active === 'profil' && (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Carte profil + photo */}
         <div className="card p-5">
@@ -217,9 +248,21 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {/* Image de marque (logo) — réservé aux gestionnaires */}
-        {canBranding && (
-          <div className="card p-5 lg:col-span-3">
+        {/* Sécurité — Mot de passe */}
+        <div className="lg:col-span-3">
+          <ChangePasswordCard />
+        </div>
+
+        {/* Sécurité — Double authentification (2FA) */}
+        <div className="lg:col-span-3">
+          <TwoFactorCard />
+        </div>
+      </div>
+      )}
+
+      {active === 'marque' && canBranding && (
+        <div className="max-w-3xl">
+          <div className="card p-5">
             <div className="mb-4 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
               <h3 className="font-display font-bold text-content">Image de marque</h3>
@@ -274,25 +317,10 @@ export function ProfilePage() {
               Le logo et le nom apparaissent dans la barre latérale et l'en-tête de votre espace.
             </p>
           </div>
-        )}
-
-        {/* Personnalisation des factures & devis — réservé aux gestionnaires */}
-        {canBranding && (
-          <div className="lg:col-span-3">
-            <InvoiceCustomizationCard />
-          </div>
-        )}
-
-        {/* Sécurité — Mot de passe */}
-        <div className="lg:col-span-3">
-          <ChangePasswordCard />
         </div>
+      )}
 
-        {/* Sécurité — Double authentification (2FA) */}
-        <div className="lg:col-span-3">
-          <TwoFactorCard />
-        </div>
-      </div>
+      {active === 'documents' && canBranding && <InvoiceCustomizationCard />}
     </div>
   );
 }
