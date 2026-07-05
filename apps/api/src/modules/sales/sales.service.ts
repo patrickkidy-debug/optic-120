@@ -8,6 +8,7 @@ import {
 import type { SaleCreateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
+import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
@@ -40,7 +41,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
   if (input.type === SaleType.SALE) {
     await assertWithinLimit(tenantId, 'sales');
   }
-  return prisma.$transaction(async (tx) => {
+  return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
     if (!branch) throw notFound('Succursale introuvable');
 
@@ -90,7 +91,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         insuranceAmount: insurance,
         totalAmount: total,
         paidAmount: paidInit,
-        currency: branch ? 'XOF' : 'XOF',
+        currency: 'XOF',
         items: {
           create: lines.map((l) => ({
             productId: l.productId,
@@ -141,7 +142,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
     }
 
     return sale;
-  });
+  }));
 }
 
 /** Fidélité : 1 point gagné par tranche de FCFA dépensés (1 point = 25 FCFA de remise). */
@@ -153,7 +154,7 @@ export const LOYALTY_POINT_PER = 1000;
  * correspondants. Retour total (toute la vente) pour rester simple et fiable.
  */
 export async function createReturn(tenantId: string, saleId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findFirst({
       where: { id: saleId, tenantId, type: SaleType.SALE },
       include: { items: true },
@@ -228,7 +229,7 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
     }
 
     return ret;
-  });
+  }));
 }
 
 /** Annule une vente et réapprovisionne le stock le cas échéant. */
@@ -275,7 +276,7 @@ export async function cancelSale(tenantId: string, saleId: string, userId: strin
 
 /** Convertit un devis en vente : re-vérifie et décrémente le stock. */
 export async function convertQuote(tenantId: string, saleId: string, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const quote = await tx.sale.findFirst({
       where: { id: saleId, tenantId },
       include: { items: true },
@@ -315,7 +316,7 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
       where: { id: quote.id },
       data: { type: SaleType.SALE, number, status, paidAmount: paidInit },
     });
-  });
+  }));
 }
 
 /**
@@ -338,6 +339,11 @@ export async function addPayment(
   // Encaissement MANUEL constaté au comptoir (espèces, carte, Mobile Money via
   // le QR / numéro de la boutique). Aucune passerelle n'intervient : c'est le
   // caissier qui confirme la réception. Chaque boutique encaisse sur SON compte.
+  //
+  // Le Payment est créé en PENDING puis réglé via settlePayment : c'est ce
+  // dernier (seul créditeur de sale.paidAmount, idempotent via `!wasSuccess`)
+  // qui met la vente à jour. Le créer directement en SUCCESS ferait échouer ce
+  // crédit (la garde d'idempotence verrait un paiement déjà « réussi »).
   const payment = await prisma.payment.create({
     data: {
       tenantId,
@@ -345,7 +351,7 @@ export async function addPayment(
       method: data.method,
       amount: data.amount,
       currency: sale.currency,
-      status: PaymentStatus.SUCCESS,
+      status: PaymentStatus.PENDING,
       provider: 'manual',
     },
   });

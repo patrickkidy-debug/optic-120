@@ -8,6 +8,7 @@ import {
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
+import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 
 function nullifyEmpty<T extends Record<string, unknown>>(obj: T): T {
   const out = { ...obj } as Record<string, unknown>;
@@ -47,19 +48,21 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/lens-orders', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const input = nullifyEmpty(lensOrderCreateSchema.parse(req.body));
-    const order = await req.db!.lensOrder.create({
-      data: {
-        tenantId: req.auth!.tenantId,
-        number: await nextNumber(req.db!, 'lensOrder', 'LO'),
-        customerId: input.customerId || null,
-        supplierName: input.supplierName ?? null,
-        description: input.description,
-        expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
-        cost: input.cost ?? null,
-        notes: input.notes ?? null,
-        createdById: req.auth!.userId,
-      },
-    });
+    const order = await retryOnDuplicateNumber(async () =>
+      req.db!.lensOrder.create({
+        data: {
+          tenantId: req.auth!.tenantId,
+          number: await nextNumber(req.db!, 'lensOrder', 'LO'),
+          customerId: input.customerId || null,
+          supplierName: input.supplierName ?? null,
+          description: input.description,
+          expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
+          cost: input.cost ?? null,
+          notes: input.notes ?? null,
+          createdById: req.auth!.userId,
+        },
+      }),
+    );
     return reply.status(201).send({ order });
   });
 
@@ -86,17 +89,19 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/repairs', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const input = nullifyEmpty(repairCreateSchema.parse(req.body));
-    const repair = await req.db!.repair.create({
-      data: {
-        tenantId: req.auth!.tenantId,
-        number: await nextNumber(req.db!, 'repair', 'REP'),
-        customerId: input.customerId || null,
-        description: input.description,
-        cost: input.cost ?? null,
-        notes: input.notes ?? null,
-        createdById: req.auth!.userId,
-      },
-    });
+    const repair = await retryOnDuplicateNumber(async () =>
+      req.db!.repair.create({
+        data: {
+          tenantId: req.auth!.tenantId,
+          number: await nextNumber(req.db!, 'repair', 'REP'),
+          customerId: input.customerId || null,
+          description: input.description,
+          cost: input.cost ?? null,
+          notes: input.notes ?? null,
+          createdById: req.auth!.userId,
+        },
+      }),
+    );
     return reply.status(201).send({ repair });
   });
 

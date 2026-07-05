@@ -1,0 +1,16 @@
+{
+  "name": "oculosaas-whatsapp-agent",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Agent IA commercial OculoSaaS branché sur un compte WhatsApp (non-officiel, via QR).",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^9.5.0"
+  }
+}

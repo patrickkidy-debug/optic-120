@@ -1,6 +1,7 @@
 import { PaymentStatus, SubscriptionStatus, SubInvoiceStatus, MOBILE_MONEY_METHODS, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
+import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
@@ -178,20 +179,22 @@ export async function subscribe(
   if (!plan) throw badRequest('Offre invalide');
 
   const now = new Date();
-  const invoice = await prisma.subscriptionInvoice.create({
-    data: {
-      tenantId,
-      subscriptionId: sub.id,
-      planId: plan.id,
-      number: await nextInvoiceNumber(tenantId),
-      amount: plan.priceMonthly,
-      currency: plan.currency,
-      status: SubInvoiceStatus.PENDING,
-      periodStart: now,
-      periodEnd: addOneMonth(now),
-      dueDate: now,
-    },
-  });
+  const invoice = await retryOnDuplicateNumber(async () =>
+    prisma.subscriptionInvoice.create({
+      data: {
+        tenantId,
+        subscriptionId: sub.id,
+        planId: plan.id,
+        number: await nextInvoiceNumber(tenantId),
+        amount: plan.priceMonthly,
+        currency: plan.currency,
+        status: SubInvoiceStatus.PENDING,
+        periodStart: now,
+        periodEnd: addOneMonth(now),
+        dueDate: now,
+      },
+    }),
+  );
 
   return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone, capiContext);
 }
@@ -218,20 +221,22 @@ export async function subscribeManual(tenantId: string, planId: string) {
   if (!plan) throw badRequest('Offre invalide');
 
   const now = new Date();
-  const invoice = await prisma.subscriptionInvoice.create({
-    data: {
-      tenantId,
-      subscriptionId: sub.id,
-      planId: plan.id,
-      number: await nextInvoiceNumber(tenantId),
-      amount: plan.priceMonthly,
-      currency: plan.currency,
-      status: SubInvoiceStatus.PENDING,
-      periodStart: now,
-      periodEnd: addOneMonth(now),
-      dueDate: now,
-    },
-  });
+  const invoice = await retryOnDuplicateNumber(async () =>
+    prisma.subscriptionInvoice.create({
+      data: {
+        tenantId,
+        subscriptionId: sub.id,
+        planId: plan.id,
+        number: await nextInvoiceNumber(tenantId),
+        amount: plan.priceMonthly,
+        currency: plan.currency,
+        status: SubInvoiceStatus.PENDING,
+        periodStart: now,
+        periodEnd: addOneMonth(now),
+        dueDate: now,
+      },
+    }),
+  );
   const payment = await prisma.subscriptionPayment.create({
     data: {
       tenantId,
