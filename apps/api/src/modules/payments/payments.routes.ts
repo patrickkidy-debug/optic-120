@@ -3,6 +3,7 @@ import { paymentConfigSchema, collectInfoSchema, PaymentStatus } from '@oculo/sh
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
+import { isProd } from '../../config/env.js';
 import * as paymentService from './payment.service.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 
@@ -65,6 +66,9 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
 
   // Déclencheur manuel de confirmation (mode simulation uniquement).
   app.post('/:id/simulate-callback', async (req, reply) => {
+    // Simulation réservée au hors-production : en prod, seul un webhook réel
+    // (Moneroo/PayTech) peut confirmer un paiement (jamais un appel utilisateur).
+    if (isProd) throw notFound('Ressource introuvable');
     const { id } = req.params as { id: string };
     const body = (req.body ?? {}) as { status?: PaymentStatus };
     const payment = await req.db!.payment.findFirst({ where: { id } });
