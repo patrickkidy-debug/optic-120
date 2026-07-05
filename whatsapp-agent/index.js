@@ -97,9 +97,16 @@ function extractText(message) {
   );
 }
 
-async function handleMessage(sock, jid, text, name) {
+/** Réponses en attente (débounce) par contact. */
+const pending = new Map();
+// Silence à attendre après le dernier message avant de répondre : agrège les
+// messages envoyés d'affilée pour analyser toute la pensée du prospect.
+const DEBOUNCE_MS = 2500;
+
+/** Génère et envoie la réponse en tenant compte de tout l'historique. */
+async function respond(sock, jid, name) {
   const history = histories.get(jid) || [];
-  history.push({ role: 'user', content: text });
+  if (!history.length || history[history.length - 1].role !== 'user') return;
 
   try {
     await sock.presenceSubscribe(jid);
@@ -121,6 +128,27 @@ async function handleMessage(sock, jid, text, name) {
   }
   await sock.sendMessage(jid, { text: reply });
   console.log(`↩️  Réponse envoyée à ${name || jid} (${reply.length} car.)`);
+}
+
+/**
+ * Empile le message et (re)programme la réponse après un court silence.
+ * Si le prospect envoie plusieurs messages d'affilée, le minuteur est
+ * réinitialisé à chaque fois : le bot attend qu'il ait fini, puis répond UNE
+ * seule fois en analysant l'ensemble de la discussion.
+ */
+function queueMessage(sock, jid, text, name) {
+  const history = histories.get(jid) || [];
+  history.push({ role: 'user', content: text });
+  histories.set(jid, history.slice(-HISTORY_LIMIT));
+
+  clearTimeout(pending.get(jid));
+  pending.set(
+    jid,
+    setTimeout(() => {
+      pending.delete(jid);
+      respond(sock, jid, name).catch((e) => console.error('respond:', e?.message || e));
+    }, DEBOUNCE_MS),
+  );
 }
 
 async function start() {
@@ -181,7 +209,7 @@ async function start() {
         if (!text) continue;
         const name = msg.pushName;
         console.log(`📥 Message de ${name || jid} : ${text.slice(0, 80)}`);
-        await handleMessage(sock, jid, text, name);
+        queueMessage(sock, jid, text, name);
       } catch (err) {
         console.error('Erreur traitement message :', err?.message || err);
       }
