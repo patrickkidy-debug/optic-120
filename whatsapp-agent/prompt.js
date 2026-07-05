@@ -45,7 +45,7 @@ Recommande l'offre la mieux adaptée au nombre de magasins du prospect.
 
 ## Contact
 Pour une démonstration gratuite, un devis ou parler directement à un conseiller :
-- 📞 Appel / WhatsApp : +225056609036
+- 📞 Appel / WhatsApp : +2250596609036
 - 🌐 Site : https://oculosaas.com
 Donne ce numéro dès que le prospect veut une démo, veut être rappelé, ou pose une question à laquelle tu ne peux pas répondre.
 
