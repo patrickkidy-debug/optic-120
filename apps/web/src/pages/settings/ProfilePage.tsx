@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -73,12 +73,17 @@ export function ProfilePage() {
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [locBusy, setLocBusy] = useState(false);
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactBusy, setContactBusy] = useState(false);
   const [locHydrated, setLocHydrated] = useState(false);
 
-  // Pré-remplit la situation géographique dès l'arrivée des réglages (une fois).
+  // Pré-remplit situation géographique + contact dès l'arrivée des réglages (une fois).
   useEffect(() => {
     if (branding && !locHydrated) {
       setLocation(branding.location ?? '');
+      setContactPhone(branding.contactPhone ?? '');
+      setContactEmail(branding.contactEmail ?? '');
       setLocHydrated(true);
     }
   }, [branding, locHydrated]);
@@ -138,6 +143,17 @@ export function ProfilePage() {
       alert(apiErrorMessage(e));
     } finally {
       setLocBusy(false);
+    }
+  }
+  async function saveContact() {
+    setContactBusy(true);
+    try {
+      await updateBranding({ contactPhone: contactPhone.trim(), contactEmail: contactEmail.trim() });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setContactBusy(false);
     }
   }
 
@@ -350,6 +366,38 @@ export function ProfilePage() {
                   </Button>
                 </div>
               </Field>
+            </div>
+
+            <div className="mt-4 max-w-2xl border-t pt-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Contact className="h-4 w-4 text-primary" />
+                <h4 className="font-semibold text-content">Contact de l'entreprise</h4>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Téléphone">
+                  <input
+                    className="input"
+                    type="tel"
+                    placeholder="+225 07 00 00 00 00"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                  />
+                </Field>
+                <Field label="Email">
+                  <input
+                    className="input"
+                    type="email"
+                    placeholder="contact@etablissement.com"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <div className="mt-3">
+                <Button onClick={saveContact} loading={contactBusy}>
+                  <Save className="h-4 w-4" /> Enregistrer le contact
+                </Button>
+              </div>
             </div>
 
             <p className="mt-3 text-xs text-content-faint">

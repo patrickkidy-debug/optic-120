@@ -1089,6 +1089,9 @@ export const brandingUpdateSchema = z.object({
   logoUrl: imageData,
   /** Situation géographique (adresse ou lien de carte). */
   location: z.string().max(200).optional(),
+  /** Contact de l'entreprise (affichable sur les documents). */
+  contactPhone: z.string().max(40).optional(),
+  contactEmail: z.string().max(120).optional(),
   invoiceSettings: invoiceSettingsSchema.optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;

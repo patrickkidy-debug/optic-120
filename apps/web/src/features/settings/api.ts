@@ -53,6 +53,8 @@ export interface Branding {
   name: string;
   logoUrl: string | null;
   location: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
   invoiceSettings: InvoiceSettings | null;
 }
 
