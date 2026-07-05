@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
@@ -37,6 +37,7 @@ const METHODS: { value: PaymentMethod; label: string; icon: typeof Banknote; mob
 
 export function PosPage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canQuote = usePermission('optique.quotes.create');
   const pos = usePosStore();
@@ -230,6 +231,9 @@ export function PosPage() {
           onPaid={() => {
             pos.clear();
             setPaySale(null);
+            qc.invalidateQueries({ queryKey: ['dashboard'] });
+            qc.invalidateQueries({ queryKey: ['receivables'] });
+            qc.invalidateQueries({ queryKey: ['sales'] });
           }}
         />
       )}

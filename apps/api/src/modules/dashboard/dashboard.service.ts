@@ -34,14 +34,14 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     prevWeekAgg,
   ] = await Promise.all([
     prisma.sale.aggregate({
-      where: { ...saleBase, createdAt: { gte: startOfToday() } },
+      where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } },
       _sum: { paidAmount: true, totalAmount: true },
     }),
     prisma.sale.aggregate({
-      where: { ...saleBase, createdAt: { gte: startOfMonth() } },
+      where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfMonth() } },
       _sum: { paidAmount: true, totalAmount: true },
     }),
-    prisma.sale.count({ where: { ...saleBase, createdAt: { gte: startOfToday() } } }),
+    prisma.sale.count({ where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } } }),
     prisma.customer.count({ where: { tenantId } }),
     prisma.stockItem.findMany({
       where: { tenantId, ...branchFilter },
@@ -67,7 +67,7 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       _sum: { amount: true },
     }),
     // Nombre de ventes du mois (pour le panier moyen).
-    prisma.sale.count({ where: { ...saleBase, createdAt: { gte: startOfMonth() } } }),
+    prisma.sale.count({ where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfMonth() } } }),
     // Nouveaux clients ce mois.
     prisma.customer.count({ where: { tenantId, createdAt: { gte: startOfMonth() } } }),
     // Top 5 produits du mois (par chiffre d'affaires).

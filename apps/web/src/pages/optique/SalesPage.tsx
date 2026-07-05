@@ -12,6 +12,8 @@ import {
   Trash2,
   Loader2,
   Banknote,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 import {
   listSales,
@@ -26,6 +28,7 @@ import {
 } from '../../features/optique/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
+import { downloadCsv } from '../../lib/csv';
 import { VAT_RATE } from '@oculo/shared-types';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
@@ -58,6 +61,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const user = useAuthStore((s) => s.user);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -65,15 +69,23 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     queryFn: () => listSales({ type: kind }),
   });
 
+  // Rafraîchit les vues impactées par un changement de vente (liste + tableau
+  // de bord + créances).
+  function refreshSalesViews() {
+    qc.invalidateQueries({ queryKey: ['sales'] });
+    qc.invalidateQueries({ queryKey: ['dashboard'] });
+    qc.invalidateQueries({ queryKey: ['receivables'] });
+  }
+
   const cancelMut = useMutation({
     mutationFn: cancelSale,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['sales'] }),
+    onSuccess: refreshSalesViews,
     onError: (e) => alert(apiErrorMessage(e)),
   });
   const convertMut = useMutation({
     mutationFn: convertQuote,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['sales'] });
+      refreshSalesViews();
       alert('Devis converti en vente.');
     },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -81,7 +93,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const returnMut = useMutation({
     mutationFn: createSaleReturn,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['sales'] });
+      refreshSalesViews();
       alert('Retour enregistré : stock réapprovisionné et avoir créé.');
     },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -108,17 +120,137 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     }
   }
 
+  const clientName = (s: SaleListItem) =>
+    s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '';
+
+  /** Récupère TOUT l'historique (toutes les pages) pour l'export. */
+  async function fetchAllSales(): Promise<SaleListItem[]> {
+    const all: SaleListItem[] = [];
+    let page = 1;
+    for (;;) {
+      const res = await listSales({ type: kind, page, pageSize: 100 });
+      all.push(...res.items);
+      if (all.length >= res.total || res.items.length === 0) break;
+      page += 1;
+    }
+    return all;
+  }
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const rows = await fetchAllSales();
+      downloadCsv(
+        `${isQuote ? 'devis' : 'ventes'}_${new Date().toISOString().slice(0, 10)}.csv`,
+        ['N°', 'Date', 'Client', 'Statut', 'Total', 'Payé', 'Reste'],
+        rows.map((s) => [
+          s.number,
+          new Date(s.createdAt).toLocaleString('fr-FR'),
+          clientName(s),
+          STATUS_LABEL[s.status] ?? s.status,
+          Number(s.totalAmount),
+          Number(s.paidAmount),
+          Number(s.totalAmount) - Number(s.paidAmount),
+        ]),
+      );
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function exportPdf() {
+    setExporting(true);
+    try {
+      const rows = await fetchAllSales();
+      const esc = (v: unknown) =>
+        String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const money = (n: number) =>
+        `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)} FCFA`;
+      const total = rows
+        .filter((s) => s.status !== 'CANCELLED')
+        .reduce((sum, s) => sum + Number(s.paidAmount), 0);
+      const title = isQuote ? 'Historique des devis' : 'Historique des ventes';
+      const body = rows
+        .map(
+          (s) => `<tr>
+            <td>${esc(s.number)}</td>
+            <td>${esc(new Date(s.createdAt).toLocaleDateString('fr-FR'))}</td>
+            <td>${esc(clientName(s) || '—')}</td>
+            <td>${esc(STATUS_LABEL[s.status] ?? s.status)}</td>
+            <td style="text-align:right">${money(Number(s.totalAmount))}</td>
+            <td style="text-align:right">${money(Number(s.paidAmount))}</td>
+          </tr>`,
+        )
+        .join('');
+      const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8" />
+        <title>${title}</title>
+        <style>
+          @page { size: A4; margin: 14mm; }
+          body { font-family: -apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:#1e293b; padding:20px; }
+          h1 { font-size:20px; margin:0 0 2px; color:#0d9488; }
+          .muted { color:#64748b; font-size:12px; }
+          table { width:100%; border-collapse:collapse; margin-top:16px; font-size:12px; }
+          th { background:#0d9488; color:#fff; padding:8px 10px; text-align:left; }
+          td { padding:7px 10px; border-bottom:1px solid #e2e8f0; }
+          tfoot td { font-weight:700; border-top:2px solid #0d9488; }
+        </style></head><body>
+        <h1>${esc(user?.tenantName ?? 'OculoSaaS')}</h1>
+        <div class="muted">${title} — édité le ${new Date().toLocaleDateString('fr-FR')} · ${rows.length} lignes</div>
+        <table>
+          <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Statut</th>
+            <th style="text-align:right">Total</th><th style="text-align:right">Payé</th></tr></thead>
+          <tbody>${body}</tbody>
+          <tfoot><tr><td colspan="5" style="text-align:right">Total encaissé</td>
+            <td style="text-align:right">${money(total)}</td></tr></tfoot>
+        </table></body></html>`;
+      const win = window.open('', '_blank', 'width=900,height=1100');
+      if (!win) {
+        alert('Veuillez autoriser les fenêtres pop-up pour générer le PDF.');
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => {
+        win.focus();
+        win.print();
+      };
+      setTimeout(() => {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          /* déjà imprimé */
+        }
+      }, 600);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title={isQuote ? 'Devis' : 'Historique des ventes'}
         subtitle={isQuote ? 'Devis en attente de conversion' : 'Toutes les ventes du magasin'}
         actions={
-          isQuote && canQuote ? (
-            <Button onClick={() => setQuoteOpen(true)}>
-              <Plus className="h-4 w-4" /> Nouveau devis
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={exportCsv} loading={exporting}>
+              <FileSpreadsheet className="h-4 w-4" /> CSV
             </Button>
-          ) : undefined
+            <Button variant="outline" onClick={exportPdf} loading={exporting}>
+              <Printer className="h-4 w-4" /> PDF
+            </Button>
+            {isQuote && canQuote && (
+              <Button onClick={() => setQuoteOpen(true)}>
+                <Plus className="h-4 w-4" /> Nouveau devis
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -264,7 +396,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           onClose={() => setPaySale(null)}
           onPaid={() => {
             setPaySale(null);
-            qc.invalidateQueries({ queryKey: ['sales'] });
+            refreshSalesViews();
           }}
         />
       )}

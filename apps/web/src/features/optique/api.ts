@@ -156,7 +156,9 @@ export async function createSale(input: SaleCreateInput) {
   return data.sale;
 }
 
-export async function listSales(params: { type?: string; branchId?: string; page?: number } = {}) {
+export async function listSales(
+  params: { type?: string; branchId?: string; page?: number; pageSize?: number } = {},
+) {
   const { data } = await api.get('/sales', { params });
   return data as { items: SaleListItem[]; total: number; page: number; pageSize: number };
 }

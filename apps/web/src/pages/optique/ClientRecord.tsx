@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Glasses, Plus, Printer, ReceiptText, FileText, Star } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
 import { getCustomer, createPrescription, type Prescription } from '../../features/optique/api';
-import { usePermission } from '../../store/auth';
+import { printPrescription, type PrescriptionPatient } from '../../features/optique/prescriptionDocument';
+import type { CompanyInfo } from '../../features/optique/saleDocument';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate, formatCurrency } from '../../lib/format';
@@ -14,9 +16,19 @@ import { Modal, Button, Badge, PageLoader, Field } from '../../components/ui';
 export function ClientRecord({ customerId, onClose }: { customerId: string; onClose: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const canCreate = usePermission('optique.prescriptions.create');
   const canQuote = usePermission('optique.quotes.create');
   const [adding, setAdding] = useState(false);
+
+  const company: CompanyInfo = {
+    name: user?.tenantName ?? 'OculoSaaS',
+    logoUrl: user?.tenantLogoUrl,
+    location: user?.tenantLocation,
+    contactPhone: user?.tenantContactPhone,
+    contactEmail: user?.tenantContactEmail,
+    ...user?.tenantInvoiceSettings,
+  };
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', customerId],
@@ -82,7 +94,12 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
             ) : (
               <div className="space-y-3">
                 {customer.prescriptions.map((p) => (
-                  <PrescriptionCard key={p.id} rx={p} />
+                  <PrescriptionCard
+                    key={p.id}
+                    rx={p}
+                    patient={{ firstName: customer.firstName, lastName: customer.lastName, phone: customer.phone }}
+                    company={company}
+                  />
                 ))}
               </div>
             )}
@@ -111,14 +128,26 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
   );
 }
 
-function PrescriptionCard({ rx }: { rx: Prescription }) {
+function PrescriptionCard({
+  rx,
+  patient,
+  company,
+}: {
+  rx: Prescription;
+  patient: PrescriptionPatient;
+  company: CompanyInfo;
+}) {
   return (
     <div className="rounded-xl border p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-medium text-content">{formatDate(rx.date)}</span>
         <div className="flex items-center gap-2">
           {rx.lensType && <Badge tone="info">{rx.lensType}</Badge>}
-          <button onClick={() => window.print()} className="btn-ghost h-7 w-7 rounded-lg p-0" title="Imprimer">
+          <button
+            onClick={() => printPrescription(rx, patient, company)}
+            className="btn-ghost h-7 w-7 rounded-lg p-0"
+            title="Imprimer l'ordonnance"
+          >
             <Printer className="h-3.5 w-3.5" />
           </button>
         </div>
