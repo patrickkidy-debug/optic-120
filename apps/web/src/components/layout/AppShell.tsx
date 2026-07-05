@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { EmailVerifyBanner } from '../EmailVerifyBanner';
 import { TrialBanner } from '../TrialBanner';
+import { PwaControls } from '../PwaControls';
 import { SupportChatWidget } from '../SupportChatWidget';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
@@ -81,6 +82,7 @@ export function AppShell() {
       </div>
 
       <div className="lg:pl-64">
+        <PwaControls />
         <Topbar />
         <TrialBanner />
         <EmailVerifyBanner />
