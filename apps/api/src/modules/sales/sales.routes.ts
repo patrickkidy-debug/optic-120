@@ -37,6 +37,37 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ items, total, page, pageSize });
   });
 
+  // Créances : ventes non soldées (solde restant dû), pour le suivi des
+  // encaissements échelonnés. Route statique déclarée avant `/:id`.
+  app.get('/receivables', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string };
+    const where: Record<string, unknown> = {
+      type: SaleType.SALE,
+      status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+    };
+    if (q.branchId) where.branchId = q.branchId;
+    const sales = await req.db!.sale.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      include: { customer: true, branch: true },
+    });
+    const items = sales
+      .map((s) => ({
+        id: s.id,
+        number: s.number,
+        customer: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : null,
+        customerPhone: s.customer?.phone ?? null,
+        branch: s.branch.name,
+        total: Number(s.totalAmount),
+        paid: Number(s.paidAmount),
+        balance: Number(s.totalAmount) - Number(s.paidAmount),
+        createdAt: s.createdAt,
+      }))
+      .filter((s) => s.balance > 0);
+    const totalOutstanding = items.reduce((sum, s) => sum + s.balance, 0);
+    return reply.send({ totalOutstanding, count: items.length, items });
+  });
+
   app.get('/:id', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const sale = await req.db!.sale.findFirst({

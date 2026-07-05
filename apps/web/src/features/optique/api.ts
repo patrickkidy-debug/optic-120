@@ -234,6 +234,31 @@ export async function paymentStatus(paymentId: string) {
   return data as { status: string; amount: number; method: string };
 }
 
+export interface Receivable {
+  id: string;
+  number: string;
+  customer: string | null;
+  customerPhone: string | null;
+  branch: string;
+  total: number;
+  paid: number;
+  balance: number;
+  createdAt: string;
+}
+
+export interface ReceivablesData {
+  totalOutstanding: number;
+  count: number;
+  items: Receivable[];
+}
+
+export async function listReceivables(branchId?: string): Promise<ReceivablesData> {
+  const { data } = await api.get<ReceivablesData>('/sales/receivables', {
+    params: branchId ? { branchId } : {},
+  });
+  return data;
+}
+
 export async function simulatePayment(paymentId: string, status: 'SUCCESS' | 'FAILED' = 'SUCCESS') {
   const { data } = await api.post(`/payments/${paymentId}/simulate-callback`, { status });
   return data as { ok: boolean; status: string };
