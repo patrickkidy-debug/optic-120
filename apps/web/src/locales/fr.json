@@ -34,7 +34,8 @@
     "payments": "Paiements",
     "audit": "Journal d'activité",
     "support": "Aide & support",
-    "profile": "Mon profil"
+    "profile": "Mon profil",
+    "settingsShortcut": "Réglages"
   },
   "common": {
     "save": "Enregistrer",

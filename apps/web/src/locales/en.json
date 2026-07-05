@@ -34,7 +34,8 @@
     "payments": "Payments",
     "audit": "Activity log",
     "support": "Help & support",
-    "profile": "My profile"
+    "profile": "My profile",
+    "settingsShortcut": "Settings"
   },
   "common": {
     "save": "Save",

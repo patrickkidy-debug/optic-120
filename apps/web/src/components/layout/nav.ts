@@ -25,6 +25,7 @@ import {
   Wrench,
   BellRing,
   Barcode,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -94,6 +95,7 @@ export const NAV: NavGroup[] = [
       { to: '/parametres/paiements', labelKey: 'nav.payments', icon: CreditCard, permission: 'settings.payments.view' },
       { to: '/parametres/journal', labelKey: 'nav.audit', icon: ScrollText, permission: 'audit.logs.view' },
       { to: '/aide', labelKey: 'nav.support', icon: LifeBuoy },
+      { to: '/parametres/profil', labelKey: 'nav.settingsShortcut', icon: Settings },
     ],
   },
   {
