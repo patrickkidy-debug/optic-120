@@ -555,6 +555,16 @@ export async function startTwoFactorSetup(
 ): Promise<{ qrDataUrl: string; secret: string }> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw unauthorized();
+  // Ne jamais réinitialiser en silence une 2FA déjà active : sans ce garde,
+  // ouvrir la page de configuration remplacerait le secret et remettrait
+  // `twoFactorEnabled` à false, désactivant de fait la protection existante.
+  // La reconfiguration passe donc par une désactivation explicite (mot de passe
+  // + code, cf. disableTwoFactor).
+  if (user.twoFactorEnabled) {
+    throw badRequest(
+      'La double authentification est déjà activée. Désactivez-la d\'abord pour la reconfigurer.',
+    );
+  }
   const secret = generateTotpSecret();
   await prisma.user.update({
     where: { id: userId },
