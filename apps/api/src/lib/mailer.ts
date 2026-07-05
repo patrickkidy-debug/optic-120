@@ -73,7 +73,52 @@ class SmtpMailer implements Mailer {
   }
 }
 
-export const mailer: Mailer = env.MAIL_DRIVER === 'smtp' ? new SmtpMailer() : new ConsoleMailer();
+/**
+ * Driver HTTP (Resend, https://resend.com). Envoie les emails via l'API HTTPS —
+ * indispensable sur les hébergeurs qui bloquent le SMTP sortant (ex. Render, où
+ * les ports 587/465 expirent). Un timeout borne la requête pour ne jamais bloquer.
+ */
+class ResendMailer implements Mailer {
+  private from = (env.MAIL_FROM || 'OculoSaaS <no-reply@oculosaas.com>').trim();
+
+  async send(msg: MailMessage): Promise<void> {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: this.from,
+        to: [msg.to],
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Resend ${res.status}: ${body.slice(0, 300)}`);
+    }
+  }
+
+  async verify(): Promise<void> {
+    if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY manquant');
+    const res = await fetch('https://api.resend.com/domains', {
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`Resend API a répondu ${res.status}`);
+  }
+}
+
+export const mailer: Mailer =
+  env.MAIL_DRIVER === 'resend'
+    ? new ResendMailer()
+    : env.MAIL_DRIVER === 'smtp'
+      ? new SmtpMailer()
+      : new ConsoleMailer();
 
 /**
  * Vérifie la configuration email au démarrage (non bloquant) : rend visible dans
@@ -83,13 +128,19 @@ export const mailer: Mailer = env.MAIL_DRIVER === 'smtp' ? new SmtpMailer() : ne
 export async function verifyMailerConnection(): Promise<void> {
   try {
     await mailer.verify();
-    if (env.MAIL_DRIVER === 'smtp') {
+    if (env.MAIL_DRIVER === 'resend') {
+      logger.info({ from: (env.MAIL_FROM || '').trim() }, '✉️  Mailer Resend : connexion OK');
+    } else if (env.MAIL_DRIVER === 'smtp') {
       logger.info({ host: env.SMTP_HOST, from: resolveFrom() }, '✉️  Mailer SMTP : connexion OK');
     }
   } catch (err) {
-    logger.error(
-      { err, host: env.SMTP_HOST, user: env.SMTP_USER },
-      '✉️  Mailer SMTP : échec de connexion — vérifiez SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD',
-    );
+    if (env.MAIL_DRIVER === 'resend') {
+      logger.error({ err }, '✉️  Mailer Resend : échec — vérifiez RESEND_API_KEY');
+    } else {
+      logger.error(
+        { err, host: env.SMTP_HOST, user: env.SMTP_USER },
+        '✉️  Mailer SMTP : échec de connexion — vérifiez SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD',
+      );
+    }
   }
 }

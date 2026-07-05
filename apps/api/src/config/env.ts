@@ -31,12 +31,15 @@ const envSchema = z.object({
     .string()
     .min(16, 'ENCRYPTION_KEY doit faire au moins 16 caractères'),
 
-  MAIL_DRIVER: z.enum(['console', 'smtp']).default('console'),
+  // 'resend' = envoi par HTTPS (recommandé : Render bloque le SMTP sortant).
+  MAIL_DRIVER: z.enum(['console', 'smtp', 'resend']).default('console'),
   MAIL_FROM: z.string().default('OculoSaaS <no-reply@oculosaas.africa>'),
   SMTP_HOST: z.string().optional().default(''),
   SMTP_PORT: z.coerce.number().optional().default(587),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASSWORD: z.string().optional().default(''),
+  // Clé API Resend (https://resend.com) pour l'envoi d'emails par HTTPS.
+  RESEND_API_KEY: z.string().optional().default(''),
 
   MAX_FAILED_LOGINS: z.coerce.number().default(5),
   ACCOUNT_LOCK_MINUTES: z.coerce.number().default(15),
