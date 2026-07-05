@@ -23,6 +23,8 @@ model Tenant {
   name          String
   slug          String       @unique
   logoUrl       String?
+  // Situation géographique de l'établissement (adresse ou lien de carte).
+  location      String?
   // Personnalisation des documents (factures/devis) : couleur d'accent, mentions
   // légales, note de bas de page, validité des devis. null = valeurs par défaut.
   invoiceSettings Json?

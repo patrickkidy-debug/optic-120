@@ -52,6 +52,7 @@ export interface AuditLogDto {
 export interface Branding {
   name: string;
   logoUrl: string | null;
+  location: string | null;
   invoiceSettings: InvoiceSettings | null;
 }
 

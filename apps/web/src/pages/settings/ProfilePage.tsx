@@ -71,6 +71,17 @@ export function ProfilePage() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
   const [name, setName] = useState('');
+  const [location, setLocation] = useState('');
+  const [locBusy, setLocBusy] = useState(false);
+  const [locHydrated, setLocHydrated] = useState(false);
+
+  // Pré-remplit la situation géographique dès l'arrivée des réglages (une fois).
+  useEffect(() => {
+    if (branding && !locHydrated) {
+      setLocation(branding.location ?? '');
+      setLocHydrated(true);
+    }
+  }, [branding, locHydrated]);
 
   async function pickPhoto(file: File) {
     setPhotoBusy(true);
@@ -117,6 +128,17 @@ export function ProfilePage() {
     await updateBranding({ name: name.trim() });
     qc.invalidateQueries({ queryKey: ['branding'] });
     setName('');
+  }
+  async function saveLocation() {
+    setLocBusy(true);
+    try {
+      await updateBranding({ location: location.trim() });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setLocBusy(false);
+    }
   }
 
   const themes: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
@@ -313,6 +335,23 @@ export function ProfilePage() {
                 <Logo />
               </div>
             </div>
+
+            <div className="mt-4 max-w-2xl">
+              <Field label="Situation géographique">
+                <div className="flex gap-2">
+                  <input
+                    className="input"
+                    placeholder="Adresse ou lien Google Maps (ex : Cocody, Rue des Jardins, Abidjan)"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+                  <Button onClick={saveLocation} loading={locBusy}>
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Field>
+            </div>
+
             <p className="mt-3 text-xs text-content-faint">
               Le logo et le nom apparaissent dans la barre latérale et l'en-tête de votre espace.
             </p>

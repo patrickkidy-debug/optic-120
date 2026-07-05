@@ -1087,6 +1087,8 @@ export type InvoiceSettings = z.infer<typeof invoiceSettingsSchema>;
 export const brandingUpdateSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   logoUrl: imageData,
+  /** Situation géographique (adresse ou lien de carte). */
+  location: z.string().max(200).optional(),
   invoiceSettings: invoiceSettingsSchema.optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;

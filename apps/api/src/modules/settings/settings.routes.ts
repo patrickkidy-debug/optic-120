@@ -12,12 +12,13 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/branding', { preHandler: requirePermission('settings.branches.view') }, async (req, reply) => {
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.auth!.tenantId },
-      select: { name: true, logoUrl: true, invoiceSettings: true },
+      select: { name: true, logoUrl: true, location: true, invoiceSettings: true },
     });
     return reply.send({
       branding: {
         name: tenant?.name ?? '',
         logoUrl: tenant?.logoUrl ?? null,
+        location: tenant?.location ?? null,
         invoiceSettings: (tenant?.invoiceSettings as unknown) ?? null,
       },
     });
@@ -30,6 +31,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       data: {
         name: input.name ?? undefined,
         logoUrl: input.logoUrl === undefined ? undefined : input.logoUrl || null,
+        location: input.location === undefined ? undefined : input.location || null,
         // Remplacement complet du bloc de personnalisation quand fourni ;
         // un objet vide efface les réglages (retour aux valeurs par défaut).
         invoiceSettings:
@@ -39,12 +41,13 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
               ? Prisma.DbNull
               : input.invoiceSettings,
       },
-      select: { name: true, logoUrl: true, invoiceSettings: true },
+      select: { name: true, logoUrl: true, location: true, invoiceSettings: true },
     });
     return reply.send({
       branding: {
         name: tenant.name,
         logoUrl: tenant.logoUrl,
+        location: tenant.location,
         invoiceSettings: (tenant.invoiceSettings as unknown) ?? null,
       },
     });
