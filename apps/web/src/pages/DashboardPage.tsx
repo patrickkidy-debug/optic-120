@@ -11,7 +11,8 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { Banknote, TrendingUp, ShoppingBag, AlertTriangle, Receipt, Building2, Trophy, Wallet, Users } from 'lucide-react';
+import { Banknote, TrendingUp, ShoppingBag, AlertTriangle, Receipt, Building2, Trophy, Wallet, Users, Package, ArrowUp, ArrowDown, UserPlus, ShoppingCart, type LucideIcon } from 'lucide-react';
+import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
@@ -37,6 +38,179 @@ function statusTone(status: string) {
   if (status === 'PARTIALLY_PAID' || status === 'CONFIRMED') return 'warning' as const;
   if (status === 'CANCELLED') return 'danger' as const;
   return 'neutral' as const;
+}
+
+/** Variation en % entre une valeur courante et précédente (null si non pertinent). */
+function pctDelta(current: number, prev: number): number | null {
+  if (prev <= 0) return current > 0 ? 100 : null;
+  return Math.round(((current - prev) / prev) * 100);
+}
+
+function DeltaChip({ pct, label }: { pct: number | null; label?: string }) {
+  if (pct === null) return null;
+  const up = pct >= 0;
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold',
+        up ? 'bg-[color:var(--success)]/15 text-success' : 'bg-[color:var(--danger)]/15 text-danger',
+      )}
+    >
+      {up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+      {Math.abs(pct)}%{label ? <span className="ml-1 font-normal text-content-faint">{label}</span> : null}
+    </span>
+  );
+}
+
+/** Mini graphe en ligne (tendance), tracé en SVG, dégradé de marque. */
+function Sparkline({ data }: { data: number[] }) {
+  if (data.length < 2) return null;
+  const max = Math.max(1, ...data);
+  const pts = data
+    .map((v, i) => `${(i / (data.length - 1)) * 100},${30 - (v / max) * 26 - 2}`)
+    .join(' ');
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-8 w-full">
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#7c3aed" />
+          <stop offset="1" stopColor="#ec4899" />
+        </linearGradient>
+      </defs>
+      <polyline
+        points={pts}
+        fill="none"
+        stroke="url(#sparkGrad)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const KPI_TONES: Record<string, string> = {
+  primary: 'from-primary/20 to-primary/5 text-primary',
+  success: 'from-[color:var(--success)]/20 to-[color:var(--success)]/[0.04] text-success',
+  accent: 'from-accent/20 to-accent/5 text-accent',
+  danger: 'from-[color:var(--danger)]/20 to-[color:var(--danger)]/[0.04] text-danger',
+};
+
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  tone = 'primary',
+  delta,
+  deltaLabel,
+  spark,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone?: keyof typeof KPI_TONES;
+  delta?: number | null;
+  deltaLabel?: string;
+  spark?: number[];
+}) {
+  return (
+    <div className="card group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-lg">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm text-content-muted">{label}</p>
+          <p className="mt-1 font-display text-2xl font-bold text-content">{value}</p>
+          {delta !== undefined && (
+            <div className="mt-2">
+              <DeltaChip pct={delta ?? null} label={deltaLabel} />
+            </div>
+          )}
+        </div>
+        <span
+          className={clsx(
+            'grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br',
+            KPI_TONES[tone],
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      {spark && <div className="-mb-1 mt-3 opacity-80">{<Sparkline data={spark} />}</div>}
+    </div>
+  );
+}
+
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  tone = 'primary',
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone?: keyof typeof KPI_TONES;
+}) {
+  return (
+    <div className="card flex items-center gap-3 p-4">
+      <span
+        className={clsx(
+          'grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br',
+          KPI_TONES[tone],
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-xs text-content-muted">{label}</p>
+        <p className="font-display text-lg font-bold text-content">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function TopProductsCard({
+  products,
+}: {
+  products: { name: string; revenue: number; quantity: number }[];
+}) {
+  const max = Math.max(1, ...products.map((p) => p.revenue));
+  return (
+    <div className="card p-5 lg:col-span-2">
+      <div className="mb-4 flex items-center gap-2">
+        <Package className="h-4 w-4 text-primary" />
+        <h3 className="font-display font-bold text-content">Top produits du mois</h3>
+      </div>
+      {products.length === 0 ? (
+        <div className="grid h-40 place-items-center text-sm text-content-muted">
+          Aucune vente enregistrée ce mois-ci.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {products.map((p, i) => (
+            <div key={`${p.name}-${i}`}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                <span className="truncate text-content">
+                  {i + 1}. {p.name}
+                </span>
+                <span className="shrink-0 font-semibold text-content">
+                  {formatCurrency(p.revenue)}
+                  <span className="ml-2 text-xs font-normal text-content-faint">
+                    {p.quantity} vendu{p.quantity > 1 ? 's' : ''}
+                  </span>
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-surface-3">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                  style={{ width: `${(p.revenue / max) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function DashboardPage() {
@@ -102,19 +276,38 @@ export function DashboardPage() {
         <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
       </div>
 
+      {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Banknote} label={t('dashboard.todayRevenue')} value={formatCurrency(data.todayRevenue)} tone="primary" />
-        <StatCard icon={TrendingUp} label={t('dashboard.monthRevenue')} value={formatCurrency(data.monthRevenue)} tone="success" />
-        <StatCard icon={ShoppingBag} label={t('dashboard.sales')} value={data.todaySalesCount} tone="accent" />
-        <StatCard
-          icon={AlertTriangle}
-          label={t('dashboard.lowStock')}
-          value={data.lowStockCount}
-          tone={data.lowStockCount > 0 ? 'danger' : 'primary'}
+        <KpiCard icon={Banknote} label="Chiffre d'affaires du jour" value={formatCurrency(data.todayRevenue)} tone="primary" />
+        <KpiCard
+          icon={TrendingUp}
+          label="Chiffre d'affaires du mois"
+          value={formatCurrency(data.monthRevenue)}
+          tone="success"
+          delta={pctDelta(data.weekRevenue, data.prevWeekRevenue)}
+          deltaLabel="vs 7 j préc."
+          spark={data.revenueByDay.map((d) => d.revenue)}
         />
+        <KpiCard icon={ShoppingBag} label="Ventes du jour" value={String(data.todaySalesCount)} tone="accent" />
+        <KpiCard icon={ShoppingCart} label="Panier moyen (mois)" value={formatCurrency(data.avgBasket)} tone="primary" />
       </div>
 
       <ForecastPanel />
+
+      {/* Analyses : top produits + indicateurs clés */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <TopProductsCard products={data.topProducts} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1">
+          <MiniStat icon={UserPlus} label="Nouveaux clients (mois)" value={String(data.newCustomersMonth)} tone="accent" />
+          <MiniStat icon={Users} label="Clients au total" value={String(data.customersCount)} tone="primary" />
+          <MiniStat
+            icon={AlertTriangle}
+            label="Stocks faibles"
+            value={String(data.lowStockCount)}
+            tone={data.lowStockCount > 0 ? 'danger' : 'success'}
+          />
+        </div>
+      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">

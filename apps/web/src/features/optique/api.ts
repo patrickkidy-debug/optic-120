@@ -258,6 +258,12 @@ export interface DashboardData {
   }[];
   revenueByDay: { date: string; revenue: number }[];
   paymentBreakdown: { method: string; total: number }[];
+  monthSalesCount: number;
+  avgBasket: number;
+  newCustomersMonth: number;
+  weekRevenue: number;
+  prevWeekRevenue: number;
+  topProducts: { name: string; revenue: number; quantity: number }[];
 }
 
 export async function getDashboard(branchId?: string): Promise<DashboardData> {

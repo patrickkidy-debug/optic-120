@@ -28,6 +28,10 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     recentSales,
     weekSales,
     paymentGroups,
+    monthCount,
+    newCustomersMonth,
+    topProductGroups,
+    prevWeekAgg,
   ] = await Promise.all([
     prisma.sale.aggregate({
       where: { ...saleBase, createdAt: { gte: startOfToday() } },
@@ -62,6 +66,32 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       where: { tenantId, status: 'SUCCESS', createdAt: { gte: startOfMonth() } },
       _sum: { amount: true },
     }),
+    // Nombre de ventes du mois (pour le panier moyen).
+    prisma.sale.count({ where: { ...saleBase, createdAt: { gte: startOfMonth() } } }),
+    // Nouveaux clients ce mois.
+    prisma.customer.count({ where: { tenantId, createdAt: { gte: startOfMonth() } } }),
+    // Top 5 produits du mois (par chiffre d'affaires).
+    prisma.saleItem.groupBy({
+      by: ['productId'],
+      where: {
+        sale: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfMonth() } },
+      },
+      _sum: { lineTotal: true, quantity: true },
+      orderBy: { _sum: { lineTotal: 'desc' } },
+      take: 5,
+    }),
+    // CA de la semaine précédente (pour la tendance 7 jours).
+    prisma.sale.aggregate({
+      where: {
+        ...saleBase,
+        status: { in: PAID_LIKE },
+        createdAt: {
+          gte: new Date(Date.now() - 13 * 24 * 3600 * 1000),
+          lt: new Date(Date.now() - 6 * 24 * 3600 * 1000),
+        },
+      },
+      _sum: { paidAmount: true },
+    }),
   ]);
 
   // Série des 7 derniers jours.
@@ -78,6 +108,23 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     const idx = indexByDate.get(key);
     if (idx !== undefined) days[idx].revenue += Number(s.paidAmount);
   }
+
+  const weekRevenue = days.reduce((sum, d) => sum + d.revenue, 0);
+  const prevWeekRevenue = Number(prevWeekAgg._sum.paidAmount ?? 0);
+  const monthRevenueValue = Number(monthAgg._sum.paidAmount ?? 0);
+  const avgBasket = monthCount > 0 ? Math.round(monthRevenueValue / monthCount) : 0;
+
+  const topProductNames = topProductGroups.length
+    ? await prisma.product.findMany({
+        where: { tenantId, id: { in: topProductGroups.map((g) => g.productId) } },
+        select: { id: true, name: true },
+      })
+    : [];
+  const topProducts = topProductGroups.map((g) => ({
+    name: topProductNames.find((p) => p.id === g.productId)?.name ?? '—',
+    revenue: Number(g._sum.lineTotal ?? 0),
+    quantity: Number(g._sum.quantity ?? 0),
+  }));
 
   return {
     todayRevenue: Number(todayAgg._sum.paidAmount ?? 0),
@@ -101,6 +148,12 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       method: g.method,
       total: Number(g._sum.amount ?? 0),
     })),
+    monthSalesCount: monthCount,
+    avgBasket,
+    newCustomersMonth,
+    weekRevenue,
+    prevWeekRevenue,
+    topProducts,
   };
 }
 
