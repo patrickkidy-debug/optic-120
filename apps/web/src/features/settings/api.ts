@@ -72,6 +72,9 @@ export async function updateBranding(input: BrandingUpdateInput): Promise<Brandi
       ...user,
       tenantName: data.branding.name,
       tenantLogoUrl: data.branding.logoUrl,
+      tenantLocation: data.branding.location,
+      tenantContactPhone: data.branding.contactPhone,
+      tenantContactEmail: data.branding.contactEmail,
       tenantInvoiceSettings: data.branding.invoiceSettings,
     });
   }

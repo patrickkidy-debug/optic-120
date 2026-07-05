@@ -493,6 +493,9 @@ function InvoiceCustomizationCard() {
     printSaleDocument(sample, {
       name: branding?.name || user?.tenantName || 'Votre établissement',
       logoUrl: branding?.logoUrl ?? user?.tenantLogoUrl,
+      location: branding?.location ?? user?.tenantLocation,
+      contactPhone: branding?.contactPhone ?? user?.tenantContactPhone,
+      contactEmail: branding?.contactEmail ?? user?.tenantContactEmail,
       ...buildSettings(),
     });
   }

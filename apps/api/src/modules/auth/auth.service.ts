@@ -74,6 +74,9 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     allBranches: user.role.allBranches,
     tenantName: user.tenant.name,
     tenantLogoUrl: user.tenant.logoUrl,
+    tenantLocation: user.tenant.location,
+    tenantContactPhone: user.tenant.contactPhone,
+    tenantContactEmail: user.tenant.contactEmail,
     tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
     emailVerified: user.emailVerifiedAt != null,
   };

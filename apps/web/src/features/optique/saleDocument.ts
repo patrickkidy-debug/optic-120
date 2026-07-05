@@ -11,6 +11,11 @@ export interface CompanyInfo {
   footerNote?: string | null;
   /** Validité d'un devis en jours (défaut 30). */
   quoteValidityDays?: number | null;
+  /** Situation géographique de l'établissement (adresse ou lien de carte). */
+  location?: string | null;
+  /** Contact de l'entreprise, affiché sous l'en-tête. */
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -94,6 +99,13 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     .map((l) => esc(l))
     .join(' · ');
 
+  const contactLine = [
+    company.contactPhone ? `Tél : ${esc(company.contactPhone)}` : '',
+    company.contactEmail ? `Email : ${esc(company.contactEmail)}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   const validityDays =
     company.quoteValidityDays && company.quoteValidityDays > 0 ? company.quoteValidityDays : 30;
   const paymentBlock = isQuote
@@ -123,6 +135,8 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
         ${logo}
         <div style="margin-top:8px;font-size:13px;font-weight:600;color:#334155;">${esc(sale.branch.name)}</div>
         ${branchLines ? `<div style="font-size:12px;color:#64748b;">${branchLines}</div>` : ''}
+        ${company.location ? `<div style="font-size:12px;color:#64748b;">${esc(company.location)}</div>` : ''}
+        ${contactLine ? `<div style="font-size:12px;color:#64748b;">${contactLine}</div>` : ''}
         ${
           company.legalInfo
             ? `<div style="margin-top:4px;font-size:11px;color:#94a3b8;white-space:pre-line;">${esc(company.legalInfo)}</div>`

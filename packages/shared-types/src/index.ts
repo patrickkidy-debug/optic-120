@@ -1115,6 +1115,10 @@ export interface AuthUser {
   allBranches: boolean;
   tenantName: string;
   tenantLogoUrl: string | null;
+  /** Situation géographique + contact de l'établissement (documents). */
+  tenantLocation: string | null;
+  tenantContactPhone: string | null;
+  tenantContactEmail: string | null;
   /** Personnalisation des factures/devis (couleur, mentions légales…). */
   tenantInvoiceSettings: InvoiceSettings | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
