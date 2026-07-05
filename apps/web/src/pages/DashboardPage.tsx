@@ -284,21 +284,21 @@ export function DashboardPage() {
           label="Chiffre d'affaires du mois"
           value={formatCurrency(data.monthRevenue)}
           tone="success"
-          delta={pctDelta(data.weekRevenue, data.prevWeekRevenue)}
+          delta={pctDelta(data.weekRevenue ?? 0, data.prevWeekRevenue ?? 0)}
           deltaLabel="vs 7 j préc."
-          spark={data.revenueByDay.map((d) => d.revenue)}
+          spark={(data.revenueByDay ?? []).map((d) => d.revenue)}
         />
         <KpiCard icon={ShoppingBag} label="Ventes du jour" value={String(data.todaySalesCount)} tone="accent" />
-        <KpiCard icon={ShoppingCart} label="Panier moyen (mois)" value={formatCurrency(data.avgBasket)} tone="primary" />
+        <KpiCard icon={ShoppingCart} label="Panier moyen (mois)" value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
       </div>
 
       <ForecastPanel />
 
       {/* Analyses : top produits + indicateurs clés */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <TopProductsCard products={data.topProducts} />
+        <TopProductsCard products={data.topProducts ?? []} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1">
-          <MiniStat icon={UserPlus} label="Nouveaux clients (mois)" value={String(data.newCustomersMonth)} tone="accent" />
+          <MiniStat icon={UserPlus} label="Nouveaux clients (mois)" value={String(data.newCustomersMonth ?? 0)} tone="accent" />
           <MiniStat icon={Users} label="Clients au total" value={String(data.customersCount)} tone="primary" />
           <MiniStat
             icon={AlertTriangle}
