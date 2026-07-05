@@ -3,6 +3,14 @@ import type { SaleDetail } from './api';
 export interface CompanyInfo {
   name: string;
   logoUrl?: string | null;
+  /** Couleur d'accent personnalisée (#RRGGBB). Défaut : teal/violet. */
+  accentColor?: string | null;
+  /** Mentions légales (RCCM, NINEA/IFU…) affichées sous l'en-tête. */
+  legalInfo?: string | null;
+  /** Note libre en bas de document (remerciement, conditions…). */
+  footerNote?: string | null;
+  /** Validité d'un devis en jours (défaut 30). */
+  quoteValidityDays?: number | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -44,7 +52,8 @@ function esc(value: unknown): string {
 export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): string {
   const isQuote = sale.type === 'QUOTE';
   const docTitle = isQuote ? 'DEVIS' : 'FACTURE';
-  const accent = isQuote ? '#7c3aed' : '#0d9488';
+  const validColor = /^#[0-9a-fA-F]{6}$/.test(company.accentColor ?? '');
+  const accent = validColor ? (company.accentColor as string) : isQuote ? '#7c3aed' : '#0d9488';
   const currency = sale.currency || 'XOF';
 
   const customerName = sale.customer
@@ -85,8 +94,10 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     .map((l) => esc(l))
     .join(' · ');
 
+  const validityDays =
+    company.quoteValidityDays && company.quoteValidityDays > 0 ? company.quoteValidityDays : 30;
   const paymentBlock = isQuote
-    ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">Ce devis est valable 30 jours à compter de sa date d'émission. Sous réserve de disponibilité des articles en stock.</p>`
+    ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">Ce devis est valable ${validityDays} jours à compter de sa date d'émission. Sous réserve de disponibilité des articles en stock.</p>`
     : `<table style="width:100%;border-collapse:collapse;">
         ${totalRow('Payé', money(sale.paidAmount, currency), { color: '#0d9488' })}
         ${balance > 0 ? totalRow('Reste à payer', money(balance, currency), { strong: true, color: '#dc2626' }) : ''}
@@ -112,6 +123,11 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
         ${logo}
         <div style="margin-top:8px;font-size:13px;font-weight:600;color:#334155;">${esc(sale.branch.name)}</div>
         ${branchLines ? `<div style="font-size:12px;color:#64748b;">${branchLines}</div>` : ''}
+        ${
+          company.legalInfo
+            ? `<div style="margin-top:4px;font-size:11px;color:#94a3b8;white-space:pre-line;">${esc(company.legalInfo)}</div>`
+            : ''
+        }
       </div>
       <div style="text-align:right;">
         <div style="font-size:28px;font-weight:800;letter-spacing:1px;color:${accent};">${docTitle}</div>
@@ -152,6 +168,12 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     </div>
 
     ${paymentBlock}
+
+    ${
+      company.footerNote
+        ? `<div style="margin-top:24px;padding:12px 16px;background:#f8fafc;border-left:3px solid ${accent};border-radius:0 8px 8px 0;font-size:12px;color:#475569;white-space:pre-line;">${esc(company.footerNote)}</div>`
+        : ''
+    }
 
     <div style="margin-top:40px;display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;">
       <span>${esc(company.name)}</span>

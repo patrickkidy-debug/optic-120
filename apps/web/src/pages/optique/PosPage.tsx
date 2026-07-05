@@ -267,7 +267,11 @@ function PaymentModal({
   async function downloadInvoice() {
     try {
       const full = await getSale(sale.id);
-      printSaleDocument(full, { name: user?.tenantName ?? 'OculoSaaS', logoUrl: user?.tenantLogoUrl });
+      printSaleDocument(full, {
+        name: user?.tenantName ?? 'OculoSaaS',
+        logoUrl: user?.tenantLogoUrl,
+        ...user?.tenantInvoiceSettings,
+      });
     } catch {
       window.print();
     }

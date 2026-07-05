@@ -92,6 +92,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       printSaleDocument(sale, {
         name: user?.tenantName ?? 'OculoSaaS',
         logoUrl: user?.tenantLogoUrl,
+        ...user?.tenantInvoiceSettings,
       });
     } catch (e) {
       alert(apiErrorMessage(e));

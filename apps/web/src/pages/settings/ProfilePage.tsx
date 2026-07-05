@@ -1,7 +1,7 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -17,6 +17,9 @@ import {
   disableTwoFactor,
 } from '../../features/auth/api';
 import { getBranding, updateBranding } from '../../features/settings/api';
+import { printSaleDocument } from '../../features/optique/saleDocument';
+import type { SaleDetail } from '../../features/optique/api';
+import type { InvoiceSettings } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
@@ -273,6 +276,13 @@ export function ProfilePage() {
           </div>
         )}
 
+        {/* Personnalisation des factures & devis — réservé aux gestionnaires */}
+        {canBranding && (
+          <div className="lg:col-span-3">
+            <InvoiceCustomizationCard />
+          </div>
+        )}
+
         {/* Sécurité — Mot de passe */}
         <div className="lg:col-span-3">
           <ChangePasswordCard />
@@ -282,6 +292,169 @@ export function ProfilePage() {
         <div className="lg:col-span-3">
           <TwoFactorCard />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceCustomizationCard() {
+  const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
+
+  const [useColor, setUseColor] = useState(false);
+  const [accentColor, setAccentColor] = useState('#0d9488');
+  const [legalInfo, setLegalInfo] = useState('');
+  const [footerNote, setFooterNote] = useState('');
+  const [validity, setValidity] = useState('30');
+  const [busy, setBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Pré-remplit le formulaire à l'arrivée des réglages existants (une seule fois).
+  useEffect(() => {
+    if (!branding || hydrated) return;
+    const iv = branding.invoiceSettings;
+    if (iv?.accentColor) {
+      setUseColor(true);
+      setAccentColor(iv.accentColor);
+    }
+    setLegalInfo(iv?.legalInfo ?? '');
+    setFooterNote(iv?.footerNote ?? '');
+    setValidity(String(iv?.quoteValidityDays ?? 30));
+    setHydrated(true);
+  }, [branding, hydrated]);
+
+  function buildSettings(): InvoiceSettings {
+    const out: InvoiceSettings = {};
+    if (useColor && /^#[0-9a-fA-F]{6}$/.test(accentColor)) out.accentColor = accentColor;
+    if (legalInfo.trim()) out.legalInfo = legalInfo.trim();
+    if (footerNote.trim()) out.footerNote = footerNote.trim();
+    const v = parseInt(validity, 10);
+    if (Number.isFinite(v) && v > 0 && v !== 30) out.quoteValidityDays = v;
+    return out;
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateBranding({ invoiceSettings: buildSettings() });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Aperçu instantané : un devis fictif rendu avec les réglages en cours d'édition.
+  function preview() {
+    const now = new Date().toISOString();
+    const sample: SaleDetail = {
+      id: 'preview',
+      number: 'DEV-2026-0007',
+      type: 'QUOTE',
+      status: 'CONFIRMED',
+      subtotal: '95000',
+      discountAmount: '5000',
+      taxAmount: '0',
+      insuranceAmount: '0',
+      totalAmount: '90000',
+      paidAmount: '0',
+      currency: 'XOF',
+      createdAt: now,
+      items: [
+        { id: '1', quantity: 1, unitPrice: '75000', lineTotal: '75000', product: { name: 'Monture Ray-Ban RB5154', sku: 'RB-5154' } },
+        { id: '2', quantity: 2, unitPrice: '10000', lineTotal: '20000', product: { name: 'Verre unifocal anti-reflet', sku: 'VERR-UNI' } },
+      ],
+      customer: { firstName: 'Awa', lastName: 'Diop', phone: '+225 07 00 00 00 00', email: null },
+      branch: {
+        name: branding?.name || user?.tenantName || 'Optique Vision Plus',
+        city: 'Abidjan',
+        address: 'Cocody, Rue des Jardins',
+        phone: '+225 27 22 00 00 00',
+      },
+      cashier: { firstName: 'Koffi', lastName: "N'Guessan" },
+    };
+    printSaleDocument(sample, {
+      name: branding?.name || user?.tenantName || 'Votre établissement',
+      logoUrl: branding?.logoUrl ?? user?.tenantLogoUrl,
+      ...buildSettings(),
+    });
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <FileText className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Personnalisation des documents</h3>
+      </div>
+      <p className="mb-4 text-sm text-content-muted">
+        S'applique à toutes vos factures et devis imprimés (le logo est géré ci-dessus).
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Field label="Couleur d'accent">
+          <label className="mb-2 flex items-center gap-2 text-sm text-content-muted">
+            <input type="checkbox" checked={useColor} onChange={(e) => setUseColor(e.target.checked)} />
+            Utiliser une couleur personnalisée
+          </label>
+          {useColor && (
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="h-10 w-16 cursor-pointer rounded-lg border bg-transparent"
+              />
+              <input
+                className="input flex-1 font-mono"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                placeholder="#0d9488"
+              />
+            </div>
+          )}
+        </Field>
+
+        <Field label="Validité des devis (jours)">
+          <input
+            type="number"
+            min={1}
+            max={365}
+            className="input"
+            value={validity}
+            onChange={(e) => setValidity(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Mentions légales (RCCM, NINEA/IFU…)">
+          <textarea
+            className="input min-h-[80px]"
+            value={legalInfo}
+            maxLength={300}
+            onChange={(e) => setLegalInfo(e.target.value)}
+            placeholder="RCCM CI-ABJ-2024-B-12345 · NINEA 001234567"
+          />
+        </Field>
+
+        <Field label="Note de bas de page">
+          <textarea
+            className="input min-h-[80px]"
+            value={footerNote}
+            maxLength={300}
+            onChange={(e) => setFooterNote(e.target.value)}
+            placeholder="Merci de votre confiance. Aucun échange après 7 jours sans le ticket."
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button onClick={save} loading={busy}>
+          <Save className="h-4 w-4" /> Enregistrer
+        </Button>
+        <Button variant="outline" onClick={preview}>
+          <Eye className="h-4 w-4" /> Aperçu (devis)
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { brandingUpdateSchema } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
@@ -11,9 +12,15 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/branding', { preHandler: requirePermission('settings.branches.view') }, async (req, reply) => {
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.auth!.tenantId },
-      select: { name: true, logoUrl: true },
+      select: { name: true, logoUrl: true, invoiceSettings: true },
     });
-    return reply.send({ branding: { name: tenant?.name ?? '', logoUrl: tenant?.logoUrl ?? null } });
+    return reply.send({
+      branding: {
+        name: tenant?.name ?? '',
+        logoUrl: tenant?.logoUrl ?? null,
+        invoiceSettings: (tenant?.invoiceSettings as unknown) ?? null,
+      },
+    });
   });
 
   app.patch('/branding', { preHandler: requirePermission('settings.branches.update') }, async (req, reply) => {
@@ -23,9 +30,23 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       data: {
         name: input.name ?? undefined,
         logoUrl: input.logoUrl === undefined ? undefined : input.logoUrl || null,
+        // Remplacement complet du bloc de personnalisation quand fourni ;
+        // un objet vide efface les réglages (retour aux valeurs par défaut).
+        invoiceSettings:
+          input.invoiceSettings === undefined
+            ? undefined
+            : Object.keys(input.invoiceSettings).length === 0
+              ? Prisma.DbNull
+              : input.invoiceSettings,
       },
-      select: { name: true, logoUrl: true },
+      select: { name: true, logoUrl: true, invoiceSettings: true },
     });
-    return reply.send({ branding: { name: tenant.name, logoUrl: tenant.logoUrl } });
+    return reply.send({
+      branding: {
+        name: tenant.name,
+        logoUrl: tenant.logoUrl,
+        invoiceSettings: (tenant.invoiceSettings as unknown) ?? null,
+      },
+    });
   });
 }

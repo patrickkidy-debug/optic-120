@@ -1063,9 +1063,31 @@ export const profileUpdateSchema = z.object({
 });
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
+/**
+ * Personnalisation des documents commerciaux (factures & devis).
+ * Tous les champs sont facultatifs : absents = valeurs par défaut du modèle.
+ */
+export const invoiceSettingsSchema = z
+  .object({
+    /** Couleur d'accent (en-têtes, tableau) au format #RRGGBB. */
+    accentColor: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, 'Couleur invalide (format #RRGGBB)')
+      .optional(),
+    /** Mentions légales sous l'en-tête (RCCM, NINEA/IFU, régime TVA…). */
+    legalInfo: z.string().max(300).optional(),
+    /** Message libre en bas de document (remerciement, conditions…). */
+    footerNote: z.string().max(300).optional(),
+    /** Durée de validité d'un devis, en jours. */
+    quoteValidityDays: z.number().int().min(1).max(365).optional(),
+  })
+  .strict();
+export type InvoiceSettings = z.infer<typeof invoiceSettingsSchema>;
+
 export const brandingUpdateSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   logoUrl: imageData,
+  invoiceSettings: invoiceSettingsSchema.optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
 
@@ -1088,6 +1110,8 @@ export interface AuthUser {
   allBranches: boolean;
   tenantName: string;
   tenantLogoUrl: string | null;
+  /** Personnalisation des factures/devis (couleur, mentions légales…). */
+  tenantInvoiceSettings: InvoiceSettings | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
   isPlatformOperator: boolean;
   /** Vrai une fois l'adresse email confirmée. */

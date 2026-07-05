@@ -5,6 +5,7 @@ import type {
   ProfileUpdateInput,
   GoogleSignupInput,
   EstablishmentChoice,
+  InvoiceSettings,
 } from '@oculo/shared-types';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
@@ -73,6 +74,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     allBranches: user.role.allBranches,
     tenantName: user.tenant.name,
     tenantLogoUrl: user.tenant.logoUrl,
+    tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
     emailVerified: user.emailVerifiedAt != null,
   };
 }

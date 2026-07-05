@@ -23,6 +23,9 @@ model Tenant {
   name          String
   slug          String       @unique
   logoUrl       String?
+  // Personnalisation des documents (factures/devis) : couleur d'accent, mentions
+  // légales, note de bas de page, validité des devis. null = valeurs par défaut.
+  invoiceSettings Json?
   // Numéro WhatsApp du responsable de l'établissement, collecté à l'inscription
   // (obligatoire côté formulaire) pour permettre au fondateur de le contacter.
   whatsappPhone String?
