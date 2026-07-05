@@ -73,6 +73,7 @@ const EmployeesPage = lazy(() => named(import('./pages/management/EmployeesPage'
 const FinancePage = lazy(() => named(import('./pages/management/FinancePage'), 'FinancePage'));
 const SuppliersPage = lazy(() => named(import('./pages/management/SuppliersPage'), 'SuppliersPage'));
 const ReceivablesPage = lazy(() => named(import('./pages/management/ReceivablesPage'), 'ReceivablesPage'));
+const ReportsPage = lazy(() => named(import('./pages/management/ReportsPage'), 'ReportsPage'));
 const InsurancePage = lazy(() => named(import('./pages/management/InsurancePage'), 'InsurancePage'));
 
 /** Enveloppe les pages publiques (hors AppShell) dans un Suspense. */
@@ -139,6 +140,7 @@ export const router = createBrowserRouter([
 
           { path: '/gestion/personnel', element: perm('hr.employees.view', <EmployeesPage />) },
           { path: '/gestion/creances', element: perm('optique.sales.view', <ReceivablesPage />) },
+          { path: '/gestion/rapports', element: perm('optique.sales.view', <ReportsPage />) },
           { path: '/gestion/finance', element: perm('finance.expenses.view', <FinancePage />) },
           { path: '/gestion/fournisseurs', element: perm('suppliers.view', <SuppliersPage />) },
           { path: '/gestion/assurances', element: perm('insurance.view', <InsurancePage />) },

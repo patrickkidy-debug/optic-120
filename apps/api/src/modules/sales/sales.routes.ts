@@ -68,6 +68,40 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ totalOutstanding, count: items.length, items });
   });
 
+  // Rapport de ventes sur une période (résumé + lignes) pour l'export CSV.
+  app.get('/report', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const q = req.query as { from?: string; to?: string; branchId?: string };
+    const from = q.from ? new Date(q.from) : new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    const to = q.to ? new Date(q.to) : new Date();
+    from.setHours(0, 0, 0, 0);
+    to.setHours(23, 59, 59, 999);
+    const where: Record<string, unknown> = {
+      type: SaleType.SALE,
+      createdAt: { gte: from, lte: to },
+    };
+    if (q.branchId) where.branchId = q.branchId;
+    const sales = await req.db!.sale.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      include: { customer: true, branch: true },
+    });
+    const rows = sales.map((s) => ({
+      number: s.number,
+      date: s.createdAt,
+      customer: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '',
+      branch: s.branch.name,
+      status: s.status,
+      total: Number(s.totalAmount),
+      paid: Number(s.paidAmount),
+      balance: Number(s.totalAmount) - Number(s.paidAmount),
+    }));
+    const active = rows.filter((r) => r.status !== 'CANCELLED');
+    const revenue = active.reduce((sum, r) => sum + r.paid, 0);
+    const count = active.length;
+    const avgBasket = count > 0 ? Math.round(revenue / count) : 0;
+    return reply.send({ from, to, summary: { revenue, count, avgBasket }, rows });
+  });
+
   app.get('/:id', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const sale = await req.db!.sale.findFirst({

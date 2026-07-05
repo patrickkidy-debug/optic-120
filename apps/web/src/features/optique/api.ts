@@ -259,6 +259,33 @@ export async function listReceivables(branchId?: string): Promise<ReceivablesDat
   return data;
 }
 
+export interface SalesReportRow {
+  number: string;
+  date: string;
+  customer: string;
+  branch: string;
+  status: string;
+  total: number;
+  paid: number;
+  balance: number;
+}
+
+export interface SalesReport {
+  from: string;
+  to: string;
+  summary: { revenue: number; count: number; avgBasket: number };
+  rows: SalesReportRow[];
+}
+
+export async function getSalesReport(params: {
+  from: string;
+  to: string;
+  branchId?: string;
+}): Promise<SalesReport> {
+  const { data } = await api.get<SalesReport>('/sales/report', { params });
+  return data;
+}
+
 export async function simulatePayment(paymentId: string, status: 'SUCCESS' | 'FAILED' = 'SUCCESS') {
   const { data } = await api.post(`/payments/${paymentId}/simulate-callback`, { status });
   return data as { ok: boolean; status: string };

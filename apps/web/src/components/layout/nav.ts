@@ -28,6 +28,7 @@ import {
   Settings,
   Coins,
   Lock,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -84,6 +85,7 @@ export const NAV: NavGroup[] = [
     titleKey: 'nav.management',
     items: [
       { to: '/gestion/creances', labelKey: 'nav.receivables', icon: Coins, permission: 'optique.sales.view' },
+      { to: '/gestion/rapports', labelKey: 'nav.reports', icon: BarChart3, permission: 'optique.sales.view' },
       { to: '/gestion/personnel', labelKey: 'nav.hr', icon: UserCog, permission: 'hr.employees.view' },
       { to: '/gestion/finance', labelKey: 'nav.finance', icon: Wallet, permission: 'finance.expenses.view' },
       { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, permission: 'suppliers.view' },
