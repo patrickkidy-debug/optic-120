@@ -54,6 +54,7 @@ const LensOrdersPage = lazy(() => named(import('./pages/optique/LensOrdersPage')
 const RepairsPage = lazy(() => named(import('./pages/optique/RepairsPage'), 'RepairsPage'));
 const RenewalsPage = lazy(() => named(import('./pages/optique/RenewalsPage'), 'RenewalsPage'));
 const LabelsPage = lazy(() => named(import('./pages/optique/LabelsPage'), 'LabelsPage'));
+const CashRegisterPage = lazy(() => named(import('./pages/optique/CashRegisterPage'), 'CashRegisterPage'));
 const RolesPage = lazy(() => named(import('./pages/settings/RolesPage'), 'RolesPage'));
 const UsersPage = lazy(() => named(import('./pages/settings/UsersPage'), 'UsersPage'));
 const BranchesPage = lazy(() => named(import('./pages/settings/BranchesPage'), 'BranchesPage'));
@@ -120,6 +121,7 @@ export const router = createBrowserRouter([
           { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
           { path: '/optique/renouvellements', element: perm('optique.customers.view', <RenewalsPage />) },
           { path: '/optique/etiquettes', element: perm('optique.products.view', <LabelsPage />) },
+          { path: '/optique/caisse-session', element: perm('optique.cashregister.view', <CashRegisterPage />) },
           { path: '/parametres/roles', element: perm('rbac.roles.view', <RolesPage />) },
           { path: '/parametres/utilisateurs', element: perm('rbac.users.view', <UsersPage />) },
           { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },

@@ -27,6 +27,7 @@ import {
   Barcode,
   Settings,
   Coins,
+  Lock,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -67,6 +68,7 @@ export const NAV: NavGroup[] = [
       { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },
       { to: '/optique/renouvellements', labelKey: 'nav.renewals', icon: BellRing, permission: 'optique.customers.view' },
       { to: '/optique/etiquettes', labelKey: 'nav.labels', icon: Barcode, permission: 'optique.products.view' },
+      { to: '/optique/caisse-session', labelKey: 'nav.cashSession', icon: Lock, permission: 'optique.cashregister.view' },
     ],
   },
   {
