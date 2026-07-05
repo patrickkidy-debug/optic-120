@@ -141,6 +141,15 @@ export async function verifyPassword(password: string): Promise<boolean> {
   return data.ok;
 }
 
+/** Change le mot de passe du compte connecté (exige l'ancien) et renouvelle la session. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const { data } = await api.post<AuthResponse>('/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+}
+
 export async function updateProfile(input: ProfileUpdateInput): Promise<AuthUser> {
   const { data } = await api.patch<{ user: AuthUser }>('/auth/me', input);
   useAuthStore.getState().setUser(data.user);

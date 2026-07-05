@@ -10,6 +10,7 @@ import { fileToResizedDataUrl } from '../../lib/image';
 import { apiErrorMessage } from '../../lib/api';
 import {
   updateProfile,
+  changePassword,
   getTwoFactorStatus,
   setupTwoFactor,
   enableTwoFactor,
@@ -18,7 +19,7 @@ import {
 import { getBranding, updateBranding } from '../../features/settings/api';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
-import { PageHeader, Badge, Button, Field } from '../../components/ui';
+import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
 
 function ImagePicker({
   onPick,
@@ -272,10 +273,85 @@ export function ProfilePage() {
           </div>
         )}
 
+        {/* Sécurité — Mot de passe */}
+        <div className="lg:col-span-3">
+          <ChangePasswordCard />
+        </div>
+
         {/* Sécurité — Double authentification (2FA) */}
         <div className="lg:col-span-3">
           <TwoFactorCard />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ChangePasswordCard() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok?: string; err?: string }>({});
+
+  async function submit() {
+    setMsg({});
+    if (next.length < 8) {
+      setMsg({ err: 'Le nouveau mot de passe doit faire au moins 8 caractères.' });
+      return;
+    }
+    if (next !== confirm) {
+      setMsg({ err: 'La confirmation ne correspond pas.' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await changePassword(current, next);
+      setMsg({ ok: 'Mot de passe modifié. Vos autres appareils ont été déconnectés.' });
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+    } catch (e) {
+      setMsg({ err: apiErrorMessage(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Mot de passe</h3>
+      </div>
+      <div className="max-w-sm space-y-3">
+        <Field label="Mot de passe actuel">
+          <PasswordInput
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+          />
+        </Field>
+        <Field label="Nouveau mot de passe">
+          <PasswordInput
+            autoComplete="new-password"
+            placeholder="Au moins 8 caractères"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+          />
+        </Field>
+        <Field label="Confirmer le nouveau mot de passe">
+          <PasswordInput
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </Field>
+        {msg.err && <p className="text-sm text-danger">{msg.err}</p>}
+        {msg.ok && <p className="text-sm text-success">{msg.ok}</p>}
+        <Button onClick={submit} loading={busy} disabled={!current || !next || !confirm}>
+          Changer le mot de passe
+        </Button>
       </div>
     </div>
   );

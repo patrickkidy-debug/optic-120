@@ -763,6 +763,35 @@ export async function verifyUserPassword(userId: string, password: string): Prom
   return verifyPassword(user.passwordHash, password);
 }
 
+/**
+ * Changement de mot de passe par l'utilisateur connecté : vérifie l'ancien,
+ * enregistre le nouveau, révoque toutes les sessions actives (sécurité), puis
+ * ouvre une session fraîche pour l'appareil courant (pas de déconnexion ici).
+ */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  meta: RequestMeta,
+): Promise<SessionResult> {
+  const user = await loadUser({ id: userId });
+  if (!user) throw unauthorized();
+  if (!(await verifyPassword(user.passwordHash, currentPassword))) {
+    throw badRequest('Mot de passe actuel incorrect');
+  }
+  const newHash = await hashPassword(newPassword);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } }),
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+  await recordAudit({ tenantId: user.tenantId, userId, action: 'PASSWORD_CHANGED', ...meta });
+  const session = await issueSession(user, meta);
+  return { ...session, user: buildAuthUser(user) };
+}
+
 export async function getCurrentAuthUser(userId: string): Promise<AuthUser | null> {
   const user = await loadUser({ id: userId });
   return user ? buildAuthUser(user) : null;

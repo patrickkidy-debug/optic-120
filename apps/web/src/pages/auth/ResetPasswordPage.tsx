@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../../features/auth/api';
 import { apiErrorMessage } from '../../lib/api';
 import { AuthLayout } from './AuthLayout';
-import { Button, Field } from '../../components/ui';
+import { Button, Field, PasswordInput } from '../../components/ui';
 
 export function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -40,9 +40,7 @@ export function ResetPasswordPage() {
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <Field label="Nouveau mot de passe">
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}

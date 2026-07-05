@@ -7,6 +7,7 @@ import {
   resetPasswordSchema,
   verifyEmailSchema,
   verifyPasswordSchema,
+  changePasswordSchema,
   profileUpdateSchema,
   twoFactorEnableSchema,
   twoFactorDisableSchema,
@@ -197,6 +198,20 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const { password } = verifyPasswordSchema.parse(req.body);
     const ok = await authService.verifyUserPassword(req.auth!.userId, password);
     return reply.send({ ok });
+  });
+
+  // Changement de mot de passe (utilisateur connecté). Révoque les autres
+  // sessions et renouvelle celle-ci (nouveau cookie de rafraîchissement).
+  app.post('/change-password', { ...strictLimit, preHandler: requireAuth }, async (req, reply) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    const { accessToken, refreshToken, user } = await authService.changePassword(
+      req.auth!.userId,
+      currentPassword,
+      newPassword,
+      requestMeta(req),
+    );
+    setRefreshCookie(reply, refreshToken);
+    return reply.send({ accessToken, user });
   });
 
   /* --- 2FA (compte connecté) --- */

@@ -617,6 +617,13 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+/** Changement de mot de passe par un utilisateur connecté (exige l'ancien). */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export const verifyPasswordSchema = z.object({
   password: z.string().min(1),
 });

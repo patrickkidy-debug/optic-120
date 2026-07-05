@@ -1,5 +1,11 @@
-import { type ReactNode, type ButtonHTMLAttributes } from 'react';
-import { Loader2, X, type LucideIcon } from 'lucide-react';
+import {
+  forwardRef,
+  useState,
+  type ReactNode,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+} from 'react';
+import { Loader2, X, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 export function Spinner({ className }: { className?: string }) {
@@ -13,6 +19,35 @@ export function PageLoader() {
     </div>
   );
 }
+
+/**
+ * Champ mot de passe avec bascule afficher/masquer (icône œil). Transmet la ref
+ * et toutes les props, donc compatible avec react-hook-form (`{...register()}`).
+ */
+export const PasswordInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function PasswordInput({ className, ...props }, ref) {
+    const [show, setShow] = useState(false);
+    return (
+      <div className="relative">
+        <input
+          ref={ref}
+          type={show ? 'text' : 'password'}
+          className={clsx('input pr-11', className)}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          tabIndex={-1}
+          aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          className="absolute inset-y-0 right-0 grid w-11 place-items-center text-content-muted transition-colors hover:text-content"
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    );
+  },
+);
 
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
 const badgeTones: Record<BadgeTone, string> = {

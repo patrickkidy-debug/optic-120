@@ -8,7 +8,7 @@ import { login, loginTwoFactor, loginSelectTenant } from '../../features/auth/ap
 import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { AuthLayout } from './AuthLayout';
-import { Button, Field } from '../../components/ui';
+import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
 
@@ -234,7 +234,7 @@ export function LoginPage() {
           {errors.identifier && <p className="mt-1 text-xs text-danger">{errors.identifier.message}</p>}
         </Field>
         <Field label={t('auth.password')}>
-          <input className="input" type="password" placeholder="••••••••" {...register('password')} />
+          <PasswordInput placeholder="••••••••" {...register('password')} />
           {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
         </Field>
 

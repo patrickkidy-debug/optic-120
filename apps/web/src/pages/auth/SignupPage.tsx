@@ -9,7 +9,7 @@ import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
 import { AuthLayout } from './AuthLayout';
-import { Button, Field } from '../../components/ui';
+import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
 
@@ -163,7 +163,7 @@ export function SignupPage() {
           )}
         </Field>
         <Field label={t('auth.password')}>
-          <input className="input" type="password" placeholder="Au moins 8 caractères" {...register('adminPassword')} />
+          <PasswordInput placeholder="Au moins 8 caractères" {...register('adminPassword')} />
           {errors.adminPassword && (
             <p className="mt-1 text-xs text-danger">{errors.adminPassword.message}</p>
           )}
