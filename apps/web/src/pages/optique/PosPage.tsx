@@ -38,6 +38,7 @@ const METHODS: { value: PaymentMethod; label: string; icon: typeof Banknote; mob
 export function PosPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const branchId = useUIStore((s) => s.activeBranchId);
   const canQuote = usePermission('optique.quotes.create');
   const pos = usePosStore();
@@ -51,7 +52,7 @@ export function PosPage() {
   });
   const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
 
-  const totals = computeTotals(pos);
+  const totals = computeTotals(pos, user?.tenantVatRate ?? undefined);
 
   const products = (stock ?? []).filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()),
@@ -63,7 +64,7 @@ export function PosPage() {
         branchId: branchId!,
         customerId: pos.customerId ?? undefined,
         type,
-        items: pos.lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        items: pos.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,
       }),
@@ -135,7 +136,18 @@ export function PosPage() {
                   <div key={l.productId} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-content">{l.name}</p>
-                      <p className="text-xs text-content-faint">{formatCurrency(l.unitPrice)}</p>
+                      <div className="mt-0.5 flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          value={l.unitPrice || ''}
+                          onChange={(e) => pos.setUnitPrice(l.productId, Number(e.target.value) || 0)}
+                          className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
+                          title="Prix unitaire (modifiable)"
+                          placeholder="Prix"
+                        />
+                        <span className="text-[11px] text-content-faint">FCFA</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => pos.setQuantity(l.productId, l.quantity - 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
@@ -192,7 +204,7 @@ export function PosPage() {
 
             <div className="space-y-1 text-sm">
               <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />
-              <Row label={t('pos.tax')} value={formatCurrency(totals.taxAmount)} />
+              <Row label={`${t('pos.tax')} (${user?.tenantVatRate ?? 18} %)`} value={formatCurrency(totals.taxAmount)} />
               <div className="my-1 border-t" />
               <div className="flex justify-between font-display text-lg font-bold text-content">
                 <span>{t('pos.due')}</span>

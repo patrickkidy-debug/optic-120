@@ -352,6 +352,7 @@ export interface LensOrder {
   number: string;
   customerId: string | null;
   customer: { firstName: string; lastName: string } | null;
+  category: string | null;
   supplierName: string | null;
   description: string;
   status: LensOrderStatus;
@@ -378,6 +379,7 @@ export interface Repair {
   number: string;
   customerId: string | null;
   customer: { firstName: string; lastName: string } | null;
+  category: string | null;
   description: string;
   status: RepairStatus;
   cost: string | number | null;

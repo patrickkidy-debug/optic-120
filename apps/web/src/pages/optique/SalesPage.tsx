@@ -29,7 +29,6 @@ import {
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
-import { VAT_RATE } from '@oculo/shared-types';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
@@ -420,6 +419,7 @@ function QuoteModal({
   onCreated: (saleId: string) => void;
 }) {
   const branchId = useUIStore((s) => s.activeBranchId);
+  const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
   const [search, setSearch] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -454,10 +454,15 @@ function QuoteModal({
     if (qty <= 0) return setLines((prev) => prev.filter((l) => l.productId !== productId));
     setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, quantity: qty } : l)));
   }
+  function setPrice(productId: string, price: number) {
+    setLines((prev) =>
+      prev.map((l) => (l.productId === productId ? { ...l, unitPrice: Math.max(0, price) } : l)),
+    );
+  }
 
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const taxBase = Math.max(0, subtotal - discount);
-  const taxAmount = Math.round(taxBase * VAT_RATE);
+  const taxAmount = Math.round(taxBase * (vatPct / 100));
   const total = taxBase + taxAmount;
 
   const createMut = useMutation({
@@ -466,7 +471,7 @@ function QuoteModal({
         branchId: branchId!,
         customerId: customerId || undefined,
         type: 'QUOTE',
-        items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: discount,
         insuranceAmount: insurance,
       }),
@@ -530,7 +535,15 @@ function QuoteModal({
                   <div key={l.productId} className="flex items-center gap-2 rounded-lg bg-surface-2 p-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-content">{l.name}</p>
-                      <p className="text-xs text-content-faint">{formatCurrency(l.unitPrice)}</p>
+                      <input
+                        type="number"
+                        min={0}
+                        value={l.unitPrice || ''}
+                        onChange={(e) => setPrice(l.productId, Number(e.target.value) || 0)}
+                        className="mt-0.5 h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
+                        title="Prix unitaire (modifiable)"
+                        placeholder="Prix"
+                      />
                     </div>
                     <input
                       type="number"
@@ -577,7 +590,7 @@ function QuoteModal({
                 <span className="text-content">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-content-muted">
-                <span>TVA (18%)</span>
+                <span>TVA ({vatPct} %)</span>
                 <span className="text-content">{formatCurrency(taxAmount)}</span>
               </div>
               <div className="flex justify-between font-display text-lg font-bold text-content">

@@ -733,8 +733,14 @@ export type LensOrderStatus = (typeof LENS_ORDER_STATUSES)[number];
 export const REPAIR_STATUSES = ['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED'] as const;
 export type RepairStatus = (typeof REPAIR_STATUSES)[number];
 
+export const LENS_ORDER_CATEGORIES = ['VERRES', 'LENTILLES', 'ACCESSOIRE', 'MONTURE', 'AUTRE'] as const;
+export type LensOrderCategory = (typeof LENS_ORDER_CATEGORIES)[number];
+export const REPAIR_CATEGORIES = ['MONTURE', 'VERRE', 'VIS', 'PLAQUETTES', 'NETTOYAGE', 'AUTRE'] as const;
+export type RepairCategory = (typeof REPAIR_CATEGORIES)[number];
+
 export const lensOrderCreateSchema = z.object({
   customerId: z.string().uuid().optional().or(z.literal('')),
+  category: z.enum(LENS_ORDER_CATEGORIES).optional(),
   supplierName: z.string().max(120).optional().or(z.literal('')),
   description: z.string().trim().min(2).max(400),
   expectedAt: z.string().optional().or(z.literal('')),
@@ -746,6 +752,7 @@ export const lensOrderStatusSchema = z.object({ status: z.enum(LENS_ORDER_STATUS
 
 export const repairCreateSchema = z.object({
   customerId: z.string().uuid().optional().or(z.literal('')),
+  category: z.enum(REPAIR_CATEGORIES).optional(),
   description: z.string().trim().min(2).max(400),
   cost: z.coerce.number().min(0).optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
@@ -762,6 +769,9 @@ export type BranchCreateInput = z.infer<typeof branchCreateSchema>;
 export const saleItemSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().positive(),
+  // Prix unitaire personnalisé (optionnel) : si absent, le serveur applique le
+  // prix catalogue du produit. Permet de fixer un prix libre à la caisse.
+  unitPrice: z.number().nonnegative().optional(),
 });
 
 export const saleCreateSchema = z.object({
@@ -1092,6 +1102,8 @@ export const brandingUpdateSchema = z.object({
   /** Contact de l'entreprise (affichable sur les documents). */
   contactPhone: z.string().max(40).optional(),
   contactEmail: z.string().max(120).optional(),
+  /** Taux de TVA de l'établissement, en pourcentage (0 = exonéré). */
+  vatRate: z.number().min(0).max(100).optional(),
   invoiceSettings: invoiceSettingsSchema.optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
@@ -1119,6 +1131,8 @@ export interface AuthUser {
   tenantLocation: string | null;
   tenantContactPhone: string | null;
   tenantContactEmail: string | null;
+  /** Taux de TVA de l'établissement en pourcentage (null = défaut 18 %). */
+  tenantVatRate: number | null;
   /** Personnalisation des factures/devis (couleur, mentions légales…). */
   tenantInvoiceSettings: InvoiceSettings | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */

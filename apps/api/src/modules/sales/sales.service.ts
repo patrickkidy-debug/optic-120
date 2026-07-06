@@ -55,16 +55,22 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
     const lines: ComputedLine[] = input.items.map((i) => {
       const p = byId.get(i.productId);
       if (!p) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
-      const unitPrice = Number(p.sellPrice);
+      // Prix libre autorisé (fixé par le caissier) ; sinon prix catalogue.
+      const unitPrice =
+        i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
       const lineTotal = unitPrice * i.quantity;
       subtotal += lineTotal;
       return { productId: i.productId, quantity: i.quantity, unitPrice, lineTotal, name: p.name };
     });
 
+    // Taux de TVA de l'établissement (en %, 0 = exonéré). null = défaut 18 %.
+    const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { vatRate: true } });
+    const vatFraction = (tenant?.vatRate ?? VAT_RATE * 100) / 100;
+
     const discount = input.discountAmount ?? 0;
     const insurance = input.insuranceAmount ?? 0;
     const taxBase = Math.max(0, subtotal - discount);
-    const taxAmount = Math.round(taxBase * VAT_RATE);
+    const taxAmount = Math.round(taxBase * vatFraction);
     const total = taxBase + taxAmount;
     const isSale = input.type === SaleType.SALE;
 

@@ -78,6 +78,8 @@ export function ProfilePage() {
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
+  const [vat, setVat] = useState('18');
+  const [vatBusy, setVatBusy] = useState(false);
   const [locHydrated, setLocHydrated] = useState(false);
 
   // Pré-remplit situation géographique + contact dès l'arrivée des réglages (une fois).
@@ -86,6 +88,7 @@ export function ProfilePage() {
       setLocation(branding.location ?? '');
       setContactPhone(branding.contactPhone ?? '');
       setContactEmail(branding.contactEmail ?? '');
+      setVat(String(branding.vatRate ?? 18));
       setLocHydrated(true);
     }
   }, [branding, locHydrated]);
@@ -156,6 +159,18 @@ export function ProfilePage() {
       alert(apiErrorMessage(e));
     } finally {
       setContactBusy(false);
+    }
+  }
+  async function saveVat() {
+    const v = Math.min(100, Math.max(0, Number(vat) || 0));
+    setVatBusy(true);
+    try {
+      await updateBranding({ vatRate: v });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setVatBusy(false);
     }
   }
 
@@ -413,6 +428,29 @@ export function ProfilePage() {
                   <Save className="h-4 w-4" /> Enregistrer le contact
                 </Button>
               </div>
+            </div>
+
+            <div className="mt-4 max-w-2xl border-t pt-4">
+              <Field label="Taux de TVA (%) — 0 = exonéré">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    className="input w-32 text-right"
+                    value={vat}
+                    onChange={(e) => setVat(e.target.value)}
+                  />
+                  <span className="text-sm text-content-muted">%</span>
+                  <Button onClick={saveVat} loading={vatBusy}>
+                    <Save className="h-4 w-4" /> Enregistrer
+                  </Button>
+                </div>
+              </Field>
+              <p className="mt-1 text-xs text-content-faint">
+                Appliqué à la caisse, aux devis et aux factures. Défaut : 18 %.
+              </p>
             </div>
 
             <p className="mt-3 text-xs text-content-faint">

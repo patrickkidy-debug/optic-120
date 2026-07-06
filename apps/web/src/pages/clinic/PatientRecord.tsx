@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Stethoscope, CalendarDays, Scissors, Plus, Eye } from 'lucide-react';
+import { Stethoscope, CalendarDays, Scissors, Plus, Eye, Printer, Activity } from 'lucide-react';
 import type { ConsultationCreateInput } from '@oculo/shared-types';
-import { getPatient, createConsultation } from '../../features/clinic/api';
-import { usePermission } from '../../store/auth';
+import { getPatient, createConsultation, type Consultation } from '../../features/clinic/api';
+import { printMedicalPrescription } from '../../features/clinic/clinicDocument';
+import type { CompanyInfo } from '../../features/optique/saleDocument';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Button, Badge, PageLoader, Field } from '../../components/ui';
@@ -12,12 +14,22 @@ import { Modal, Button, Badge, PageLoader, Field } from '../../components/ui';
 export function PatientRecord({ patientId, onClose }: { patientId: string; onClose: () => void }) {
   const qc = useQueryClient();
   const canConsult = usePermission('clinic.consultations.create');
+  const user = useAuthStore((s) => s.user);
   const [adding, setAdding] = useState(false);
 
   const { data: patient, isLoading } = useQuery({
     queryKey: ['patient', patientId],
     queryFn: () => getPatient(patientId),
   });
+
+  const company: CompanyInfo = {
+    name: user?.tenantName ?? 'OculoSaaS',
+    logoUrl: user?.tenantLogoUrl,
+    location: user?.tenantLocation,
+    contactPhone: user?.tenantContactPhone,
+    contactEmail: user?.tenantContactEmail,
+    ...user?.tenantInvoiceSettings,
+  };
 
   return (
     <Modal open onClose={onClose} title="Dossier médical" size="lg">
@@ -68,9 +80,18 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
             ) : (
               patient.consultations.map((c) => (
                 <div key={c.id} className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-content">{formatDateTime(c.date)}</span>
-                    {c.diagnosis && <Badge tone="info">{c.diagnosis}</Badge>}
+                    <div className="flex items-center gap-2">
+                      {c.diagnosis && <Badge tone="info">{c.diagnosis}</Badge>}
+                      <button
+                        onClick={() => printMedicalPrescription(c, patient, company)}
+                        className="btn-ghost h-7 w-7 rounded-lg p-0"
+                        title="Imprimer l'ordonnance"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-content-muted">
                     {c.visualAcuityRight && <span>AV OD : {c.visualAcuityRight}</span>}
@@ -85,6 +106,8 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
               ))
             )}
           </Section>
+
+          <IopSection consultations={patient.consultations} />
 
           <Section icon={CalendarDays} title={`Rendez-vous (${patient.appointments.length})`}>
             {patient.appointments.length === 0 ? (
@@ -114,6 +137,48 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Suivi de la tension oculaire (TO/IOP) sur l'historique des consultations. */
+function IopSection({ consultations }: { consultations: Consultation[] }) {
+  const rows = consultations.filter((c) => c.tonometryRight || c.tonometryLeft);
+  if (rows.length === 0) return null;
+  const val = (v: string | null) => {
+    const n = parseFloat((v ?? '').replace(',', '.'));
+    const high = Number.isFinite(n) && n > 21;
+    return <span className={high ? 'font-bold text-danger' : 'text-content'}>{v ?? '—'}</span>;
+  };
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        <Activity className="h-4 w-4 text-primary" />
+        <h4 className="font-semibold text-content">Suivi de la tension oculaire</h4>
+      </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase text-content-faint">
+              <th className="px-3 py-2 font-semibold">Date</th>
+              <th className="px-3 py-2 text-center font-semibold">TO OD (mmHg)</th>
+              <th className="px-3 py-2 text-center font-semibold">TO OG (mmHg)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-b last:border-0">
+                <td className="px-3 py-2 text-content-muted">{formatDate(c.date)}</td>
+                <td className="px-3 py-2 text-center">{val(c.tonometryRight)}</td>
+                <td className="px-3 py-2 text-center">{val(c.tonometryLeft)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-1 text-xs text-content-faint">
+        Valeurs &gt; 21 mmHg en rouge (risque de glaucome — à surveiller).
+      </p>
+    </div>
   );
 }
 

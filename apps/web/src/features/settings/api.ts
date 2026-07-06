@@ -55,6 +55,7 @@ export interface Branding {
   location: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
+  vatRate: number | null;
   invoiceSettings: InvoiceSettings | null;
 }
 
@@ -75,6 +76,7 @@ export async function updateBranding(input: BrandingUpdateInput): Promise<Brandi
       tenantLocation: data.branding.location,
       tenantContactPhone: data.branding.contactPhone,
       tenantContactEmail: data.branding.contactEmail,
+      tenantVatRate: data.branding.vatRate,
       tenantInvoiceSettings: data.branding.invoiceSettings,
     });
   }

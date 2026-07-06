@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Glasses, Wand2 } from 'lucide-react';
-import type { LensOrderCreateInput, LensOrderStatus } from '@oculo/shared-types';
-import { LENS_ORDER_STATUSES } from '@oculo/shared-types';
+import { Plus, Glasses, Wand2, CircleDot, Package, Frame, Tag, type LucideIcon } from 'lucide-react';
+import type { LensOrderCreateInput, LensOrderStatus, LensOrderCategory } from '@oculo/shared-types';
+import { LENS_ORDER_STATUSES, LENS_ORDER_CATEGORIES } from '@oculo/shared-types';
 import {
   listLensOrders,
   createLensOrder,
@@ -24,6 +24,45 @@ const STATUS: Record<LensOrderStatus, { label: string; tone: 'neutral' | 'info' 
 
 function formatDate(v?: string | null) {
   return v ? new Date(v).toLocaleDateString('fr-FR') : '—';
+}
+
+const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> = {
+  VERRES: { label: 'Verres', icon: Glasses },
+  LENTILLES: { label: 'Lentilles de contact', icon: CircleDot },
+  ACCESSOIRE: { label: 'Accessoire', icon: Package },
+  MONTURE: { label: 'Monture', icon: Frame },
+  AUTRE: { label: 'Autre', icon: Tag },
+};
+
+function CatIcon({ category }: { category: string | null }) {
+  const def = category ? LENS_CAT[category as LensOrderCategory] : undefined;
+  if (!def) return null;
+  const Icon = def.icon;
+  return <Icon className="h-4 w-4 shrink-0 text-primary" />;
+}
+
+/** Sélecteur de catégorie en pastilles avec icônes. */
+function CategoryChips({ value, onChange }: { value: LensOrderCategory; onChange: (c: LensOrderCategory) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {LENS_ORDER_CATEGORIES.map((c) => {
+        const Icon = LENS_CAT[c].icon;
+        const active = value === c;
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition ${
+              active ? 'border-primary bg-primary-soft text-content' : 'border-line text-content-muted'
+            }`}
+          >
+            <Icon className="h-4 w-4" /> {LENS_CAT[c].label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function LensOrdersPage() {
@@ -82,7 +121,12 @@ export function LensOrdersPage() {
                   <td className="table-cell text-content-muted">
                     {o.customer ? `${o.customer.firstName} ${o.customer.lastName}` : '—'}
                   </td>
-                  <td className="table-cell text-content-muted">{o.description}</td>
+                  <td className="table-cell text-content-muted">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CatIcon category={o.category} />
+                      {o.description}
+                    </span>
+                  </td>
                   <td className="table-cell text-content-muted">{o.supplierName ?? '—'}</td>
                   <td className="table-cell text-content-muted">{formatDate(o.expectedAt)}</td>
                   <td className="table-cell">
@@ -152,7 +196,7 @@ function ConfiguratorModal({ onClose, onCreated }: { onClose: () => void; onCrea
     ' (paire)';
 
   const mut = useMutation({
-    mutationFn: () => createLensOrder({ customerId: customerId || '', description, cost: price }),
+    mutationFn: () => createLensOrder({ customerId: customerId || '', category: 'VERRES', description, cost: price }),
     onSuccess: onCreated,
     onError: (e) => setError(apiErrorMessage(e, 'Création impossible')),
   });
@@ -221,6 +265,7 @@ function ConfiguratorModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
 function LensOrderModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { register, handleSubmit } = useForm<LensOrderCreateInput>();
+  const [category, setCategory] = useState<LensOrderCategory>('VERRES');
   const [error, setError] = useState('');
   const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
   const mut = useMutation({
@@ -230,8 +275,12 @@ function LensOrderModal({ onClose, onCreated }: { onClose: () => void; onCreated
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle commande de verres">
-      <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
+    <Modal open onClose={onClose} title="Nouvelle commande">
+      <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, category }))} className="space-y-3">
+        <div>
+          <span className="label">Type</span>
+          <CategoryChips value={category} onChange={setCategory} />
+        </div>
         <Field label="Client (optionnel)">
           <select className="input" {...register('customerId')}>
             <option value="">— Aucun —</option>

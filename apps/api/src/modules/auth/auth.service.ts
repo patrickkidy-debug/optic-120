@@ -77,6 +77,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     tenantLocation: user.tenant.location,
     tenantContactPhone: user.tenant.contactPhone,
     tenantContactEmail: user.tenant.contactEmail,
+    tenantVatRate: user.tenant.vatRate ?? null,
     tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
     emailVerified: user.emailVerifiedAt != null,
   };

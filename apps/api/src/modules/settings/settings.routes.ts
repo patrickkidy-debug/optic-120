@@ -18,6 +18,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         location: true,
         contactPhone: true,
         contactEmail: true,
+        vatRate: true,
         invoiceSettings: true,
       },
     });
@@ -28,6 +29,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         location: tenant?.location ?? null,
         contactPhone: tenant?.contactPhone ?? null,
         contactEmail: tenant?.contactEmail ?? null,
+        vatRate: tenant?.vatRate ?? null,
         invoiceSettings: (tenant?.invoiceSettings as unknown) ?? null,
       },
     });
@@ -43,6 +45,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         location: input.location === undefined ? undefined : input.location || null,
         contactPhone: input.contactPhone === undefined ? undefined : input.contactPhone || null,
         contactEmail: input.contactEmail === undefined ? undefined : input.contactEmail || null,
+        vatRate: input.vatRate === undefined ? undefined : input.vatRate,
         // Remplacement complet du bloc de personnalisation quand fourni ;
         // un objet vide efface les réglages (retour aux valeurs par défaut).
         invoiceSettings:
@@ -58,6 +61,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         location: true,
         contactPhone: true,
         contactEmail: true,
+        vatRate: true,
         invoiceSettings: true,
       },
     });
@@ -68,6 +72,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         location: tenant.location,
         contactPhone: tenant.contactPhone,
         contactEmail: tenant.contactEmail,
+        vatRate: tenant.vatRate ?? null,
         invoiceSettings: (tenant.invoiceSettings as unknown) ?? null,
       },
     });

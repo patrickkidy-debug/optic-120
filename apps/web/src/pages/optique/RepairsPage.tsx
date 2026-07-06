@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Wrench } from 'lucide-react';
-import type { RepairCreateInput, RepairStatus } from '@oculo/shared-types';
-import { REPAIR_STATUSES } from '@oculo/shared-types';
+import { Plus, Wrench, Frame, Glasses, CircleDot, Sparkles, Tag, type LucideIcon } from 'lucide-react';
+import type { RepairCreateInput, RepairStatus, RepairCategory } from '@oculo/shared-types';
+import { REPAIR_STATUSES, REPAIR_CATEGORIES } from '@oculo/shared-types';
 import { listRepairs, createRepair, setRepairStatus, listCustomers } from '../../features/optique/api';
 import { apiErrorMessage } from '../../lib/api';
 import { usePermission } from '../../store/auth';
@@ -16,6 +16,45 @@ const STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | '
   DELIVERED: { label: 'Livré', tone: 'success' },
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
+
+const REPAIR_CAT: Record<RepairCategory, { label: string; icon: LucideIcon }> = {
+  MONTURE: { label: 'Monture', icon: Frame },
+  VERRE: { label: 'Verre', icon: Glasses },
+  VIS: { label: 'Vis / charnière', icon: Wrench },
+  PLAQUETTES: { label: 'Plaquettes', icon: CircleDot },
+  NETTOYAGE: { label: 'Nettoyage', icon: Sparkles },
+  AUTRE: { label: 'Autre', icon: Tag },
+};
+
+function CatIcon({ category }: { category: string | null }) {
+  const def = category ? REPAIR_CAT[category as RepairCategory] : undefined;
+  if (!def) return null;
+  const Icon = def.icon;
+  return <Icon className="h-4 w-4 shrink-0 text-primary" />;
+}
+
+function CategoryChips({ value, onChange }: { value: RepairCategory; onChange: (c: RepairCategory) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {REPAIR_CATEGORIES.map((c) => {
+        const Icon = REPAIR_CAT[c].icon;
+        const active = value === c;
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition ${
+              active ? 'border-primary bg-primary-soft text-content' : 'border-line text-content-muted'
+            }`}
+          >
+            <Icon className="h-4 w-4" /> {REPAIR_CAT[c].label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function RepairsPage() {
   const qc = useQueryClient();
@@ -65,7 +104,12 @@ export function RepairsPage() {
                   <td className="table-cell text-content-muted">
                     {r.customer ? `${r.customer.firstName} ${r.customer.lastName}` : '—'}
                   </td>
-                  <td className="table-cell text-content-muted">{r.description}</td>
+                  <td className="table-cell text-content-muted">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CatIcon category={r.category} />
+                      {r.description}
+                    </span>
+                  </td>
                   <td className="table-cell">
                     {canManage ? (
                       <select
@@ -95,6 +139,7 @@ export function RepairsPage() {
 
 function RepairModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { register, handleSubmit } = useForm<RepairCreateInput>();
+  const [category, setCategory] = useState<RepairCategory>('MONTURE');
   const [error, setError] = useState('');
   const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
   const mut = useMutation({
@@ -105,7 +150,11 @@ function RepairModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   return (
     <Modal open onClose={onClose} title="Nouvelle réparation">
-      <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
+      <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, category }))} className="space-y-3">
+        <div>
+          <span className="label">Type de réparation</span>
+          <CategoryChips value={category} onChange={setCategory} />
+        </div>
         <Field label="Client (optionnel)">
           <select className="input" {...register('customerId')}>
             <option value="">— Aucun —</option>
