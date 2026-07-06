@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Chart as ChartJS,
@@ -38,6 +38,7 @@ import {
   Copy,
   Check,
   MessageCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   listAllSubscriptions,
@@ -65,7 +66,7 @@ import { listSupportTickets, setSupportTicketStatus } from '../../features/suppo
 import { listPendingPayments, confirmPayment } from '../../features/billing/api';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
-import { PageHeader, Button, Badge, PageLoader, EmptyState, StatCard, Field, Modal } from '../../components/ui';
+import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal } from '../../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -82,6 +83,51 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
   SUSPENDED: { label: 'Suspendu', tone: 'danger' },
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
+
+const KPI_TONES = {
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-success/15 text-success',
+  accent: 'bg-accent/10 text-accent',
+  info: 'bg-sky-500/10 text-sky-500',
+  danger: 'bg-danger/15 text-danger',
+} as const;
+
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone: keyof typeof KPI_TONES;
+}) {
+  return (
+    <div className="card p-5 transition hover:-translate-y-0.5 hover:shadow-card-lg">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-content-muted">{label}</p>
+          <p className="mt-1 font-display text-2xl font-bold text-content">{value}</p>
+        </div>
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${KPI_TONES[tone]}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      {sub && <div className="mt-2 text-xs">{sub}</div>}
+    </div>
+  );
+}
+
+function Delta({ value }: { value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-medium text-success">
+      <TrendingUp className="h-3.5 w-3.5" /> {value}
+    </span>
+  );
+}
 
 type Tab = 'subs' | 'payments' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
@@ -113,17 +159,39 @@ export function PlatformPage() {
         }
       />
 
-      {/* KPI */}
+      {/* KPI — vue d'ensemble */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Building2} label="Établissements" value={stats?.tenantsTotal ?? '—'} tone="primary" />
-        <StatCard icon={Banknote} label="Revenu mensuel (MRR)" value={stats ? formatCurrency(stats.mrr) : '—'} tone="success" />
-        <StatCard icon={Sparkles} label="Abonnements actifs" value={stats?.subsActive ?? '—'} tone="accent" />
-        <StatCard icon={Users} label="Utilisateurs" value={stats?.usersTotal ?? '—'} tone="primary" />
+        <KpiCard
+          icon={Building2}
+          tone="primary"
+          label="Établissements"
+          value={stats?.tenantsTotal ?? '—'}
+          sub={stats ? <Delta value={`+${stats.newTenants30d} ce mois`} /> : null}
+        />
+        <KpiCard
+          icon={Banknote}
+          tone="success"
+          label="Revenu mensuel (MRR)"
+          value={stats ? formatCurrency(stats.mrr) : '—'}
+          sub={stats ? <span className="text-content-faint">{stats.subsActive} abonnements actifs</span> : null}
+        />
+        <KpiCard
+          icon={Sparkles}
+          tone="accent"
+          label="Abonnements actifs"
+          value={stats?.subsActive ?? '—'}
+          sub={stats ? <span className="text-content-faint">{stats.subsTrialing} en essai</span> : null}
+        />
+        <KpiCard
+          icon={Users}
+          tone="info"
+          label="Utilisateurs"
+          value={stats?.usersTotal ?? '—'}
+          sub={stats ? <Delta value={`+${stats.newUsers30d} ce mois`} /> : null}
+        />
       </div>
       {stats && (
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="badge bg-primary-soft text-content"><UserPlus className="h-3.5 w-3.5" /> {stats.newTenants30d} nouv. établissements (30j)</span>
-          <span className="badge bg-primary-soft text-content"><UserPlus className="h-3.5 w-3.5" /> {stats.newUsers30d} nouv. utilisateurs (30j)</span>
           <span className="badge bg-surface-3 text-content-muted">{stats.subsTrialing} en essai</span>
           <span className="badge bg-surface-3 text-content-muted">{stats.subsPastDue} en retard</span>
           <span className="badge bg-surface-3 text-content-muted">{stats.subsSuspended} suspendus</span>
@@ -581,14 +649,14 @@ function FinanceTab() {
   return (
     <div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Wallet} label="Revenu total encaissé" value={summary ? formatCurrency(summary.totalRevenue) : '—'} tone="success" />
-        <StatCard icon={TrendingUp} label="Panier moyen (ARPU)" value={summary ? formatCurrency(summary.arpu) : '—'} tone="primary" />
-        <StatCard icon={Receipt} label="Factures payées" value={summary?.paidInvoicesCount ?? '—'} tone="accent" />
-        <StatCard
+        <KpiCard icon={Wallet} tone="success" label="Revenu total encaissé" value={summary ? formatCurrency(summary.totalRevenue) : '—'} />
+        <KpiCard icon={TrendingUp} tone="primary" label="Panier moyen (ARPU)" value={summary ? formatCurrency(summary.arpu) : '—'} />
+        <KpiCard icon={Receipt} tone="accent" label="Factures payées" value={summary?.paidInvoicesCount ?? '—'} />
+        <KpiCard
           icon={TrendingDown}
+          tone={summary && summary.churnRate30d > 5 ? 'danger' : 'primary'}
           label="Churn (30j)"
           value={summary ? `${summary.churnRate30d}%` : '—'}
-          tone={summary && summary.churnRate30d > 5 ? 'danger' : 'primary'}
         />
       </div>
 
