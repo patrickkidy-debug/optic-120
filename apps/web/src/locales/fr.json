@@ -4,6 +4,7 @@
     "main": "Principal",
     "dashboard": "Tableau de bord",
     "clinic": "Clinique",
+    "clinicDashboard": "Tableau clinique",
     "patients": "Patients",
     "consultations": "Consultations",
     "appointments": "Rendez-vous",

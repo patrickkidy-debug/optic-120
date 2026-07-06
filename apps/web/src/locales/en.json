@@ -4,6 +4,7 @@
     "main": "Main",
     "dashboard": "Dashboard",
     "clinic": "Clinic",
+    "clinicDashboard": "Clinical dashboard",
     "patients": "Patients",
     "consultations": "Consultations",
     "appointments": "Appointments",

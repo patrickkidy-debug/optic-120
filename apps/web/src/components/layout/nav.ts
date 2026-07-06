@@ -75,6 +75,7 @@ export const NAV: NavGroup[] = [
   {
     titleKey: 'nav.clinic',
     items: [
+      { to: '/clinique/dashboard', labelKey: 'nav.clinicDashboard', icon: LayoutDashboard, permission: 'clinic.patients.view' },
       { to: '/clinique/patients', labelKey: 'nav.patients', icon: Users, permission: 'clinic.patients.view' },
       { to: '/clinique/consultations', labelKey: 'nav.consultations', icon: Stethoscope, permission: 'clinic.consultations.view' },
       { to: '/clinique/rendez-vous', labelKey: 'nav.appointments', icon: CalendarDays, permission: 'clinic.appointments.view' },
