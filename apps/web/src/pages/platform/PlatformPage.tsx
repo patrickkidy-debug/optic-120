@@ -627,19 +627,32 @@ function FinanceTab() {
     datasets: [
       {
         data: (series ?? []).map((d) => d.revenue),
-        borderColor: '#22c55e',
+        borderColor: (ctx: { chart: ChartJS }) => {
+          const { ctx: c, chartArea } = ctx.chart;
+          if (!chartArea) return '#7c3aed';
+          const g = c.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+          g.addColorStop(0, '#7c3aed');
+          g.addColorStop(1, '#0d9488');
+          return g;
+        },
         backgroundColor: (ctx: { chart: ChartJS }) => {
           const { ctx: c, chartArea } = ctx.chart;
-          if (!chartArea) return 'rgba(34,197,94,0.15)';
+          if (!chartArea) return 'rgba(124,58,237,0.12)';
           const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g.addColorStop(0, 'rgba(34,197,94,0.35)');
-          g.addColorStop(1, 'rgba(34,197,94,0)');
+          g.addColorStop(0, 'rgba(124,58,237,0.28)');
+          g.addColorStop(0.6, 'rgba(124,58,237,0.05)');
+          g.addColorStop(1, 'rgba(124,58,237,0)');
           return g;
         },
         fill: true,
-        tension: 0.4,
-        pointRadius: 2,
-        pointBackgroundColor: '#22c55e',
+        tension: 0.45,
+        cubicInterpolationMode: 'monotone' as const,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#7c3aed',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
       },
     ],
   };
@@ -683,10 +696,37 @@ function FinanceTab() {
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#0f172a',
+                  padding: 10,
+                  cornerRadius: 10,
+                  displayColors: false,
+                  titleColor: '#94a3b8',
+                  bodyColor: '#fff',
+                  bodyFont: { weight: 'bold' },
+                  callbacks: { label: (c) => formatCurrency(Number(c.parsed.y)) },
+                },
+              },
               scales: {
-                x: { grid: { display: false }, ticks: { color: '#94a3b8', maxTicksLimit: 10 } },
-                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+                x: {
+                  grid: { display: false },
+                  border: { display: false },
+                  ticks: { color: '#94a3b8', maxTicksLimit: 8, font: { size: 11 } },
+                },
+                y: {
+                  grid: { color: 'rgba(148,163,184,0.12)' },
+                  border: { display: false },
+                  ticks: {
+                    color: '#94a3b8',
+                    maxTicksLimit: 5,
+                    font: { size: 11 },
+                    callback: (v: string | number) =>
+                      new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(v)),
+                  },
+                },
               },
             }}
           />
