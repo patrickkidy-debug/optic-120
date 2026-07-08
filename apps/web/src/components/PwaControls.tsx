@@ -22,6 +22,9 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+/** Prompt capturé tôt par le script inline d'index.html (avant React). */
+type WinWithPrompt = Window & { __oculoInstallPrompt?: InstallPromptEvent | null };
+
 /**
  * Contrôles PWA globaux :
  *  - bandeau « Hors ligne » quand le réseau tombe (données figées, reconnexion auto) ;
@@ -35,20 +38,32 @@ export function PwaControls() {
   const [iosHint, setIosHint] = useState(false);
 
   useEffect(() => {
+    const w = window as WinWithPrompt;
     const onPrompt = (e: Event) => {
       e.preventDefault(); // empêche l'invite native, on affiche la nôtre
       setDeferred(e as InstallPromptEvent);
     };
-    const onInstalled = () => setDeferred(null);
+    // L'événement a pu se produire AVANT le montage de React : le script inline
+    // d'index.html l'a stocké → on le récupère ici.
+    const onAvailable = () => {
+      if (w.__oculoInstallPrompt) setDeferred(w.__oculoInstallPrompt);
+    };
+    const onInstalled = () => {
+      w.__oculoInstallPrompt = null;
+      setDeferred(null);
+    };
     const goOnline = () => setOffline(false);
     const goOffline = () => setOffline(true);
 
     setIosHint(shouldShowIosHint());
+    if (w.__oculoInstallPrompt) setDeferred(w.__oculoInstallPrompt);
+    window.addEventListener('oculo-install-available', onAvailable);
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
     return () => {
+      window.removeEventListener('oculo-install-available', onAvailable);
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
       window.removeEventListener('online', goOnline);
@@ -60,6 +75,7 @@ export function PwaControls() {
     if (!deferred) return;
     await deferred.prompt();
     await deferred.userChoice;
+    (window as WinWithPrompt).__oculoInstallPrompt = null;
     setDeferred(null);
   }
 

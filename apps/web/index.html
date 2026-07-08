@@ -74,6 +74,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="OculoSaaS" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <!-- Capture l'invite d'installation PWA TRÈS TÔT : Chrome peut déclencher
+         « beforeinstallprompt » avant le montage de React, sinon l'événement est
+         perdu et le bouton « Installer » n'apparaît jamais. -->
+    <script>
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__oculoInstallPrompt = e;
+        window.dispatchEvent(new Event('oculo-install-available'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__oculoInstallPrompt = null;
+      });
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Chargement non bloquant : la feuille de style Google Fonts retardait
