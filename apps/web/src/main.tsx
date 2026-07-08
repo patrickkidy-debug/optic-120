@@ -11,6 +11,7 @@ import { useAuthStore } from './store/auth';
 import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
 import { trackPixelPageView } from './lib/pixel';
+import { PwaControls } from './components/PwaControls';
 
 applyTheme(getStoredTheme());
 
@@ -36,7 +37,14 @@ function Root() {
   // inscription) s'affichent sans attendre la vérification de session (qui,
   // sur un serveur endormi, peut prendre plusieurs secondes). Seules les routes
   // protégées patientent derrière le splash (voir RequireAuth).
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      {/* Invite d'installation PWA (Android/desktop + guide iOS) + bandeau hors ligne,
+          disponible partout : landing, connexion et application. */}
+      <PwaControls />
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
