@@ -4,6 +4,12 @@ import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
+  // Identifiant de build (horodatage) injecté dans le client. Sert à forcer la
+  // détection d'une nouvelle version du service worker à chaque déploiement
+  // (l'URL /sw.js?v=<build> change → le navigateur réinstalle le SW → MAJ auto).
+  define: {
+    __SW_VERSION__: JSON.stringify(String(Date.now())),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

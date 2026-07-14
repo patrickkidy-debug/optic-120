@@ -8,3 +8,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Identifiant de build injecté par Vite (voir `define` dans vite.config.ts). */
+declare const __SW_VERSION__: string;

@@ -1,9 +1,14 @@
 /* Service worker OculoSaaS — rend l'app installable (PWA) et utilisable hors-ligne.
  * Stratégie sûre : navigation = network-first (jamais de HTML périmé),
  * assets hashés = cache-first. L'API (cross-origin) n'est jamais interceptée. */
-const CACHE = 'oculosaas-v2';
+const CACHE = 'oculosaas-v3';
 
+// Active immédiatement la nouvelle version (pas d'attente que tous les onglets
+// ferment) ; combiné à clients.claim(), la MAJ s'applique sans délai.
 self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
