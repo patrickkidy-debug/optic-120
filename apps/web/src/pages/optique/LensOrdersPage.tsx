@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Glasses, CircleDot, Package, Frame, Tag, type LucideIcon } from 'lucide-react';
 import type { LensOrderStatus, LensOrderCategory } from '@oculo/shared-types';
 import { LENS_ORDER_STATUSES, LENS_ORDER_CATEGORIES } from '@oculo/shared-types';
-import { listLensOrders, createLensOrder, setLensOrderStatus, listCustomers } from '../../features/optique/api';
+import { listLensOrders, createLensOrder, setLensOrderStatus, listCustomers, type LensOrder } from '../../features/optique/api';
 import { apiErrorMessage } from '../../lib/api';
 import { usePermission } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
@@ -48,6 +48,29 @@ function formatDate(v?: string | null) {
 }
 function fcfa(n: number) {
   return `${new Intl.NumberFormat('fr-FR').format(n)} FCFA`;
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+function daysBetween(a: string | number | Date, b: string | number | Date) {
+  return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / DAY));
+}
+
+/** Délai de livraison : temps réel une fois livré, ou attente en cours (retard signalé). */
+function DelayCell({ order }: { order: LensOrder }) {
+  if (order.deliveredAt) {
+    return (
+      <span className="font-medium text-success">
+        Livré en {daysBetween(order.createdAt, order.deliveredAt)} j
+      </span>
+    );
+  }
+  if (order.status === 'CANCELLED') return <span className="text-content-faint">—</span>;
+  const late =
+    order.expectedAt && Date.now() > new Date(order.expectedAt).getTime()
+      ? daysBetween(order.expectedAt, Date.now())
+      : 0;
+  if (late > 0) return <span className="font-medium text-danger">Retard {late} j</span>;
+  return <span className="text-content-muted">En cours {daysBetween(order.createdAt, Date.now())} j</span>;
 }
 
 function CatIcon({ category }: { category: string | null }) {
@@ -106,6 +129,7 @@ export function LensOrdersPage() {
                 <th className="table-cell font-semibold">Article</th>
                 <th className="table-cell font-semibold">Fournisseur</th>
                 <th className="table-cell font-semibold">Échéance</th>
+                <th className="table-cell font-semibold">Délai livraison</th>
                 <th className="table-cell font-semibold">Statut</th>
               </tr>
             </thead>
@@ -124,6 +148,7 @@ export function LensOrdersPage() {
                   </td>
                   <td className="table-cell text-content-muted">{o.supplierName ?? '—'}</td>
                   <td className="table-cell text-content-muted">{formatDate(o.expectedAt)}</td>
+                  <td className="table-cell"><DelayCell order={o} /></td>
                   <td className="table-cell">
                     {canManage ? (
                       <select

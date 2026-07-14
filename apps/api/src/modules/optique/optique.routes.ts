@@ -70,8 +70,12 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/lens-orders/:id', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const { status } = lensOrderStatusSchema.parse(req.body);
-    const res = await req.db!.lensOrder.updateMany({ where: { id }, data: { status } });
-    if (res.count === 0) throw notFound('Commande introuvable');
+    const current = await req.db!.lensOrder.findFirst({ where: { id }, select: { deliveredAt: true } });
+    if (!current) throw notFound('Commande introuvable');
+    // Horodate la remise au client au premier passage à « Livré » (pour le délai).
+    const data: { status: typeof status; deliveredAt?: Date } = { status };
+    if (status === 'DELIVERED' && !current.deliveredAt) data.deliveredAt = new Date();
+    await req.db!.lensOrder.updateMany({ where: { id }, data });
     return reply.send({ ok: true, status });
   });
 
@@ -126,6 +130,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       by: ['customerId'],
       _max: { date: true },
     });
+    const rxLast = new Map(rxGrouped.map((g) => [g.customerId, g._max.date]));
     const rxDue = new Set(
       rxGrouped.filter((g) => g._max.date && g._max.date < rxCutoff).map((g) => g.customerId),
     );
@@ -135,6 +140,9 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       where: { type: 'SALE', customerId: { not: null } },
       _max: { createdAt: true },
     });
+    const saleLast = new Map(
+      saleGrouped.filter((g) => g.customerId).map((g) => [g.customerId as string, g._max.createdAt]),
+    );
     const saleDue = new Set(
       saleGrouped
         .filter((g) => g.customerId && g._max.createdAt && g._max.createdAt < saleCutoff)
@@ -151,6 +159,8 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       ...c,
       renewPrescription: rxDue.has(c.id),
       reorder: saleDue.has(c.id),
+      lastPrescriptionAt: rxLast.get(c.id) ?? null,
+      lastPurchaseAt: saleLast.get(c.id) ?? null,
     }));
     return reply.send({ renewals });
   });

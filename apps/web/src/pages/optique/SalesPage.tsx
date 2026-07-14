@@ -73,6 +73,9 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   function refreshSalesViews() {
     qc.invalidateQueries({ queryKey: ['sales'] });
     qc.invalidateQueries({ queryKey: ['dashboard'] });
+    qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+    qc.invalidateQueries({ queryKey: ['forecast'] });
+    qc.invalidateQueries({ queryKey: ['sales-report'] });
     qc.invalidateQueries({ queryKey: ['receivables'] });
   }
 

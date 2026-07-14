@@ -418,6 +418,7 @@ model LensOrder {
   description  String // ex. « Verres progressifs 1.6 anti-reflet »
   status       LensOrderStatus @default(ORDERED)
   expectedAt   DateTime?
+  deliveredAt  DateTime? // date de remise au client (calcul du délai de livraison)
   cost         Decimal?        @db.Decimal(12, 2)
   notes        String?
   createdById  String?

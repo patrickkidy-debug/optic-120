@@ -357,6 +357,7 @@ export interface LensOrder {
   description: string;
   status: LensOrderStatus;
   expectedAt: string | null;
+  deliveredAt: string | null;
   cost: string | number | null;
   notes: string | null;
   createdAt: string;
@@ -413,6 +414,8 @@ export interface Renewal {
   email?: string | null;
   renewPrescription: boolean;
   reorder: boolean;
+  lastPrescriptionAt?: string | null;
+  lastPurchaseAt?: string | null;
 }
 export async function listRenewals(): Promise<Renewal[]> {
   const { data } = await api.get<{ renewals: Renewal[] }>('/optique/renewals');

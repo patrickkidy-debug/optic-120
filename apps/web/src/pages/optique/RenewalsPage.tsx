@@ -9,6 +9,19 @@ function waLink(phone?: string | null) {
   return digits ? `https://wa.me/${digits}` : null;
 }
 
+/** Ancienneté en mois d'une date passée (arrondi), pour le suivi du renouvellement. */
+function monthsAgo(v?: string | null): number | null {
+  if (!v) return null;
+  const months = Math.round((Date.now() - new Date(v).getTime()) / (30 * 24 * 60 * 60 * 1000));
+  return months >= 0 ? months : null;
+}
+function ageLabel(v?: string | null): string {
+  const m = monthsAgo(v);
+  if (m === null) return '—';
+  if (m === 0) return 'ce mois-ci';
+  return `il y a ${m} mois`;
+}
+
 export function RenewalsPage() {
   const { data, isLoading } = useQuery({ queryKey: ['renewals'], queryFn: listRenewals });
 
@@ -30,6 +43,7 @@ export function RenewalsPage() {
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">Client</th>
                 <th className="table-cell font-semibold">Motif</th>
+                <th className="table-cell font-semibold">Renouvellement</th>
                 <th className="table-cell font-semibold">Contact</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
@@ -47,6 +61,10 @@ export function RenewalsPage() {
                         {c.renewPrescription && <Badge tone="warning">Ordonnance à renouveler</Badge>}
                         {c.reorder && <Badge tone="info">Nouvel achat à proposer</Badge>}
                       </div>
+                    </td>
+                    <td className="table-cell text-xs text-content-muted">
+                      <div>Dernier achat : {ageLabel(c.lastPurchaseAt)}</div>
+                      <div>Ordonnance : {ageLabel(c.lastPrescriptionAt)}</div>
                     </td>
                     <td className="table-cell text-content-muted">
                       {c.phone || c.email || '—'}

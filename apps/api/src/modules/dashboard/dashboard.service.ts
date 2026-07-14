@@ -171,7 +171,14 @@ export async function getAdminDashboard(
   const branchWhere = opts.allBranches ? { tenantId } : { tenantId, id: { in: scopedIds } };
   const branches = await prisma.branch.findMany({ where: branchWhere, select: { id: true, name: true } });
   const saleScope = opts.allBranches ? {} : { branchId: { in: scopedIds } };
-  const saleWhere = { tenantId, type: SaleType.SALE, createdAt: { gte: monthStart }, ...saleScope };
+  // Exclut les ventes annulées du chiffre d'affaires (comme le tableau de bord).
+  const saleWhere = {
+    tenantId,
+    type: SaleType.SALE,
+    status: { in: PAID_LIKE },
+    createdAt: { gte: monthStart },
+    ...saleScope,
+  };
 
   const [perBranch, perCashier, revenueAgg, expenseAgg, usersTotal, usersActive] = await Promise.all([
     prisma.sale.groupBy({ by: ['branchId'], where: saleWhere, _sum: { paidAmount: true }, _count: { _all: true } }),

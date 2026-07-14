@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Contact, Glasses, FileText } from 'lucide-react';
+import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer } from 'lucide-react';
 import { customerCreateSchema, type CustomerCreateInput } from '@oculo/shared-types';
 import {
   listCustomers,
@@ -11,7 +11,7 @@ import {
   updateCustomer,
   type Customer,
 } from '../../features/optique/api';
-import { usePermission } from '../../store/auth';
+import { useAuthStore, usePermission } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
@@ -23,10 +23,12 @@ export function ClientsPage() {
   const canUpdate = usePermission('optique.customers.update');
   const canSeeRx = usePermission('optique.prescriptions.view');
   const canQuote = usePermission('optique.quotes.create');
+  const tenantName = useAuthStore((s) => s.user?.tenantName);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Customer | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', search],
@@ -41,17 +43,87 @@ export function ClientsPage() {
     navigate('/optique/caisse');
   }
 
+  // Génère un PDF (via impression navigateur) de TOUT le fichier clients,
+  // indépendamment du filtre de recherche en cours.
+  async function exportPdf() {
+    setExporting(true);
+    try {
+      const all = await listCustomers();
+      const esc = (v: unknown) =>
+        String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const body = all
+        .map(
+          (c, i) => `<tr>
+            <td>${i + 1}</td>
+            <td>${esc(`${c.firstName} ${c.lastName}`)}</td>
+            <td>${esc(c.phone || '—')}</td>
+            <td>${esc(c.email || '—')}</td>
+          </tr>`,
+        )
+        .join('');
+      const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8" />
+        <title>Liste des clients</title>
+        <style>
+          @page { size: A4; margin: 14mm; }
+          body { font-family: -apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:#1e293b; padding:20px; }
+          h1 { font-size:20px; margin:0 0 2px; color:#0d9488; }
+          .muted { color:#64748b; font-size:12px; }
+          table { width:100%; border-collapse:collapse; margin-top:16px; font-size:12px; }
+          th { background:#0d9488; color:#fff; padding:8px 10px; text-align:left; }
+          td { padding:7px 10px; border-bottom:1px solid #e2e8f0; }
+        </style></head><body>
+        <h1>${esc(tenantName ?? 'OculoSaaS')}</h1>
+        <div class="muted">Liste des clients — éditée le ${new Date().toLocaleDateString('fr-FR')} · ${all.length} clients</div>
+        <table>
+          <thead><tr><th>#</th><th>Client</th><th>Téléphone</th><th>Email</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table></body></html>`;
+      const win = window.open('', '_blank', 'width=900,height=1100');
+      if (!win) {
+        alert('Veuillez autoriser les fenêtres pop-up pour générer le PDF.');
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => {
+        win.focus();
+        win.print();
+      };
+      setTimeout(() => {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          /* déjà imprimé */
+        }
+      }, 600);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Clients"
         subtitle="Fichier clients et ordonnances optiques"
         actions={
-          canCreate && (
-            <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
-              <Plus className="h-4 w-4" /> Nouveau client
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={exportPdf}
+              loading={exporting}
+              disabled={!customers || customers.length === 0}
+            >
+              <Printer className="h-4 w-4" /> PDF
             </Button>
-          )
+            {canCreate && (
+              <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
+                <Plus className="h-4 w-4" /> Nouveau client
+              </Button>
+            )}
+          </div>
         }
       />
 
