@@ -68,7 +68,7 @@ function BranchSelector() {
   const active = branches?.find((b) => b.id === activeBranchId);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} data-tour="branch-switch" className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className="btn-outline h-9 rounded-xl px-3 text-sm"

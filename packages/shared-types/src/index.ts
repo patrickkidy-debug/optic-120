@@ -1121,6 +1121,9 @@ export interface AuthUser {
   lastName: string;
   photoUrl: string | null;
   roleId: string;
+  /** Identifiant stable du rôle (ex: "admin", "opticien") — sûr à comparer. */
+  roleCode: string;
+  /** Libellé affiché : personnalisable par l'établissement, ne pas comparer. */
   roleName: string;
   permissions: string[];
   branchIds: string[];

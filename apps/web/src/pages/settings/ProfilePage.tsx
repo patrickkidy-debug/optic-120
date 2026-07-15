@@ -19,6 +19,7 @@ import {
   disableTwoFactor,
 } from '../../features/auth/api';
 import { getBranding, updateBranding } from '../../features/settings/api';
+import { RestartTourCard } from '../../features/tour';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings } from '@oculo/shared-types';
@@ -216,6 +217,12 @@ export function ProfilePage() {
           </button>
         ))}
       </div>
+
+      {active === 'profil' && (
+      <div className="mb-4">
+        <RestartTourCard />
+      </div>
+      )}
 
       {active === 'profil' && (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

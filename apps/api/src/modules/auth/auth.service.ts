@@ -66,6 +66,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     lastName: user.lastName,
     photoUrl: user.photoUrl,
     roleId: user.roleId,
+    roleCode: user.role.code,
     roleName: user.role.name,
     permissions: user.role.permissions.map(
       (rp) => `${rp.permission.module}.${rp.permission.action}`,

@@ -28,7 +28,7 @@ export function Sidebar() {
   const can = (perm?: string) => !perm || isOperator || (user?.permissions.includes(perm) ?? false);
 
   return (
-    <nav className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
+    <nav data-tour="sidebar" className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
       <div className="px-2">
         <Logo />
       </div>
@@ -60,6 +60,7 @@ export function Sidebar() {
                     <NavLink
                       key={it.to}
                       to={it.to}
+                      data-tour={`nav:${it.to}`}
                       onClick={() => setSidebar(false)}
                       onMouseEnter={() => prefetchRoute(it.to)}
                       onFocus={() => prefetchRoute(it.to)}

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LifeBuoy, Mail, MessageCircle, Send, CheckCircle2 } from 'lucide-react';
 import { supportTicketSchema, type SupportTicketInput } from '@oculo/shared-types';
 import { createSupportTicket } from '../features/support/api';
+import { RestartTourCard } from '../features/tour';
 import { apiErrorMessage } from '../lib/api';
 import { PageHeader, Button, Field } from '../components/ui';
 
@@ -41,6 +42,10 @@ export function SupportPage() {
   return (
     <div>
       <PageHeader title="Aide & support" subtitle="Une question ? Un problème ? Nous sommes là." />
+
+      <div className="mb-4">
+        <RestartTourCard />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Contacts rapides */}
