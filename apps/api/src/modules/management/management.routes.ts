@@ -9,6 +9,7 @@ import {
   insurerCreateSchema,
   insurerUpdateSchema,
   SaleType,
+  SaleStatus,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
@@ -24,6 +25,9 @@ function clean<T extends Record<string, unknown>>(obj: T): T {
   }
   return out;
 }
+/** Statuts comptant comme recette (une vente annulée ne rapporte rien). */
+const PAID_LIKE = [SaleStatus.PAID, SaleStatus.PARTIALLY_PAID, SaleStatus.CONFIRMED];
+
 function startOfMonth(): Date {
   const d = new Date();
   d.setDate(1);
@@ -78,7 +82,7 @@ async function expensesRoutes(app: FastifyInstance) {
     const from = startOfMonth();
     const [revenueAgg, expenseAgg, byCategory] = await Promise.all([
       req.db!.sale.aggregate({
-        where: { type: SaleType.SALE, createdAt: { gte: from } },
+        where: { type: SaleType.SALE, status: { in: PAID_LIKE }, createdAt: { gte: from } },
         _sum: { paidAmount: true },
       }),
       req.db!.expense.aggregate({ where: { date: { gte: from } }, _sum: { amount: true } }),

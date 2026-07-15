@@ -244,8 +244,10 @@ export function PosPage() {
             pos.clear();
             setPaySale(null);
             qc.invalidateQueries({ queryKey: ['dashboard'] });
+            qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
             qc.invalidateQueries({ queryKey: ['receivables'] });
             qc.invalidateQueries({ queryKey: ['sales'] });
+            qc.invalidateQueries({ queryKey: ['finance-summary'] });
           }}
         />
       )}

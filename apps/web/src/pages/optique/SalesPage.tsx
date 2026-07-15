@@ -77,6 +77,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     qc.invalidateQueries({ queryKey: ['forecast'] });
     qc.invalidateQueries({ queryKey: ['sales-report'] });
     qc.invalidateQueries({ queryKey: ['receivables'] });
+    qc.invalidateQueries({ queryKey: ['finance-summary'] });
   }
 
   const cancelMut = useMutation({
