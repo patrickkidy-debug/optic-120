@@ -24,32 +24,43 @@ import { PLAN_CATALOG } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 
 /* ============================================================
- * Page d'accueil publique (vitrine commerciale) — thème SOMBRE
- * premium : glassmorphism, néon, grille et halos animés. La
- * palette de la marque (violet → rose → orange sur fond navy) est
- * épinglée localement pour un rendu identique quel que soit le
- * thème choisi ailleurs dans l'application.
+ * Page d'accueil publique (vitrine commerciale) — thème CLAIR
+ * premium : verre dépoli sur blanc, halos pastel, grille fine et
+ * dégradé de marque. La palette est épinglée localement pour un
+ * rendu identique quel que soit le thème choisi ailleurs dans
+ * l'application (qui reste sombre par défaut).
  * ============================================================ */
 
-/** Palette sombre de marque, épinglée sur la page (indépendante du thème global). */
+/**
+ * Palette claire de marque, épinglée sur la page (indépendante du thème global).
+ * Les teintes d'accent sont volontairement plus foncées que dans l'app sombre :
+ * sur fond blanc, l'orange 500 et le cyan 400 tombent sous le ratio de contraste
+ * 4.5:1 exigé pour du texte (WCAG AA).
+ */
 const LANDING_THEME = {
-  '--bg': '#080c16',
-  '--bg-subtle': '#0b1120',
-  '--surface': '#111a2e',
-  '--surface-2': '#16203a',
-  '--surface-3': '#1d2949',
-  '--border': 'rgba(148, 163, 184, 0.12)',
-  '--border-strong': 'rgba(148, 163, 184, 0.22)',
-  '--primary': '#8b5cf6',
-  '--primary-hover': '#7c3aed',
-  '--primary-soft': 'rgba(139, 92, 246, 0.16)',
-  '--accent': '#f97316',
-  '--accent-cyan': '#22d3ee',
-  '--text': '#e8edf7',
-  '--text-muted': '#94a3b8',
-  '--text-faint': '#5b6b85',
+  '--bg': '#ffffff',
+  '--bg-subtle': '#f7f8fc',
+  '--surface': '#ffffff',
+  '--surface-2': '#f4f6fb',
+  '--surface-3': '#eaeefb',
+  '--border': 'rgba(15, 23, 42, 0.08)',
+  '--border-strong': 'rgba(15, 23, 42, 0.14)',
+  '--primary': '#7c3aed',
+  '--primary-hover': '#6d28d9',
+  '--primary-soft': 'rgba(124, 58, 237, 0.09)',
+  '--accent': '#ea580c',
+  '--accent-hover': '#c2410c',
+  '--accent-soft': 'rgba(234, 88, 12, 0.10)',
+  '--accent-cyan': '#0e7490',
+  '--text': '#0f172a',
+  '--text-muted': '#4a5568',
+  '--text-faint': '#94a3b8',
+  '--success': '#15803d',
+  '--warning': '#b45309',
+  '--danger': '#dc2626',
   '--gradient-brand': 'linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%)',
-  '--ring': 'rgba(139, 92, 246, 0.35)',
+  '--ring': 'rgba(124, 58, 237, 0.28)',
+  colorScheme: 'light',
 } as CSSProperties;
 
 const NAV = [
@@ -328,22 +339,22 @@ export function LandingPage() {
 
   return (
     <div style={LANDING_THEME} className="relative min-h-screen overflow-x-hidden bg-bg text-content">
-      {/* Fond : grille + halos animés */}
+      {/* Fond : grille fine + halos pastel animés */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="grid-overlay absolute inset-0 opacity-60" />
-        <div className="glow-blob left-[8%] top-[6%] h-72 w-72 bg-primary/25" />
+        <div className="grid-overlay absolute inset-0" />
+        <div className="glow-blob left-[6%] top-[2%] h-96 w-96 bg-primary/30" />
         <div
-          className="glow-blob right-[6%] top-[38%] h-80 w-80 bg-[#ec4899]/20"
+          className="glow-blob right-[4%] top-[30%] h-96 w-96 bg-[#ec4899]/22"
           style={{ animationDelay: '4s' }}
         />
         <div
-          className="glow-blob bottom-[8%] left-[30%] h-72 w-72 bg-accent/15"
+          className="glow-blob bottom-[6%] left-[28%] h-80 w-80 bg-accent/18"
           style={{ animationDelay: '8s' }}
         />
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-bg/60 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur-md">
         <nav className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-4 sm:px-8">
           <Logo />
           <div className="hidden items-center gap-8 md:flex">
@@ -374,7 +385,7 @@ export function LandingPage() {
           </button>
         </nav>
         {menuOpen && (
-          <div className="border-t border-white/10 bg-bg/95 px-4 py-4 md:hidden">
+          <div className="border-t border-line bg-bg/95 px-4 py-4 md:hidden">
             <div className="flex flex-col gap-1">
               {NAV.map((n) => (
                 <a
@@ -445,7 +456,7 @@ export function LandingPage() {
                     <Check className="h-4 w-4 text-cyan" /> Sans engagement
                   </span>
                 </div>
-                <div className="mt-8 flex flex-wrap gap-8 border-t border-white/10 pt-8">
+                <div className="mt-8 flex flex-wrap gap-8 border-t border-line pt-8">
                   {STATS.map((s) => (
                     <div key={s.label}>
                       <div className="font-display text-2xl font-extrabold text-content">
@@ -650,7 +661,7 @@ export function LandingPage() {
                         <span className="text-content-muted">FCFA/mois</span>
                       </div>
                       <p className="min-h-[40px] text-sm text-content-muted">{plan.description}</p>
-                      <div className="h-px w-full bg-white/10" />
+                      <div className="h-px w-full bg-line" />
                       <ul className="flex flex-1 flex-col gap-3">
                         {plan.features.map((f) => (
                           <li
@@ -738,7 +749,7 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 bg-bg-subtle py-12">
+      <footer className="relative z-10 border-t border-line bg-bg-subtle py-12">
         <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-8 px-4 sm:px-8 md:grid-cols-4">
           <div className="flex flex-col gap-5">
             <Logo />
@@ -783,7 +794,7 @@ export function LandingPage() {
             </a>
           </div>
         </div>
-        <div className="mx-auto mt-12 max-w-[1280px] border-t border-white/5 px-4 pt-8 text-center sm:px-8">
+        <div className="mx-auto mt-12 max-w-[1280px] border-t border-line px-4 pt-8 text-center sm:px-8">
           <p className="text-sm text-content-muted">
             © {year} OculoSaaS. Excellence en ophtalmologie. Tous droits réservés.
           </p>
