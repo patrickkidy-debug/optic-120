@@ -39,25 +39,41 @@ import { Logo } from '../components/Logo';
  */
 const LANDING_THEME = {
   '--bg': '#ffffff',
+  '--bg-rgb': '255 255 255',
   '--bg-subtle': '#f7f8fc',
+  '--bg-subtle-rgb': '247 248 252',
   '--surface': '#ffffff',
+  '--surface-rgb': '255 255 255',
   '--surface-2': '#f4f6fb',
+  '--surface-2-rgb': '244 246 251',
   '--surface-3': '#eaeefb',
+  '--surface-3-rgb': '234 238 251',
   '--border': 'rgba(15, 23, 42, 0.08)',
   '--border-strong': 'rgba(15, 23, 42, 0.14)',
   '--primary': '#7c3aed',
+  '--primary-rgb': '124 58 237',
   '--primary-hover': '#6d28d9',
+  '--primary-hover-rgb': '109 40 217',
   '--primary-soft': 'rgba(124, 58, 237, 0.09)',
   '--accent': '#ea580c',
+  '--accent-rgb': '234 88 12',
   '--accent-hover': '#c2410c',
+  '--accent-hover-rgb': '194 65 12',
   '--accent-soft': 'rgba(234, 88, 12, 0.10)',
   '--accent-cyan': '#0e7490',
+  '--accent-cyan-rgb': '14 116 144',
   '--text': '#0f172a',
+  '--text-rgb': '15 23 42',
   '--text-muted': '#4a5568',
+  '--text-muted-rgb': '74 85 104',
   '--text-faint': '#94a3b8',
+  '--text-faint-rgb': '148 163 184',
   '--success': '#15803d',
+  '--success-rgb': '21 128 61',
   '--warning': '#b45309',
+  '--warning-rgb': '180 83 9',
   '--danger': '#dc2626',
+  '--danger-rgb': '220 38 38',
   '--gradient-brand': 'linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%)',
   '--ring': 'rgba(124, 58, 237, 0.28)',
   colorScheme: 'light',
@@ -253,8 +269,9 @@ function DemoVideo() {
           />
         </div>
       </div>
-      {/* Badge flottant */}
-      <div className="glass-card float-slow absolute -right-3 top-6 hidden rounded-2xl p-3 sm:block">
+      {/* Badge flottant. Posé sur la vidéo sombre : blanc plein plutôt que verre
+          dépoli, qui virerait au gris sale sur ce fond. */}
+      <div className="float-slow absolute -right-3 top-6 hidden rounded-2xl border border-line bg-surface p-3 shadow-card-lg sm:block">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-full bg-cyan/15 text-cyan">
             <TrendingUp className="h-5 w-5" />

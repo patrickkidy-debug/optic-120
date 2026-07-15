@@ -2,35 +2,61 @@
  * OculoSaaS — Tokens de thème
  * Thème SOMBRE premium par défaut (bleu marine + cyan + orange,
  * inspiration Linear / Stripe / Vercel). Thème CLAIR médical en option.
+ *
+ * Chaque couleur unie est déclarée DEUX fois :
+ *   --x     : la valeur lisible (#hex), pour le CSS brut (var(--border)…)
+ *   --x-rgb : les canaux « R G B », pour Tailwind.
+ * Pourquoi : Tailwind ne sait pas appliquer un modificateur d'opacité
+ * (bg-primary/10) à une couleur écrite `var(--primary)` — il abandonne la
+ * classe SANS erreur. Avec les canaux, la config peut produire
+ * `rgb(var(--primary-rgb) / <alpha-value>)` et toutes les opacités marchent.
+ * Les tokens contenant déjà une transparence (--border, --primary-soft…)
+ * restent en rgba() et s'utilisent sans modificateur.
  * ============================================================ */
 
 :root,
 .dark {
   --bg: #080c16;
+  --bg-rgb: 8 12 22;
   --bg-subtle: #0b1120;
+  --bg-subtle-rgb: 11 17 32;
   --surface: #111a2e;
+  --surface-rgb: 17 26 46;
   --surface-2: #16203a;
+  --surface-2-rgb: 22 32 58;
   --surface-3: #1d2949;
+  --surface-3-rgb: 29 41 73;
   --border: rgba(148, 163, 184, 0.12);
   --border-strong: rgba(148, 163, 184, 0.22);
 
   --primary: #8b5cf6;
+  --primary-rgb: 139 92 246;
   --primary-hover: #7c3aed;
+  --primary-hover-rgb: 124 58 237;
   --primary-soft: rgba(139, 92, 246, 0.16);
 
   --accent-cyan: #22d3ee;
+  --accent-cyan-rgb: 34 211 238;
 
   --accent: #f97316;
+  --accent-rgb: 249 115 22;
   --accent-hover: #ea580c;
+  --accent-hover-rgb: 234 88 12;
   --accent-soft: rgba(249, 115, 22, 0.14);
 
   --text: #e8edf7;
+  --text-rgb: 232 237 247;
   --text-muted: #94a3b8;
+  --text-muted-rgb: 148 163 184;
   --text-faint: #5b6b85;
+  --text-faint-rgb: 91 107 133;
 
   --success: #20c997;
+  --success-rgb: 32 201 151;
   --warning: #f59e0b;
+  --warning-rgb: 245 158 11;
   --danger: #ef4444;
+  --danger-rgb: 239 68 68;
 
   --ring: rgba(139, 92, 246, 0.5);
   --gradient-hero: linear-gradient(135deg, #0b1120 0%, #111a2e 55%, #0e2440 100%);
@@ -41,30 +67,46 @@
 
 .light {
   --bg: #f5f7fa;
+  --bg-rgb: 245 247 250;
   --bg-subtle: #eef2f7;
+  --bg-subtle-rgb: 238 242 247;
   --surface: #ffffff;
+  --surface-rgb: 255 255 255;
   --surface-2: #ffffff;
+  --surface-2-rgb: 255 255 255;
   --surface-3: #f1f5fb;
+  --surface-3-rgb: 241 245 251;
   --border: rgba(15, 23, 42, 0.09);
   --border-strong: rgba(15, 23, 42, 0.16);
 
   --primary: #7c3aed;
+  --primary-rgb: 124 58 237;
   --primary-hover: #6d28d9;
-  --primary-soft: rgba(124, 58, 237, 0.10);
+  --primary-hover-rgb: 109 40 217;
+  --primary-soft: rgba(124, 58, 237, 0.1);
 
   --accent-cyan: #0aa2c0;
+  --accent-cyan-rgb: 10 162 192;
 
   --accent: #f97316;
+  --accent-rgb: 249 115 22;
   --accent-hover: #ea580c;
+  --accent-hover-rgb: 234 88 12;
   --accent-soft: rgba(249, 115, 22, 0.12);
 
   --text: #0f172a;
+  --text-rgb: 15 23 42;
   --text-muted: #64748b;
+  --text-muted-rgb: 100 116 139;
   --text-faint: #94a3b8;
+  --text-faint-rgb: 148 163 184;
 
   --success: #16a34a;
+  --success-rgb: 22 163 74;
   --warning: #d97706;
+  --warning-rgb: 217 119 6;
   --danger: #dc2626;
+  --danger-rgb: 220 38 38;
 
   --ring: rgba(124, 58, 237, 0.4);
   --gradient-hero: linear-gradient(135deg, #f3ecff 0%, #ffffff 58%, #ffeede 100%);
