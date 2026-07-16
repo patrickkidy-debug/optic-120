@@ -292,6 +292,15 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
           <input className="input" type="email" {...register('email')} />
           {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
         </Field>
+        <Field label="Téléphone WhatsApp">
+          <input
+            className="input"
+            type="tel"
+            placeholder="+225 07 00 00 00 00"
+            {...register('phone')}
+          />
+          {errors.phone && <p className="mt-1 text-xs text-danger">{errors.phone.message}</p>}
+        </Field>
         <Field label="Mot de passe temporaire">
           <input className="input" type="text" {...register('password')} placeholder="Au moins 8 caractères" />
           {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}

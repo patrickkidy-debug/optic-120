@@ -371,7 +371,8 @@ function UsersTab() {
       (u) =>
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        u.tenantName.toLowerCase().includes(q),
+        u.tenantName.toLowerCase().includes(q) ||
+        (u.phone ?? '').replace(/\s/g, '').includes(q.replace(/\s/g, '')),
     );
   }, [data, query]);
 
@@ -394,6 +395,7 @@ function UsersTab() {
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
               <th className="table-cell font-semibold">Utilisateur</th>
+              <th className="table-cell font-semibold">Téléphone</th>
               <th className="table-cell font-semibold">Établissement</th>
               <th className="table-cell font-semibold">Rôle</th>
               <th className="table-cell font-semibold">Statut</th>
@@ -407,6 +409,22 @@ function UsersTab() {
                 <td className="table-cell">
                   <div className="font-medium text-content">{u.name}</div>
                   <div className="text-xs text-content-faint">{u.email}</div>
+                </td>
+                <td className="table-cell">
+                  {u.phone ? (
+                    <a
+                      href={waLink(u.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Ouvrir la discussion WhatsApp"
+                      className="inline-flex items-center gap-1.5 text-sm text-content-muted transition hover:text-success"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                      {u.phone}
+                    </a>
+                  ) : (
+                    <span className="text-content-faint">—</span>
+                  )}
                 </td>
                 <td className="table-cell text-content-muted">{u.tenantName}</td>
                 <td className="table-cell text-content-muted">{u.roleLabel}</td>

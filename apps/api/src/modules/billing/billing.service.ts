@@ -535,6 +535,7 @@ export async function listAllUsers(limit = 200) {
     id: u.id,
     name: `${u.firstName} ${u.lastName}`,
     email: u.email,
+    phone: u.phone,
     tenantName: u.tenant.name,
     tenantSlug: u.tenant.slug,
     roleLabel: u.role.name,

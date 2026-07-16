@@ -50,6 +50,7 @@ export async function createUser(tenantId: string, input: UserCreateInput) {
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName,
+      phone: input.phone,
       roleId: input.roleId,
       branches: { create: input.branchIds.map((branchId) => ({ branchId })) },
     },

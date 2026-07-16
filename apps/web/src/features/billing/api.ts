@@ -193,6 +193,7 @@ export interface PlatformUser {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   tenantName: string;
   tenantSlug: string;
   roleLabel: string;

@@ -549,9 +549,14 @@ export const whatsappSchema = z
     (v) => {
       const cleaned = v.replace(/[\s().-]/g, '');
       if (!/^\+\d{8,15}$/.test(cleaned)) return false;
-      return WEST_AFRICA_DIAL_CODES.some((d) => cleaned.startsWith(d));
+      const dial = WEST_AFRICA_DIAL_CODES.find((d) => cleaned.startsWith(d));
+      if (!dial) return false;
+      // Rejette les numéros de remplissage : après l'indicatif, un même
+      // chiffre répété (+225 0000000, +221 1111111…) n'est pas un vrai numéro.
+      const rest = cleaned.slice(dial.length);
+      return rest.length >= 5 && !/^(\d)\1+$/.test(rest);
     },
-    "Indicatif d'Afrique de l'Ouest requis (ex : +221 77 123 45 67)",
+    "Numéro invalide — indicatif d'Afrique de l'Ouest requis (ex : +221 77 123 45 67)",
   );
 
 export const signupSchema = z.object({
@@ -817,6 +822,9 @@ export const userCreateSchema = z.object({
   firstName: z.string().min(1).max(80),
   lastName: z.string().min(1).max(80),
   email: z.string().email(),
+  // Vrai numéro exigé (comme à l'inscription) : joignable par l'établissement
+  // et par le support.
+  phone: whatsappSchema,
   username: z.string().min(3).max(40).optional(),
   password: passwordSchema,
   roleId: z.string().uuid(),
