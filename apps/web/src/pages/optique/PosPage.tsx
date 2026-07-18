@@ -89,7 +89,7 @@ export function PosPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input pl-9"
-            placeholder="Rechercher un produit…"
+            placeholder={t('pos.searchProduct')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -143,8 +143,8 @@ export function PosPage() {
                           value={l.unitPrice || ''}
                           onChange={(e) => pos.setUnitPrice(l.productId, Number(e.target.value) || 0)}
                           className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
-                          title="Prix unitaire (modifiable)"
-                          placeholder="Prix"
+                          title={t('pos.unitPriceEditable')}
+                          placeholder={t('pos.pricePlaceholder')}
                         />
                         <span className="text-[11px] text-content-faint">FCFA</span>
                       </div>
@@ -348,7 +348,7 @@ export function PaymentModal({
       {phase === 'choose' && (
         <>
           <label className="mb-3 block text-sm">
-            <span className="text-content-muted">Montant encaissé maintenant</span>
+            <span className="text-content-muted">{t('pos.amountNow')}</span>
             <input
               type="number"
               min={1}
@@ -362,7 +362,7 @@ export function PaymentModal({
                 Encaissement échelonné — reste {formatCurrency(remainingAfter)} après ce paiement.
               </span>
             ) : (
-              <span className="mt-1 block text-xs text-content-faint">Paiement intégral du solde.</span>
+              <span className="mt-1 block text-xs text-content-faint">{t('pos.fullPayment')}</span>
             )}
           </label>
           <p className="mb-2 text-sm text-content-muted">{t('pos.chooseMethod')}</p>
@@ -454,7 +454,7 @@ export function PaymentModal({
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
           {sale.due - settled > 0 ? (
             <>
-              <p className="mt-3 font-display text-lg font-bold text-content">Encaissement enregistré</p>
+              <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.recorded')}</p>
               <p className="mt-1 text-sm text-content-muted">
                 Reçu {formatCurrency(settled)} · reste{' '}
                 <span className="font-semibold text-warning">{formatCurrency(sale.due - settled)}</span>

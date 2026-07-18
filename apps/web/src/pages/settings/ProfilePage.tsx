@@ -7,7 +7,7 @@ import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCh
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
-import i18n from '../../lib/i18n';
+import i18n, { LOCALES } from '../../lib/i18n';
 import { fileToResizedDataUrl } from '../../lib/image';
 import { apiErrorMessage } from '../../lib/api';
 import {
@@ -294,11 +294,8 @@ export function ProfilePage() {
             <Globe className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-content">{t('settings.language')}</h3>
           </div>
-          <div className="mt-3 flex gap-2">
-            {[
-              { code: 'fr', label: 'Français' },
-              { code: 'en', label: 'English' },
-            ].map((l) => (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {LOCALES.map((l) => (
               <button
                 key={l.code}
                 onClick={() => changeLocale(l.code)}

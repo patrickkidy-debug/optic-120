@@ -262,8 +262,8 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={isQuote ? FileText : Receipt}
-          title={isQuote ? 'Aucun devis' : 'Aucune vente'}
-          hint={isQuote ? 'Créez un devis avec le bouton « Nouveau devis ».' : 'Les ventes créées en caisse apparaîtront ici.'}
+          title={isQuote ? t('sales.noQuote') : t('sales.noSale')}
+          hint={isQuote ? t('sales.hintQuote') : t('sales.hintSale')}
           action={
             isQuote && canQuote ? (
               <Button onClick={() => setQuoteOpen(true)}>
@@ -335,7 +335,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                               })
                             }
                             className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
-                            title="Encaisser le solde"
+                            title={t('sales.collectBalance')}
                           >
                             <Banknote className="h-3.5 w-3.5" /> Encaisser
                           </button>
@@ -344,7 +344,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         <button
                           onClick={() => convertMut.mutate(s.id)}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                          title="Convertir en vente"
+                          title={t('sales.convertToSale')}
                         >
                           <ArrowRightLeft className="h-3.5 w-3.5" /> Convertir
                         </button>
@@ -356,7 +356,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                               returnMut.mutate(s.id);
                           }}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs text-accent"
-                          title="Retour / avoir"
+                          title={t('sales.returnCredit')}
                         >
                           <Undo2 className="h-3.5 w-3.5" /> Retour
                         </button>
@@ -367,7 +367,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                             if (confirm(`Annuler la vente ${s.number} ?`)) cancelMut.mutate(s.id);
                           }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
-                          title="Annuler"
+                          title={t('sales.cancelSale')}
                         >
                           <XCircle className="h-4 w-4" />
                         </button>
@@ -395,7 +395,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       {paySale && (
         <PaymentModal
           sale={paySale}
-          onPaidLabel="Terminer"
+          onPaidLabel={t('sales.finish')}
           onClose={() => setPaySale(null)}
           onPaid={() => {
             setPaySale(null);
@@ -422,6 +422,7 @@ function QuoteModal({
   onClose: () => void;
   onCreated: (saleId: string) => void;
 }) {
+  const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
   const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
   const [search, setSearch] = useState('');
@@ -484,7 +485,7 @@ function QuoteModal({
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouveau devis" size="lg">
+    <Modal open onClose={onClose} title={t('sales.newQuote')} size="lg">
       {!branchId ? (
         <PageLoader />
       ) : (
@@ -493,7 +494,7 @@ function QuoteModal({
           <div>
             <input
               className="input mb-2"
-              placeholder="Rechercher un produit…"
+              placeholder={t('pos.searchProduct')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -501,7 +502,7 @@ function QuoteModal({
               {isLoading ? (
                 <PageLoader />
               ) : products.length === 0 ? (
-                <p className="py-6 text-center text-sm text-content-muted">Aucun produit.</p>
+                <p className="py-6 text-center text-sm text-content-muted">{t('common.noProduct')}</p>
               ) : (
                 products.map((p) => (
                   <button
@@ -523,7 +524,7 @@ function QuoteModal({
           {/* Devis en cours */}
           <div className="flex flex-col">
             <select className="input mb-2" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">Client comptant</option>
+              <option value="">{t('sales.walkInCustomer')}</option>
               {customers?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.firstName} {c.lastName}
@@ -533,7 +534,7 @@ function QuoteModal({
 
             <div className="max-h-44 flex-1 space-y-1 overflow-y-auto">
               {lines.length === 0 ? (
-                <p className="py-8 text-center text-sm text-content-muted">Ajoutez des produits au devis.</p>
+                <p className="py-8 text-center text-sm text-content-muted">{t('sales.addProducts')}</p>
               ) : (
                 lines.map((l) => (
                   <div key={l.productId} className="flex items-center gap-2 rounded-lg bg-surface-2 p-2">
@@ -545,8 +546,8 @@ function QuoteModal({
                         value={l.unitPrice || ''}
                         onChange={(e) => setPrice(l.productId, Number(e.target.value) || 0)}
                         className="mt-0.5 h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
-                        title="Prix unitaire (modifiable)"
-                        placeholder="Prix"
+                        title={t('pos.unitPriceEditable')}
+                        placeholder={t('pos.pricePlaceholder')}
                       />
                     </div>
                     <input
@@ -590,7 +591,7 @@ function QuoteModal({
 
             <div className="mt-3 space-y-1 border-t pt-3 text-sm">
               <div className="flex justify-between text-content-muted">
-                <span>Sous-total</span>
+                <span>{t('common.subtotal')}</span>
                 <span className="text-content">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-content-muted">

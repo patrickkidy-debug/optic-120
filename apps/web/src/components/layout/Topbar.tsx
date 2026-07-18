@@ -8,7 +8,7 @@ import { useAuthStore } from '../../store/auth';
 import { listBranches } from '../../features/optique/api';
 import { logout } from '../../features/auth/api';
 import { Avatar } from '../Avatar';
-import i18n from '../../lib/i18n';
+import i18n, { LOCALES } from '../../lib/i18n';
 import type { ThemeMode } from '../../lib/theme';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,18 +28,60 @@ function ThemeToggle() {
   );
 }
 
+/** Sélecteur de langue. Liste alimentée par LOCALES (lib/i18n). */
 function LanguageToggle() {
   const locale = useUIStore((s) => s.locale);
   const setLocale = useUIStore((s) => s.setLocale);
-  function toggle() {
-    const next = locale === 'fr' ? 'en' : 'fr';
-    setLocale(next);
-    void i18n.changeLanguage(next);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  function choose(code: string) {
+    setLocale(code);
+    void i18n.changeLanguage(code);
+    setOpen(false);
   }
+
+  const current = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
+
   return (
-    <button onClick={toggle} className="btn-ghost h-9 rounded-xl px-2.5 text-xs font-bold uppercase">
-      {locale}
-    </button>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="btn-ghost h-9 rounded-xl px-2.5 text-xs font-bold uppercase"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Langue"
+      >
+        {current.short}
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute right-0 z-30 mt-2 w-40 rounded-xl border bg-surface p-1.5 shadow-card-lg"
+        >
+          {LOCALES.map((l) => (
+            <button
+              key={l.code}
+              role="option"
+              aria-selected={l.code === locale}
+              onClick={() => choose(l.code)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-content transition hover:bg-surface-2"
+            >
+              {l.label}
+              {l.code === locale && <Check className="h-4 w-4 text-primary" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

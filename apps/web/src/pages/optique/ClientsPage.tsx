@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../
 import { ClientRecord } from './ClientRecord';
 
 export function ClientsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const canCreate = usePermission('optique.customers.create');
   const canUpdate = usePermission('optique.customers.update');
@@ -62,7 +64,7 @@ export function ClientsPage() {
         )
         .join('');
       const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8" />
-        <title>Liste des clients</title>
+        <title>${esc(t('clients.listTitle'))}</title>
         <style>
           @page { size: A4; margin: 14mm; }
           body { font-family: -apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:#1e293b; padding:20px; }
@@ -73,9 +75,9 @@ export function ClientsPage() {
           td { padding:7px 10px; border-bottom:1px solid #e2e8f0; }
         </style></head><body>
         <h1>${esc(tenantName ?? 'OculoSaaS')}</h1>
-        <div class="muted">Liste des clients — éditée le ${new Date().toLocaleDateString('fr-FR')} · ${all.length} clients</div>
+        <div class="muted">${esc(t('clients.listTitle'))} — ${new Date().toLocaleDateString()} · ${all.length}</div>
         <table>
-          <thead><tr><th>#</th><th>Client</th><th>Téléphone</th><th>Email</th></tr></thead>
+          <thead><tr><th>#</th><th>${esc(t('common.client'))}</th><th>${esc(t('common.phone'))}</th><th>${esc(t('common.email'))}</th></tr></thead>
           <tbody>${body}</tbody>
         </table></body></html>`;
       const win = window.open('', '_blank', 'width=900,height=1100');
@@ -106,8 +108,8 @@ export function ClientsPage() {
   return (
     <div>
       <PageHeader
-        title="Clients"
-        subtitle="Fichier clients et ordonnances optiques"
+        title={t('clients.title')}
+        subtitle={t('clients.subtitle')}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -120,7 +122,7 @@ export function ClientsPage() {
             </Button>
             {canCreate && (
               <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
-                <Plus className="h-4 w-4" /> Nouveau client
+                <Plus className="h-4 w-4" /> {t('clients.newClient')}
               </Button>
             )}
           </div>
@@ -129,7 +131,7 @@ export function ClientsPage() {
 
       <div className="relative mb-4 sm:max-w-xs">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-        <input className="input pl-9" placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="input pl-9" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {isLoading ? (
@@ -137,19 +139,19 @@ export function ClientsPage() {
       ) : !customers || customers.length === 0 ? (
         <EmptyState
           icon={Contact}
-          title="Aucun client"
-          hint="Enregistrez votre premier client pour créer ses ordonnances."
-          action={canCreate && <Button onClick={() => { setEditing(null); setModalOpen(true); }}><Plus className="h-4 w-4" /> Nouveau client</Button>}
+          title={t('clients.none')}
+          hint={t('clients.emptyHint')}
+          action={canCreate && <Button onClick={() => { setEditing(null); setModalOpen(true); }}><Plus className="h-4 w-4" /> {t('clients.newClient')}</Button>}
         />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Client</th>
-                <th className="table-cell font-semibold">Téléphone</th>
-                <th className="table-cell font-semibold">Email</th>
-                <th className="table-cell text-right font-semibold">Actions</th>
+                <th className="table-cell font-semibold">{t('common.client')}</th>
+                <th className="table-cell font-semibold">{t('common.phone')}</th>
+                <th className="table-cell font-semibold">{t('common.email')}</th>
+                <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -198,6 +200,7 @@ export function ClientsPage() {
 }
 
 function CustomerModal({ customer, onClose }: { customer: Customer | null; onClose: () => void }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState('');
   const { register, handleSubmit, formState: { errors } } = useForm<CustomerCreateInput>({
@@ -214,7 +217,7 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
   });
 
   return (
-    <Modal open onClose={onClose} title={customer ? 'Modifier le client' : 'Nouveau client'}>
+    <Modal open onClose={onClose} title={customer ? t('clients.editClient') : t('clients.newClient')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Prénom"><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>

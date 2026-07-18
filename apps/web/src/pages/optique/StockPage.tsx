@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Boxes, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import { getStock, adjustStock, type StockRow } from '../../features/optique/api';
@@ -9,6 +10,7 @@ import { formatCurrency } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
 export function StockPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canAdjust = usePermission('optique.stock.adjust');
@@ -30,14 +32,14 @@ export function StockPage() {
 
   return (
     <div>
-      <PageHeader title="Gestion du stock" subtitle="Quantités par magasin et alertes de rupture" />
+      <PageHeader title={t('stock.title')} subtitle={t('stock.subtitle')} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input pl-9"
-            placeholder="Rechercher…"
+            placeholder={t('common.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -53,17 +55,17 @@ export function StockPage() {
       {isLoading ? (
         <PageLoader />
       ) : rows.length === 0 ? (
-        <EmptyState icon={Boxes} title="Aucun article" hint="Le catalogue est vide ou aucun stock ne correspond." />
+        <EmptyState icon={Boxes} title={t('stock.noItem')} hint={t('stock.emptyHint')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Produit</th>
-                <th className="table-cell text-right font-semibold">Prix</th>
-                <th className="table-cell text-center font-semibold">Quantité</th>
-                <th className="table-cell text-center font-semibold">Seuil</th>
-                <th className="table-cell text-right font-semibold">Actions</th>
+                <th className="table-cell font-semibold">{t('common.product')}</th>
+                <th className="table-cell text-right font-semibold">{t('common.price')}</th>
+                <th className="table-cell text-center font-semibold">{t('common.quantity')}</th>
+                <th className="table-cell text-center font-semibold">{t('common.threshold')}</th>
+                <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +84,7 @@ export function StockPage() {
                   <td className="table-cell text-center text-content-muted">{r.minAlert}</td>
                   <td className="table-cell">
                     <div className="flex items-center justify-end gap-2">
-                      {r.low && <Badge tone="danger">Faible</Badge>}
+                      {r.low && <Badge tone="danger">{t('stock.lowBadge')}</Badge>}
                       {canAdjust && (
                         <button onClick={() => setEditing(r)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <SlidersHorizontal className="h-3.5 w-3.5" /> Ajuster
@@ -115,6 +117,7 @@ function AdjustModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [delta, setDelta] = useState(0);
   const [minAlert, setMinAlert] = useState(row.minAlert);
   const [error, setError] = useState('');
@@ -132,13 +135,13 @@ function AdjustModal({
     <Modal open onClose={onClose} title={`Ajuster — ${row.name}`} size="sm">
       <div className="space-y-4">
         <div className="rounded-xl bg-surface-2 p-3 text-center">
-          <p className="text-xs text-content-muted">Quantité actuelle</p>
+          <p className="text-xs text-content-muted">{t('stock.currentQty')}</p>
           <p className="font-display text-2xl font-bold text-content">{row.quantity}</p>
           <p className="mt-1 text-xs text-content-faint">
             Nouvelle quantité : <span className="font-semibold text-content">{row.quantity + delta}</span>
           </p>
         </div>
-        <Field label="Mouvement (+ entrée / − sortie)">
+        <Field label={t('stock.movement')}>
           <div className="flex items-center gap-2">
             <button className="btn-outline h-10 w-10 p-0 text-lg" onClick={() => setDelta((d) => d - 1)}>
               −
@@ -154,7 +157,7 @@ function AdjustModal({
             </button>
           </div>
         </Field>
-        <Field label="Seuil d'alerte">
+        <Field label={t('stock.minAlert')}>
           <input
             type="number"
             className="input"

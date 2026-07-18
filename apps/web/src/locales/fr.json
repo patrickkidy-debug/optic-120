@@ -1,5 +1,8 @@
 {
-  "brand": { "name": "OculoSaaS", "tagline": "Optique & Ophtalmologie" },
+  "brand": {
+    "name": "OculoSaaS",
+    "tagline": "Optique & Ophtalmologie"
+  },
   "nav": {
     "main": "Principal",
     "dashboard": "Tableau de bord",
@@ -65,7 +68,19 @@
     "empty": "Aucune donnée",
     "back": "Retour",
     "comingSoon": "Bientôt disponible",
-    "phase2": "Module prévu en Phase 2"
+    "phase2": "Module prévu en Phase 2",
+    "product": "Produit",
+    "client": "Client",
+    "phone": "Téléphone",
+    "email": "Email",
+    "date": "Date",
+    "subtotal": "Sous-total",
+    "threshold": "Seuil",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "noProduct": "Aucun produit.",
+    "print": "Imprimer",
+    "needHelp": "Besoin d'aide ?"
   },
   "auth": {
     "signInTitle": "Connexion",
@@ -108,7 +123,25 @@
     "recentSales": "Ventes récentes",
     "revenue7d": "Revenus (7 jours)",
     "paymentMethods": "Répartition des paiements",
-    "noSales": "Aucune vente pour le moment"
+    "noSales": "Aucune vente pour le moment",
+    "todayRevenueFull": "Chiffre d'affaires du jour",
+    "monthRevenueFull": "Chiffre d'affaires du mois",
+    "vsPrev7d": "vs 7 j préc.",
+    "todaySales": "Ventes du jour",
+    "avgBasket": "Panier moyen (mois)",
+    "newCustomers": "Nouveaux clients (mois)",
+    "totalCustomers": "Clients au total",
+    "lowStockLabel": "Stocks faibles",
+    "topProducts": "Top produits du mois",
+    "adminView": "Vue administrateur",
+    "revenueMonth": "Recettes (mois)",
+    "expensesMonth": "Dépenses (mois)",
+    "netMonth": "Résultat net (mois)",
+    "activeUsers": "Utilisateurs actifs",
+    "noDataMonth": "Aucune donnée ce mois-ci.",
+    "noSalesMonth": "Aucune vente ce mois-ci.",
+    "noRecentSales": "Aucune vente pour le moment",
+    "noSalesRecorded": "Aucune vente enregistrée ce mois-ci."
   },
   "products": {
     "title": "Catalogue produits",
@@ -126,7 +159,13 @@
     "minAlert": "Seuil d'alerte",
     "low": "Stock faible",
     "movements": "Mouvements",
-    "inStock": "En stock"
+    "inStock": "En stock",
+    "subtitle": "Quantités par magasin et alertes de rupture",
+    "noItem": "Aucun article",
+    "emptyHint": "Le catalogue est vide ou aucun stock ne correspond.",
+    "currentQty": "Quantité actuelle",
+    "movement": "Mouvement (+ entrée / − sortie)",
+    "lowBadge": "Faible"
   },
   "pos": {
     "title": "Point de vente",
@@ -146,7 +185,16 @@
     "pendingMobile": "En attente de confirmation mobile…",
     "simulate": "Simuler la confirmation",
     "paid": "Paiement confirmé",
-    "newSale": "Nouvelle vente"
+    "newSale": "Nouvelle vente",
+    "searchProduct": "Rechercher un produit…",
+    "unitPriceEditable": "Prix unitaire (modifiable)",
+    "pricePlaceholder": "Prix",
+    "amountNow": "Montant encaissé maintenant",
+    "fullPayment": "Paiement intégral du solde.",
+    "qrPayment": "QR de paiement",
+    "number": "Numéro",
+    "network": "Réseau",
+    "recorded": "Encaissement enregistré"
   },
   "sales": {
     "title": "Historique des ventes",
@@ -157,7 +205,20 @@
     "paid": "Payé",
     "cancel": "Annuler la vente",
     "convert": "Convertir en vente",
-    "print": "Imprimer"
+    "print": "Imprimer",
+    "totalCollected": "Total encaissé",
+    "collectBalance": "Encaisser le solde",
+    "convertToSale": "Convertir en vente",
+    "returnCredit": "Retour / avoir",
+    "cancelSale": "Annuler",
+    "finish": "Terminer",
+    "newQuote": "Nouveau devis",
+    "walkInCustomer": "Client comptant",
+    "addProducts": "Ajoutez des produits au devis.",
+    "noQuote": "Aucun devis",
+    "noSale": "Aucune vente",
+    "hintQuote": "Créez un devis avec le bouton « Nouveau devis ».",
+    "hintSale": "Les ventes créées en caisse apparaîtront ici."
   },
   "settings": {
     "title": "Paramètres",
@@ -169,5 +230,20 @@
     "language": "Langue",
     "profile": "Profil",
     "security": "Sécurité"
+  },
+  "forecast": {
+    "title": "IA prédictive — Prévisions économiques",
+    "subtitle": "Basée sur l'historique de vos ventes (tendance + saisonnalité)",
+    "soon": "Prévisions bientôt disponibles",
+    "hint": "Enregistrez quelques jours de ventes : l'IA apprendra vos habitudes pour prévoir votre chiffre d'affaires et anticiper les ruptures de stock."
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Fichier clients et ordonnances optiques",
+    "listTitle": "Liste des clients",
+    "none": "Aucun client",
+    "emptyHint": "Enregistrez votre premier client pour créer ses ordonnances.",
+    "newClient": "Nouveau client",
+    "editClient": "Modifier le client"
   }
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme';
+import { isSupportedLocale } from '../lib/i18n';
 
 const BRANCH_KEY = 'oculo_branch';
 const LOCALE_KEY = 'oculo_locale';
@@ -21,7 +22,12 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   theme: getStoredTheme(),
-  locale: localStorage.getItem(LOCALE_KEY) ?? 'fr',
+  // Même repli que i18n : une langue inconnue en stockage ne doit pas laisser
+  // le sélecteur sans option active alors que l'app affiche du français.
+  locale: (() => {
+    const v = localStorage.getItem(LOCALE_KEY);
+    return isSupportedLocale(v) ? v : 'fr';
+  })(),
   sidebarOpen: false,
   activeBranchId: localStorage.getItem(BRANCH_KEY),
   supportWidgetHidden: localStorage.getItem(HELP_KEY) === '1',

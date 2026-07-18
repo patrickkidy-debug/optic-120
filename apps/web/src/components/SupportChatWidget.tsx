@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, X, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { createSupportTicket } from '../features/support/api';
 import { apiErrorMessage } from '../lib/api';
@@ -11,6 +12,7 @@ import { useUIStore } from '../store/ui';
  * Aucune dépendance externe : réponse par email / console.
  */
 export function SupportChatWidget() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -125,7 +127,7 @@ export function SupportChatWidget() {
             className="group flex items-center gap-2 rounded-full bg-brand px-4 py-3.5 text-white shadow-card-lg transition hover:-translate-y-0.5 hover:shadow-glow"
           >
             <MessageCircle className="h-6 w-6" />
-            <span className="hidden text-sm font-semibold sm:inline">Besoin d'aide ?</span>
+            <span className="hidden text-sm font-semibold sm:inline">{t('common.needHelp')}</span>
           </button>
           <button
             onClick={(e) => {

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Line } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
 import { Sparkles, TrendingUp, TrendingDown, CalendarDays, PackageX, LineChart } from 'lucide-react';
@@ -17,6 +18,7 @@ const CHART_OPTIONS: ChartOptions<'line'> = {
 };
 
 export function ForecastPanel() {
+  const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
   const { data, isLoading } = useQuery({
     queryKey: ['forecast', branchId],
@@ -65,8 +67,8 @@ export function ForecastPanel() {
           <Sparkles className="h-4 w-4" />
         </span>
         <div>
-          <h3 className="font-display font-bold text-content">IA prédictive — Prévisions économiques</h3>
-          <p className="text-xs text-content-muted">Basée sur l'historique de vos ventes (tendance + saisonnalité)</p>
+          <h3 className="font-display font-bold text-content">{t('forecast.title')}</h3>
+          <p className="text-xs text-content-muted">{t('forecast.subtitle')}</p>
         </div>
       </div>
 
@@ -79,11 +81,8 @@ export function ForecastPanel() {
           <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-2/40 p-4">
             <LineChart className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div>
-              <p className="font-semibold text-content">Prévisions bientôt disponibles</p>
-              <p className="text-sm text-content-muted">
-                Enregistrez quelques jours de ventes : l'IA apprendra vos habitudes pour prévoir
-                votre chiffre d'affaires et anticiper les ruptures de stock.
-              </p>
+              <p className="font-semibold text-content">{t('forecast.soon')}</p>
+              <p className="text-sm text-content-muted">{t('forecast.hint')}</p>
             </div>
           </div>
         ) : (

@@ -173,16 +173,17 @@ function TopProductsCard({
 }: {
   products: { name: string; revenue: number; quantity: number }[];
 }) {
+  const { t } = useTranslation();
   const max = Math.max(1, ...products.map((p) => p.revenue));
   return (
     <div className="card p-5 lg:col-span-2">
       <div className="mb-4 flex items-center gap-2">
         <Package className="h-4 w-4 text-primary" />
-        <h3 className="font-display font-bold text-content">Top produits du mois</h3>
+        <h3 className="font-display font-bold text-content">{t('dashboard.topProducts')}</h3>
       </div>
       {products.length === 0 ? (
         <div className="grid h-40 place-items-center text-sm text-content-muted">
-          Aucune vente enregistrée ce mois-ci.
+          {t('dashboard.noSalesRecorded')}
         </div>
       ) : (
         <div className="space-y-3">
@@ -291,18 +292,18 @@ export function DashboardPage() {
 
       {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={Banknote} label="Chiffre d'affaires du jour" value={formatCurrency(data.todayRevenue)} tone="primary" />
+        <KpiCard icon={Banknote} label={t('dashboard.todayRevenueFull')} value={formatCurrency(data.todayRevenue)} tone="primary" />
         <KpiCard
           icon={TrendingUp}
-          label="Chiffre d'affaires du mois"
+          label={t('dashboard.monthRevenueFull')}
           value={formatCurrency(data.monthRevenue)}
           tone="success"
           delta={pctDelta(data.weekRevenue ?? 0, data.prevWeekRevenue ?? 0)}
-          deltaLabel="vs 7 j préc."
+          deltaLabel={t('dashboard.vsPrev7d')}
           spark={(data.revenueByDay ?? []).map((d) => d.revenue)}
         />
-        <KpiCard icon={ShoppingBag} label="Ventes du jour" value={String(data.todaySalesCount)} tone="accent" />
-        <KpiCard icon={ShoppingCart} label="Panier moyen (mois)" value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
+        <KpiCard icon={ShoppingBag} label={t('dashboard.todaySales')} value={String(data.todaySalesCount)} tone="accent" />
+        <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
       </div>
 
       <ForecastPanel />
@@ -311,11 +312,11 @@ export function DashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <TopProductsCard products={data.topProducts ?? []} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1">
-          <MiniStat icon={UserPlus} label="Nouveaux clients (mois)" value={String(data.newCustomersMonth ?? 0)} tone="accent" />
-          <MiniStat icon={Users} label="Clients au total" value={String(data.customersCount)} tone="primary" />
+          <MiniStat icon={UserPlus} label={t('dashboard.newCustomers')} value={String(data.newCustomersMonth ?? 0)} tone="accent" />
+          <MiniStat icon={Users} label={t('dashboard.totalCustomers')} value={String(data.customersCount)} tone="primary" />
           <MiniStat
             icon={AlertTriangle}
-            label="Stocks faibles"
+            label={t('dashboard.lowStockLabel')}
             value={String(data.lowStockCount)}
             tone={data.lowStockCount > 0 ? 'danger' : 'success'}
           />
@@ -439,17 +440,17 @@ export function DashboardPage() {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-soft text-primary">
               <Building2 className="h-4 w-4" />
             </span>
-            <h2 className="font-display text-lg font-bold text-content">Vue administrateur</h2>
+            <h2 className="font-display text-lg font-bold text-content">{t('dashboard.adminView')}</h2>
             <span className="text-xs text-content-faint">— mois en cours</span>
           </div>
 
           {/* Finance du mois */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard icon={Banknote} label="Recettes (mois)" value={formatCurrency(admin.finance.monthRevenue)} tone="success" />
-            <StatCard icon={Wallet} label="Dépenses (mois)" value={formatCurrency(admin.finance.monthExpenses)} tone="danger" />
+            <StatCard icon={Banknote} label={t('dashboard.revenueMonth')} value={formatCurrency(admin.finance.monthRevenue)} tone="success" />
+            <StatCard icon={Wallet} label={t('dashboard.expensesMonth')} value={formatCurrency(admin.finance.monthExpenses)} tone="danger" />
             <StatCard
               icon={TrendingUp}
-              label="Résultat net (mois)"
+              label={t('dashboard.netMonth')}
               value={formatCurrency(admin.finance.net)}
               tone={admin.finance.net >= 0 ? 'primary' : 'danger'}
             />
@@ -462,7 +463,7 @@ export function DashboardPage() {
                 <Building2 className="h-4 w-4 text-primary" /> Par magasin
               </h3>
               {admin.branchBreakdown.length === 0 ? (
-                <p className="text-sm text-content-muted">Aucune donnée ce mois-ci.</p>
+                <p className="text-sm text-content-muted">{t('dashboard.noDataMonth')}</p>
               ) : (
                 <div className="space-y-3">
                   {admin.branchBreakdown.map((b) => {
@@ -492,7 +493,7 @@ export function DashboardPage() {
                 <Trophy className="h-4 w-4 text-accent" /> Meilleurs vendeurs
               </h3>
               {admin.topSellers.length === 0 ? (
-                <p className="text-sm text-content-muted">Aucune vente ce mois-ci.</p>
+                <p className="text-sm text-content-muted">{t('dashboard.noSalesMonth')}</p>
               ) : (
                 <div className="space-y-2">
                   {admin.topSellers.map((s, i) => (
@@ -514,7 +515,7 @@ export function DashboardPage() {
 
           {/* Équipe */}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <StatCard icon={Users} label="Utilisateurs actifs" value={`${admin.team.usersActive} / ${admin.team.usersTotal}`} tone="primary" />
+            <StatCard icon={Users} label={t('dashboard.activeUsers')} value={`${admin.team.usersActive} / ${admin.team.usersTotal}`} tone="primary" />
           </div>
         </div>
       )}

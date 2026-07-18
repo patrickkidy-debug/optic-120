@@ -1,5 +1,8 @@
 {
-  "brand": { "name": "OculoSaaS", "tagline": "Optics & Ophthalmology" },
+  "brand": {
+    "name": "OculoSaaS",
+    "tagline": "Optics & Ophthalmology"
+  },
   "nav": {
     "main": "Main",
     "dashboard": "Dashboard",
@@ -65,7 +68,19 @@
     "empty": "No data",
     "back": "Back",
     "comingSoon": "Coming soon",
-    "phase2": "Module planned for Phase 2"
+    "phase2": "Module planned for Phase 2",
+    "product": "Product",
+    "client": "Customer",
+    "phone": "Phone",
+    "email": "Email",
+    "date": "Date",
+    "subtotal": "Subtotal",
+    "threshold": "Threshold",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "noProduct": "No product.",
+    "print": "Print",
+    "needHelp": "Need help?"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -108,7 +123,25 @@
     "recentSales": "Recent sales",
     "revenue7d": "Revenue (7 days)",
     "paymentMethods": "Payment breakdown",
-    "noSales": "No sales yet"
+    "noSales": "No sales yet",
+    "todayRevenueFull": "Today's revenue",
+    "monthRevenueFull": "Monthly revenue",
+    "vsPrev7d": "vs prev. 7 d",
+    "todaySales": "Today's sales",
+    "avgBasket": "Average basket (month)",
+    "newCustomers": "New customers (month)",
+    "totalCustomers": "Total customers",
+    "lowStockLabel": "Low stock",
+    "topProducts": "Top products this month",
+    "adminView": "Administrator view",
+    "revenueMonth": "Income (month)",
+    "expensesMonth": "Expenses (month)",
+    "netMonth": "Net result (month)",
+    "activeUsers": "Active users",
+    "noDataMonth": "No data this month.",
+    "noSalesMonth": "No sales this month.",
+    "noRecentSales": "No sales yet",
+    "noSalesRecorded": "No sales recorded this month."
   },
   "products": {
     "title": "Product catalog",
@@ -126,7 +159,13 @@
     "minAlert": "Alert threshold",
     "low": "Low stock",
     "movements": "Movements",
-    "inStock": "In stock"
+    "inStock": "In stock",
+    "subtitle": "Quantities per store and shortage alerts",
+    "noItem": "No item",
+    "emptyHint": "The catalogue is empty or no stock matches.",
+    "currentQty": "Current quantity",
+    "movement": "Movement (+ in / − out)",
+    "lowBadge": "Low"
   },
   "pos": {
     "title": "Point of sale",
@@ -146,7 +185,16 @@
     "pendingMobile": "Awaiting mobile confirmation…",
     "simulate": "Simulate confirmation",
     "paid": "Payment confirmed",
-    "newSale": "New sale"
+    "newSale": "New sale",
+    "searchProduct": "Search a product…",
+    "unitPriceEditable": "Unit price (editable)",
+    "pricePlaceholder": "Price",
+    "amountNow": "Amount collected now",
+    "fullPayment": "Full payment of the balance.",
+    "qrPayment": "Payment QR code",
+    "number": "Number",
+    "network": "Network",
+    "recorded": "Payment recorded"
   },
   "sales": {
     "title": "Sales history",
@@ -157,7 +205,20 @@
     "paid": "Paid",
     "cancel": "Cancel sale",
     "convert": "Convert to sale",
-    "print": "Print"
+    "print": "Print",
+    "totalCollected": "Total collected",
+    "collectBalance": "Collect balance",
+    "convertToSale": "Convert to sale",
+    "returnCredit": "Return / credit note",
+    "cancelSale": "Cancel",
+    "finish": "Finish",
+    "newQuote": "New quote",
+    "walkInCustomer": "Walk-in customer",
+    "addProducts": "Add products to the quote.",
+    "noQuote": "No quote",
+    "noSale": "No sale",
+    "hintQuote": "Create a quote with the \"New quote\" button.",
+    "hintSale": "Sales created at the till will appear here."
   },
   "settings": {
     "title": "Settings",
@@ -169,5 +230,20 @@
     "language": "Language",
     "profile": "Profile",
     "security": "Security"
+  },
+  "forecast": {
+    "title": "Predictive AI — Business forecast",
+    "subtitle": "Based on your sales history (trend + seasonality)",
+    "soon": "Forecast coming soon",
+    "hint": "Record a few days of sales: the AI will learn your habits to forecast your revenue and anticipate stock shortages."
+  },
+  "clients": {
+    "title": "Customers",
+    "subtitle": "Customer records and optical prescriptions",
+    "listTitle": "Customer list",
+    "none": "No customer",
+    "emptyHint": "Register your first customer to create their prescriptions.",
+    "newClient": "New customer",
+    "editClient": "Edit customer"
   }
 }
