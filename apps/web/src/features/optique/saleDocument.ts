@@ -1,3 +1,4 @@
+import { CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
 import type { SaleDetail } from './api';
 
 export interface CompanyInfo {
@@ -26,12 +27,14 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: 'Annulée',
 };
 
+// La devise vient de la vente elle-meme (figee a l'encaissement) : une
+// facture reimprimee garde sa devise d'origine.
 function money(amount: number | string, currency = 'XOF'): string {
-  const n = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(
-    Number.isFinite(Number(amount)) ? Number(amount) : 0,
-  );
-  const suffix = currency === 'XOF' || currency === 'XAF' ? 'FCFA' : currency;
-  return `${n} ${suffix}`;
+  const fmt = CURRENCY_FORMAT[currency as SupportedCurrency];
+  const n = new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: fmt?.decimals ?? 0,
+  }).format(Number.isFinite(Number(amount)) ? Number(amount) : 0);
+  return `${n} ${fmt?.symbol ?? currency}`;
 }
 
 function frDate(d: string | Date): string {

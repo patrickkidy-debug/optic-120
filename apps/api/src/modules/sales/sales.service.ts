@@ -63,8 +63,13 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
       return { productId: i.productId, quantity: i.quantity, unitPrice, lineTotal, name: p.name };
     });
 
-    // Taux de TVA de l'établissement (en %, 0 = exonéré). null = défaut 18 %.
-    const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { vatRate: true } });
+    // Taux de TVA et devise de l'établissement. Le taux est en % (0 = exonéré),
+    // null = défaut 18 %. La devise dépend du pays (FCFA, escudo, kwanza…) :
+    // elle doit être figée sur la vente, pas supposée.
+    const tenant = await tx.tenant.findUnique({
+      where: { id: tenantId },
+      select: { vatRate: true, currency: true },
+    });
     const vatFraction = (tenant?.vatRate ?? VAT_RATE * 100) / 100;
 
     const discount = input.discountAmount ?? 0;
@@ -97,7 +102,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         insuranceAmount: insurance,
         totalAmount: total,
         paidAmount: paidInit,
-        currency: 'XOF',
+        currency: tenant?.currency ?? 'XOF',
         items: {
           create: lines.map((l) => ({
             productId: l.productId,

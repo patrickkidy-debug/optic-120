@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,6 +15,7 @@ import {
   QrCode,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
+import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
 import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
 import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -25,15 +26,35 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
 
-const METHODS: { value: PaymentMethod; label: string; icon: typeof Banknote; mobile: boolean }[] = [
-  { value: 'CASH', label: 'Espèces', icon: Banknote, mobile: false },
-  { value: 'CARD', label: 'Carte', icon: CreditCard, mobile: false },
-  { value: 'WAVE', label: 'Wave', icon: Smartphone, mobile: true },
-  { value: 'ORANGE_MONEY', label: 'Orange Money', icon: Smartphone, mobile: true },
-  { value: 'MTN_MOMO', label: 'MTN MoMo', icon: Smartphone, mobile: true },
-  { value: 'MOOV_MONEY', label: 'Moov Money', icon: Smartphone, mobile: true },
-  { value: 'FREE_MONEY', label: 'Free Money', icon: Smartphone, mobile: true },
-];
+/** Libellé commercial de chaque moyen d'encaissement. */
+const METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: 'Espèces',
+  CARD: 'Carte',
+  WAVE: 'Wave',
+  ORANGE_MONEY: 'Orange Money',
+  MTN_MOMO: 'MTN MoMo',
+  MOOV_MONEY: 'Moov Money',
+  FREE_MONEY: 'Free Money',
+  MPESA: 'M-Pesa',
+  EMOLA: 'e-Mola',
+  MKESH: 'mKesh',
+  MULTICAIXA: 'Multicaixa Express',
+  UNITEL_MONEY: 'Unitel Money',
+  VINTI4: 'Vinti4',
+};
+
+/**
+ * Moyens proposés en caisse : espèces et carte partout, puis les services
+ * mobiles du pays de l'établissement (Wave au Sénégal, M-Pesa au Mozambique…).
+ */
+function methodsFor(countryCode?: string | null) {
+  const mobile = paymentMethodsForCountry(countryCode);
+  return [
+    { value: 'CASH' as PaymentMethod, label: METHOD_LABELS.CASH, icon: Banknote, mobile: false },
+    { value: 'CARD' as PaymentMethod, label: METHOD_LABELS.CARD, icon: CreditCard, mobile: false },
+    ...mobile.map((m) => ({ value: m, label: METHOD_LABELS[m], icon: Smartphone, mobile: true })),
+  ];
+}
 
 export function PosPage() {
   const { t } = useTranslation();
@@ -146,7 +167,9 @@ export function PosPage() {
                           title={t('pos.unitPriceEditable')}
                           placeholder={t('pos.pricePlaceholder')}
                         />
-                        <span className="text-[11px] text-content-faint">FCFA</span>
+                        <span className="text-[11px] text-content-faint">
+                          {CURRENCY_FORMAT[(user?.tenantCurrency ?? 'XOF') as SupportedCurrency]?.symbol ?? ''}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -277,6 +300,8 @@ export function PaymentModal({
 }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  // Moyens d'encaissement du pays de l'établissement (Wave, M-Pesa, Multicaixa…).
+  const METHODS = useMemo(() => methodsFor(user?.tenantCountryCode), [user?.tenantCountryCode]);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [amount, setAmount] = useState<number>(sale.due);
   const [settled, setSettled] = useState(0);

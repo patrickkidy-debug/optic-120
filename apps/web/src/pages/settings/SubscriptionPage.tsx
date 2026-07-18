@@ -23,9 +23,10 @@ import {
   type Plan,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
+import { planPrice } from '@oculo/shared-types';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
-import { formatCurrency, formatDate } from '../../lib/format';
+import { formatCurrency, formatDate, getActiveCurrency } from '../../lib/format';
 import { PageHeader, Button, Modal, Badge, PageLoader } from '../../components/ui';
 import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 
@@ -68,6 +69,7 @@ function UsageBar({ label, used, max }: { label: string; used: number; max: numb
 }
 
 export function SubscriptionPage() {
+  const currency = getActiveCurrency();
   const qc = useQueryClient();
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
@@ -150,24 +152,24 @@ export function SubscriptionPage() {
         // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
         trackPixelEvent(
           'InitiateCheckout',
-          { value: plan.priceMonthly, currency: 'XOF', content_name: plan.name },
+          { value: planPrice(plan.code, currency), currency, content_name: plan.name },
           `checkout_${res.paymentId}`,
         );
         if (res.redirectUrl) {
           // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
           sessionStorage.setItem(
             PENDING_PURCHASE_KEY,
-            JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: plan.priceMonthly }),
+            JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: planPrice(plan.code, currency) }),
           );
           window.location.href = res.redirectUrl;
         } else {
           setAutoLaunch(false);
-          setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
+          setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: planPrice(plan.code, currency) });
         }
       })
       .catch(() => {
         setAutoLaunch(false);
-        setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: plan.priceMonthly });
+        setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: planPrice(plan.code, currency) });
       });
   }, [params, plans]);
 
@@ -198,7 +200,7 @@ export function SubscriptionPage() {
               <Badge tone={STATUS[sub.status]?.tone ?? 'neutral'}>{STATUS[sub.status]?.label ?? sub.status}</Badge>
             </div>
             <h3 className="mt-3 font-display text-xl font-bold text-content">Offre {sub.plan.name}</h3>
-            <p className="font-display text-2xl font-bold text-gradient">{formatCurrency(sub.plan.priceMonthly)}<span className="text-sm font-normal text-content-muted"> / mois</span></p>
+            <p className="font-display text-2xl font-bold text-gradient">{formatCurrency(planPrice(sub.plan.code, currency))}<span className="text-sm font-normal text-content-muted"> / mois</span></p>
             <p className="mt-2 text-xs text-content-muted">
               {sub.status === 'TRIALING'
                 ? "Activez votre abonnement pour accéder à votre espace."
@@ -249,13 +251,13 @@ export function SubscriptionPage() {
               </div>
               <div className="shrink-0 text-center">
                 <div className="font-display text-3xl font-extrabold text-gradient">
-                  {formatCurrency(standard.priceMonthly)}
+                  {formatCurrency(planPrice(standard.code, currency))}
                 </div>
                 <div className="text-xs text-content-muted">par mois</div>
                 <Button
                   className="mt-3 w-full px-6 shadow-glow sm:w-auto"
                   onClick={() =>
-                    setPayFor({ kind: 'plan', id: standard.id, label: standard.name, amount: standard.priceMonthly })
+                    setPayFor({ kind: 'plan', id: standard.id, label: standard.name, amount: planPrice(standard.code, currency) })
                   }
                 >
                   Activer l'offre {standard.name}
@@ -274,7 +276,7 @@ export function SubscriptionPage() {
             plan={p}
             current={sub?.plan.code === p.code}
             canManage={canManage}
-            onSubscribe={() => setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: p.priceMonthly })}
+            onSubscribe={() => setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: planPrice(p.code, currency) })}
           />
         ))}
       </div>
@@ -350,6 +352,7 @@ function PlanCard({
   canManage: boolean;
   onSubscribe: () => void;
 }) {
+  const currency = getActiveCurrency();
   const highlight = plan.code === 'STANDARD';
   return (
     <div
@@ -370,7 +373,7 @@ function PlanCard({
       )}
       <p className="mt-1 text-sm text-content-muted">{plan.description}</p>
       <p className="mt-3 font-display text-2xl font-bold text-content">
-        {formatCurrency(plan.priceMonthly)}
+        {formatCurrency(planPrice(plan.code, currency))}
         <span className="text-sm font-normal text-content-muted"> / mois</span>
       </p>
       <ul className="mt-4 space-y-2">

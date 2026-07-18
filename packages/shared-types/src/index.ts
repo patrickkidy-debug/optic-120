@@ -46,6 +46,13 @@ export const PaymentMethod = {
   MOOV_MONEY: 'MOOV_MONEY',
   FREE_MONEY: 'FREE_MONEY',
   CARD: 'CARD',
+  // Marchés lusophones (encaissement manuel au comptoir, comme les autres).
+  MPESA: 'MPESA', // Mozambique (Vodacom)
+  EMOLA: 'EMOLA', // Mozambique (Movitel)
+  MKESH: 'MKESH', // Mozambique (Tmcel)
+  MULTICAIXA: 'MULTICAIXA', // Angola (Multicaixa Express)
+  UNITEL_MONEY: 'UNITEL_MONEY', // Angola
+  VINTI4: 'VINTI4', // Cap-Vert
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
@@ -57,6 +64,34 @@ export const MOBILE_MONEY_METHODS: PaymentMethod[] = [
   PaymentMethod.MOOV_MONEY,
   PaymentMethod.FREE_MONEY,
 ];
+
+/**
+ * Moyens d'encaissement proposés en caisse selon le pays de l'établissement.
+ * Évite qu'un caissier de Dakar voie « M-Pesa » ou qu'un caissier de Maputo
+ * voie « Wave ». Espèces et carte sont proposées partout.
+ */
+export const PAYMENT_METHODS_BY_COUNTRY: Record<string, PaymentMethod[]> = {
+  MZ: [PaymentMethod.MPESA, PaymentMethod.EMOLA, PaymentMethod.MKESH],
+  AO: [PaymentMethod.MULTICAIXA, PaymentMethod.UNITEL_MONEY],
+  CV: [PaymentMethod.VINTI4],
+};
+
+/** Moyens proposés par défaut (Afrique de l'Ouest francophone). */
+export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  PaymentMethod.WAVE,
+  PaymentMethod.ORANGE_MONEY,
+  PaymentMethod.MTN_MOMO,
+  PaymentMethod.MOOV_MONEY,
+  PaymentMethod.FREE_MONEY,
+];
+
+/** Liste finale (hors espèces/carte) pour un pays donné. */
+export function paymentMethodsForCountry(countryCode?: string | null): PaymentMethod[] {
+  if (countryCode && PAYMENT_METHODS_BY_COUNTRY[countryCode]) {
+    return PAYMENT_METHODS_BY_COUNTRY[countryCode];
+  }
+  return DEFAULT_PAYMENT_METHODS;
+}
 
 export const PaymentStatus = {
   PENDING: 'PENDING',
@@ -240,6 +275,28 @@ export const PLAN_CATALOG: PlanDef[] = [
 
 /** Offre présélectionnée par défaut après la création d'un compte. */
 export const DEFAULT_PLAN_CODE = 'STARTER';
+
+/**
+ * Tarif mensuel par devise. `priceMonthly` d'un PlanDef reste la référence en
+ * XOF ; cette table donne le prix affiché et facturé dans les autres devises.
+ *
+ * ⚠️ Montants INDICATIFS, alignés en ordre de grandeur sur le tarif XOF. Le
+ * kwanza et le metical fluctuent : à revoir avant toute campagne commerciale.
+ * Une devise absente de cette table retombe sur le tarif XOF.
+ */
+export const PLAN_PRICES: Record<string, Partial<Record<SupportedCurrency, number>>> = {
+  STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800 },
+  STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250 },
+  GROWTH: { XOF: 23000, XAF: 23000, CVE: 3900, AOA: 38000, MZN: 2400 },
+};
+
+/** Prix mensuel d'une offre dans la devise de l'établissement. */
+export function planPrice(planCode: string, currency: string): number {
+  const row = PLAN_PRICES[planCode];
+  const fallback = PLAN_CATALOG.find((p) => p.code === planCode)?.priceMonthly ?? 0;
+  if (!row) return fallback;
+  return row[currency as SupportedCurrency] ?? fallback;
+}
 
 /* ============================================================
  * RÔLES SYSTÈME (12) — seedés comme templates globaux (tenantId = null)
@@ -494,8 +551,36 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
  * ============================================================ */
 
 export const DEFAULT_CURRENCY = 'XOF';
-export const SUPPORTED_CURRENCIES = ['XOF', 'XAF'] as const;
+export const SUPPORTED_CURRENCIES = ['XOF', 'XAF', 'CVE', 'AOA', 'MZN'] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+
+/**
+ * Symbole affiché et nombre de décimales par devise. Le franc CFA se note
+ * « FCFA » (pas « XOF ») et s'écrit sans centimes ; l'escudo, le kwanza et le
+ * metical utilisent bien 2 décimales.
+ */
+export const CURRENCY_FORMAT: Record<
+  SupportedCurrency,
+  { symbol: string; decimals: number; label: string }
+> = {
+  XOF: { symbol: 'FCFA', decimals: 0, label: 'Franc CFA (UEMOA)' },
+  XAF: { symbol: 'FCFA', decimals: 0, label: 'Franc CFA (CEMAC)' },
+  CVE: { symbol: '$', decimals: 0, label: 'Escudo cap-verdien' },
+  AOA: { symbol: 'Kz', decimals: 0, label: 'Kwanza angolais' },
+  MZN: { symbol: 'MT', decimals: 0, label: 'Metical mozambicain' },
+};
+
 export const VAT_RATE = 0.18; // TVA 18 % (UEMOA)
+
+/**
+ * Taux de TVA par défaut selon le pays. L'établissement peut le modifier dans
+ * ses réglages ; ces valeurs ne sont qu'un point de départ à l'inscription.
+ */
+export const DEFAULT_VAT_BY_COUNTRY: Record<string, number> = {
+  CV: 15, // Cap-Vert
+  AO: 14, // Angola
+  MZ: 16, // Mozambique
+};
 export const SUPPORTED_LOCALES = ['fr', 'en', 'pt'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
@@ -509,31 +594,51 @@ const passwordSchema = z
   .max(128);
 
 /**
- * Pays d'Afrique de l'Ouest (CEDEAO + Mauritanie) avec leur indicatif
- * téléphonique international. Sert de source unique au sélecteur d'indicatif du
- * formulaire d'inscription ET à la validation du numéro WhatsApp.
+ * Pays desservis, avec indicatif, devise et langue par défaut. Source unique du
+ * sélecteur d'indicatif à l'inscription, de la validation du numéro WhatsApp,
+ * ET de la devise attribuée à l'établissement (déduite de son indicatif, le
+ * formulaire ne demandant pas le pays séparément).
+ *
+ * Couvre la CEDEAO + Mauritanie, plus les marchés lusophones hors Afrique de
+ * l'Ouest (Angola, Mozambique) ouverts en test.
  */
-export const WEST_AFRICA_COUNTRIES = [
-  { code: 'BJ', name: 'Bénin', dial: '+229', flag: '🇧🇯' },
-  { code: 'BF', name: 'Burkina Faso', dial: '+226', flag: '🇧🇫' },
-  { code: 'CV', name: 'Cap-Vert', dial: '+238', flag: '🇨🇻' },
-  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮' },
-  { code: 'GM', name: 'Gambie', dial: '+220', flag: '🇬🇲' },
-  { code: 'GH', name: 'Ghana', dial: '+233', flag: '🇬🇭' },
-  { code: 'GN', name: 'Guinée', dial: '+224', flag: '🇬🇳' },
-  { code: 'GW', name: 'Guinée-Bissau', dial: '+245', flag: '🇬🇼' },
-  { code: 'LR', name: 'Libéria', dial: '+231', flag: '🇱🇷' },
-  { code: 'ML', name: 'Mali', dial: '+223', flag: '🇲🇱' },
-  { code: 'MR', name: 'Mauritanie', dial: '+222', flag: '🇲🇷' },
-  { code: 'NE', name: 'Niger', dial: '+227', flag: '🇳🇪' },
-  { code: 'NG', name: 'Nigéria', dial: '+234', flag: '🇳🇬' },
-  { code: 'SN', name: 'Sénégal', dial: '+221', flag: '🇸🇳' },
-  { code: 'SL', name: 'Sierra Leone', dial: '+232', flag: '🇸🇱' },
-  { code: 'TG', name: 'Togo', dial: '+228', flag: '🇹🇬' },
+export const SUPPORTED_COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', dial: '+229', flag: '🇧🇯', currency: 'XOF', locale: 'fr' },
+  { code: 'BF', name: 'Burkina Faso', dial: '+226', flag: '🇧🇫', currency: 'XOF', locale: 'fr' },
+  { code: 'CV', name: 'Cap-Vert', dial: '+238', flag: '🇨🇻', currency: 'CVE', locale: 'pt' },
+  { code: 'CI', name: "Côte d'Ivoire", dial: '+225', flag: '🇨🇮', currency: 'XOF', locale: 'fr' },
+  { code: 'GM', name: 'Gambie', dial: '+220', flag: '🇬🇲', currency: 'XOF', locale: 'en' },
+  { code: 'GH', name: 'Ghana', dial: '+233', flag: '🇬🇭', currency: 'XOF', locale: 'en' },
+  { code: 'GN', name: 'Guinée', dial: '+224', flag: '🇬🇳', currency: 'XOF', locale: 'fr' },
+  { code: 'GW', name: 'Guinée-Bissau', dial: '+245', flag: '🇬🇼', currency: 'XOF', locale: 'pt' },
+  { code: 'LR', name: 'Libéria', dial: '+231', flag: '🇱🇷', currency: 'XOF', locale: 'en' },
+  { code: 'ML', name: 'Mali', dial: '+223', flag: '🇲🇱', currency: 'XOF', locale: 'fr' },
+  { code: 'MR', name: 'Mauritanie', dial: '+222', flag: '🇲🇷', currency: 'XOF', locale: 'fr' },
+  { code: 'NE', name: 'Niger', dial: '+227', flag: '🇳🇪', currency: 'XOF', locale: 'fr' },
+  { code: 'NG', name: 'Nigéria', dial: '+234', flag: '🇳🇬', currency: 'XOF', locale: 'en' },
+  { code: 'SN', name: 'Sénégal', dial: '+221', flag: '🇸🇳', currency: 'XOF', locale: 'fr' },
+  { code: 'SL', name: 'Sierra Leone', dial: '+232', flag: '🇸🇱', currency: 'XOF', locale: 'en' },
+  { code: 'TG', name: 'Togo', dial: '+228', flag: '🇹🇬', currency: 'XOF', locale: 'fr' },
+  // Marchés lusophones ouverts en test (hors CEDEAO).
+  { code: 'AO', name: 'Angola', dial: '+244', flag: '🇦🇴', currency: 'AOA', locale: 'pt' },
+  { code: 'MZ', name: 'Mozambique', dial: '+258', flag: '🇲🇿', currency: 'MZN', locale: 'pt' },
 ] as const;
 
-/** Indicatifs acceptés (dérivés de WEST_AFRICA_COUNTRIES). */
-export const WEST_AFRICA_DIAL_CODES = WEST_AFRICA_COUNTRIES.map((c) => c.dial);
+export type SupportedCountry = (typeof SUPPORTED_COUNTRIES)[number];
+
+/** Indicatifs acceptés (dérivés de SUPPORTED_COUNTRIES). */
+export const SUPPORTED_DIAL_CODES = SUPPORTED_COUNTRIES.map((c) => c.dial);
+
+/**
+ * Retrouve le pays à partir d'un numéro international. Les indicatifs les plus
+ * longs sont testés d'abord : sans cela « +22 » masquerait « +225 ».
+ */
+export function countryFromPhone(phone: string): SupportedCountry | undefined {
+  const cleaned = phone.replace(/[\s().-]/g, '');
+  return [...SUPPORTED_COUNTRIES]
+    .sort((a, b) => b.dial.length - a.dial.length)
+    .find((c) => cleaned.startsWith(c.dial));
+}
 
 /**
  * Numéro WhatsApp du responsable (obligatoire à l'inscription). Doit porter
@@ -549,14 +654,14 @@ export const whatsappSchema = z
     (v) => {
       const cleaned = v.replace(/[\s().-]/g, '');
       if (!/^\+\d{8,15}$/.test(cleaned)) return false;
-      const dial = WEST_AFRICA_DIAL_CODES.find((d) => cleaned.startsWith(d));
+      const dial = SUPPORTED_DIAL_CODES.find((d) => cleaned.startsWith(d));
       if (!dial) return false;
       // Rejette les numéros de remplissage : après l'indicatif, un même
       // chiffre répété (+225 0000000, +221 1111111…) n'est pas un vrai numéro.
       const rest = cleaned.slice(dial.length);
       return rest.length >= 5 && !/^(\d)\1+$/.test(rest);
     },
-    "Numéro invalide — indicatif d'Afrique de l'Ouest requis (ex : +221 77 123 45 67)",
+    "Numéro invalide — indicatif d'un pays desservi requis (ex : +221 77 123 45 67)",
   );
 
 export const signupSchema = z.object({
@@ -1138,6 +1243,10 @@ export interface AuthUser {
   allBranches: boolean;
   tenantName: string;
   tenantLogoUrl: string | null;
+  /** Devise de l'établissement (XOF, CVE, AOA, MZN…) — pilote tout l'affichage monétaire. */
+  tenantCurrency: string;
+  /** Pays ISO-2 : sert à proposer les bons moyens d'encaissement en caisse. */
+  tenantCountryCode: string | null;
   /** Situation géographique + contact de l'établissement (documents). */
   tenantLocation: string | null;
   tenantContactPhone: string | null;

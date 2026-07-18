@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ShieldCheck,
   Stethoscope,
@@ -80,114 +81,48 @@ const LANDING_THEME = {
 } as CSSProperties;
 
 const NAV = [
-  { href: '#fonctionnalites', label: 'Fonctionnalités' },
-  { href: '#apercu', label: 'Aperçu' },
-  { href: '#securite', label: 'Sécurité' },
-  { href: '#tarifs', label: 'Tarifs' },
+  { href: '#fonctionnalites', key: 'landing.navFeatures' },
+  { href: '#apercu', key: 'landing.navPreview' },
+  { href: '#securite', key: 'landing.navSecurity' },
+  { href: '#tarifs', key: 'landing.navPricing' },
 ];
 
 const ADVANTAGES = [
-  {
-    icon: Stethoscope,
-    title: 'Gestion intelligente',
-    tone: 'primary' as const,
-    items: ['Dossiers patients complets', 'Suivi des consultations', 'Ordonnances numériques'],
-  },
-  {
-    icon: Wallet,
-    title: 'Gestion commerciale',
-    tone: 'accent' as const,
-    items: ['Ventes et facturation', 'Stocks et montures', 'Gestion des assurances'],
-  },
-  {
-    icon: Network,
-    title: 'Collaboration',
-    tone: 'cyan' as const,
-    items: ['Accès multi-utilisateurs', 'Multi-magasins synchronisés', 'Réseau de cliniques'],
-  },
+  { icon: Stethoscope, key: 'adv1', tone: 'primary' as const },
+  { icon: Wallet, key: 'adv2', tone: 'accent' as const },
+  { icon: Network, key: 'adv3', tone: 'cyan' as const },
 ];
 
 const SHOWCASE = [
-  {
-    icon: CalendarDays,
-    title: 'Agenda intelligent',
-    text: 'Planification optimisée des rendez-vous avec rappels automatiques.',
-    tone: 'primary' as const,
-  },
-  {
-    icon: LineChart,
-    title: 'Analyses en temps réel',
-    text: 'Visualisez vos performances de vente et le flux de patients instantanément.',
-    tone: 'cyan' as const,
-  },
-  {
-    icon: Wallet,
-    title: 'Comptabilité intégrée',
-    text: 'Gérez vos dépenses, recettes et rapprochements sans effort.',
-    tone: 'accent' as const,
-  },
+  { icon: CalendarDays, key: 'show1', tone: 'primary' as const },
+  { icon: LineChart, key: 'show2', tone: 'cyan' as const },
+  { icon: Wallet, key: 'show3', tone: 'accent' as const },
 ];
 
 const PAYMENTS = [
   { label: 'Wave', short: 'Wave', bg: '#1DC3F5', fg: '#00263A' },
   { label: 'Orange Money', short: 'OM', bg: '#FF6600', fg: '#ffffff' },
   { label: 'MTN MoMo', short: 'MTN', bg: '#FFCC00', fg: '#111111' },
+  { label: 'M-Pesa', short: 'M-P', bg: '#E30613', fg: '#ffffff' },
+  { label: 'Multicaixa', short: 'MCX', bg: '#0B3D91', fg: '#ffffff' },
+  { label: 'Vinti4', short: 'V4', bg: '#0F7B3E', fg: '#ffffff' },
   { label: 'Moov Money', short: 'Moov', bg: '#0A56A5', fg: '#ffffff' },
   { label: 'Free Money', short: 'Free', bg: '#E4032E', fg: '#ffffff' },
 ];
 
 const SECURITY = [
-  {
-    icon: Lock,
-    title: 'Chiffrement AES-256',
-    text: 'Vos données sensibles sont chiffrées, au repos comme en transit.',
-    tone: 'primary' as const,
-  },
-  {
-    icon: CloudUpload,
-    title: 'Sauvegardes régulières',
-    text: 'Sauvegardes automatiques pour protéger vos informations.',
-    tone: 'cyan' as const,
-  },
-  {
-    icon: Database,
-    title: 'Isolation des données',
-    text: 'Chaque établissement dispose de ses propres données cloisonnées.',
-    tone: 'accent' as const,
-  },
-  {
-    icon: Gauge,
-    title: 'Haute disponibilité',
-    text: 'Architecture cloud pensée pour un service fiable et continu.',
-    tone: 'primary' as const,
-  },
+  { icon: Lock, key: 'sec1', tone: 'primary' as const },
+  { icon: CloudUpload, key: 'sec2', tone: 'cyan' as const },
+  { icon: Database, key: 'sec3', tone: 'accent' as const },
+  { icon: Gauge, key: 'sec4', tone: 'primary' as const },
 ];
 
-const STATS = [
-  { value: '100 %', label: 'en ligne, sans installation' },
-  { value: '5+', label: 'opérateurs Mobile Money' },
-  { value: '24/7', label: 'accès à vos données' },
-];
+const STATS = ['stat1', 'stat2', 'stat3'] as const;
 
 const TESTIMONIALS = [
-  {
-    name: 'Dr. Aminata Sow',
-    role: 'Clinique de l’Œil — Dakar',
-    initials: 'AS',
-    text: 'OculoSaaS a transformé notre organisation : rendez-vous, dossiers patients et caisse réunis au même endroit.',
-  },
-  {
-    name: 'Mamadou Diallo',
-    role: 'Optique Horizon — Abidjan',
-    initials: 'MD',
-    text: 'Encaisser par Wave et Orange Money directement à la caisse, c’est exactement ce qu’il nous fallait.',
-  },
-  {
-    name: 'Fatou Ndiaye',
-    role: 'Vision Plus — Thiès',
-    initials: 'FN',
-    text: 'Je pilote mes magasins depuis mon téléphone. Les rapports montrent clairement où je gagne de l’argent.',
-  },
+  { name: 'Dr. Aminata Sow', role: "Clinique de l'Œil — Dakar", initials: 'AS', key: 'testi1' },
+  { name: 'Mamadou Diallo', role: 'Optique Horizon — Abidjan', initials: 'MD', key: 'testi2' },
+  { name: 'Fatou Ndiaye', role: 'Vision Plus — Thiès', initials: 'FN', key: 'testi3' },
 ];
 
 const TONE_TEXT: Record<'primary' | 'accent' | 'cyan', string> = {
@@ -255,6 +190,7 @@ function Reveal({
  * version complète (lecture, plein écran, téléchargement).
  */
 function DemoVideo() {
+  const { t } = useTranslation();
   return (
     <div className="relative">
       <div className="glass-card overflow-hidden rounded-[28px] p-2 shadow-card-lg">
@@ -277,8 +213,8 @@ function DemoVideo() {
             <TrendingUp className="h-5 w-5" />
           </span>
           <div>
-            <div className="text-sm font-bold text-content">Temps réel</div>
-            <div className="text-xs text-content-muted">Données synchronisées</div>
+            <div className="text-sm font-bold text-content">{t('landing.realtime')}</div>
+            <div className="text-xs text-content-muted">{t('landing.realtimeSub')}</div>
           </div>
         </div>
       </div>
@@ -289,7 +225,7 @@ function DemoVideo() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 text-sm font-semibold text-content-muted transition hover:text-primary"
         >
-          <Maximize2 className="h-4 w-4" /> Voir en plein écran &amp; télécharger la vidéo
+          <Maximize2 className="h-4 w-4" /> {t('landing.fullscreen')}
         </a>
       </div>
     </div>
@@ -351,6 +287,7 @@ function DashboardMock() {
 }
 
 export function LandingPage() {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const year = new Date().getFullYear();
 
@@ -381,16 +318,16 @@ export function LandingPage() {
                 href={n.href}
                 className="text-sm text-content-muted transition-colors hover:text-primary"
               >
-                {n.label}
+                {t(n.key)}
               </a>
             ))}
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <Link to="/login" className="btn-ghost">
-              Se connecter
+              {t('landing.signIn')}
             </Link>
             <Link to="/signup" className="btn-primary neon-glow rounded-full px-6">
-              Utiliser le logiciel
+              {t('landing.useSoftware')}
             </Link>
           </div>
           <button
@@ -411,7 +348,7 @@ export function LandingPage() {
                   onClick={() => setMenuOpen(false)}
                   className="rounded-xl px-3 py-2.5 text-sm text-content-muted hover:bg-surface-2 hover:text-content"
                 >
-                  {n.label}
+                  {t(n.key)}
                 </a>
               ))}
               <div className="mt-3 flex flex-col gap-2">
@@ -436,50 +373,48 @@ export function LandingPage() {
                 <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5">
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-                    Pensé pour l’Afrique de l’Ouest
+                    {t('landing.heroBadge')}
                   </span>
                 </span>
                 <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
-                  La gestion <span className="text-gradient">premium</span> de votre magasin
-                  d'optique et de votre clinique.
+                  {t('landing.heroTitleA')} <span className="text-gradient">{t('landing.heroTitleAccent')}</span>{' '}
+                  {t('landing.heroTitleB')}
                 </h1>
                 <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
-                  La plateforme tout-en-un conçue pour les opticiens et ophtalmologues : caisse,
-                  stocks, patients, paiements Mobile Money et rapports. Précision médicale,
-                  efficacité commerciale.
+                  {t('landing.heroSubtitle')}
                 </p>
                 <div className="mt-2 flex flex-col gap-4 sm:flex-row">
                   <Link
                     to="/signup"
                     className="btn-primary neon-glow rounded-xl px-8 py-4 text-base transition hover:-translate-y-0.5"
                   >
-                    Utiliser le logiciel <ArrowRight className="h-4 w-4" />
+                    {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a
                     href="#tarifs"
                     className="glass-card glass-hover rounded-xl px-8 py-4 text-center text-base font-semibold text-content"
                   >
-                    Voir les tarifs
+                    {t('landing.seePricing')}
                   </a>
                 </div>
                 <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> Activation immédiate
+                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check1')}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> Paiement Mobile Money
+                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check2')}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> Sans engagement
+                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check3')}
                   </span>
                 </div>
                 <div className="mt-8 flex flex-wrap gap-8 border-t border-line pt-8">
-                  {STATS.map((s) => (
-                    <div key={s.label}>
+                  {STATS.map((k) => (
+                    <div key={k}>
                       <div className="font-display text-2xl font-extrabold text-content">
-                        {s.value}
+                        {t(`landing.${k}`)}
                       </div>
-                      <div className="text-sm text-content-muted">{s.label}</div>
+                      <div className="text-sm text-content-muted">{t(`landing.${k}Label`)}</div>
                     </div>
                   ))}
                 </div>
@@ -497,16 +432,15 @@ export function LandingPage() {
           <div className="mx-auto max-w-[1280px]">
             <Reveal className="mb-14 text-center">
               <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
-                L’excellence opérationnelle
+                {t('landing.advTitle')}
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-content-muted">
-                Une suite complète d’outils intégrés pour piloter chaque aspect de votre activité
-                médicale et commerciale.
+                {t('landing.advSubtitle')}
               </p>
             </Reveal>
             <div className="grid gap-6 md:grid-cols-3">
               {ADVANTAGES.map((a, i) => (
-                <Reveal key={a.title} delay={i * 120} className="h-full">
+                <Reveal key={a.key} delay={i * 120} className="h-full">
                   <div className="glass-card glass-hover flex h-full flex-col gap-6 rounded-3xl p-8">
                     <div
                       className={clsx(
@@ -516,12 +450,12 @@ export function LandingPage() {
                     >
                       <a.icon className={clsx('h-8 w-8', TONE_TEXT[a.tone])} />
                     </div>
-                    <h3 className="font-display text-xl font-bold text-content">{a.title}</h3>
+                    <h3 className="font-display text-xl font-bold text-content">{t(`landing.${a.key}`)}</h3>
                     <ul className="flex flex-col gap-3">
-                      {a.items.map((it) => (
-                        <li key={it} className="flex items-center gap-3 text-content-muted">
+                      {(['a', 'b', 'c'] as const).map((sfx) => (
+                        <li key={sfx} className="flex items-center gap-3 text-content-muted">
                           <Check className={clsx('h-4 w-4 shrink-0', TONE_TEXT[a.tone])} />
-                          {it}
+                          {t(`landing.${a.key}${sfx}`)}
                         </li>
                       ))}
                     </ul>
@@ -538,11 +472,11 @@ export function LandingPage() {
             <Reveal>
               <div>
                 <h2 className="mb-8 font-display text-3xl font-extrabold text-content sm:text-4xl">
-                  Un tableau de bord qui anticipe vos besoins
+                  {t('landing.previewTitle')}
                 </h2>
                 <div className="flex flex-col gap-8">
                   {SHOWCASE.map((s) => (
-                    <div key={s.title} className="flex gap-4">
+                    <div key={s.key} className="flex gap-4">
                       <div
                         className={clsx(
                           'grid h-12 w-12 shrink-0 place-items-center rounded-lg',
@@ -552,8 +486,8 @@ export function LandingPage() {
                         <s.icon className={clsx('h-5 w-5', TONE_TEXT[s.tone])} />
                       </div>
                       <div>
-                        <h4 className="mb-1 font-bold text-content">{s.title}</h4>
-                        <p className="text-sm text-content-muted">{s.text}</p>
+                        <h4 className="mb-1 font-bold text-content">{t(`landing.${s.key}`)}</h4>
+                        <p className="text-sm text-content-muted">{t(`landing.${s.key}Text`)}</p>
                       </div>
                     </div>
                   ))}
@@ -573,11 +507,10 @@ export function LandingPage() {
               <div className="glass-card flex flex-col items-center gap-10 rounded-[40px] p-10 text-center sm:p-12">
                 <div>
                   <h2 className="font-display text-2xl font-extrabold text-content sm:text-3xl">
-                    Paiements locaux simplifiés
+                    {t('landing.payTitle')}
                   </h2>
                   <p className="mx-auto mt-4 max-w-2xl text-content-muted">
-                    Encaissez vos clients directement depuis OculoSaaS grâce aux paiements Mobile
-                    Money les plus utilisés en Afrique de l’Ouest.
+                    {t('landing.paySubtitle')}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
@@ -605,15 +538,15 @@ export function LandingPage() {
           <div className="mx-auto max-w-[1280px]">
             <Reveal className="mb-14 text-center">
               <span className="mb-4 inline-block text-xs font-semibold uppercase tracking-widest text-primary">
-                Infrastructure de confiance
+                {t('landing.secEyebrow')}
               </span>
               <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
-                Une sécurité sérieuse
+                {t('landing.secTitle')}
               </h2>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {SECURITY.map((s, i) => (
-                <Reveal key={s.title} delay={i * 100} className="h-full">
+                <Reveal key={s.key} delay={i * 100} className="h-full">
                   <div
                     className={clsx(
                       'glass-card glass-hover h-full rounded-2xl border-l-4 p-8',
@@ -625,8 +558,8 @@ export function LandingPage() {
                     )}
                   >
                     <s.icon className={clsx('mb-4 h-8 w-8', TONE_TEXT[s.tone])} />
-                    <h4 className="mb-2 font-bold text-content">{s.title}</h4>
-                    <p className="text-sm text-content-muted">{s.text}</p>
+                    <h4 className="mb-2 font-bold text-content">{t(`landing.${s.key}`)}</h4>
+                    <p className="text-sm text-content-muted">{t(`landing.${s.key}Text`)}</p>
                   </div>
                 </Reveal>
               ))}
@@ -639,10 +572,10 @@ export function LandingPage() {
           <div className="mx-auto max-w-[1280px]">
             <Reveal className="mb-14 text-center">
               <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
-                Une offre adaptée à votre taille
+                {t('landing.priceTitle')}
               </h2>
               <p className="mt-4 text-content-muted">
-                Simple, transparent, sans frais cachés. Activation immédiate après paiement.
+                {t('landing.priceSubtitle')}
               </p>
             </Reveal>
             <div className="grid items-stretch gap-6 md:grid-cols-3">
@@ -660,7 +593,7 @@ export function LandingPage() {
                     >
                       {highlighted && (
                         <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-4 py-1 text-xs font-bold uppercase tracking-widest text-white shadow-card-lg">
-                          Le plus populaire
+                          {t('landing.mostPopular')}
                         </span>
                       )}
                       <div
@@ -675,12 +608,14 @@ export function LandingPage() {
                         <span className="font-display text-4xl font-extrabold text-content">
                           {formatPrice(plan.priceMonthly)}
                         </span>
-                        <span className="text-content-muted">FCFA/mois</span>
+                        <span className="text-content-muted">FCFA{t('landing.perMonth')}</span>
                       </div>
-                      <p className="min-h-[40px] text-sm text-content-muted">{plan.description}</p>
+                      <p className="min-h-[40px] text-sm text-content-muted">
+                        {t(`landing.plan${plan.code.charAt(0)}${plan.code.slice(1).toLowerCase()}Desc`)}
+                      </p>
                       <div className="h-px w-full bg-line" />
                       <ul className="flex flex-1 flex-col gap-3">
-                        {plan.features.map((f) => (
+                        {(t(`planFeatures.${plan.code}`, { returnObjects: true }) as string[]).map((f) => (
                           <li
                             key={f}
                             className={clsx(
@@ -700,7 +635,7 @@ export function LandingPage() {
                           highlighted ? 'btn-primary neon-glow' : 'btn-outline',
                         )}
                       >
-                        {highlighted ? 'Démarrer maintenant' : `Choisir ${plan.name}`}
+                        {highlighted ? t('landing.startNow') : `${t('landing.choose')} ${plan.name}`}
                       </Link>
                     </div>
                   </Reveal>
@@ -715,26 +650,26 @@ export function LandingPage() {
           <div className="mx-auto max-w-[1280px]">
             <Reveal className="mb-14 text-center">
               <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
-                Ils nous font confiance
+                {t('landing.testimonialsTitle')}
               </h2>
             </Reveal>
             <div className="grid gap-6 md:grid-cols-3">
-              {TESTIMONIALS.map((t, i) => (
-                <Reveal key={t.name} delay={i * 120} className="h-full">
+              {TESTIMONIALS.map((item, i) => (
+                <Reveal key={item.name} delay={i * 120} className="h-full">
                   <div className="glass-card flex h-full flex-col rounded-3xl p-8">
                     <div className="mb-6 flex gap-1 text-primary">
                       {Array.from({ length: 5 }).map((_, s) => (
                         <Star key={s} className="h-4 w-4 fill-current" />
                       ))}
                     </div>
-                    <p className="mb-8 flex-1 italic text-content/80">“{t.text}”</p>
+                    <p className="mb-8 flex-1 italic text-content/80">“{t(`landing.${item.key}`)}”</p>
                     <div className="flex items-center gap-4">
                       <div className="grid h-12 w-12 place-items-center rounded-full bg-brand font-bold text-white">
-                        {t.initials}
+                        {item.initials}
                       </div>
                       <div>
-                        <div className="font-bold text-content">{t.name}</div>
-                        <div className="text-xs uppercase text-content-muted">{t.role}</div>
+                        <div className="font-bold text-content">{item.name}</div>
+                        <div className="text-xs uppercase text-content-muted">{item.role}</div>
                       </div>
                     </div>
                   </div>
@@ -749,11 +684,10 @@ export function LandingPage() {
           <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 bg-primary/20" />
           <Reveal className="mx-auto max-w-[900px] text-center">
             <h2 className="mb-8 font-display text-4xl font-extrabold text-content sm:text-5xl">
-              Transformez votre établissement avec <span className="text-gradient">OculoSaaS</span>.
+              {t('landing.ctaTitle')} <span className="text-gradient">OculoSaaS</span>.
             </h2>
             <p className="mx-auto mb-12 max-w-2xl text-lg text-content-muted">
-              Rejoignez la gestion connectée de l’optique et de la clinique. Activation immédiate
-              après paiement, sans engagement.
+              {t('landing.ctaSubtitle')}
             </p>
             <Link
               to="/signup"
@@ -771,11 +705,11 @@ export function LandingPage() {
           <div className="flex flex-col gap-5">
             <Logo />
             <p className="text-sm text-content-muted">
-              La gestion tout-en-un au service de la santé visuelle en Afrique de l’Ouest.
+              {t('landing.footerTagline')}
             </p>
           </div>
           <div className="flex flex-col gap-3">
-            <h5 className="mb-1 font-bold text-content">Produit</h5>
+            <h5 className="mb-1 font-bold text-content">{t('landing.footerProduct')}</h5>
             <a href="#fonctionnalites" className="text-sm text-content-muted hover:text-primary">
               Fonctionnalités
             </a>
@@ -787,24 +721,24 @@ export function LandingPage() {
             </a>
           </div>
           <div className="flex flex-col gap-3">
-            <h5 className="mb-1 font-bold text-content">Compte</h5>
+            <h5 className="mb-1 font-bold text-content">{t('landing.footerAccount')}</h5>
             <Link to="/login" className="text-sm text-content-muted hover:text-primary">
-              Se connecter
+              {t('landing.signIn')}
             </Link>
             <Link to="/signup" className="text-sm text-content-muted hover:text-primary">
-              Créer un compte
+              {t('landing.footerCreate')}
             </Link>
             <a href="#securite" className="text-sm text-content-muted hover:text-primary">
               Sécurité
             </a>
           </div>
           <div className="flex flex-col gap-3">
-            <h5 className="mb-1 font-bold text-content">Assistance</h5>
+            <h5 className="mb-1 font-bold text-content">{t('landing.footerSupport')}</h5>
             <a
               href="mailto:support@oculosaas.com"
               className="text-sm text-content-muted hover:text-primary"
             >
-              Contact
+              {t('landing.footerContact')}
             </a>
             <a href="#faq" className="text-sm text-content-muted hover:text-primary">
               FAQ
@@ -813,7 +747,7 @@ export function LandingPage() {
         </div>
         <div className="mx-auto mt-12 max-w-[1280px] border-t border-line px-4 pt-8 text-center sm:px-8">
           <p className="text-sm text-content-muted">
-            © {year} OculoSaaS. Excellence en ophtalmologie. Tous droits réservés.
+            © {year} OculoSaaS. {t('landing.footerExcellence')} {t('landing.footerRights')}
           </p>
         </div>
       </footer>

@@ -7,6 +7,7 @@ import type {
   EstablishmentChoice,
   InvoiceSettings,
 } from '@oculo/shared-types';
+import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY } from '@oculo/shared-types';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
@@ -75,6 +76,8 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     allBranches: user.role.allBranches,
     tenantName: user.tenant.name,
     tenantLogoUrl: user.tenant.logoUrl,
+    tenantCurrency: user.tenant.currency ?? 'XOF',
+    tenantCountryCode: user.tenant.countryCode ?? null,
     tenantLocation: user.tenant.location,
     tenantContactPhone: user.tenant.contactPhone,
     tenantContactEmail: user.tenant.contactEmail,
@@ -215,9 +218,21 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
     );
   }
 
+  // Le formulaire ne demande pas le pays : on le déduit de l'indicatif du
+  // numéro WhatsApp, qui est obligatoire et validé. Il fixe la devise, la TVA
+  // par défaut et les moyens d'encaissement proposés en caisse.
+  const country = countryFromPhone(opts.whatsapp);
+
   return prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
-      data: { name: opts.tenantName, slug, whatsappPhone: opts.whatsapp },
+      data: {
+        name: opts.tenantName,
+        slug,
+        whatsappPhone: opts.whatsapp,
+        countryCode: country?.code ?? null,
+        currency: country?.currency ?? 'XOF',
+        vatRate: country ? DEFAULT_VAT_BY_COUNTRY[country.code] ?? null : null,
+      },
     });
     const branch = await tx.branch.create({
       data: { tenantId: tenant.id, name: opts.branchName, city: '' },

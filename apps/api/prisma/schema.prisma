@@ -36,6 +36,7 @@ model Tenant {
   whatsappPhone String?
   status        TenantStatus @default(ACTIVE)
   currency      String       @default("XOF")
+  countryCode   String? // ISO-2, déduit de l'indicatif WhatsApp à l'inscription
   // Taux de TVA en pourcentage (0 = exonéré). null = défaut 18 %.
   vatRate       Float?
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.
@@ -462,6 +463,13 @@ enum PaymentMethod {
   MOOV_MONEY
   FREE_MONEY
   CARD
+  // Marchés lusophones (encaissement manuel au comptoir)
+  MPESA
+  EMOLA
+  MKESH
+  MULTICAIXA
+  UNITEL_MONEY
+  VINTI4
 }
 
 enum PaymentStatus {

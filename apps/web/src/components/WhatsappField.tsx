@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { WEST_AFRICA_COUNTRIES } from '@oculo/shared-types';
+import { SUPPORTED_COUNTRIES } from '@oculo/shared-types';
 
 /** Indicatif présélectionné : Sénégal. */
 const DEFAULT_DIAL = '+221';
 
 function splitNumber(value: string): { dial: string; local: string } {
   const cleaned = value.replace(/[\s().-]/g, '');
-  const match = WEST_AFRICA_COUNTRIES.find((c) => cleaned.startsWith(c.dial));
+  const match = SUPPORTED_COUNTRIES.find((c) => cleaned.startsWith(c.dial));
   if (match) return { dial: match.dial, local: cleaned.slice(match.dial.length) };
   return { dial: DEFAULT_DIAL, local: '' };
 }
@@ -78,7 +78,7 @@ export function WhatsappField({
             role="listbox"
             className="absolute left-0 z-30 mt-1 max-h-64 w-64 overflow-auto rounded-xl border bg-surface-3 p-1 shadow-card"
           >
-            {WEST_AFRICA_COUNTRIES.map((c) => (
+            {SUPPORTED_COUNTRIES.map((c) => (
               <li key={c.code} role="option" aria-selected={c.dial === dial}>
                 <button
                   type="button"

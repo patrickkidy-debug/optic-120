@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AuthUser } from '@oculo/shared-types';
+import { setActiveCurrency } from '../lib/format';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -24,7 +25,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'loading',
   locked: false,
   suspended: false,
-  setAuth: (accessToken, user) => set({ accessToken, user, status: 'authenticated' }),
+  setAuth: (accessToken, user) => {
+    // Fixe la devise d'affichage (FCFA, escudo, kwanza, metical) pour toute la session.
+    setActiveCurrency(user.tenantCurrency);
+    set({ accessToken, user, status: 'authenticated' });
+  },
   setUser: (user) => set({ user }),
   setStatus: (status) => set({ status }),
   setLocked: (locked) => set({ locked }),

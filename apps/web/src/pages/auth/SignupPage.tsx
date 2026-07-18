@@ -60,16 +60,16 @@ export function SignupPage() {
   // Inscription Google : compte inexistant → on demande juste le nom de l'établissement.
   if (google.step.kind === 'needsSignup') {
     return (
-      <AuthLayout title="Finalisez votre inscription" subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
+      <AuthLayout title={t('auth.finishSignup')} subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
         <form
           onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName, googleWhatsapp); }}
           className="space-y-4"
         >
-          <Field label="Email Google">
+          <Field label={t('auth.googleEmail')}>
             <input className="input" value={google.step.email} disabled />
           </Field>
           <Field label="Nom de l'établissement">
-            <input className="input" autoFocus value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Clinique Vision Plus" />
+            <input className="input" autoFocus value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder={t('auth.placeholderOrg')} />
           </Field>
           <Field label="Magasin principal">
             <input className="input" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
@@ -93,9 +93,9 @@ export function SignupPage() {
   // Compte Google déjà existant et protégé par 2FA.
   if (google.step.kind === 'twoFactor') {
     return (
-      <AuthLayout title="Vérification en deux étapes" subtitle="Saisissez le code de votre application d'authentification">
+      <AuthLayout title={t('auth.twoFactorTitle')} subtitle={t('auth.twoFactorSubtitle')}>
         <form onSubmit={(e) => { e.preventDefault(); void google.verifyTwoFactor(googleCode); }} className="space-y-4">
-          <Field label="Code à 6 chiffres">
+          <Field label={t('auth.sixDigitCode')}>
             <input
               className="input text-center text-2xl tracking-[0.4em]"
               autoFocus
@@ -127,7 +127,7 @@ export function SignupPage() {
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.tenantName')}>
-          <input className="input" placeholder="Clinique Vision Plus" {...register('tenantName')} />
+          <input className="input" placeholder={t('auth.placeholderOrg')} {...register('tenantName')} />
           {errors.tenantName && <p className="mt-1 text-xs text-danger">{errors.tenantName.message}</p>}
         </Field>
         <Field label={t('auth.branchName')}>
@@ -148,7 +148,7 @@ export function SignupPage() {
           </Field>
         </div>
         <Field label={t('auth.email')}>
-          <input className="input" type="email" placeholder="vous@etablissement.sn" {...register('adminEmail')} />
+          <input className="input" type="email" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
           {errors.adminEmail && <p className="mt-1 text-xs text-danger">{errors.adminEmail.message}</p>}
         </Field>
         <Field label={t('auth.whatsapp')}>
@@ -163,7 +163,7 @@ export function SignupPage() {
           )}
         </Field>
         <Field label={t('auth.password')}>
-          <PasswordInput placeholder="Au moins 8 caractères" {...register('adminPassword')} />
+          <PasswordInput placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
           {errors.adminPassword && (
             <p className="mt-1 text-xs text-danger">{errors.adminPassword.message}</p>
           )}
