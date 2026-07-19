@@ -59,6 +59,30 @@ export interface ResolvedLocale {
 }
 
 /**
+ * Pages publiques : vitrine et entrées de compte. Seules celles-ci s'adaptent
+ * au visiteur — c'est le rôle du marketing d'aller chercher le prospect dans
+ * sa langue.
+ *
+ * Partout ailleurs (l'outil de travail), le français est la langue par défaut :
+ * un caissier dont le téléphone est réglé en anglais ne doit pas découvrir sa
+ * caisse en anglais. Il peut toujours choisir sa langue dans les réglages, et
+ * ce choix est alors respecté partout.
+ */
+const PUBLIC_PATHS = new Set([
+  '/',
+  '/signup',
+  '/login',
+  '/mot-de-passe-oublie',
+  '/reinitialiser',
+  '/verifier-email',
+]);
+
+export function isPublicPath(pathname: string): boolean {
+  const bare = pathname.replace(/^\/(fr|en|pt)(?=\/|$)/, '') || '/';
+  return PUBLIC_PATHS.has(bare.replace(/\/+$/, '') || '/');
+}
+
+/**
  * Choisit la langue à afficher.
  *
  * Ordre volontaire :
@@ -80,6 +104,12 @@ export function resolveLocale(pathname?: string): ResolvedLocale {
     /* stockage indisponible (navigation privée) : on poursuit sans */
   }
   if (isSupportedLocale(stored)) return { locale: stored, source: 'stored' };
+
+  // Hors vitrine : français, sans détection. L'application est un outil de
+  // travail, pas une page d'acquisition.
+  if (pathname && !isPublicPath(pathname)) {
+    return { locale: DEFAULT_LOCALE, source: 'default' };
+  }
 
   const geo = localeForCountry(readCookie(COUNTRY_COOKIE));
   if (geo) return { locale: geo, source: 'geo' };

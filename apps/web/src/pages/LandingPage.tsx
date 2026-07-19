@@ -308,40 +308,56 @@ export function LandingPage() {
         />
       </div>
 
-      {/* Header */}
+      {/* Header — bascule desktop a 1024px (lg) et non 768px : a 768 les
+          4 liens + selecteur + 2 boutons debordaient (779px de contenu pour
+          704 disponibles), le logo touchait le premier lien et le bouton
+          principal etait coupe. */}
       <header className="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-4 sm:px-8">
+        <nav className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 py-4 sm:px-8">
           <Logo />
-          <div className="hidden items-center gap-8 md:flex">
+
+          <div className="hidden items-center gap-6 lg:flex xl:gap-8">
             {NAV.map((n) => (
               <a
                 key={n.href}
                 href={n.href}
-                className="text-sm text-content-muted transition-colors hover:text-primary"
+                className="whitespace-nowrap text-sm text-content-muted transition-colors hover:text-primary"
               >
                 {t(n.key)}
               </a>
             ))}
           </div>
-          <div className="hidden items-center gap-3 md:flex">
+
+          <div className="hidden items-center gap-3 lg:flex">
             <LanguagePicker />
-            <Link to="/login" className="btn-ghost">
+            <Link to="/login" className="btn-ghost whitespace-nowrap">
               {t('landing.signIn')}
             </Link>
-            <Link to="/signup" className="btn-primary neon-glow rounded-full px-6">
+            <Link
+              to="/signup"
+              className="btn-primary neon-glow whitespace-nowrap rounded-full px-6"
+            >
               {t('landing.useSoftware')}
             </Link>
           </div>
-          <button
-            className="btn-ghost md:hidden"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu"
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+
+          {/* Sous 1024px : le selecteur reste accessible sans ouvrir le menu —
+              un visiteur lusophone doit pouvoir changer de langue tout de suite. */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguagePicker />
+            <button
+              className="btn-ghost"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </nav>
+
         {menuOpen && (
-          <div className="border-t border-line bg-bg/95 px-4 py-4 md:hidden">
+          <div className="border-t border-line bg-bg/95 px-4 py-4 lg:hidden">
             <div className="flex flex-col gap-1">
               {NAV.map((n) => (
                 <a
@@ -354,12 +370,11 @@ export function LandingPage() {
                 </a>
               ))}
               <div className="mt-3 flex flex-col gap-2">
-                <LanguagePicker className="self-start" />
                 <Link to="/login" onClick={() => setMenuOpen(false)} className="btn-outline">
-                  Se connecter
+                  {t('landing.signIn')}
                 </Link>
                 <Link to="/signup" onClick={() => setMenuOpen(false)} className="btn-primary">
-                  Utiliser le logiciel
+                  {t('landing.useSoftware')}
                 </Link>
               </div>
             </div>
