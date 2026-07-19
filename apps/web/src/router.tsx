@@ -1,3 +1,4 @@
+import { LOCALES } from './lib/locale-resolve';
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
@@ -101,6 +102,12 @@ function OperatorOnly({ children }: { children: ReactNode }) {
 
 export const router = createBrowserRouter([
   { path: '/', element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly> },
+  // URLs localisees : cibles canoniques du hreflang. Un lien /pt partage sur
+  // WhatsApp doit ouvrir la vitrine en portugais, quel que soit le visiteur.
+  ...LOCALES.map((l) => ({
+    path: `/${l.code}`,
+    element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly>,
+  })),
   { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
   { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
   { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },

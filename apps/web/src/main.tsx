@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
-import './lib/i18n';
+import { initI18n } from './lib/i18n';
 import './styles/index.css';
 import { queryClient } from './lib/queryClient';
 import { router } from './router';
@@ -47,13 +47,17 @@ function Root() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <Root />
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+// La langue est resolue AVANT le montage : aucun ecran ne s'affiche dans une
+// langue erronee, meme brievement.
+void initI18n().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <Root />
+      </QueryClientProvider>
+    </React.StrictMode>,
+  );
+});
 
 // Après un déploiement, un ancien chunk peut manquer (404). Vite émet alors
 // « vite:preloadError » : on recharge une fois pour charger la nouvelle version.

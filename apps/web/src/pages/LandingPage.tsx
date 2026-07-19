@@ -23,6 +23,7 @@ import {
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
+import { LanguagePicker } from '../components/LanguagePicker';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -323,6 +324,7 @@ export function LandingPage() {
             ))}
           </div>
           <div className="hidden items-center gap-3 md:flex">
+            <LanguagePicker />
             <Link to="/login" className="btn-ghost">
               {t('landing.signIn')}
             </Link>
@@ -352,6 +354,7 @@ export function LandingPage() {
                 </a>
               ))}
               <div className="mt-3 flex flex-col gap-2">
+                <LanguagePicker className="self-start" />
                 <Link to="/login" onClick={() => setMenuOpen(false)} className="btn-outline">
                   Se connecter
                 </Link>

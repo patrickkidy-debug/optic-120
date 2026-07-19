@@ -1,68 +1,83 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import fr from '../locales/fr.json';
-import en from '../locales/en.json';
-import pt from '../locales/pt.json';
+import {
+  LOCALES,
+  DEFAULT_LOCALE,
+  LOCALE_STORAGE_KEY,
+  isSupportedLocale,
+  resolveLocale,
+  type LocaleCode,
+} from './locale-resolve';
+
+export { LOCALES, DEFAULT_LOCALE, isSupportedLocale, resolveLocale };
+export type { LocaleCode };
 
 /**
- * Langues proposées dans l'application. Source unique : le sélecteur de la
- * barre supérieure et celui des Réglages lisent cette liste — ajouter une
- * langue ici (plus son fichier dans `locales/`) suffit à l'exposer partout.
- *
- * Le portugais vise les membres lusophones de la CEDEAO (Cap-Vert,
- * Guinée-Bissau) : c'est donc du portugais européen — « utilizador »,
- * « guardar », « definições » — et non brésilien.
+ * Chargement à la demande : une seule langue part sur le réseau au lieu des
+ * trois (~14 kB chacune). Vite crée un chunk par fichier grâce au glob.
  */
-export const LOCALES = [
-  { code: 'fr', label: 'Français', short: 'FR' },
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'pt', label: 'Português', short: 'PT' },
-] as const;
+const BUNDLES = import.meta.glob<{ default: Record<string, unknown> }>('../locales/*.json');
 
-export type LocaleCode = (typeof LOCALES)[number]['code'];
+function bundleFor(locale: LocaleCode) {
+  return BUNDLES[`../locales/${locale}.json`];
+}
 
-export function isSupportedLocale(v: string | null | undefined): v is LocaleCode {
-  return !!v && LOCALES.some((l) => l.code === v);
+const loaded = new Set<string>();
+
+/** Charge et enregistre une langue (idempotent — le cache évite tout re-fetch). */
+export async function loadLocale(locale: LocaleCode): Promise<void> {
+  if (loaded.has(locale)) return;
+  const loader = bundleFor(locale);
+  if (!loader) return;
+  const mod = await loader();
+  i18n.addResourceBundle(locale, 'translation', mod.default, true, true);
+  loaded.add(locale);
 }
 
 /**
- * Langue déduite du navigateur, au premier passage seulement.
- *
- * Un visiteur de Luanda, Maputo, Praia ou Bissau arrive avec `pt-*` : il doit
- * voir la vitrine et l'inscription dans sa langue sans rien cliquer. Dès qu'il
- * choisit une langue, ce choix est stocké et prime sur la détection.
- *
- * `navigator.languages` est parcouru dans l'ordre de préférence de l'utilisateur.
+ * Change la langue : charge le bundle si besoin, met à jour i18next, mémorise
+ * le choix (il primera sur toute détection ultérieure) et corrige `<html lang>`
+ * pour les lecteurs d'écran et les moteurs de recherche.
  */
-function detectLocale(): LocaleCode {
-  if (typeof navigator === 'undefined') return 'fr';
-  const candidates = navigator.languages?.length
-    ? navigator.languages
-    : [navigator.language].filter(Boolean);
-  for (const tag of candidates) {
-    const base = tag.toLowerCase().split('-')[0];
-    if (isSupportedLocale(base)) return base;
+export async function setLocale(locale: LocaleCode): Promise<void> {
+  await loadLocale(locale);
+  await i18n.changeLanguage(locale);
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    /* stockage indisponible : le choix vaut pour la session en cours */
   }
-  return 'fr';
+  document.documentElement.lang = locale;
 }
 
-// Une langue inconnue en stockage (ancienne valeur, saisie manuelle) doit
-// retomber sur la détection plutôt que d'afficher des clés brutes.
-const stored = localStorage.getItem('oculo_locale');
-const initialLocale: LocaleCode = isSupportedLocale(stored) ? stored : detectLocale();
+/**
+ * À appeler AVANT le premier rendu de React. Sans cette attente, l'écran
+ * s'afficherait une fraction de seconde avec les clés brutes ou la mauvaise
+ * langue — ce que l'on veut précisément éviter.
+ */
+export async function initI18n(): Promise<LocaleCode> {
+  const { locale } = resolveLocale(window.location.pathname);
 
-void i18n.use(initReactI18next).init({
-  resources: {
-    fr: { translation: fr },
-    en: { translation: en },
-    pt: { translation: pt },
-  },
-  lng: initialLocale,
-  fallbackLng: 'fr',
-  interpolation: { escapeValue: false },
-});
+  await i18n.use(initReactI18next).init({
+    resources: {},
+    lng: locale,
+    fallbackLng: DEFAULT_LOCALE,
+    interpolation: { escapeValue: false },
+    // Rien à afficher tant que le bundle n'est pas là : on l'attend juste après.
+    react: { useSuspense: false },
+    // Filet : les trois langues ont aujourd'hui des jeux de clés identiques, on
+    // ne précharge donc pas le français en plus (ce serait ~5 kB pour rien).
+    // Si une clé venait à manquer, on charge le repli à ce moment-là.
+    saveMissing: true,
+    missingKeyHandler: () => {
+      void loadLocale(DEFAULT_LOCALE);
+    },
+  });
 
-/** Langue retenue au demarrage (choix memorise, sinon detection navigateur). */
-export const INITIAL_LOCALE = initialLocale;
+  await loadLocale(locale);
+
+  document.documentElement.lang = locale;
+  return locale;
+}
 
 export default i18n;
