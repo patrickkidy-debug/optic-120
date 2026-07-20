@@ -40,7 +40,7 @@ export interface NavItem {
   /** Réservé à l'éditeur du SaaS (console plateforme). */
   operatorOnly?: boolean;
   soon?: boolean;
-  badge?: 'lowStock';
+  badge?: 'lowStock' | 'lensOverdue';
 }
 
 export interface NavGroup {
@@ -65,7 +65,7 @@ export const NAV: NavGroup[] = [
       { to: '/optique/caisse', labelKey: 'nav.pos', icon: ShoppingCart, permission: 'optique.sales.create' },
       { to: '/optique/ventes', labelKey: 'nav.sales', icon: ReceiptText, permission: 'optique.sales.view' },
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
-      { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view' },
+      { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view', badge: 'lensOverdue' },
       { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },
       { to: '/optique/renouvellements', labelKey: 'nav.renewals', icon: BellRing, permission: 'optique.customers.view' },
       { to: '/optique/etiquettes', labelKey: 'nav.labels', icon: Barcode, permission: 'optique.products.view' },

@@ -39,6 +39,10 @@ model Tenant {
   countryCode   String? // ISO-2, déduit de l'indicatif WhatsApp à l'inscription
   // Taux de TVA en pourcentage (0 = exonéré). null = défaut 18 %.
   vatRate       Float?
+  // Tarifs verres/traitements propres à l'établissement (configurateur). null = barème par défaut.
+  lensPricing   Json?
+  // Investissement initial, pour la projection d'amortissement (page Finance).
+  initialInvestment Float?
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.
   paymentConfig Json?
   createdAt     DateTime     @default(now())

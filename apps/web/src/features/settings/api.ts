@@ -1,5 +1,5 @@
 import { api } from '../../lib/api';
-import type { PaymentConfigInput, BrandingUpdateInput, InvoiceSettings } from '@oculo/shared-types';
+import type { PaymentConfigInput, BrandingUpdateInput, InvoiceSettings, LensPricing } from '@oculo/shared-types';
 import { useAuthStore } from '../../store/auth';
 
 export interface MaskedPaymentConfig {
@@ -57,6 +57,8 @@ export interface Branding {
   contactEmail: string | null;
   vatRate: number | null;
   invoiceSettings: InvoiceSettings | null;
+  lensPricing: LensPricing | null;
+  initialInvestment: number | null;
 }
 
 export async function getBranding(): Promise<Branding> {
@@ -78,6 +80,7 @@ export async function updateBranding(input: BrandingUpdateInput): Promise<Brandi
       tenantContactEmail: data.branding.contactEmail,
       tenantVatRate: data.branding.vatRate,
       tenantInvoiceSettings: data.branding.invoiceSettings,
+      tenantLensPricing: data.branding.lensPricing,
     });
   }
   return data.branding;

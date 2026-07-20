@@ -6,7 +6,7 @@ import { NAV } from './nav';
 import { Logo } from '../Logo';
 import { useAuthStore } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
-import { lowStockCount } from '../../features/optique/api';
+import { lowStockCount, lensOverdueCount } from '../../features/optique/api';
 import { prefetchRoute } from '../../lib/routePrefetch';
 
 export function Sidebar() {
@@ -16,10 +16,18 @@ export function Sidebar() {
   const setSidebar = useUIStore((s) => s.setSidebar);
 
   const canSeeStock = user?.permissions.includes('optique.stock.view') ?? false;
+  const canSeeSales = user?.permissions.includes('optique.sales.view') ?? false;
   const { data: lowCount } = useQuery({
     queryKey: ['lowStock', activeBranchId],
     queryFn: () => lowStockCount(activeBranchId!),
     enabled: Boolean(activeBranchId) && canSeeStock,
+    refetchInterval: 60_000,
+  });
+  // Rappel : commandes de verres en retard de livraison.
+  const { data: overdueCount } = useQuery({
+    queryKey: ['lensOverdue'],
+    queryFn: lensOverdueCount,
+    enabled: canSeeSales,
     refetchInterval: 60_000,
   });
 
@@ -75,6 +83,14 @@ export function Sidebar() {
                           {it.badge === 'lowStock' && lowCount ? (
                             <span className="badge bg-[color:var(--danger)]/15 text-danger">
                               {lowCount}
+                            </span>
+                          ) : null}
+                          {it.badge === 'lensOverdue' && overdueCount ? (
+                            <span
+                              className="badge bg-[color:var(--danger)]/15 text-danger"
+                              title="Commandes de verres en retard de livraison"
+                            >
+                              {overdueCount}
                             </span>
                           ) : null}
                         </>

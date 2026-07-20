@@ -1207,6 +1207,35 @@ export const invoiceSettingsSchema = z
   .strict();
 export type InvoiceSettings = z.infer<typeof invoiceSettingsSchema>;
 
+/**
+ * Tarifs verres/traitements propres à l'établissement (configurateur de
+ * commandes de verres). Prix par verre, en devise de l'établissement. Les
+ * indices d'amincissement restent des multiplicateurs physiques, non modifiés.
+ */
+export const lensPricingSchema = z
+  .object({
+    unifocal: z.number().nonnegative(),
+    progressif: z.number().nonnegative(),
+    degressif: z.number().nonnegative(),
+    ar: z.number().nonnegative(),
+    blue: z.number().nonnegative(),
+    photo: z.number().nonnegative(),
+    hard: z.number().nonnegative(),
+  })
+  .strict();
+export type LensPricing = z.infer<typeof lensPricingSchema>;
+
+/** Barème par défaut (repli quand l'établissement n'a rien configuré). */
+export const DEFAULT_LENS_PRICING: LensPricing = {
+  unifocal: 15000,
+  progressif: 45000,
+  degressif: 30000,
+  ar: 5000,
+  blue: 8000,
+  photo: 15000,
+  hard: 3000,
+};
+
 export const brandingUpdateSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   logoUrl: imageData,
@@ -1218,6 +1247,10 @@ export const brandingUpdateSchema = z.object({
   /** Taux de TVA de l'établissement, en pourcentage (0 = exonéré). */
   vatRate: z.number().min(0).max(100).optional(),
   invoiceSettings: invoiceSettingsSchema.optional(),
+  /** Tarifs verres/traitements de l'établissement. */
+  lensPricing: lensPricingSchema.optional(),
+  /** Investissement initial (projection d'amortissement, page Finance). */
+  initialInvestment: z.number().nonnegative().optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
 
@@ -1255,6 +1288,8 @@ export interface AuthUser {
   tenantVatRate: number | null;
   /** Personnalisation des factures/devis (couleur, mentions légales…). */
   tenantInvoiceSettings: InvoiceSettings | null;
+  /** Tarifs verres/traitements de l'établissement (null = barème par défaut). */
+  tenantLensPricing: LensPricing | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
   isPlatformOperator: boolean;
   /** Vrai une fois l'adresse email confirmée. */

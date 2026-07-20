@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -22,7 +22,8 @@ import { getBranding, updateBranding } from '../../features/settings/api';
 import { RestartTourCard } from '../../features/tour';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
-import type { InvoiceSettings } from '@oculo/shared-types';
+import type { InvoiceSettings, LensPricing } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
@@ -464,7 +465,79 @@ export function ProfilePage() {
         </div>
       )}
 
-      {active === 'documents' && canBranding && <InvoiceCustomizationCard />}
+      {active === 'documents' && canBranding && (
+        <div className="space-y-4">
+          <InvoiceCustomizationCard />
+          <LensPricingCard />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Tarifs verres/traitements propres à la boutique (configurateur de commandes). */
+function LensPricingCard() {
+  const qc = useQueryClient();
+  const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
+  const [p, setP] = useState<LensPricing>(DEFAULT_LENS_PRICING);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (branding?.lensPricing) setP({ ...DEFAULT_LENS_PRICING, ...branding.lensPricing });
+  }, [branding]);
+
+  const field = (key: keyof LensPricing, label: string) => (
+    <Field label={label}>
+      <input
+        type="number"
+        min={0}
+        className="input text-right"
+        value={p[key]}
+        onChange={(e) => setP((prev) => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+      />
+    </Field>
+  );
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateBranding({ lensPricing: p });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <Glasses className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Tarifs des verres</h3>
+      </div>
+      <p className="mb-4 text-xs text-content-faint">
+        Prix par verre utilisés par le configurateur de commandes. Le total facturé
+        est calculé pour une paire, avec l'indice d'amincissement choisi.
+      </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {field('unifocal', 'Unifocal')}
+        {field('progressif', 'Progressif')}
+        {field('degressif', 'Dégressif (bureau)')}
+        {field('ar', 'Anti-reflet')}
+        {field('blue', 'Anti-lumière bleue')}
+        {field('photo', 'Photochromique')}
+        {field('hard', 'Durci anti-rayures')}
+      </div>
+      <div className="mt-4 flex items-center gap-3">
+        <Button onClick={save} loading={busy}>
+          <Save className="h-4 w-4" /> Enregistrer
+        </Button>
+        {saved && <span className="text-sm text-success">Tarifs enregistrés.</span>}
+      </div>
     </div>
   );
 }

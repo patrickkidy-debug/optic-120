@@ -23,9 +23,11 @@ import {
   getSale,
   getStock,
   listCustomers,
+  createCustomer,
   createSale,
   type SaleListItem,
 } from '../../features/optique/api';
+import { listInsurers } from '../../features/management/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
@@ -47,6 +49,12 @@ const STATUS_LABEL: Record<string, string> = {
   PARTIALLY_PAID: 'Partiel',
   PAID: 'Payée',
   CANCELLED: 'Annulée',
+};
+const PAYMENT_LABEL: Record<string, string> = {
+  CASH: 'Espèces', CARD: 'Carte', WAVE: 'Wave', ORANGE_MONEY: 'Orange Money',
+  MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', FREE_MONEY: 'Free Money',
+  MPESA: 'M-Pesa', EMOLA: 'e-Mola', MKESH: 'mKesh', MULTICAIXA: 'Multicaixa',
+  UNITEL_MONEY: 'Unitel Money', VINTI4: 'Vinti4',
 };
 
 export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
@@ -280,6 +288,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                 <th className="table-cell font-semibold">{t('sales.number')}</th>
                 <th className="table-cell font-semibold">{t('sales.customer')}</th>
                 <th className="table-cell font-semibold">{t('common.status')}</th>
+                {!isQuote && <th className="table-cell font-semibold">Moyen</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.amount')}</th>
                 {!isQuote && <th className="table-cell text-right font-semibold">{t('sales.paid')}</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.date')}</th>
@@ -296,6 +305,17 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                   <td className="table-cell">
                     <Badge tone={statusTone(s.status)}>{STATUS_LABEL[s.status] ?? s.status}</Badge>
                   </td>
+                  {!isQuote && (
+                    <td className="table-cell text-content-muted">
+                      {s.paymentMethods && s.paymentMethods.length > 0 ? (
+                        <span className="text-xs">
+                          {s.paymentMethods.map((m) => PAYMENT_LABEL[m] ?? m).join(' + ')}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                  )}
                   <td className="table-cell text-right font-semibold text-content">
                     {formatCurrency(Number(s.totalAmount))}
                   </td>
@@ -427,7 +447,14 @@ function QuoteModal({
   const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
   const [search, setSearch] = useState('');
   const [customerId, setCustomerId] = useState('');
+  // Saisie d'un nouveau client directement dans le devis (sans passer par la
+  // page Clients). Enregistré au moment de la création du devis.
+  const [newClient, setNewClient] = useState(false);
+  const [newFirst, setNewFirst] = useState('');
+  const [newLast, setNewLast] = useState('');
+  const [newPhone, setNewPhone] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [insurerId, setInsurerId] = useState('');
   const [insurance, setInsurance] = useState(0);
   const [lines, setLines] = useState<QuoteLine[]>([]);
 
@@ -437,6 +464,12 @@ function QuoteModal({
     enabled: Boolean(branchId),
   });
   const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const canSeeInsurers = usePermission('insurance.view');
+  const { data: insurers } = useQuery({
+    queryKey: ['insurers'],
+    queryFn: listInsurers,
+    enabled: canSeeInsurers,
+  });
 
   const products = (stock ?? []).filter(
     (p) =>
@@ -471,15 +504,26 @@ function QuoteModal({
   const total = taxBase + taxAmount;
 
   const createMut = useMutation({
-    mutationFn: () =>
-      createSale({
+    mutationFn: async () => {
+      // Nouveau client saisi ici : on le crée d'abord, puis on rattache le devis.
+      let effectiveCustomerId = customerId || undefined;
+      if (newClient && newFirst.trim() && newLast.trim()) {
+        const c = await createCustomer({
+          firstName: newFirst.trim(),
+          lastName: newLast.trim(),
+          phone: newPhone.trim() || undefined,
+        });
+        effectiveCustomerId = c.id;
+      }
+      return createSale({
         branchId: branchId!,
-        customerId: customerId || undefined,
+        customerId: effectiveCustomerId,
         type: 'QUOTE',
         items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: discount,
         insuranceAmount: insurance,
-      }),
+      });
+    },
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -523,14 +567,63 @@ function QuoteModal({
 
           {/* Devis en cours */}
           <div className="flex flex-col">
-            <select className="input mb-2" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">{t('sales.walkInCustomer')}</option>
-              {customers?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName}
-                </option>
-              ))}
-            </select>
+            {newClient ? (
+              <div className="mb-2 space-y-2 rounded-xl border border-primary/30 bg-primary-soft/30 p-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className="input h-9"
+                    placeholder="Prénom"
+                    value={newFirst}
+                    onChange={(e) => setNewFirst(e.target.value)}
+                  />
+                  <input
+                    className="input h-9"
+                    placeholder="Nom"
+                    value={newLast}
+                    onChange={(e) => setNewLast(e.target.value)}
+                  />
+                </div>
+                <input
+                  className="input h-9"
+                  placeholder="Téléphone (optionnel)"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewClient(false)}
+                  className="text-xs text-content-muted hover:text-content"
+                >
+                  ← Choisir un client existant
+                </button>
+              </div>
+            ) : (
+              <div className="mb-2 flex gap-2">
+                <select
+                  className="input flex-1"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                >
+                  <option value="">{t('sales.walkInCustomer')}</option>
+                  {customers?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomerId('');
+                    setNewClient(true);
+                  }}
+                  className="btn-outline h-9 shrink-0 rounded-lg px-2.5 text-xs"
+                  title="Nouveau client"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Client
+                </button>
+              </div>
+            )}
 
             <div className="max-h-44 flex-1 space-y-1 overflow-y-auto">
               {lines.length === 0 ? (
@@ -588,6 +681,32 @@ function QuoteModal({
                 />
               </label>
             </div>
+
+            {/* Assurance : choisir un assureur enregistré applique automatiquement
+                son taux de prise en charge (montant restant modifiable). */}
+            {canSeeInsurers && insurers && insurers.length > 0 && (
+              <label className="mt-2 block text-xs text-content-muted">
+                Assurance
+                <select
+                  className="input mt-1"
+                  value={insurerId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setInsurerId(id);
+                    const ins = insurers.find((x) => x.id === id);
+                    if (ins) setInsurance(Math.round((total * ins.coveragePercent) / 100));
+                    else setInsurance(0);
+                  }}
+                >
+                  <option value="">Aucune (client paie tout)</option>
+                  {insurers.map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {ins.name} — {ins.coveragePercent}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <div className="mt-3 space-y-1 border-t pt-3 text-sm">
               <div className="flex justify-between text-content-muted">

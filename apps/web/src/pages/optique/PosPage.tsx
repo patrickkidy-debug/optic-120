@@ -17,6 +17,7 @@ import {
 import type { PaymentMethod } from '@oculo/shared-types';
 import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
 import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import { listInsurers } from '../../features/management/api';
 import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
@@ -62,9 +63,17 @@ export function PosPage() {
   const user = useAuthStore((s) => s.user);
   const branchId = useUIStore((s) => s.activeBranchId);
   const canQuote = usePermission('optique.quotes.create');
+  const canSeeInsurers = usePermission('insurance.view');
   const pos = usePosStore();
   const [search, setSearch] = useState('');
+  const [insurerId, setInsurerId] = useState('');
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
+
+  const { data: insurers } = useQuery({
+    queryKey: ['insurers'],
+    queryFn: listInsurers,
+    enabled: canSeeInsurers,
+  });
 
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
@@ -224,6 +233,33 @@ export function PosPage() {
                 />
               </label>
             </div>
+
+            {/* Assurance : sélectionner un assureur applique son taux de prise en
+                charge sur le total (montant restant modifiable au-dessus). */}
+            {canSeeInsurers && insurers && insurers.length > 0 && (
+              <label className="text-xs text-content-muted">
+                Assurance
+                <select
+                  className="input mt-1"
+                  value={insurerId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setInsurerId(id);
+                    const ins = insurers.find((x) => x.id === id);
+                    // Total avant prise en charge = net dû + prise en charge actuelle.
+                    const totalBefore = totals.dueFromCustomer + pos.insuranceAmount;
+                    pos.setInsurance(ins ? Math.round((totalBefore * ins.coveragePercent) / 100) : 0);
+                  }}
+                >
+                  <option value="">Aucune (client paie tout)</option>
+                  {insurers.map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {ins.name} — {ins.coveragePercent}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <div className="space-y-1 text-sm">
               <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />

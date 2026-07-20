@@ -2,10 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Glasses, CircleDot, Package, Frame, Tag, type LucideIcon } from 'lucide-react';
 import type { LensOrderStatus, LensOrderCategory } from '@oculo/shared-types';
-import { LENS_ORDER_STATUSES, LENS_ORDER_CATEGORIES } from '@oculo/shared-types';
+import { LENS_ORDER_STATUSES, LENS_ORDER_CATEGORIES, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listLensOrders, createLensOrder, setLensOrderStatus, listCustomers, type LensOrder } from '../../features/optique/api';
 import { apiErrorMessage } from '../../lib/api';
-import { usePermission } from '../../store/auth';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
 
 const STATUS: Record<LensOrderStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
@@ -24,11 +24,13 @@ const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> =
   AUTRE: { label: 'Autre', icon: Tag },
 };
 
-/* Configurateur de verres : barème indicatif. */
+/* Configurateur de verres. Les PRIX viennent des tarifs de la boutique
+   (user.tenantLensPricing, sinon barème par défaut) : ici on ne garde que les
+   libellés. L'indice reste un multiplicateur physique, non modifiable. */
 const LENS_TYPES = [
-  { id: 'unifocal', label: 'Unifocal', base: 15000 },
-  { id: 'progressif', label: 'Progressif', base: 45000 },
-  { id: 'degressif', label: 'Dégressif (bureau)', base: 30000 },
+  { id: 'unifocal', label: 'Unifocal' },
+  { id: 'progressif', label: 'Progressif' },
+  { id: 'degressif', label: 'Dégressif (bureau)' },
 ] as const;
 const LENS_INDEX = [
   { id: '1.5', label: '1.5 (standard)', mult: 1 },
@@ -37,10 +39,10 @@ const LENS_INDEX = [
   { id: '1.74', label: '1.74 (ultra-aminci)', mult: 2.2 },
 ] as const;
 const TREATMENTS = [
-  { id: 'ar', label: 'Anti-reflet', price: 5000 },
-  { id: 'blue', label: 'Anti-lumière bleue', price: 8000 },
-  { id: 'photo', label: 'Photochromique', price: 15000 },
-  { id: 'hard', label: 'Durci anti-rayures', price: 3000 },
+  { id: 'ar', label: 'Anti-reflet' },
+  { id: 'blue', label: 'Anti-lumière bleue' },
+  { id: 'photo', label: 'Photochromique' },
+  { id: 'hard', label: 'Durci anti-rayures' },
 ] as const;
 
 function formatDate(v?: string | null) {
@@ -192,13 +194,18 @@ function LensOrderModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [error, setError] = useState('');
 
   const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  // Tarifs propres à la boutique (sinon barème par défaut).
+  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
 
   const isVerres = category === 'VERRES';
   const typeDef = LENS_TYPES.find((t) => t.id === ltype)!;
   const indexDef = LENS_INDEX.find((i) => i.id === lindex)!;
   const treatLabels = TREATMENTS.filter((t) => treats.includes(t.id)).map((t) => t.label);
-  const treatSum = TREATMENTS.filter((t) => treats.includes(t.id)).reduce((s, t) => s + t.price, 0);
-  const configPrice = Math.round((typeDef.base * indexDef.mult + treatSum) * 2); // paire
+  const treatSum = TREATMENTS.filter((t) => treats.includes(t.id)).reduce(
+    (s, t) => s + (pricing[t.id] ?? 0),
+    0,
+  );
+  const configPrice = Math.round((pricing[ltype] * indexDef.mult + treatSum) * 2); // paire
   const configDesc =
     `Verres ${typeDef.label.toLowerCase()} indice ${lindex}` +
     (treatLabels.length ? ` — ${treatLabels.join(', ')}` : '') +

@@ -173,6 +173,8 @@ export interface SaleListItem {
   createdAt: string;
   customer?: { firstName: string; lastName: string } | null;
   branch: { name: string };
+  /** Moyens d'encaissement utilisés (paiements réussis), sans doublon. */
+  paymentMethods?: string[];
 }
 
 export interface SaleDetailItem {
@@ -361,6 +363,11 @@ export interface LensOrder {
   cost: string | number | null;
   notes: string | null;
   createdAt: string;
+}
+/** Nombre de commandes de verres en retard (échéance dépassée, non livrées). */
+export async function lensOverdueCount(): Promise<number> {
+  const { data } = await api.get<{ count: number }>('/optique/lens-orders/alerts/count');
+  return data.count;
 }
 export async function listLensOrders(status?: string): Promise<LensOrder[]> {
   const { data } = await api.get<{ orders: LensOrder[] }>('/optique/lens-orders', {

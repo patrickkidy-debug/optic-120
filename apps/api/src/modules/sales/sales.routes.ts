@@ -24,16 +24,28 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     if (q.status) where.status = q.status;
     if (q.type) where.type = q.type;
 
-    const [items, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       req.db!.sale.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: { customer: true, branch: true, _count: { select: { items: true } } },
+        include: {
+          customer: true,
+          branch: true,
+          _count: { select: { items: true } },
+          // Moyens d'encaissement réellement utilisés (paiements réussis).
+          payments: { where: { status: 'SUCCESS' }, select: { method: true } },
+        },
       }),
       req.db!.sale.count({ where }),
     ]);
+    // Méthodes distinctes par vente (une vente échelonnée peut cumuler plusieurs
+    // moyens : espèces + Wave, par exemple).
+    const items = rows.map((s) => ({
+      ...s,
+      paymentMethods: [...new Set(s.payments.map((p) => p.method))],
+    }));
     return reply.send({ items, total, page, pageSize });
   });
 

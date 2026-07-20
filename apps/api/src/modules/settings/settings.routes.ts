@@ -20,6 +20,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         contactEmail: true,
         vatRate: true,
         invoiceSettings: true,
+        lensPricing: true,
+        initialInvestment: true,
       },
     });
     return reply.send({
@@ -31,6 +33,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         contactEmail: tenant?.contactEmail ?? null,
         vatRate: tenant?.vatRate ?? null,
         invoiceSettings: (tenant?.invoiceSettings as unknown) ?? null,
+        lensPricing: (tenant?.lensPricing as unknown) ?? null,
+        initialInvestment: tenant?.initialInvestment ?? null,
       },
     });
   });
@@ -54,6 +58,9 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
             : Object.keys(input.invoiceSettings).length === 0
               ? Prisma.DbNull
               : input.invoiceSettings,
+        lensPricing: input.lensPricing === undefined ? undefined : input.lensPricing,
+        initialInvestment:
+          input.initialInvestment === undefined ? undefined : input.initialInvestment,
       },
       select: {
         name: true,
@@ -63,6 +70,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         contactEmail: true,
         vatRate: true,
         invoiceSettings: true,
+        lensPricing: true,
+        initialInvestment: true,
       },
     });
     return reply.send({
@@ -74,6 +83,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         contactEmail: tenant.contactEmail,
         vatRate: tenant.vatRate ?? null,
         invoiceSettings: (tenant.invoiceSettings as unknown) ?? null,
+        lensPricing: (tenant.lensPricing as unknown) ?? null,
+        initialInvestment: tenant.initialInvestment ?? null,
       },
     });
   });

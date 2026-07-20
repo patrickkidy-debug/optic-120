@@ -46,6 +46,18 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ orders });
   });
 
+  // Nombre de commandes de verres en retard : échéance dépassée, pas encore
+  // livrées ni annulées. Sert au rappel (pastille) sur le menu.
+  app.get('/lens-orders/alerts/count', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const count = await req.db!.lensOrder.count({
+      where: {
+        expectedAt: { lt: new Date() },
+        status: { notIn: ['DELIVERED', 'CANCELLED'] },
+      },
+    });
+    return reply.send({ count });
+  });
+
   app.post('/lens-orders', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const input = nullifyEmpty(lensOrderCreateSchema.parse(req.body));
     const order = await retryOnDuplicateNumber(async () =>

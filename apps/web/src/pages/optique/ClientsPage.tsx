@@ -4,7 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer } from 'lucide-react';
+import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer, MessageCircle } from 'lucide-react';
+
+/** Lien wa.me à partir d'un numéro (garde les chiffres uniquement). */
+function waLink(phone?: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/[^0-9]/g, '');
+  return digits ? `https://wa.me/${digits}` : null;
+}
 import { customerCreateSchema, type CustomerCreateInput } from '@oculo/shared-types';
 import {
   listCustomers,
@@ -169,6 +176,17 @@ export function ClientsPage() {
                   <td className="table-cell text-content-muted">{c.email ?? '—'}</td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
+                      {waLink(c.phone) && (
+                        <a
+                          href={waLink(c.phone)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                          title={`Relancer ${c.firstName} sur WhatsApp`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        </a>
+                      )}
                       {canQuote && (
                         <button onClick={() => startQuote(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <FileText className="h-3.5 w-3.5" /> Devis

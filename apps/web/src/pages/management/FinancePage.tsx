@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, Banknote } from 'lucide-react';
+import { Plus, Wallet, TrendingUp, TrendingDown, Trash2, Banknote, Target } from 'lucide-react';
 import { expenseCreateSchema, type ExpenseCreateInput } from '@oculo/shared-types';
 import {
   listExpenses,
@@ -10,6 +10,7 @@ import {
   deleteExpense,
   getFinanceSummary,
 } from '../../features/management/api';
+import { getBranding, updateBranding } from '../../features/settings/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
@@ -64,6 +65,8 @@ export function FinancePage() {
         </div>
       )}
 
+      {canCreate && <PaybackCard monthlyNet={summary?.net ?? 0} />}
+
       {isLoading ? (
         <PageLoader />
       ) : !expenses || expenses.length === 0 ? (
@@ -102,6 +105,104 @@ export function FinancePage() {
       )}
 
       {open && <ExpenseModal onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+/**
+ * Projection d'amortissement de l'investissement initial.
+ *
+ * Rythme = résultat net du mois en cours. C'est une estimation « au rythme
+ * actuel » : un mois exceptionnel (bon ou mauvais) déplace la projection. À
+ * lire comme un ordre de grandeur, pas comme une garantie.
+ */
+function PaybackCard({ monthlyNet }: { monthlyNet: number }) {
+  const qc = useQueryClient();
+  const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
+  const [amount, setAmount] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (branding && !hydrated) {
+      setAmount(branding.initialInvestment ? String(branding.initialInvestment) : '');
+      setHydrated(true);
+    }
+  }, [branding, hydrated]);
+
+  const investment = Number(amount) || 0;
+  const months = investment > 0 && monthlyNet > 0 ? investment / monthlyNet : null;
+  const recoupDate =
+    months != null ? new Date(Date.now() + months * 30 * 24 * 3600 * 1000) : null;
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateBranding({ initialInvestment: investment });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card mb-6 p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <Target className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Amortissement de l'investissement</h3>
+      </div>
+      <p className="mb-4 text-xs text-content-faint">
+        Estimation du temps nécessaire pour récupérer votre investissement de départ,
+        au rythme du résultat net actuel.
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Field label="Investissement initial">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              className="input text-right"
+              placeholder="Ex : 5 000 000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            <Button onClick={save} loading={busy}>Enregistrer</Button>
+          </div>
+        </Field>
+
+        <div className="flex flex-col justify-center rounded-xl bg-surface-2 p-4">
+          {investment <= 0 ? (
+            <p className="text-sm text-content-muted">
+              Saisissez votre investissement pour voir la projection.
+            </p>
+          ) : monthlyNet <= 0 ? (
+            <p className="text-sm text-danger">
+              Résultat net négatif ce mois : amortissement non calculable au rythme actuel.
+            </p>
+          ) : (
+            <>
+              <div className="text-sm text-content-muted">Récupéré dans environ</div>
+              <div className="font-display text-2xl font-extrabold text-content">
+                {Math.ceil(months!)} mois
+                <span className="ml-2 text-sm font-normal text-content-muted">
+                  (~{(months! / 12).toFixed(1)} ans)
+                </span>
+              </div>
+              {recoupDate && (
+                <div className="mt-1 text-xs text-content-faint">
+                  soit vers {recoupDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </div>
+              )}
+              <div className="mt-2 text-xs text-content-faint">
+                Au rythme de {formatCurrency(monthlyNet)} de résultat net par mois.
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

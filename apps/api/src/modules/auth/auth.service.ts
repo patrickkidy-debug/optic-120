@@ -6,6 +6,7 @@ import type {
   GoogleSignupInput,
   EstablishmentChoice,
   InvoiceSettings,
+  LensPricing,
 } from '@oculo/shared-types';
 import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY } from '@oculo/shared-types';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
@@ -83,6 +84,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     tenantContactEmail: user.tenant.contactEmail,
     tenantVatRate: user.tenant.vatRate ?? null,
     tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
+    tenantLensPricing: (user.tenant.lensPricing as LensPricing | null) ?? null,
     emailVerified: user.emailVerifiedAt != null,
   };
 }
