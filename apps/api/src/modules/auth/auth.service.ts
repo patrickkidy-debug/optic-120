@@ -7,6 +7,7 @@ import type {
   EstablishmentChoice,
   InvoiceSettings,
   LensPricing,
+  WhatsappTemplates,
 } from '@oculo/shared-types';
 import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY } from '@oculo/shared-types';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
@@ -85,6 +86,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     tenantVatRate: user.tenant.vatRate ?? null,
     tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
     tenantLensPricing: (user.tenant.lensPricing as LensPricing | null) ?? null,
+    tenantWhatsappTemplates: (user.tenant.whatsappTemplates as WhatsappTemplates | null) ?? null,
     emailVerified: user.emailVerifiedAt != null,
   };
 }

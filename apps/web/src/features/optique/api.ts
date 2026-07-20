@@ -34,6 +34,8 @@ export interface Product {
   buyPrice: string;
   sellPrice: string;
   isActive: boolean;
+  /** Attributs libres (ex. type de verre + fournisseur pour la catégorie VERRE). */
+  attributes?: Record<string, unknown> | null;
 }
 
 export async function listProducts(params: { search?: string; category?: string } = {}) {
@@ -171,7 +173,7 @@ export interface SaleListItem {
   totalAmount: string;
   paidAmount: string;
   createdAt: string;
-  customer?: { firstName: string; lastName: string } | null;
+  customer?: { firstName: string; lastName: string; phone?: string | null } | null;
   branch: { name: string };
   /** Moyens d'encaissement utilisés (paiements réussis), sans doublon. */
   paymentMethods?: string[];
@@ -353,7 +355,7 @@ export interface LensOrder {
   id: string;
   number: string;
   customerId: string | null;
-  customer: { firstName: string; lastName: string } | null;
+  customer: { firstName: string; lastName: string; phone?: string | null } | null;
   category: string | null;
   supplierName: string | null;
   description: string;

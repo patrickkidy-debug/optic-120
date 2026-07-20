@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
-import { productCreateSchema, type ProductCreateInput } from '@oculo/shared-types';
+import { productCreateSchema, type ProductCreateInput, LENS_PRODUCT_TYPES } from '@oculo/shared-types';
 import {
   listProducts,
   createProduct,
@@ -11,6 +11,7 @@ import {
   deleteProduct,
   type Product,
 } from '../../features/optique/api';
+import { listSuppliers } from '../../features/management/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
@@ -169,9 +170,18 @@ export function ProductsPage() {
 function ProductModal({ product, onClose }: { product: Product | null; onClose: () => void }) {
   const qc = useQueryClient();
   const [serverError, setServerError] = useState('');
+  const attrs = (product?.attributes ?? {}) as { lensType?: string; supplier?: string };
+  // Attributs spécifiques aux verres, stockés dans product.attributes.
+  const [lensType, setLensType] = useState(attrs.lensType ?? '');
+  const [supplier, setSupplier] = useState(attrs.supplier ?? '');
+  const [supplierOther, setSupplierOther] = useState(false);
+
+  const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ProductCreateInput>({
     resolver: zodResolver(productCreateSchema),
@@ -187,9 +197,22 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
       : { category: 'MONTURE', buyPrice: 0, sellPrice: 0 },
   });
 
+  const isLens = watch('category') === 'VERRE';
+
   const mut = useMutation({
-    mutationFn: (values: ProductCreateInput) =>
-      product ? updateProduct(product.id, values) : createProduct(values),
+    mutationFn: (values: ProductCreateInput) => {
+      // Type de verre + fournisseur rangés dans attributes (uniquement pour un verre).
+      const withAttrs: ProductCreateInput = isLens
+        ? {
+            ...values,
+            attributes: {
+              ...(lensType ? { lensType } : {}),
+              ...(supplier ? { supplier } : {}),
+            },
+          }
+        : values;
+      return product ? updateProduct(product.id, withAttrs) : createProduct(withAttrs);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
       onClose();
@@ -222,6 +245,52 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
         <Field label="Marque (optionnel)">
           <input className="input" {...register('brand')} />
         </Field>
+
+        {/* Spécifique aux verres : type de verre + fournisseur. */}
+        {isLens && (
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
+            <Field label="Type de verre">
+              <select
+                className="input"
+                value={lensType}
+                onChange={(e) => setLensType(e.target.value)}
+              >
+                <option value="">— Choisir —</option>
+                {LENS_PRODUCT_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Fournisseur">
+              {supplierOther || (suppliers && suppliers.length === 0) ? (
+                <input
+                  className="input"
+                  placeholder="Ex : Essilor, Zeiss…"
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                />
+              ) : (
+                <select
+                  className="input"
+                  value={supplier}
+                  onChange={(e) => {
+                    if (e.target.value === '__other__') {
+                      setSupplier('');
+                      setSupplierOther(true);
+                    } else setSupplier(e.target.value);
+                  }}
+                >
+                  <option value="">— Choisir —</option>
+                  {suppliers?.map((s) => (
+                    <option key={s.id} value={s.name}>{s.name}</option>
+                  ))}
+                  <option value="__other__">Autre…</option>
+                </select>
+              )}
+            </Field>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Prix d'achat (FCFA)">
             <input className="input" type="number" step="1" {...register('buyPrice', { valueAsNumber: true })} />

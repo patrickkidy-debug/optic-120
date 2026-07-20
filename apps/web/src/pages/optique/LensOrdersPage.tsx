@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Glasses, CircleDot, Package, Frame, Tag, type LucideIcon } from 'lucide-react';
-import type { LensOrderStatus, LensOrderCategory } from '@oculo/shared-types';
+import { Plus, Glasses, CircleDot, Package, Frame, Tag, MessageCircle, type LucideIcon } from 'lucide-react';
+import type { LensOrderStatus, LensOrderCategory, SaleWaStage } from '@oculo/shared-types';
 import { LENS_ORDER_STATUSES, LENS_ORDER_CATEGORIES, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listLensOrders, createLensOrder, setLensOrderStatus, listCustomers, type LensOrder } from '../../features/optique/api';
 import { apiErrorMessage } from '../../lib/api';
+import { sendWhatsappForStage } from '../../lib/whatsapp';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
 
@@ -14,6 +15,14 @@ const STATUS: Record<LensOrderStatus, { label: string; tone: 'neutral' | 'info' 
   MOUNTED: { label: 'Monté', tone: 'warning' },
   DELIVERED: { label: 'Livré', tone: 'success' },
   CANCELLED: { label: 'Annulé', tone: 'danger' },
+};
+
+/** Étape du message WhatsApp selon le statut de la commande. */
+const STAGE_FOR_STATUS: Partial<Record<LensOrderStatus, SaleWaStage>> = {
+  ORDERED: 'lens_ordered',
+  RECEIVED: 'lens_ready',
+  MOUNTED: 'lens_ready',
+  DELIVERED: 'lens_delivered',
 };
 
 const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> = {
@@ -94,6 +103,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
 export function LensOrdersPage() {
   const qc = useQueryClient();
   const canManage = usePermission('optique.sales.create');
+  const tenantName = useAuthStore((s) => s.user?.tenantName) ?? 'OculoSaaS';
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['lens-orders'], queryFn: () => listLensOrders() });
   const invalidate = () => qc.invalidateQueries({ queryKey: ['lens-orders'] });
@@ -133,6 +143,7 @@ export function LensOrdersPage() {
                 <th className="table-cell font-semibold">Échéance</th>
                 <th className="table-cell font-semibold">Délai livraison</th>
                 <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell text-right font-semibold">Prévenir</th>
               </tr>
             </thead>
             <tbody>
@@ -164,6 +175,23 @@ export function LensOrdersPage() {
                       </select>
                     ) : (
                       <Badge tone={STATUS[o.status].tone}>{STATUS[o.status].label}</Badge>
+                    )}
+                  </td>
+                  <td className="table-cell text-right">
+                    {o.customer?.phone && STAGE_FOR_STATUS[o.status] && (
+                      <button
+                        onClick={() =>
+                          sendWhatsappForStage(STAGE_FOR_STATUS[o.status]!, o.customer?.phone, {
+                            client: o.customer?.firstName ?? '',
+                            etablissement: tenantName,
+                            numero: o.number,
+                          })
+                        }
+                        className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                        title="Prévenir le client par WhatsApp"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                      </button>
                     )}
                   </td>
                 </tr>

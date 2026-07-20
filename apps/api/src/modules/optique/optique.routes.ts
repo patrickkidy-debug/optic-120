@@ -41,7 +41,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       where,
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { customer: { select: { firstName: true, lastName: true } } },
+      include: { customer: { select: { firstName: true, lastName: true, phone: true } } },
     });
     return reply.send({ orders });
   });
@@ -99,7 +99,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       where,
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { customer: { select: { firstName: true, lastName: true } } },
+      include: { customer: { select: { firstName: true, lastName: true, phone: true } } },
     });
     return reply.send({ repairs });
   });

@@ -14,6 +14,7 @@ import {
   Banknote,
   FileSpreadsheet,
   Printer,
+  MessageCircle,
 } from 'lucide-react';
 import {
   listSales,
@@ -35,6 +36,7 @@ import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDateTime } from '../../lib/format';
+import { sendWhatsappForStage } from '../../lib/whatsapp';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 
 function statusTone(status: string) {
@@ -329,6 +331,27 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                   </td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
+                      {s.customer?.phone && s.status !== 'CANCELLED' && (
+                        <button
+                          onClick={() =>
+                            sendWhatsappForStage(
+                              isQuote ? 'quote' : 'sale_paid',
+                              s.customer?.phone,
+                              {
+                                client: s.customer?.firstName ?? '',
+                                etablissement: user?.tenantName ?? 'OculoSaaS',
+                                numero: s.number,
+                                montant: formatCurrency(Number(s.totalAmount)),
+                                reste: formatCurrency(Number(s.totalAmount) - Number(s.paidAmount)),
+                              },
+                            )
+                          }
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                          title="Envoyer un message WhatsApp au client"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDownload(s.id)}
                         disabled={downloadingId === s.id}

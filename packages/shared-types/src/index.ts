@@ -1225,6 +1225,60 @@ export const lensPricingSchema = z
   .strict();
 export type LensPricing = z.infer<typeof lensPricingSchema>;
 
+/** Types de verres proposés dans le catalogue produits (catégorie VERRE). */
+export const LENS_PRODUCT_TYPES = [
+  'Unifocal',
+  'Progressif',
+  'Dégressif (bureau)',
+  'Bifocal',
+  'Mi-distance',
+  'Solaire correcteur',
+  'Autre',
+] as const;
+export type LensProductType = (typeof LENS_PRODUCT_TYPES)[number];
+
+/* ---------------- Modèles de messages WhatsApp (par étape de vente) ---------------- */
+
+/** Étapes du parcours de vente pour lesquelles un message peut être envoyé. */
+export const SALE_WA_STAGES = [
+  { key: 'quote', label: 'Devis créé' },
+  { key: 'sale_paid', label: 'Vente encaissée' },
+  { key: 'lens_ordered', label: 'Verres commandés' },
+  { key: 'lens_ready', label: 'Verres prêts' },
+  { key: 'lens_delivered', label: 'Verres livrés / retirés' },
+] as const;
+export type SaleWaStage = (typeof SALE_WA_STAGES)[number]['key'];
+
+/** Modèles par défaut. Variables : {client} {etablissement} {numero} {montant} {reste}. */
+export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = {
+  quote:
+    'Bonjour {client}, voici votre devis {numero} chez {etablissement} : {montant}. Il reste valable quelques jours. Cordialement.',
+  sale_paid:
+    'Bonjour {client}, nous confirmons votre règlement de {montant} chez {etablissement}. Merci de votre confiance !',
+  lens_ordered:
+    'Bonjour {client}, vos verres ont bien été commandés chez {etablissement}. Nous vous préviendrons dès leur arrivée.',
+  lens_ready:
+    'Bonjour {client}, bonne nouvelle : vos verres sont prêts ! Vous pouvez passer les retirer chez {etablissement}.',
+  lens_delivered:
+    'Bonjour {client}, merci d’avoir retiré vos verres chez {etablissement}. Prenez soin de votre vue !',
+};
+
+export const whatsappTemplatesSchema = z
+  .object({
+    quote: z.string().max(1000),
+    sale_paid: z.string().max(1000),
+    lens_ordered: z.string().max(1000),
+    lens_ready: z.string().max(1000),
+    lens_delivered: z.string().max(1000),
+  })
+  .partial();
+export type WhatsappTemplates = z.infer<typeof whatsappTemplatesSchema>;
+
+/** Remplace les variables {xxx} d'un modèle par leurs valeurs (vides si absentes). */
+export function fillWaTemplate(tpl: string, vars: Record<string, string | number>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k: string) => (vars[k] != null ? String(vars[k]) : ''));
+}
+
 /** Barème par défaut (repli quand l'établissement n'a rien configuré). */
 export const DEFAULT_LENS_PRICING: LensPricing = {
   unifocal: 15000,
@@ -1251,6 +1305,8 @@ export const brandingUpdateSchema = z.object({
   lensPricing: lensPricingSchema.optional(),
   /** Investissement initial (projection d'amortissement, page Finance). */
   initialInvestment: z.number().nonnegative().optional(),
+  /** Modèles de messages WhatsApp par étape de vente. */
+  whatsappTemplates: whatsappTemplatesSchema.optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
 
@@ -1290,6 +1346,8 @@ export interface AuthUser {
   tenantInvoiceSettings: InvoiceSettings | null;
   /** Tarifs verres/traitements de l'établissement (null = barème par défaut). */
   tenantLensPricing: LensPricing | null;
+  /** Modèles de messages WhatsApp par étape (null = modèles par défaut). */
+  tenantWhatsappTemplates: WhatsappTemplates | null;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
   isPlatformOperator: boolean;
   /** Vrai une fois l'adresse email confirmée. */

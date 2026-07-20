@@ -22,6 +22,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         invoiceSettings: true,
         lensPricing: true,
         initialInvestment: true,
+        whatsappTemplates: true,
       },
     });
     return reply.send({
@@ -35,6 +36,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         invoiceSettings: (tenant?.invoiceSettings as unknown) ?? null,
         lensPricing: (tenant?.lensPricing as unknown) ?? null,
         initialInvestment: tenant?.initialInvestment ?? null,
+        whatsappTemplates: (tenant?.whatsappTemplates as unknown) ?? null,
       },
     });
   });
@@ -61,6 +63,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         lensPricing: input.lensPricing === undefined ? undefined : input.lensPricing,
         initialInvestment:
           input.initialInvestment === undefined ? undefined : input.initialInvestment,
+        whatsappTemplates:
+          input.whatsappTemplates === undefined ? undefined : input.whatsappTemplates,
       },
       select: {
         name: true,
@@ -72,6 +76,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         invoiceSettings: true,
         lensPricing: true,
         initialInvestment: true,
+        whatsappTemplates: true,
       },
     });
     return reply.send({
@@ -85,6 +90,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         invoiceSettings: (tenant.invoiceSettings as unknown) ?? null,
         lensPricing: (tenant.lensPricing as unknown) ?? null,
         initialInvestment: tenant.initialInvestment ?? null,
+        whatsappTemplates: (tenant.whatsappTemplates as unknown) ?? null,
       },
     });
   });

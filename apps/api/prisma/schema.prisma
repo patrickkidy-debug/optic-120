@@ -43,6 +43,8 @@ model Tenant {
   lensPricing   Json?
   // Investissement initial, pour la projection d'amortissement (page Finance).
   initialInvestment Float?
+  // Modèles de messages WhatsApp par étape de vente.
+  whatsappTemplates Json?
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.
   paymentConfig Json?
   createdAt     DateTime     @default(now())

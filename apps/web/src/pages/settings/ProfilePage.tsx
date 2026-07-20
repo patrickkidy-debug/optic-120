@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -23,7 +23,7 @@ import { RestartTourCard } from '../../features/tour';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings, LensPricing } from '@oculo/shared-types';
-import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
@@ -469,8 +469,82 @@ export function ProfilePage() {
         <div className="space-y-4">
           <InvoiceCustomizationCard />
           <LensPricingCard />
+          <WhatsappTemplatesCard />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Modèles de messages WhatsApp envoyés à chaque étape du parcours de vente. */
+function WhatsappTemplatesCard() {
+  const qc = useQueryClient();
+  const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
+  const [tpl, setTpl] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (branding && !hydrated) {
+      const merged: Record<string, string> = {};
+      for (const s of SALE_WA_STAGES) {
+        merged[s.key] = branding.whatsappTemplates?.[s.key] ?? DEFAULT_WA_TEMPLATES[s.key];
+      }
+      setTpl(merged);
+      setHydrated(true);
+    }
+  }, [branding, hydrated]);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateBranding({ whatsappTemplates: tpl as Parameters<typeof updateBranding>[0]['whatsappTemplates'] });
+      qc.invalidateQueries({ queryKey: ['branding'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <MessageCircle className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Messages WhatsApp</h3>
+      </div>
+      <p className="mb-4 text-xs text-content-faint">
+        Message pré-rempli proposé à chaque étape de la vente. Variables disponibles :{' '}
+        <code className="rounded bg-surface-2 px-1">{'{client}'}</code>{' '}
+        <code className="rounded bg-surface-2 px-1">{'{etablissement}'}</code>{' '}
+        <code className="rounded bg-surface-2 px-1">{'{numero}'}</code>{' '}
+        <code className="rounded bg-surface-2 px-1">{'{montant}'}</code>{' '}
+        <code className="rounded bg-surface-2 px-1">{'{reste}'}</code>. L'envoi reste manuel
+        (WhatsApp s'ouvre avec le texte prêt, vous appuyez sur Envoyer).
+      </p>
+
+      <div className="space-y-3">
+        {SALE_WA_STAGES.map((s) => (
+          <Field key={s.key} label={s.label}>
+            <textarea
+              rows={2}
+              className="input resize-y"
+              value={tpl[s.key] ?? ''}
+              onChange={(e) => setTpl((prev) => ({ ...prev, [s.key]: e.target.value }))}
+            />
+          </Field>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button onClick={save} loading={busy}>
+          <Save className="h-4 w-4" /> Enregistrer
+        </Button>
+        {saved && <span className="text-sm text-success">Modèles enregistrés.</span>}
+      </div>
     </div>
   );
 }
