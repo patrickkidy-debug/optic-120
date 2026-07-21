@@ -16,7 +16,7 @@ import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
-import { StatCard, PageLoader, EmptyState, Badge } from '../components/ui';
+import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
@@ -214,6 +214,30 @@ function TopProductsCard({
   );
 }
 
+/** Ossature affichée pendant le chargement du tableau de bord (perçu instantané). */
+function DashboardSkeleton({ welcome, title }: { welcome: string; title: string }) {
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold text-content">{welcome} 👋</h1>
+        <p className="mt-1 text-sm text-content-muted">{title}</p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card animate-pulse p-5">
+            <div className="h-3 w-24 rounded bg-surface-3" />
+            <div className="mt-3 h-7 w-32 rounded bg-surface-3" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="card h-64 animate-pulse lg:col-span-2" />
+        <div className="card h-64 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
@@ -232,7 +256,10 @@ export function DashboardPage() {
     enabled: isAdmin,
   });
 
-  if (isLoading || !data) return <PageLoader />;
+  // On affiche tout de suite l'ossature de la page (titre + cartes en attente)
+  // plutôt qu'un spinner plein écran : l'accès paraît instantané, les chiffres
+  // se remplissent dès que getDashboard répond.
+  if (isLoading || !data) return <DashboardSkeleton welcome={`${t('dashboard.welcome')}, ${user?.firstName ?? ''}`} title={t('dashboard.title')} />;
 
   const lineData = {
     labels: data.revenueByDay.map((d) => d.date.slice(5)),

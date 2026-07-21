@@ -475,17 +475,17 @@ export async function login(input: LoginInput, meta: RequestMeta): Promise<Login
   if (candidates.length === 0) throw unauthorized('Identifiants invalides');
 
   const now = new Date();
-  const matched: UserWithCtxRow[] = [];
-  let anyLocked = false;
-  for (const c of candidates) {
-    if (!c.isActive) continue;
-    if (c.lockedUntil && c.lockedUntil > now) {
-      anyLocked = true;
-      continue; // compte verrouillé : exclu de la connexion
-    }
-    // eslint-disable-next-line no-await-in-loop
-    if (await verifyPassword(c.passwordHash, input.password)) matched.push(c);
-  }
+  const eligible = candidates.filter((c) => c.isActive && !(c.lockedUntil && c.lockedUntil > now));
+  const anyLocked = candidates.some(
+    (c) => c.isActive && c.lockedUntil != null && c.lockedUntil > now,
+  );
+  // Vérif des mots de passe EN PARALLÈLE : Argon2 tourne sur le threadpool, donc
+  // plusieurs vérifs se recouvrent au lieu de s'additionner. Décisif quand un
+  // même email existe sur plusieurs établissements.
+  const results = await Promise.all(
+    eligible.map((c) => verifyPassword(c.passwordHash, input.password)),
+  );
+  const matched: UserWithCtxRow[] = eligible.filter((_, i) => results[i]);
 
   if (matched.length === 0) {
     // Mot de passe faux pour tous : on incrémente les compteurs d'échec.
