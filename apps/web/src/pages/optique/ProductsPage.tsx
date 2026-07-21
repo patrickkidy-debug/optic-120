@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
 import { productCreateSchema, type ProductCreateInput, LENS_PRODUCT_TYPES } from '@oculo/shared-types';
 import {
   listProducts,
@@ -199,6 +199,25 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
 
   const isLens = watch('category') === 'VERRE';
 
+  // Alerte doublon en direct : on vérifie la référence (SKU) à la lettre près, insensible à la casse.
+  const skuValue = (watch('sku') ?? '').trim();
+  const [debouncedSku, setDebouncedSku] = useState(skuValue);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSku(skuValue), 300);
+    return () => clearTimeout(t);
+  }, [skuValue]);
+  const { data: skuMatches } = useQuery({
+    queryKey: ['product-sku-check', debouncedSku],
+    queryFn: () => listProducts({ search: debouncedSku }),
+    enabled: debouncedSku.length > 0,
+  });
+  const dupProduct =
+    debouncedSku.length > 0
+      ? skuMatches?.items.find(
+          (p) => p.sku.trim().toLowerCase() === debouncedSku.toLowerCase() && p.id !== product?.id,
+        )
+      : undefined;
+
   const mut = useMutation({
     mutationFn: (values: ProductCreateInput) => {
       // Type de verre + fournisseur rangés dans attributes (uniquement pour un verre).
@@ -229,8 +248,17 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Référence (SKU)">
-            <input className="input" {...register('sku')} />
+            <input
+              className={`input ${dupProduct ? 'border-danger focus:border-danger' : ''}`}
+              {...register('sku')}
+            />
             {errors.sku && <p className="mt-1 text-xs text-danger">{errors.sku.message}</p>}
+            {dupProduct && (
+              <p className="mt-1 flex items-start gap-1 text-xs text-danger">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>Référence déjà enregistrée pour « {dupProduct.name} ».</span>
+              </p>
+            )}
           </Field>
           <Field label="Catégorie">
             <select className="input" {...register('category')}>
@@ -305,7 +333,7 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
           <Button type="button" variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" loading={mut.isPending}>
+          <Button type="submit" loading={mut.isPending} disabled={!!dupProduct}>
             Enregistrer
           </Button>
         </div>
