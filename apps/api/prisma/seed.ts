@@ -222,13 +222,19 @@ async function seedSystemRoles() {
  * Resynchronise les rôles SYSTÈME déjà clonés dans les tenants existants avec
  * la matrice de permissions à jour. Idempotent : permet de propager de
  * nouvelles permissions (ex : modules Phase 2) aux tenants créés avant l'ajout.
+ *
+ * IMPORTANT : ne touche QUE les rôles non personnalisés (permissionsCustomized
+ * = false). Dès qu'un admin modifie un rôle système, il est exclu du resync,
+ * sinon ses permissions seraient réinitialisées à chaque déploiement.
  */
 async function resyncTenantSystemRoles() {
   const perms = await prisma.permission.findMany();
   const idByKey = new Map(perms.map((p) => [`${p.module}.${p.action}`, p.id]));
 
+  // Ne JAMAIS resynchroniser un rôle qu'un tenant a personnalisé : sinon ses
+  // permissions seraient réinitialisées au barème par défaut à chaque déploiement.
   const roles = await prisma.role.findMany({
-    where: { tenantId: { not: null }, isSystem: true },
+    where: { tenantId: { not: null }, isSystem: true, permissionsCustomized: false },
   });
   let updated = 0;
   for (const role of roles) {

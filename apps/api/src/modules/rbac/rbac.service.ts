@@ -39,6 +39,7 @@ export async function listRoles(tenantId: string) {
     isSystem: r.isSystem,
     isCustom: r.isCustom,
     allBranches: r.allBranches,
+    permissionsCustomized: r.permissionsCustomized,
     userCount: r._count.users,
     permissions: toPermKeys(r),
   }));
@@ -88,9 +89,13 @@ export async function updateRole(
       .map((k) => idByKey.get(k))
       .filter((pid): pid is string => Boolean(pid))
       .map((permissionId) => ({ roleId: id, permissionId }));
+    // Marque le rôle comme personnalisé pour que le resync des rôles système
+    // (seed au déploiement) ne le réinitialise plus jamais aux permissions par
+    // défaut. C'est la protection contre la réinitialisation observée.
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { roleId: id } }),
       ...(data.length > 0 ? [prisma.rolePermission.createMany({ data })] : []),
+      prisma.role.update({ where: { id }, data: { permissionsCustomized: true } }),
     ]);
   }
   if (input.name && role.isCustom) {
