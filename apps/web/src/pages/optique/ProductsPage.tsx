@@ -217,7 +217,12 @@ export function ProductsPage() {
       )}
 
       {modalOpen && (
-        <ProductModal product={editing} onClose={() => setModalOpen(false)} />
+        <ProductModal
+          product={editing}
+          branchId={branchId}
+          stockRow={editing ? stockByProduct.get(editing.id) : undefined}
+          onClose={() => setModalOpen(false)}
+        />
       )}
       {adjusting && branchId && (
         <StockAdjustModal
@@ -320,7 +325,17 @@ function StockAdjustModal({
   );
 }
 
-function ProductModal({ product, onClose }: { product: Product | null; onClose: () => void }) {
+function ProductModal({
+  product,
+  branchId,
+  stockRow,
+  onClose,
+}: {
+  product: Product | null;
+  branchId: string | null;
+  stockRow?: StockRow;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const [serverError, setServerError] = useState('');
   const attrs = (product?.attributes ?? {}) as { lensType?: string; supplier?: string };
@@ -328,6 +343,9 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
   const [lensType, setLensType] = useState(attrs.lensType ?? '');
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
   const [supplierOther, setSupplierOther] = useState(false);
+  // Stock du magasin actif : quantité + seuil d'alerte, réglables dès la création.
+  const [qty, setQty] = useState(stockRow?.quantity ?? 0);
+  const [minAlert, setMinAlert] = useState(stockRow?.minAlert ?? 0);
 
   const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
 
@@ -372,7 +390,7 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
       : undefined;
 
   const mut = useMutation({
-    mutationFn: (values: ProductCreateInput) => {
+    mutationFn: async (values: ProductCreateInput) => {
       // Type de verre + fournisseur rangés dans attributes (uniquement pour un verre).
       const withAttrs: ProductCreateInput = isLens
         ? {
@@ -383,10 +401,21 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
             },
           }
         : values;
-      return product ? updateProduct(product.id, withAttrs) : createProduct(withAttrs);
+      const saved = product ? await updateProduct(product.id, withAttrs) : await createProduct(withAttrs);
+      // Appliquer le stock du magasin actif si la quantité ou le seuil ont changé.
+      if (branchId) {
+        const currentQty = stockRow?.quantity ?? 0;
+        const currentAlert = stockRow?.minAlert ?? 0;
+        const delta = qty - currentQty;
+        if (delta !== 0 || minAlert !== currentAlert) {
+          await adjustStock({ productId: saved.id, branchId, delta, minAlert });
+        }
+      }
+      return saved;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['stock'] });
       onClose();
     },
     onError: (e) => setServerError(apiErrorMessage(e)),
@@ -481,6 +510,36 @@ function ProductModal({ product, onClose }: { product: Product | null; onClose: 
             {errors.sellPrice && <p className="mt-1 text-xs text-danger">{errors.sellPrice.message}</p>}
           </Field>
         </div>
+
+        {/* Stock du magasin actif : quantité initiale (ou courante) + seuil d'alerte. */}
+        {branchId && (
+          <div className="rounded-xl border border-line bg-surface-2/40 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
+              Stock — magasin actif
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={product ? 'Quantité en stock' : 'Quantité initiale'}>
+                <input
+                  type="number"
+                  min={0}
+                  className="input"
+                  value={qty}
+                  onChange={(e) => setQty(Math.max(0, parseInt(e.target.value || '0', 10)))}
+                />
+              </Field>
+              <Field label="Seuil d'alerte (stock bas)">
+                <input
+                  type="number"
+                  min={0}
+                  className="input"
+                  value={minAlert}
+                  onChange={(e) => setMinAlert(Math.max(0, parseInt(e.target.value || '0', 10)))}
+                />
+              </Field>
+            </div>
+          </div>
+        )}
+
         {serverError && <p className="text-sm text-danger">{serverError}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
