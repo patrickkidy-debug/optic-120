@@ -3,7 +3,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal } from 'lucide-react';
-import { productCreateSchema, type ProductCreateInput, LENS_PRODUCT_TYPES } from '@oculo/shared-types';
+import {
+  productCreateSchema,
+  type ProductCreateInput,
+  LENS_BASES,
+  LENS_TREATMENTS,
+  computeLensPrice,
+  lensLabel,
+  DEFAULT_LENS_PRICING,
+  type LensBaseKey,
+  type LensTreatmentKey,
+} from '@oculo/shared-types';
 import {
   listProducts,
   createProduct,
@@ -16,7 +26,7 @@ import {
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
 import { useUIStore } from '../../store/ui';
-import { usePermission } from '../../store/auth';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
@@ -337,10 +347,17 @@ function ProductModal({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const pricing = user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
   const [serverError, setServerError] = useState('');
-  const attrs = (product?.attributes ?? {}) as { lensType?: string; supplier?: string };
+  const attrs = (product?.attributes ?? {}) as {
+    lensBase?: LensBaseKey;
+    treatments?: LensTreatmentKey[];
+    supplier?: string;
+  };
   // Attributs spécifiques aux verres, stockés dans product.attributes.
-  const [lensType, setLensType] = useState(attrs.lensType ?? '');
+  const [lensBase, setLensBase] = useState<LensBaseKey | ''>(attrs.lensBase ?? '');
+  const [treatments, setTreatments] = useState<LensTreatmentKey[]>(attrs.treatments ?? []);
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
   const [supplierOther, setSupplierOther] = useState(false);
   // Stock du magasin actif : quantité + seuil d'alerte, réglables dès la création.
@@ -353,6 +370,8 @@ function ProductModal({
     register,
     handleSubmit,
     watch,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ProductCreateInput>({
     resolver: zodResolver(productCreateSchema),
@@ -368,7 +387,24 @@ function ProductModal({
       : { category: 'MONTURE', buyPrice: 0, sellPrice: 0 },
   });
 
-  const isLens = watch('category') === 'VERRE';
+  const category = watch('category');
+  const isLens = category === 'VERRE';
+  // Verres et accessoires : référence auto-générée, on masque le champ SKU.
+  const hideSku = category === 'VERRE' || category === 'ACCESSOIRE';
+
+  // Barème verres : type de base + traitements → prix de vente synchronisé
+  // depuis les Réglages. Nom pré-rempli si vide.
+  function applyLens(base: LensBaseKey | '', treats: LensTreatmentKey[]) {
+    setLensBase(base);
+    setTreatments(treats);
+    if (base) {
+      setValue('sellPrice', computeLensPrice(pricing, base, treats), { shouldValidate: true });
+      if (!getValues('name')?.trim()) setValue('name', lensLabel(base, treats));
+    }
+  }
+  function toggleTreatment(k: LensTreatmentKey) {
+    applyLens(lensBase, treatments.includes(k) ? treatments.filter((t) => t !== k) : [...treatments, k]);
+  }
 
   // Alerte doublon en direct : on vérifie la référence (SKU) à la lettre près, insensible à la casse.
   const skuValue = (watch('sku') ?? '').trim();
@@ -391,12 +427,13 @@ function ProductModal({
 
   const mut = useMutation({
     mutationFn: async (values: ProductCreateInput) => {
-      // Type de verre + fournisseur rangés dans attributes (uniquement pour un verre).
+      // Type de base + traitements + fournisseur rangés dans attributes (verre uniquement).
       const withAttrs: ProductCreateInput = isLens
         ? {
             ...values,
             attributes: {
-              ...(lensType ? { lensType } : {}),
+              ...(lensBase ? { lensBase } : {}),
+              ...(treatments.length ? { treatments } : {}),
               ...(supplier ? { supplier } : {}),
             },
           }
@@ -428,20 +465,22 @@ function ProductModal({
           <input className="input" {...register('name')} />
           {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Référence (SKU)">
-            <input
-              className={`input ${dupProduct ? 'border-danger focus:border-danger' : ''}`}
-              {...register('sku')}
-            />
-            {errors.sku && <p className="mt-1 text-xs text-danger">{errors.sku.message}</p>}
-            {dupProduct && (
-              <p className="mt-1 flex items-start gap-1 text-xs text-danger">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>Référence déjà enregistrée pour « {dupProduct.name} ».</span>
-              </p>
-            )}
-          </Field>
+        <div className={hideSku ? '' : 'grid grid-cols-2 gap-3'}>
+          {!hideSku && (
+            <Field label="Référence (SKU)">
+              <input
+                className={`input ${dupProduct ? 'border-danger focus:border-danger' : ''}`}
+                {...register('sku')}
+              />
+              {errors.sku && <p className="mt-1 text-xs text-danger">{errors.sku.message}</p>}
+              {dupProduct && (
+                <p className="mt-1 flex items-start gap-1 text-xs text-danger">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>Référence déjà enregistrée pour « {dupProduct.name} ».</span>
+                </p>
+              )}
+            </Field>
+          )}
           <Field label="Catégorie">
             <select className="input" {...register('category')}>
               {CATEGORIES.map((c) => (
@@ -456,21 +495,49 @@ function ProductModal({
           <input className="input" {...register('brand')} />
         </Field>
 
-        {/* Spécifique aux verres : type de verre + fournisseur. */}
+        {/* Verres : type de base + traitements → prix synchronisé depuis les Réglages. */}
         {isLens && (
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
+          <div className="space-y-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
             <Field label="Type de verre">
               <select
                 className="input"
-                value={lensType}
-                onChange={(e) => setLensType(e.target.value)}
+                value={lensBase}
+                onChange={(e) => applyLens((e.target.value || '') as LensBaseKey | '', treatments)}
               >
                 <option value="">— Choisir —</option>
-                {LENS_PRODUCT_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                {LENS_BASES.map((b) => (
+                  <option key={b.key} value={b.key}>
+                    {b.label} — {formatCurrency(pricing[b.key])}
+                  </option>
                 ))}
               </select>
             </Field>
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-content-muted">Traitements</p>
+              <div className="flex flex-wrap gap-1.5">
+                {LENS_TREATMENTS.map((tr) => {
+                  const on = treatments.includes(tr.key);
+                  return (
+                    <button
+                      key={tr.key}
+                      type="button"
+                      onClick={() => toggleTreatment(tr.key)}
+                      className={`badge px-2.5 py-1 text-xs ${on ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
+                    >
+                      {tr.label} +{formatCurrency(pricing[tr.key])}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {lensBase && (
+              <p className="text-xs text-content-muted">
+                Prix synchronisé :{' '}
+                <span className="font-semibold text-content">
+                  {formatCurrency(computeLensPrice(pricing, lensBase, treatments))}
+                </span>
+              </p>
+            )}
             <Field label="Fournisseur">
               {supplierOther || (suppliers && suppliers.length === 0) ? (
                 <input

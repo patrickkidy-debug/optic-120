@@ -23,11 +23,11 @@ import {
   createSaleReturn,
   getSale,
   getStock,
-  listCustomers,
-  createCustomer,
   createSale,
   type SaleListItem,
 } from '../../features/optique/api';
+import { CustomerSearch, LensComposer } from '../../features/optique/SaleTools';
+import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
@@ -468,14 +468,9 @@ function QuoteModal({
   const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
   const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
+  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   const [search, setSearch] = useState('');
   const [customerId, setCustomerId] = useState('');
-  // Saisie d'un nouveau client directement dans le devis (sans passer par la
-  // page Clients). Enregistré au moment de la création du devis.
-  const [newClient, setNewClient] = useState(false);
-  const [newFirst, setNewFirst] = useState('');
-  const [newLast, setNewLast] = useState('');
-  const [newPhone, setNewPhone] = useState('');
   const [discount, setDiscount] = useState(0);
   const [insurerId, setInsurerId] = useState('');
   const [insurance, setInsurance] = useState(0);
@@ -486,7 +481,6 @@ function QuoteModal({
     queryFn: () => getStock(branchId!),
     enabled: Boolean(branchId),
   });
-  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
   const canSeeInsurers = usePermission('insurance.view');
   const { data: insurers } = useQuery({
     queryKey: ['insurers'],
@@ -535,26 +529,15 @@ function QuoteModal({
   }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, total]);
 
   const createMut = useMutation({
-    mutationFn: async () => {
-      // Nouveau client saisi ici : on le crée d'abord, puis on rattache le devis.
-      let effectiveCustomerId = customerId || undefined;
-      if (newClient && newFirst.trim() && newLast.trim()) {
-        const c = await createCustomer({
-          firstName: newFirst.trim(),
-          lastName: newLast.trim(),
-          phone: newPhone.trim() || undefined,
-        });
-        effectiveCustomerId = c.id;
-      }
-      return createSale({
+    mutationFn: () =>
+      createSale({
         branchId: branchId!,
-        customerId: effectiveCustomerId,
+        customerId: customerId || undefined,
         type: 'QUOTE',
         items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: discount,
         insuranceAmount: insurance,
-      });
-    },
+      }),
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -573,6 +556,14 @@ function QuoteModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <div className="mb-2">
+              <LensComposer
+                pricing={pricing}
+                onAdd={(line) =>
+                  addLine({ productId: line.productId, name: line.name, sku: line.sku, sellPrice: line.unitPrice })
+                }
+              />
+            </div>
             <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
               {isLoading ? (
                 <PageLoader />
@@ -598,63 +589,9 @@ function QuoteModal({
 
           {/* Devis en cours */}
           <div className="flex flex-col">
-            {newClient ? (
-              <div className="mb-2 space-y-2 rounded-xl border border-primary/30 bg-primary-soft/30 p-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    className="input h-9"
-                    placeholder="Prénom"
-                    value={newFirst}
-                    onChange={(e) => setNewFirst(e.target.value)}
-                  />
-                  <input
-                    className="input h-9"
-                    placeholder="Nom"
-                    value={newLast}
-                    onChange={(e) => setNewLast(e.target.value)}
-                  />
-                </div>
-                <input
-                  className="input h-9"
-                  placeholder="Téléphone (optionnel)"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setNewClient(false)}
-                  className="text-xs text-content-muted hover:text-content"
-                >
-                  ← Choisir un client existant
-                </button>
-              </div>
-            ) : (
-              <div className="mb-2 flex gap-2">
-                <select
-                  className="input flex-1"
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                >
-                  <option value="">{t('sales.walkInCustomer')}</option>
-                  {customers?.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomerId('');
-                    setNewClient(true);
-                  }}
-                  className="btn-outline h-9 shrink-0 rounded-lg px-2.5 text-xs"
-                  title="Nouveau client"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Client
-                </button>
-              </div>
-            )}
+            <div className="mb-2">
+              <CustomerSearch value={customerId || null} onChange={(id) => setCustomerId(id ?? '')} />
+            </div>
 
             <div className="max-h-44 flex-1 space-y-1 overflow-y-auto">
               {lines.length === 0 ? (

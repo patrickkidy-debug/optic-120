@@ -15,8 +15,9 @@ import {
   QrCode,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
-import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
-import { getStock, listCustomers, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
+import { getStock, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import { CustomerSearch, LensComposer } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
 import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -80,7 +81,7 @@ export function PosPage() {
     queryFn: () => getStock(branchId!),
     enabled: Boolean(branchId),
   });
-  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const pricing = user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
 
   const totals = computeTotals(pos, user?.tenantVatRate ?? undefined);
 
@@ -133,6 +134,12 @@ export function PosPage() {
             placeholder={t('pos.searchProduct')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="mb-4">
+          <LensComposer
+            pricing={pricing}
+            onAdd={(line) => pos.addLine(line)}
           />
         </div>
         {isLoading ? (
@@ -211,18 +218,7 @@ export function PosPage() {
           </div>
 
           <div className="space-y-3 border-t px-4 py-3">
-            <select
-              className="input"
-              value={pos.customerId ?? ''}
-              onChange={(e) => pos.setCustomer(e.target.value || null)}
-            >
-              <option value="">{t('pos.walkIn')}</option>
-              {customers?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName}
-                </option>
-              ))}
-            </select>
+            <CustomerSearch value={pos.customerId} onChange={(id) => pos.setCustomer(id)} />
 
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs text-content-muted">

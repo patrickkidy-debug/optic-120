@@ -773,7 +773,8 @@ export const productCategoryEnum = z.enum([
 ]);
 
 export const productCreateSchema = z.object({
-  sku: z.string().min(1).max(60),
+  // Référence facultative : générée côté serveur si absente (verres, accessoires…).
+  sku: z.string().max(60).optional(),
   category: productCategoryEnum,
   brand: z.string().max(80).optional(),
   name: z.string().min(1).max(160),
@@ -1236,6 +1237,65 @@ export const LENS_PRODUCT_TYPES = [
   'Autre',
 ] as const;
 export type LensProductType = (typeof LENS_PRODUCT_TYPES)[number];
+
+/* ---------------- Verres à la carte (type de base + traitements) ---------------- */
+
+/**
+ * Verres priçables : type de base (une clé de lensPricing) et traitements
+ * (options additionnées). Sert au configurateur produit ET à la caisse/ventes,
+ * pour que le prix affiché vienne toujours des Réglages de l'établissement.
+ */
+export const LENS_BASES = [
+  { key: 'unifocal', label: 'Unifocal' },
+  { key: 'progressif', label: 'Progressif' },
+  { key: 'degressif', label: 'Dégressif (bureau)' },
+] as const;
+export type LensBaseKey = (typeof LENS_BASES)[number]['key'];
+
+export const LENS_TREATMENTS = [
+  { key: 'ar', label: 'Anti-reflet' },
+  { key: 'blue', label: 'Anti-lumière bleue' },
+  { key: 'photo', label: 'Photochromique' },
+  { key: 'hard', label: 'Durci (anti-rayures)' },
+] as const;
+export type LensTreatmentKey = (typeof LENS_TREATMENTS)[number]['key'];
+
+/** Prix d'un verre = prix du type de base + somme des traitements choisis. */
+export function computeLensPrice(
+  pricing: LensPricing,
+  base: LensBaseKey,
+  treatments: LensTreatmentKey[],
+): number {
+  return Math.round(treatments.reduce((sum, t) => sum + (pricing[t] ?? 0), pricing[base] ?? 0));
+}
+
+/** Libellé lisible d'un verre configuré, ex. « Verre progressif · anti-reflet + photochromique ». */
+export function lensLabel(base: LensBaseKey, treatments: LensTreatmentKey[]): string {
+  const baseLabel = LENS_BASES.find((b) => b.key === base)?.label ?? base;
+  const treats = treatments
+    .map((t) => LENS_TREATMENTS.find((x) => x.key === t)?.label ?? t)
+    .join(' + ');
+  return treats ? `Verre ${baseLabel.toLowerCase()} · ${treats}` : `Verre ${baseLabel.toLowerCase()}`;
+}
+
+/** Référence déterministe d'un verre configuré (upsert idempotent côté serveur). */
+export function lensSku(base: LensBaseKey, treatments: LensTreatmentKey[]): string {
+  const suffix = [...treatments].sort().join('-');
+  return suffix ? `VERRE-${base.toUpperCase()}-${suffix.toUpperCase()}` : `VERRE-${base.toUpperCase()}`;
+}
+
+/** Requête de configuration d'un verre (caisse/ventes). */
+export const lensProductSchema = z.object({
+  base: z.enum(['unifocal', 'progressif', 'degressif']),
+  treatments: z.array(z.enum(['ar', 'blue', 'photo', 'hard'])).default([]),
+});
+export type LensProductInput = z.infer<typeof lensProductSchema>;
+
+/**
+ * Catégories fabriquées sur commande : pas de gestion de stock (les verres sont
+ * commandés au labo à chaque vente). La caisse ne bloque donc pas sur le stock.
+ */
+export const MADE_TO_ORDER_CATEGORIES = ['VERRE'] as const;
 
 /* ---------------- Modèles de messages WhatsApp (par étape de vente) ---------------- */
 

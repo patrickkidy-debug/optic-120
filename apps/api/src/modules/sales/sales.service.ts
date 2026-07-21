@@ -4,6 +4,7 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
+  MADE_TO_ORDER_CATEGORIES,
 } from '@oculo/shared-types';
 import type { SaleCreateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
@@ -30,6 +31,7 @@ interface ComputedLine {
   unitPrice: number;
   lineTotal: number;
   name: string;
+  category: string;
 }
 
 /**
@@ -60,7 +62,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
       const lineTotal = unitPrice * i.quantity;
       subtotal += lineTotal;
-      return { productId: i.productId, quantity: i.quantity, unitPrice, lineTotal, name: p.name };
+      return { productId: i.productId, quantity: i.quantity, unitPrice, lineTotal, name: p.name, category: p.category };
     });
 
     // Taux de TVA et devise de l'établissement. Le taux est en % (0 = exonéré),
@@ -117,6 +119,8 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
 
     if (isSale) {
       for (const line of lines) {
+        // Verres (fabriqués sur commande) : pas de gestion de stock, on ne bloque pas.
+        if (MADE_TO_ORDER_CATEGORIES.includes(line.category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
         const item = await tx.stockItem.findFirst({
           where: { productId: line.productId, branchId: input.branchId, tenantId },
         });
@@ -290,12 +294,14 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
   return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const quote = await tx.sale.findFirst({
       where: { id: saleId, tenantId },
-      include: { items: true },
+      include: { items: { include: { product: true } } },
     });
     if (!quote) throw notFound('Devis introuvable');
     if (quote.type !== SaleType.QUOTE) throw conflict("Cette vente n'est pas un devis");
 
     for (const line of quote.items) {
+      // Verres fabriqués sur commande : pas de décrément de stock.
+      if (MADE_TO_ORDER_CATEGORIES.includes(line.product.category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
       const item = await tx.stockItem.findFirst({
         where: { productId: line.productId, branchId: quote.branchId, tenantId },
       });

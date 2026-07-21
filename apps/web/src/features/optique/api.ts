@@ -6,6 +6,7 @@ import type {
   PrescriptionCreateInput,
   SaleCreateInput,
   PaymentMethod,
+  LensProductInput,
 } from '@oculo/shared-types';
 
 export interface Branch {
@@ -55,6 +56,12 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
 
 export async function deleteProduct(id: string) {
   await api.delete(`/products/${id}`);
+}
+
+/** Crée/réutilise un produit verre configuré (type + traitements) au prix des Réglages. */
+export async function ensureLensProduct(input: LensProductInput): Promise<Product> {
+  const { data } = await api.post('/products/lens', input);
+  return data.product;
 }
 
 export interface StockRow {

@@ -1,8 +1,27 @@
 import type { FastifyInstance } from 'fastify';
-import { productCreateSchema, productUpdateSchema } from '@oculo/shared-types';
+import { ProductCategory } from '@prisma/client';
+import {
+  productCreateSchema,
+  productUpdateSchema,
+  lensProductSchema,
+  computeLensPrice,
+  lensSku,
+  lensLabel,
+  DEFAULT_LENS_PRICING,
+  type LensPricing,
+} from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
+import { requirePermission, requireAnyPermission } from '../../middlewares/rbac-guard.js';
 import { notFound, conflict } from '../../lib/http-error.js';
+
+/** Préfixe de référence auto-générée par catégorie (quand aucune n'est saisie). */
+const SKU_PREFIX: Record<string, string> = {
+  MONTURE: 'MON',
+  VERRE: 'VER',
+  LENTILLE: 'LEN',
+  ACCESSOIRE: 'ACC',
+  SERVICE: 'SVC',
+};
 
 export async function productsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -48,22 +67,35 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
   app.post('/', { preHandler: requirePermission('optique.products.create') }, async (req, reply) => {
     const input = productCreateSchema.parse(req.body);
     const tenantId = req.auth!.tenantId;
-    const sku = input.sku.trim();
+    const provided = input.sku?.trim();
 
-    // Alerte doublon : la référence doit être unique « à la lettre près » (insensible à la casse).
-    const existing = await req.db!.product.findFirst({
-      where: { tenantId, sku: { equals: sku, mode: 'insensitive' } },
-      select: { name: true, sku: true },
-    });
-    if (existing) {
-      throw conflict(
-        `La référence « ${existing.sku} » est déjà enregistrée pour « ${existing.name} ». Chaque référence doit être unique.`,
-      );
+    // Alerte doublon (si une référence est saisie) : unique « à la lettre près ».
+    if (provided) {
+      const existing = await req.db!.product.findFirst({
+        where: { tenantId, sku: { equals: provided, mode: 'insensitive' } },
+        select: { name: true, sku: true },
+      });
+      if (existing) {
+        throw conflict(
+          `La référence « ${existing.sku} » est déjà enregistrée pour « ${existing.name} ». Chaque référence doit être unique.`,
+        );
+      }
     }
 
     // Création du produit + une ligne de stock (qté 0) par magasin, pour qu'il apparaisse
     // aussitôt dans Stock et soit ajustable partout.
     const product = await req.db!.$transaction(async (tx) => {
+      // Référence auto-générée si non saisie (verres, accessoires…).
+      let sku = provided ?? '';
+      if (!sku) {
+        const prefix = SKU_PREFIX[input.category] ?? 'PRD';
+        for (let i = 0; i < 6 && !sku; i++) {
+          const candidate = `${prefix}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+          const clash = await tx.product.findFirst({ where: { tenantId, sku: candidate }, select: { id: true } });
+          if (!clash) sku = candidate;
+        }
+        if (!sku) sku = `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+      }
       const created = await tx.product.create({
         data: {
           tenantId,
@@ -87,6 +119,34 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return reply.status(201).send({ product });
+  });
+
+  // Verre à la carte (caisse / ventes) : crée ou réutilise un produit VERRE
+  // déterministe dont le prix vient du barème de l'établissement (Réglages).
+  // Idempotent : même configuration = même produit, prix resynchronisé.
+  app.post('/lens', { preHandler: requireAnyPermission('optique.sales.create', 'optique.quotes.create') }, async (req, reply) => {
+    const { base, treatments } = lensProductSchema.parse(req.body);
+    const tenantId = req.auth!.tenantId;
+    const tenant = await req.db!.tenant.findUnique({ where: { id: tenantId }, select: { lensPricing: true } });
+    const pricing = (tenant?.lensPricing as LensPricing | null) ?? DEFAULT_LENS_PRICING;
+    const price = computeLensPrice(pricing, base, treatments);
+    const sku = lensSku(base, treatments);
+    const name = lensLabel(base, treatments);
+    const attributes = { lensBase: base, treatments };
+    const product = await req.db!.product.upsert({
+      where: { tenantId_sku: { tenantId, sku } },
+      update: { name, sellPrice: price, isActive: true, attributes },
+      create: {
+        tenantId,
+        sku,
+        category: ProductCategory.VERRE,
+        name,
+        sellPrice: price,
+        buyPrice: 0,
+        attributes,
+      },
+    });
+    return reply.send({ product });
   });
 
   app.patch('/:id', { preHandler: requirePermission('optique.products.update') }, async (req, reply) => {
