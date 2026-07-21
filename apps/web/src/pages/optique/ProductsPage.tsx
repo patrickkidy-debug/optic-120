@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal } from 'lucide-react';
 import { productCreateSchema, type ProductCreateInput, LENS_PRODUCT_TYPES } from '@oculo/shared-types';
 import {
   listProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  getStock,
+  adjustStock,
   type Product,
+  type StockRow,
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
+import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
@@ -31,16 +35,44 @@ export function ProductsPage() {
   const canCreate = usePermission('optique.products.create');
   const canUpdate = usePermission('optique.products.update');
   const canDelete = usePermission('optique.products.delete');
+  const canAdjust = usePermission('optique.stock.adjust');
+  const branchId = useUIStore((s) => s.activeBranchId);
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [adjusting, setAdjusting] = useState<StockRow | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', search, category],
     queryFn: () => listProducts({ search: search || undefined, category: category || undefined }),
   });
+
+  // Quantités du magasin actif, indexées par produit, pour ajuster sans quitter le catalogue.
+  const { data: stock } = useQuery({
+    queryKey: ['stock', branchId],
+    queryFn: () => getStock(branchId!, false),
+    enabled: Boolean(branchId),
+  });
+  const stockByProduct = useMemo(() => {
+    const m = new Map<string, StockRow>();
+    (stock ?? []).forEach((r) => m.set(r.productId, r));
+    return m;
+  }, [stock]);
+  const rowFor = (p: Product): StockRow =>
+    stockByProduct.get(p.id) ?? {
+      productId: p.id,
+      sku: p.sku,
+      name: p.name,
+      brand: p.brand,
+      category: p.category,
+      sellPrice: Number(p.sellPrice),
+      stockItemId: null,
+      quantity: 0,
+      minAlert: 0,
+      low: false,
+    };
 
   function openCreate() {
     setEditing(null);
@@ -117,6 +149,7 @@ export function ProductsPage() {
                 <th className="table-cell font-semibold">Référence</th>
                 <th className="table-cell font-semibold">Catégorie</th>
                 <th className="table-cell text-right font-semibold">Prix de vente</th>
+                <th className="table-cell text-center font-semibold">Stock</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -133,6 +166,29 @@ export function ProductsPage() {
                   </td>
                   <td className="table-cell text-right font-semibold text-content">
                     {formatCurrency(Number(p.sellPrice))}
+                  </td>
+                  <td className="table-cell text-center">
+                    {(() => {
+                      const r = rowFor(p);
+                      const content = (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-display text-base font-bold text-content">{r.quantity}</span>
+                          {r.low && <Badge tone="danger">Bas</Badge>}
+                        </span>
+                      );
+                      return canAdjust && branchId ? (
+                        <button
+                          onClick={() => setAdjusting(r)}
+                          className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
+                          title="Ajuster la quantité"
+                        >
+                          {content}
+                          <SlidersHorizontal className="h-3.5 w-3.5 text-content-faint" />
+                        </button>
+                      ) : (
+                        content
+                      );
+                    })()}
                   </td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
@@ -163,7 +219,104 @@ export function ProductsPage() {
       {modalOpen && (
         <ProductModal product={editing} onClose={() => setModalOpen(false)} />
       )}
+      {adjusting && branchId && (
+        <StockAdjustModal
+          row={adjusting}
+          branchId={branchId}
+          onClose={() => setAdjusting(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ['stock'] });
+            setAdjusting(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function StockAdjustModal({
+  row,
+  branchId,
+  onClose,
+  onSaved,
+}: {
+  row: StockRow;
+  branchId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [qty, setQty] = useState(row.quantity);
+  const [minAlert, setMinAlert] = useState(row.minAlert);
+  const [error, setError] = useState('');
+  const delta = qty - row.quantity;
+
+  const mut = useMutation({
+    mutationFn: () => adjustStock({ productId: row.productId, branchId, delta, minAlert }),
+    onSuccess: onSaved,
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={`Stock — ${row.name}`} size="sm">
+      <div className="space-y-4">
+        <div className="rounded-xl bg-surface-2 p-3 text-center">
+          <p className="text-xs text-content-muted">Quantité en stock</p>
+          <p className="font-display text-2xl font-bold text-content">{row.quantity}</p>
+          {delta !== 0 && (
+            <p className="mt-1 text-xs text-content-faint">
+              Mouvement : <span className="font-semibold text-content">{delta > 0 ? `+${delta}` : delta}</span>
+            </p>
+          )}
+        </div>
+        <Field label="Nouvelle quantité">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-outline h-10 w-10 p-0 text-lg"
+              onClick={() => setQty((q) => Math.max(0, q - 1))}
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min={0}
+              className="input text-center"
+              value={qty}
+              onChange={(e) => setQty(Math.max(0, parseInt(e.target.value || '0', 10)))}
+            />
+            <button
+              type="button"
+              className="btn-outline h-10 w-10 p-0 text-lg"
+              onClick={() => setQty((q) => q + 1)}
+            >
+              +
+            </button>
+          </div>
+        </Field>
+        <Field label="Seuil d'alerte (stock bas)">
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={minAlert}
+            onChange={(e) => setMinAlert(Math.max(0, parseInt(e.target.value || '0', 10)))}
+          />
+        </Field>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button
+            onClick={() => mut.mutate()}
+            loading={mut.isPending}
+            disabled={delta === 0 && minAlert === row.minAlert}
+          >
+            Enregistrer
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
