@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -526,6 +526,14 @@ function QuoteModal({
   const taxAmount = Math.round(taxBase * (vatPct / 100));
   const total = taxBase + taxAmount;
 
+  // Prise en charge synchronisée avec l'assureur : suit le total en temps réel.
+  const selectedInsurer = insurers?.find((x) => x.id === insurerId);
+  useEffect(() => {
+    if (!selectedInsurer) return;
+    setInsurance(Math.round((total * selectedInsurer.coveragePercent) / 100));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, total]);
+
   const createMut = useMutation({
     mutationFn: async () => {
       // Nouveau client saisi ici : on le crée d'abord, puis on rattache le devis.
@@ -714,11 +722,8 @@ function QuoteModal({
                   className="input mt-1"
                   value={insurerId}
                   onChange={(e) => {
-                    const id = e.target.value;
-                    setInsurerId(id);
-                    const ins = insurers.find((x) => x.id === id);
-                    if (ins) setInsurance(Math.round((total * ins.coveragePercent) / 100));
-                    else setInsurance(0);
+                    setInsurerId(e.target.value);
+                    if (!e.target.value) setInsurance(0);
                   }}
                 >
                   <option value="">Aucune (client paie tout)</option>

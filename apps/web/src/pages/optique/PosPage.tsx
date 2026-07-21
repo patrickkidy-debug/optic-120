@@ -84,6 +84,17 @@ export function PosPage() {
 
   const totals = computeTotals(pos, user?.tenantVatRate ?? undefined);
 
+  // Prise en charge synchronisée avec l'assureur choisi : dès que le total change
+  // (ajout/retrait d'article, remise), la part assurance est recalculée à son
+  // taux. `total` ne dépend pas de la prise en charge, donc pas de boucle.
+  const selectedInsurer = insurers?.find((x) => x.id === insurerId);
+  useEffect(() => {
+    if (!selectedInsurer) return;
+    const target = Math.round((totals.total * selectedInsurer.coveragePercent) / 100);
+    if (target !== pos.insuranceAmount) pos.setInsurance(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, totals.total]);
+
   const products = (stock ?? []).filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()),
   );
@@ -243,12 +254,10 @@ export function PosPage() {
                   className="input mt-1"
                   value={insurerId}
                   onChange={(e) => {
-                    const id = e.target.value;
-                    setInsurerId(id);
-                    const ins = insurers.find((x) => x.id === id);
-                    // Total avant prise en charge = net dû + prise en charge actuelle.
-                    const totalBefore = totals.dueFromCustomer + pos.insuranceAmount;
-                    pos.setInsurance(ins ? Math.round((totalBefore * ins.coveragePercent) / 100) : 0);
+                    setInsurerId(e.target.value);
+                    // Choisir « Aucune » remet la prise en charge à zéro ; sinon
+                    // c'est l'effet ci-dessous qui la calcule et la garde à jour.
+                    if (!e.target.value) pos.setInsurance(0);
                   }}
                 >
                   <option value="">Aucune (client paie tout)</option>
