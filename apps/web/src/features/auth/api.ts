@@ -8,6 +8,7 @@ import type {
 } from '@oculo/shared-types';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
+import { setUnlockSecret, clearUnlockSecret } from '../../lib/unlock';
 
 interface AuthResponse {
   accessToken: string;
@@ -28,6 +29,10 @@ type LoginApiResponse = AuthResponse & {
 
 export async function login(input: LoginInput): Promise<LoginOutcome> {
   const { data } = await api.post<LoginApiResponse>('/auth/login', input);
+  // Mémorise le mot de passe (localement, en mémoire) pour un déverrouillage
+  // instantané de la session verrouillée, même via les étapes 2FA / choix
+  // d'établissement où le mot de passe n'est plus ressaisi.
+  await setUnlockSecret(input.password);
   if (data.chooseEstablishment && data.selectionToken) {
     return { chooseEstablishment: data.chooseEstablishment, selectionToken: data.selectionToken };
   }
@@ -132,6 +137,7 @@ export async function logout(): Promise<void> {
   try {
     await api.post('/auth/logout');
   } finally {
+    clearUnlockSecret();
     useAuthStore.getState().clear();
   }
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Lock } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { verifyPassword, logout } from '../features/auth/api';
+import { tryLocalUnlock, setUnlockSecret } from '../lib/unlock';
 import { Logo } from './Logo';
 import { Button } from './ui';
 
@@ -18,8 +19,12 @@ export function LockScreen() {
     setLoading(true);
     setError('');
     try {
-      const ok = await verifyPassword(password);
+      // Déverrouillage local instantané si un vérificateur existe (session
+      // ouverte dans cet onglet) ; sinon repli sur le serveur (session restaurée).
+      const local = await tryLocalUnlock(password);
+      const ok = local === null ? await verifyPassword(password) : local;
       if (ok) {
+        if (local === null) await setUnlockSecret(password); // prochains déverrouillages instantanés
         useAuthStore.getState().setLocked(false);
         setPassword('');
       } else {
