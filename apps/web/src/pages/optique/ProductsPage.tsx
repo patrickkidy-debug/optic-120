@@ -7,8 +7,9 @@ import {
   productCreateSchema,
   type ProductCreateInput,
   lensBaseOptions,
+  lensBasePrice,
   LENS_TREATMENTS,
-  computeLensPrice,
+  LENS_INDICES,
   lensLabel,
   DEFAULT_LENS_PRICING,
   type LensTreatmentKey,
@@ -351,12 +352,20 @@ function ProductModal({
   const [serverError, setServerError] = useState('');
   const attrs = (product?.attributes ?? {}) as {
     lensBase?: string;
+    lensTypeName?: string;
     treatments?: LensTreatmentKey[];
+    index?: string;
     supplier?: string;
   };
   // Attributs spécifiques aux verres, stockés dans product.attributes.
   const [lensBase, setLensBase] = useState<string>(attrs.lensBase ?? '');
+  const [lensTypeName, setLensTypeName] = useState(attrs.lensTypeName ?? '');
+  const [typeOther, setTypeOther] = useState<boolean>(Boolean(attrs.lensTypeName));
   const [treatments, setTreatments] = useState<LensTreatmentKey[]>(attrs.treatments ?? []);
+  const [lensIndex, setLensIndex] = useState<string>(attrs.index ?? '');
+  const [indexOther, setIndexOther] = useState<boolean>(
+    Boolean(attrs.index && !LENS_INDICES.some((i) => i.id === attrs.index)),
+  );
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
   const [supplierOther, setSupplierOther] = useState(false);
   // Stock du magasin actif : quantité + seuil d'alerte, réglables dès la création.
@@ -391,18 +400,28 @@ function ProductModal({
   // Verres et accessoires : référence auto-générée, on masque le champ SKU.
   const hideSku = category === 'VERRE' || category === 'ACCESSOIRE';
 
-  // Barème verres : type de base + traitements → prix de vente synchronisé
-  // depuis les Réglages. Nom pré-rempli si vide.
-  function applyLens(base: string, treats: LensTreatmentKey[]) {
+  // Barème verres : prix suggéré = prix du type de base × indice + traitements.
+  // Le prix de vente reste librement modifiable en dessous.
+  function suggestPrice(base: string, treats: LensTreatmentKey[], idx: string): number {
+    const mult = LENS_INDICES.find((i) => i.id === idx)?.mult ?? 1;
+    const treatSum = treats.reduce((s, t) => s + (pricing[t] ?? 0), 0);
+    return Math.round(lensBasePrice(pricing, base) * mult + treatSum);
+  }
+  function applyLens(base: string, treats: LensTreatmentKey[], idx: string) {
     setLensBase(base);
     setTreatments(treats);
+    setLensIndex(idx);
     if (base) {
-      setValue('sellPrice', computeLensPrice(pricing, base, treats), { shouldValidate: true });
+      setValue('sellPrice', suggestPrice(base, treats, idx), { shouldValidate: true });
       if (!getValues('name')?.trim()) setValue('name', lensLabel(pricing, base, treats));
     }
   }
   function toggleTreatment(k: LensTreatmentKey) {
-    applyLens(lensBase, treatments.includes(k) ? treatments.filter((t) => t !== k) : [...treatments, k]);
+    applyLens(
+      lensBase,
+      treatments.includes(k) ? treatments.filter((t) => t !== k) : [...treatments, k],
+      lensIndex,
+    );
   }
 
   // Alerte doublon en direct : on vérifie la référence (SKU) à la lettre près, insensible à la casse.
@@ -432,7 +451,9 @@ function ProductModal({
             ...values,
             attributes: {
               ...(lensBase ? { lensBase } : {}),
+              ...(typeOther && lensTypeName.trim() ? { lensTypeName: lensTypeName.trim() } : {}),
               ...(treatments.length ? { treatments } : {}),
+              ...(lensIndex ? { index: lensIndex } : {}),
               ...(supplier ? { supplier } : {}),
             },
           }
@@ -497,20 +518,75 @@ function ProductModal({
         {/* Verres : type de base + traitements → prix synchronisé depuis les Réglages. */}
         {isLens && (
           <div className="space-y-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
-            <Field label="Type de verre">
-              <select
-                className="input"
-                value={lensBase}
-                onChange={(e) => applyLens(e.target.value, treatments)}
-              >
-                <option value="">— Choisir —</option>
-                {lensBaseOptions(pricing).map((b) => (
-                  <option key={b.key} value={b.key}>
-                    {b.label} — {formatCurrency(b.price)}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Type de verre">
+                <select
+                  className="input"
+                  value={typeOther ? '__other__' : lensBase}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '__other__') {
+                      setTypeOther(true);
+                      setLensBase('');
+                    } else {
+                      setTypeOther(false);
+                      setLensTypeName('');
+                      applyLens(v, treatments, lensIndex);
+                    }
+                  }}
+                >
+                  <option value="">— Choisir —</option>
+                  {lensBaseOptions(pricing).map((b) => (
+                    <option key={b.key} value={b.key}>
+                      {b.label} — {formatCurrency(b.price)}
+                    </option>
+                  ))}
+                  <option value="__other__">Autre (préciser)…</option>
+                </select>
+                {typeOther && (
+                  <input
+                    className="input mt-2"
+                    placeholder="Ex : Bifocal, Mi-distance…"
+                    value={lensTypeName}
+                    onChange={(e) => {
+                      setLensTypeName(e.target.value);
+                      if (!getValues('name')?.trim() && e.target.value.trim())
+                        setValue('name', `Verre ${e.target.value.trim()}`);
+                    }}
+                  />
+                )}
+              </Field>
+              <Field label="Indice (amincissement)">
+                {indexOther ? (
+                  <input
+                    className="input"
+                    placeholder="Ex : 1.59"
+                    value={lensIndex}
+                    onChange={(e) => setLensIndex(e.target.value)}
+                  />
+                ) : (
+                  <select
+                    className="input"
+                    value={lensIndex}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '__other__') {
+                        setIndexOther(true);
+                        setLensIndex('');
+                      } else applyLens(lensBase, treatments, v);
+                    }}
+                  >
+                    <option value="">— Indice —</option>
+                    {LENS_INDICES.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.label}
+                      </option>
+                    ))}
+                    <option value="__other__">Autre…</option>
+                  </select>
+                )}
+              </Field>
+            </div>
             <div>
               <p className="mb-1.5 text-xs font-medium text-content-muted">Traitements</p>
               <div className="flex flex-wrap gap-1.5">
@@ -531,10 +607,11 @@ function ProductModal({
             </div>
             {lensBase && (
               <p className="text-xs text-content-muted">
-                Prix synchronisé :{' '}
+                Prix suggéré :{' '}
                 <span className="font-semibold text-content">
-                  {formatCurrency(computeLensPrice(pricing, lensBase, treatments))}
-                </span>
+                  {formatCurrency(suggestPrice(lensBase, treatments, lensIndex))}
+                </span>{' '}
+                — modifiable ci-dessous.
               </p>
             )}
             <Field label="Fournisseur">

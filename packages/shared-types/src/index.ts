@@ -1270,6 +1270,15 @@ export const LENS_TREATMENTS = [
 ] as const;
 export type LensTreatmentKey = (typeof LENS_TREATMENTS)[number]['key'];
 
+/** Indices d'amincissement (multiplicateur physique appliqué au prix du verre). */
+export const LENS_INDICES = [
+  { id: '1.5', label: '1.5 (standard)', mult: 1 },
+  { id: '1.6', label: '1.6 (aminci)', mult: 1.3 },
+  { id: '1.67', label: '1.67 (extra-aminci)', mult: 1.7 },
+  { id: '1.74', label: '1.74 (ultra-aminci)', mult: 2.2 },
+] as const;
+export type LensIndexId = (typeof LENS_INDICES)[number]['id'];
+
 /**
  * Tous les types de verres disponibles = 3 types fixes + types personnalisés
  * de l'établissement (Réglages). Sert à peupler les listes déroulantes partout.
