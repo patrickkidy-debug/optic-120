@@ -156,10 +156,13 @@ export function PosPage() {
               >
                 <div className="flex items-start justify-between">
                   <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
-                  {p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
+                  {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
                 </div>
-                <div className="mt-2 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
-                <div className="text-xs text-content-faint">Stock : {p.quantity}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</div>
+                <div className="mt-1.5 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
+                <div className="text-xs text-content-faint">
+                  {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
+                </div>
               </button>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { StockMovementType } from '@oculo/shared-types';
+import { StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound } from '../../lib/http-error.js';
 
@@ -75,6 +75,8 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
 
   const rows = products.map((p) => {
     const item = p.stockItems[0];
+    // Verres (fabriqués sur commande) : stock illimité, jamais en alerte.
+    const unlimited = isMadeToOrderCategory(p.category);
     return {
       productId: p.id,
       sku: p.sku,
@@ -85,7 +87,8 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
       stockItemId: item?.id ?? null,
       quantity: item?.quantity ?? 0,
       minAlert: item?.minAlert ?? 0,
-      low: item ? item.quantity <= item.minAlert : false,
+      low: unlimited ? false : item ? item.quantity <= item.minAlert : false,
+      unlimited,
     };
   });
 
@@ -106,7 +109,10 @@ export async function getMovements(tenantId: string, productId: string, branchId
 export async function getLowStockCount(tenantId: string, branchId?: string): Promise<number> {
   const items = await prisma.stockItem.findMany({
     where: { tenantId, ...(branchId ? { branchId } : {}) },
-    select: { quantity: true, minAlert: true },
+    select: { quantity: true, minAlert: true, product: { select: { category: true } } },
   });
-  return items.filter((i) => i.quantity <= i.minAlert).length;
+  // Les verres (fabriqués sur commande) ne comptent jamais comme stock bas.
+  return items.filter(
+    (i) => !isMadeToOrderCategory(i.product.category) && i.quantity <= i.minAlert,
+  ).length;
 }

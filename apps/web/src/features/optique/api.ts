@@ -75,6 +75,8 @@ export interface StockRow {
   quantity: number;
   minAlert: number;
   low: boolean;
+  /** Stock illimité (verres fabriqués sur commande). */
+  unlimited?: boolean;
 }
 
 export async function getStock(branchId: string, lowStockOnly = false): Promise<StockRow[]> {

@@ -578,7 +578,10 @@ function QuoteModal({
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-content">{p.name}</p>
-                      <p className="text-xs text-content-faint">Stock : {p.quantity}</p>
+                      <p className="font-mono text-[11px] text-content-faint">{p.sku}</p>
+                      <p className="text-xs text-content-faint">
+                        {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
+                      </p>
                     </div>
                     <span className="ml-2 shrink-0 font-semibold text-primary">{formatCurrency(p.sellPrice)}</span>
                   </button>

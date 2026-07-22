@@ -1340,6 +1340,11 @@ export type LensProductInput = z.infer<typeof lensProductSchema>;
  */
 export const MADE_TO_ORDER_CATEGORIES = ['VERRE'] as const;
 
+/** Vrai pour les catégories fabriquées sur commande (stock illimité, non bloquant). */
+export function isMadeToOrderCategory(category: string): boolean {
+  return (MADE_TO_ORDER_CATEGORIES as readonly string[]).includes(category);
+}
+
 /* ---------------- Modèles de messages WhatsApp (par étape de vente) ---------------- */
 
 /** Étapes du parcours de vente pour lesquelles un message peut être envoyé. */

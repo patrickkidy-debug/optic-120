@@ -79,13 +79,17 @@ export function StockPage() {
                     {formatCurrency(r.sellPrice)}
                   </td>
                   <td className="table-cell text-center">
-                    <span className="font-display text-lg font-bold text-content">{r.quantity}</span>
+                    {r.unlimited ? (
+                      <span className="text-sm font-semibold text-content-muted">Illimité</span>
+                    ) : (
+                      <span className="font-display text-lg font-bold text-content">{r.quantity}</span>
+                    )}
                   </td>
-                  <td className="table-cell text-center text-content-muted">{r.minAlert}</td>
+                  <td className="table-cell text-center text-content-muted">{r.unlimited ? '—' : r.minAlert}</td>
                   <td className="table-cell">
                     <div className="flex items-center justify-end gap-2">
                       {r.low && <Badge tone="danger">{t('stock.lowBadge')}</Badge>}
-                      {canAdjust && (
+                      {canAdjust && !r.unlimited && (
                         <button onClick={() => setEditing(r)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <SlidersHorizontal className="h-3.5 w-3.5" /> Ajuster
                         </button>

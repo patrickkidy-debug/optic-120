@@ -12,6 +12,7 @@ import {
   LENS_INDICES,
   lensLabel,
   DEFAULT_LENS_PRICING,
+  isMadeToOrderCategory,
   type LensTreatmentKey,
 } from '@oculo/shared-types';
 import {
@@ -178,7 +179,9 @@ export function ProductsPage() {
                     {formatCurrency(Number(p.sellPrice))}
                   </td>
                   <td className="table-cell text-center">
-                    {(() => {
+                    {isMadeToOrderCategory(p.category) ? (
+                      <span className="text-xs font-semibold text-content-muted">Illimité</span>
+                    ) : (() => {
                       const r = rowFor(p);
                       const content = (
                         <span className="inline-flex items-center gap-1.5">
@@ -460,7 +463,8 @@ function ProductModal({
         : values;
       const saved = product ? await updateProduct(product.id, withAttrs) : await createProduct(withAttrs);
       // Appliquer le stock du magasin actif si la quantité ou le seuil ont changé.
-      if (branchId) {
+      // (Pas pour les verres : stock illimité.)
+      if (branchId && !isLens) {
         const currentQty = stockRow?.quantity ?? 0;
         const currentAlert = stockRow?.minAlert ?? 0;
         const delta = qty - currentQty;
@@ -654,8 +658,9 @@ function ProductModal({
           </Field>
         </div>
 
-        {/* Stock du magasin actif : quantité initiale (ou courante) + seuil d'alerte. */}
-        {branchId && (
+        {/* Stock du magasin actif : quantité initiale (ou courante) + seuil d'alerte.
+            Masqué pour les verres (stock illimité, fabriqués sur commande). */}
+        {branchId && !isLens && (
           <div className="rounded-xl border border-line bg-surface-2/40 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
               Stock — magasin actif
