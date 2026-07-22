@@ -11,7 +11,29 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { Banknote, TrendingUp, ShoppingBag, AlertTriangle, Receipt, Building2, Trophy, Wallet, Users, Package, ArrowUp, ArrowDown, UserPlus, ShoppingCart, type LucideIcon } from 'lucide-react';
+import {
+  Banknote,
+  TrendingUp,
+  ShoppingBag,
+  AlertTriangle,
+  Receipt,
+  Building2,
+  Trophy,
+  Wallet,
+  Users,
+  Package,
+  ArrowUp,
+  ArrowDown,
+  UserPlus,
+  ShoppingCart,
+  Sparkles,
+  Coffee,
+  Sun,
+  Moon,
+  Sunrise,
+  Flame,
+  type LucideIcon,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
@@ -21,6 +43,106 @@ import { ForecastPanel } from '../components/ForecastPanel';
 import { formatCurrency, formatDateTime } from '../lib/format';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
+
+interface Motivation {
+  text: string;
+  icon: LucideIcon;
+  color: string;
+}
+
+function getMotivationMessage(salesCount: number, revenue: number): Motivation {
+  const hour = new Date().getHours();
+  let timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night' = 'morning';
+
+  if (hour >= 5 && hour < 12) {
+    timeOfDay = 'morning';
+  } else if (hour >= 12 && hour < 18) {
+    timeOfDay = 'afternoon';
+  } else if (hour >= 18 && hour < 22) {
+    timeOfDay = 'evening';
+  } else {
+    timeOfDay = 'night';
+  }
+
+  let progress: 'empty' | 'normal' | 'great' = 'empty';
+  if (salesCount === 0) {
+    progress = 'empty';
+  } else if (salesCount <= 3) {
+    progress = 'normal';
+  } else {
+    progress = 'great';
+  }
+
+  const dayOfMonth = new Date().getDate();
+
+  const messages: Record<
+    typeof timeOfDay,
+    Record<typeof progress, Motivation[]>
+  > = {
+    morning: {
+      empty: [
+        { text: "Une nouvelle journée commence ! Préparez le terrain pour le succès avec votre plus beau sourire. ☀️", icon: Sunrise, color: "text-amber-500" },
+        { text: "Chaque matin est une page blanche. Remplissons-la de belles réussites aujourd'hui ! 🚀", icon: Sparkles, color: "text-violet-500" },
+        { text: "Le café est chaud, l'énergie est là. Excellente journée de ventes à vous ! ☕", icon: Coffee, color: "text-amber-700" }
+      ],
+      normal: [
+        { text: `Déjà de belles réalisations ce matin ! On continue sur ce rythme dynamique ! 🚀`, icon: Sparkles, color: "text-violet-500" },
+        { text: `La journée démarre bien avec déjà ${salesCount} vente(s) ! Continuez sur cette belle lancée ! ✨`, icon: Sunrise, color: "text-amber-500" }
+      ],
+      great: [
+        { text: `Quel départ foudroyant ! Déjà ${salesCount} ventes ce matin, vous êtes inarrêtables ! 🔥`, icon: Flame, color: "text-rose-500" },
+        { text: `Une matinée exceptionnelle avec ${salesCount} ventes ! L'équipe est en feu ! 🏆`, icon: Trophy, color: "text-yellow-500" }
+      ]
+    },
+    afternoon: {
+      empty: [
+        { text: "Gardez le sourire ! Le prochain client sera peut-être la plus belle surprise de la journée. 🎯", icon: Sparkles, color: "text-violet-500" },
+        { text: "La patience et la persévérance ouvrent toutes les portes. Restez concentrés, l'opportunité arrive ! 💪", icon: Sun, color: "text-amber-500" },
+        { text: "Une après-midi dynamique s'annonce. Votre énergie fait toute la différence ! 🌟", icon: Sparkles, color: "text-teal-500" }
+      ],
+      normal: [
+        { text: `Le compteur tourne ! Félicitations pour ces ${salesCount} ventes, la journée continue ! 🌟`, icon: Sparkles, color: "text-teal-500" },
+        { text: `Bon travail ! ${salesCount} ventes enregistrées aujourd'hui. On garde le cap ! 👍`, icon: Sun, color: "text-amber-500" }
+      ],
+      great: [
+        { text: `Quelle performance incroyable ! ${salesCount} ventes réalisées pour un chiffre d'affaires de ${formatCurrency(revenue)}. Bravo ! 🏆`, icon: Trophy, color: "text-yellow-500" },
+        { text: `Rien ne vous arrête aujourd'hui ! ${salesCount} ventes à votre actif. Continuez à briller ! 🔥`, icon: Flame, color: "text-rose-500" }
+      ]
+    },
+    evening: {
+      empty: [
+        { text: "La journée se termine doucement. Prenez le temps de soigner vos derniers contacts, chaque détail compte. ✨", icon: Moon, color: "text-indigo-400" },
+        { text: "Même les journées calmes préparent les grands succès de demain. Bravo pour votre présence et votre constance ! 🧘", icon: Sparkles, color: "text-indigo-400" }
+      ],
+      normal: [
+        { text: `Une belle journée productive s'achève avec ${salesCount} ventes. Bravo pour vos efforts ! 👏`, icon: Moon, color: "text-indigo-400" },
+        { text: `Bravo pour cette journée de travail ! ${salesCount} ventes bien méritées au compteur. 🌟`, icon: Sparkles, color: "text-indigo-400" }
+      ],
+      great: [
+        { text: `Quelle magnifique moisson ! ${salesCount} ventes aujourd'hui, c'est une véritable réussite collective. Félicitations ! 🎉`, icon: Trophy, color: "text-yellow-500" },
+        { text: `Une journée mémorable se termine en beauté avec ${salesCount} ventes et un CA de ${formatCurrency(revenue)} ! Chapeau bas ! 👑`, icon: Flame, color: "text-rose-500" }
+      ]
+    },
+    night: {
+      empty: [
+        { text: "Le calme de la nuit est propice au repos. Rechargez vos batteries pour briller à nouveau demain ! 🔋", icon: Moon, color: "text-indigo-400" },
+        { text: "Une journée s'éteint, une autre se prépare. Reposez-vous bien ! 🌙", icon: Moon, color: "text-indigo-400" }
+      ],
+      normal: [
+        { text: `Les ventes tardives témoignent de votre dévouement. Chapeau bas pour l'effort fourni ! 🎖️`, icon: Moon, color: "text-indigo-400" },
+        { text: `Journée terminée avec ${salesCount} ventes. C'est l'heure de se reposer l'esprit tranquille. 🛌`, icon: Moon, color: "text-indigo-400" }
+      ],
+      great: [
+        { text: `Exceptionnel jusqu'au bout ! Une journée mémorable avec ${salesCount} ventes. Repos bien mérité pour des champions ! 👑`, icon: Trophy, color: "text-yellow-500" },
+        { text: `Victoire ! Une journée grandiose de ${salesCount} ventes. Dormez sur vos deux oreilles, vous avez assuré ! 🏆`, icon: Flame, color: "text-rose-500" }
+      ]
+    }
+  };
+
+  const list = messages[timeOfDay][progress];
+  const index = dayOfMonth % list.length;
+  return list[index];
+}
 
 const METHOD_LABELS: Record<string, string> = {
   CASH: 'Espèces',
@@ -218,9 +340,18 @@ function TopProductsCard({
 function DashboardSkeleton({ welcome, title }: { welcome: string; title: string }) {
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold text-content">{welcome} 👋</h1>
-        <p className="mt-1 text-sm text-content-muted">{title}</p>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-content">{welcome} 👋</h1>
+          <p className="mt-1 text-sm text-content-muted">{title}</p>
+        </div>
+        <div className="flex w-full max-w-lg items-center gap-3 rounded-2xl border border-surface-3 bg-surface-2/50 p-3.5 animate-pulse">
+          <div className="h-9 w-9 shrink-0 rounded-xl bg-surface-3" />
+          <div className="w-full space-y-2">
+            <div className="h-2 w-24 rounded bg-surface-3" />
+            <div className="h-3.5 w-4/5 rounded bg-surface-3" />
+          </div>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -308,13 +439,29 @@ export function DashboardPage() {
     ],
   };
 
+  const motivation = getMotivationMessage(data.todaySalesCount ?? 0, data.todayRevenue ?? 0);
+  const MotivationIcon = motivation.icon;
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold text-content">
-          {t('dashboard.welcome')}, {user?.firstName} 👋
-        </h1>
-        <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-content">
+            {t('dashboard.welcome')}, {user?.firstName} 👋
+          </h1>
+          <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
+        </div>
+        <div className="flex max-w-lg items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent p-3.5 shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500">
+          <span className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 shadow-sm", motivation.color)}>
+            <MotivationIcon className="h-5 w-5 animate-pulse" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">Inspiration du moment</p>
+            <p className="mt-0.5 text-xs md:text-sm font-medium text-content italic leading-relaxed">
+              "{motivation.text}"
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* KPI principaux */}
