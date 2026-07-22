@@ -7,12 +7,13 @@ import {
   computeLensPrice,
   lensSku,
   lensLabel,
+  lensBaseOptions,
   DEFAULT_LENS_PRICING,
   type LensPricing,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, requireAnyPermission } from '../../middlewares/rbac-guard.js';
-import { notFound, conflict } from '../../lib/http-error.js';
+import { notFound, conflict, badRequest } from '../../lib/http-error.js';
 
 /** Préfixe de référence auto-générée par catégorie (quand aucune n'est saisie). */
 const SKU_PREFIX: Record<string, string> = {
@@ -129,9 +130,13 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     const tenantId = req.auth!.tenantId;
     const tenant = await req.db!.tenant.findUnique({ where: { id: tenantId }, select: { lensPricing: true } });
     const pricing = (tenant?.lensPricing as LensPricing | null) ?? DEFAULT_LENS_PRICING;
+    // Le type de base doit exister dans le barème (fixe ou personnalisé).
+    if (!lensBaseOptions(pricing).some((o) => o.key === base)) {
+      throw badRequest('Type de verre inconnu');
+    }
     const price = computeLensPrice(pricing, base, treatments);
     const sku = lensSku(base, treatments);
-    const name = lensLabel(base, treatments);
+    const name = lensLabel(pricing, base, treatments);
     const attributes = { lensBase: base, treatments };
     const product = await req.db!.product.upsert({
       where: { tenantId_sku: { tenantId, sku } },

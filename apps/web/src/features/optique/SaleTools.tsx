@@ -6,10 +6,9 @@ import { Search, X, UserPlus, Glasses, Plus } from 'lucide-react';
 import {
   customerCreateSchema,
   type CustomerCreateInput,
-  LENS_BASES,
+  lensBaseOptions,
   LENS_TREATMENTS,
   computeLensPrice,
-  type LensBaseKey,
   type LensTreatmentKey,
   type LensPricing,
 } from '@oculo/shared-types';
@@ -186,13 +185,13 @@ export function LensComposer({
   pricing: LensPricing;
   onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number }) => void;
 }) {
-  const [base, setBase] = useState<LensBaseKey | ''>('');
+  const [base, setBase] = useState<string>('');
   const [treatments, setTreatments] = useState<LensTreatmentKey[]>([]);
   const [error, setError] = useState('');
   const price = base ? computeLensPrice(pricing, base, treatments) : 0;
 
   const mut = useMutation({
-    mutationFn: () => ensureLensProduct({ base: base as LensBaseKey, treatments }),
+    mutationFn: () => ensureLensProduct({ base, treatments }),
     onSuccess: (p) => {
       onAdd({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice) });
       setBase('');
@@ -207,15 +206,11 @@ export function LensComposer({
       <div className="flex items-center gap-2 text-sm font-semibold text-content">
         <Glasses className="h-4 w-4 text-primary" /> Verre sur mesure
       </div>
-      <select
-        className="input"
-        value={base}
-        onChange={(e) => setBase((e.target.value || '') as LensBaseKey | '')}
-      >
+      <select className="input" value={base} onChange={(e) => setBase(e.target.value)}>
         <option value="">— Type de verre —</option>
-        {LENS_BASES.map((b) => (
+        {lensBaseOptions(pricing).map((b) => (
           <option key={b.key} value={b.key}>
-            {b.label} — {formatCurrency(pricing[b.key])}
+            {b.label} — {formatCurrency(b.price)}
           </option>
         ))}
       </select>

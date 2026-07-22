@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import JsBarcode from 'jsbarcode';
 import { Printer, Barcode as BarcodeIcon } from 'lucide-react';
-import { LENS_BASES, lensLabel, lensSku, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
+import { lensBaseOptions, lensLabel, lensSku, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listProducts, type Product } from '../../features/optique/api';
 import { useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, PageLoader, EmptyState } from '../../components/ui';
@@ -50,11 +50,11 @@ export function LabelsPage() {
   const montures: Product[] = data?.items ?? [];
 
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
-  // Un seul étiquetage par type de verre (barème des Réglages), pas par produit.
-  const lensTypes = LENS_BASES.map((b) => ({
-    name: lensLabel(b.key, []),
+  // Un seul étiquetage par type de verre (fixes + personnalisés), pas par produit.
+  const lensTypes = lensBaseOptions(pricing).map((b) => ({
+    name: lensLabel(pricing, b.key, []),
     code: lensSku(b.key, []),
-    price: pricing[b.key],
+    price: b.price,
   }));
 
   const nothing = montures.length === 0 && lensTypes.length === 0;

@@ -1213,6 +1213,14 @@ export type InvoiceSettings = z.infer<typeof invoiceSettingsSchema>;
  * commandes de verres). Prix par verre, en devise de l'établissement. Les
  * indices d'amincissement restent des multiplicateurs physiques, non modifiés.
  */
+/** Type de verre personnalisé ajouté par l'établissement (nom + prix libres). */
+export const lensCustomTypeSchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().min(1).max(60),
+  price: z.number().nonnegative(),
+});
+export type LensCustomType = z.infer<typeof lensCustomTypeSchema>;
+
 export const lensPricingSchema = z
   .object({
     unifocal: z.number().nonnegative(),
@@ -1222,6 +1230,8 @@ export const lensPricingSchema = z
     blue: z.number().nonnegative(),
     photo: z.number().nonnegative(),
     hard: z.number().nonnegative(),
+    // Types de verres ajoutés manuellement par l'établissement (Réglages).
+    customTypes: z.array(lensCustomTypeSchema).max(50).optional(),
   })
   .strict();
 export type LensPricing = z.infer<typeof lensPricingSchema>;
@@ -1260,18 +1270,41 @@ export const LENS_TREATMENTS = [
 ] as const;
 export type LensTreatmentKey = (typeof LENS_TREATMENTS)[number]['key'];
 
+/**
+ * Tous les types de verres disponibles = 3 types fixes + types personnalisés
+ * de l'établissement (Réglages). Sert à peupler les listes déroulantes partout.
+ */
+export function lensBaseOptions(pricing: LensPricing): { key: string; label: string; price: number }[] {
+  const fixed = LENS_BASES.map((b) => ({ key: b.key, label: b.label, price: pricing[b.key] ?? 0 }));
+  const custom = (pricing.customTypes ?? []).map((c) => ({ key: c.id, label: c.name, price: c.price }));
+  return [...fixed, ...custom];
+}
+
+/** Prix d'un type de base (fixe ou personnalisé). */
+export function lensBasePrice(pricing: LensPricing, base: string): number {
+  if (LENS_BASES.some((b) => b.key === base)) return pricing[base as LensBaseKey] ?? 0;
+  return (pricing.customTypes ?? []).find((c) => c.id === base)?.price ?? 0;
+}
+
+/** Libellé d'un type de base (fixe ou personnalisé). */
+export function lensBaseLabel(pricing: LensPricing, base: string): string {
+  const fixed = LENS_BASES.find((b) => b.key === base);
+  if (fixed) return fixed.label;
+  return (pricing.customTypes ?? []).find((c) => c.id === base)?.name ?? base;
+}
+
 /** Prix d'un verre = prix du type de base + somme des traitements choisis. */
 export function computeLensPrice(
   pricing: LensPricing,
-  base: LensBaseKey,
+  base: string,
   treatments: LensTreatmentKey[],
 ): number {
-  return Math.round(treatments.reduce((sum, t) => sum + (pricing[t] ?? 0), pricing[base] ?? 0));
+  return Math.round(treatments.reduce((sum, t) => sum + (pricing[t] ?? 0), lensBasePrice(pricing, base)));
 }
 
 /** Libellé lisible d'un verre configuré, ex. « Verre progressif · anti-reflet + photochromique ». */
-export function lensLabel(base: LensBaseKey, treatments: LensTreatmentKey[]): string {
-  const baseLabel = LENS_BASES.find((b) => b.key === base)?.label ?? base;
+export function lensLabel(pricing: LensPricing, base: string, treatments: LensTreatmentKey[]): string {
+  const baseLabel = lensBaseLabel(pricing, base);
   const treats = treatments
     .map((t) => LENS_TREATMENTS.find((x) => x.key === t)?.label ?? t)
     .join(' + ');
@@ -1279,14 +1312,15 @@ export function lensLabel(base: LensBaseKey, treatments: LensTreatmentKey[]): st
 }
 
 /** Référence déterministe d'un verre configuré (upsert idempotent côté serveur). */
-export function lensSku(base: LensBaseKey, treatments: LensTreatmentKey[]): string {
+export function lensSku(base: string, treatments: LensTreatmentKey[]): string {
+  const clean = base.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const suffix = [...treatments].sort().join('-');
-  return suffix ? `VERRE-${base.toUpperCase()}-${suffix.toUpperCase()}` : `VERRE-${base.toUpperCase()}`;
+  return suffix ? `VERRE-${clean}-${suffix.toUpperCase()}` : `VERRE-${clean}`;
 }
 
-/** Requête de configuration d'un verre (caisse/ventes). */
+/** Requête de configuration d'un verre (caisse/ventes). Base = type fixe ou personnalisé. */
 export const lensProductSchema = z.object({
-  base: z.enum(['unifocal', 'progressif', 'degressif']),
+  base: z.string().min(1).max(40),
   treatments: z.array(z.enum(['ar', 'blue', 'photo', 'hard'])).default([]),
 });
 export type LensProductInput = z.infer<typeof lensProductSchema>;

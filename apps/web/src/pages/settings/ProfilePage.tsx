@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -561,7 +561,7 @@ function LensPricingCard() {
     if (branding?.lensPricing) setP({ ...DEFAULT_LENS_PRICING, ...branding.lensPricing });
   }, [branding]);
 
-  const field = (key: keyof LensPricing, label: string) => (
+  const field = (key: Exclude<keyof LensPricing, 'customTypes'>, label: string) => (
     <Field label={label}>
       <input
         type="number"
@@ -573,10 +573,32 @@ function LensPricingCard() {
     </Field>
   );
 
+  const custom = p.customTypes ?? [];
+  function addCustom() {
+    const id = `custom-${Math.random().toString(36).slice(2, 8)}`;
+    setP((prev) => ({ ...prev, customTypes: [...(prev.customTypes ?? []), { id, name: '', price: 0 }] }));
+  }
+  function updateCustom(id: string, patch: Partial<{ name: string; price: number }>) {
+    setP((prev) => ({
+      ...prev,
+      customTypes: (prev.customTypes ?? []).map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+  }
+  function removeCustom(id: string) {
+    setP((prev) => ({ ...prev, customTypes: (prev.customTypes ?? []).filter((c) => c.id !== id) }));
+  }
+
   async function save() {
     setBusy(true);
     try {
-      await updateBranding({ lensPricing: p });
+      // On ne garde que les types personnalisés réellement nommés.
+      const clean: LensPricing = {
+        ...p,
+        customTypes: (p.customTypes ?? [])
+          .map((c) => ({ ...c, name: c.name.trim() }))
+          .filter((c) => c.name.length > 0),
+      };
+      await updateBranding({ lensPricing: clean });
       qc.invalidateQueries({ queryKey: ['branding'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -606,6 +628,54 @@ function LensPricingCard() {
         {field('photo', 'Photochromique')}
         {field('hard', 'Durci anti-rayures')}
       </div>
+
+      {/* Types de verres ajoutés manuellement par l'établissement. */}
+      <div className="mt-5 border-t pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
+            Vos types de verres
+          </p>
+          <Button variant="outline" onClick={addCustom} className="h-8 px-2.5 text-xs">
+            <Plus className="h-3.5 w-3.5" /> Ajouter un type
+          </Button>
+        </div>
+        {custom.length === 0 ? (
+          <p className="text-xs text-content-faint">
+            Ajoutez vos propres types de verres (ex : Bifocal, Mi-distance, Solaire correcteur…). Ils
+            apparaîtront à la caisse, en devis, dans le catalogue et sur les étiquettes.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {custom.map((c) => (
+              <div key={c.id} className="flex items-center gap-2">
+                <input
+                  className="input flex-1"
+                  placeholder="Nom du type (ex : Bifocal)"
+                  value={c.name}
+                  onChange={(e) => updateCustom(c.id, { name: e.target.value })}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  className="input w-32 text-right"
+                  placeholder="Prix"
+                  value={c.price}
+                  onChange={(e) => updateCustom(c.id, { price: Number(e.target.value) || 0 })}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeCustom(c.id)}
+                  className="btn-ghost h-9 w-9 shrink-0 rounded-lg p-0 text-danger"
+                  title="Supprimer ce type"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={save} loading={busy}>
           <Save className="h-4 w-4" /> Enregistrer

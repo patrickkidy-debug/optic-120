@@ -6,12 +6,11 @@ import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal
 import {
   productCreateSchema,
   type ProductCreateInput,
-  LENS_BASES,
+  lensBaseOptions,
   LENS_TREATMENTS,
   computeLensPrice,
   lensLabel,
   DEFAULT_LENS_PRICING,
-  type LensBaseKey,
   type LensTreatmentKey,
 } from '@oculo/shared-types';
 import {
@@ -351,12 +350,12 @@ function ProductModal({
   const pricing = user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
   const [serverError, setServerError] = useState('');
   const attrs = (product?.attributes ?? {}) as {
-    lensBase?: LensBaseKey;
+    lensBase?: string;
     treatments?: LensTreatmentKey[];
     supplier?: string;
   };
   // Attributs spécifiques aux verres, stockés dans product.attributes.
-  const [lensBase, setLensBase] = useState<LensBaseKey | ''>(attrs.lensBase ?? '');
+  const [lensBase, setLensBase] = useState<string>(attrs.lensBase ?? '');
   const [treatments, setTreatments] = useState<LensTreatmentKey[]>(attrs.treatments ?? []);
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
   const [supplierOther, setSupplierOther] = useState(false);
@@ -394,12 +393,12 @@ function ProductModal({
 
   // Barème verres : type de base + traitements → prix de vente synchronisé
   // depuis les Réglages. Nom pré-rempli si vide.
-  function applyLens(base: LensBaseKey | '', treats: LensTreatmentKey[]) {
+  function applyLens(base: string, treats: LensTreatmentKey[]) {
     setLensBase(base);
     setTreatments(treats);
     if (base) {
       setValue('sellPrice', computeLensPrice(pricing, base, treats), { shouldValidate: true });
-      if (!getValues('name')?.trim()) setValue('name', lensLabel(base, treats));
+      if (!getValues('name')?.trim()) setValue('name', lensLabel(pricing, base, treats));
     }
   }
   function toggleTreatment(k: LensTreatmentKey) {
@@ -502,12 +501,12 @@ function ProductModal({
               <select
                 className="input"
                 value={lensBase}
-                onChange={(e) => applyLens((e.target.value || '') as LensBaseKey | '', treatments)}
+                onChange={(e) => applyLens(e.target.value, treatments)}
               >
                 <option value="">— Choisir —</option>
-                {LENS_BASES.map((b) => (
+                {lensBaseOptions(pricing).map((b) => (
                   <option key={b.key} value={b.key}>
-                    {b.label} — {formatCurrency(pricing[b.key])}
+                    {b.label} — {formatCurrency(b.price)}
                   </option>
                 ))}
               </select>
