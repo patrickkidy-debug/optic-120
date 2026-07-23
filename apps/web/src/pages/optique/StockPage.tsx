@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Boxes, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
@@ -6,7 +6,7 @@ import { getStock, adjustStock, type StockRow } from '../../features/optique/api
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
 const CATEGORIES = [
@@ -34,6 +34,32 @@ export function StockPage() {
     enabled: Boolean(branchId),
   });
 
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
+      MONTURE: { count: 0, totalStock: 0, lastCreated: null },
+      VERRE: { count: 0, totalStock: 0, lastCreated: null },
+      LENTILLE: { count: 0, totalStock: 0, lastCreated: null },
+      ACCESSOIRE: { count: 0, totalStock: 0, lastCreated: null },
+      SERVICE: { count: 0, totalStock: 0, lastCreated: null },
+    };
+
+    const items = data ?? [];
+    items.forEach((r) => {
+      const cat = r.category;
+      if (stats[cat]) {
+        stats[cat].count++;
+        stats[cat].totalStock += r.quantity;
+        if (r.createdAt) {
+          if (!stats[cat].lastCreated || r.createdAt > stats[cat].lastCreated) {
+            stats[cat].lastCreated = r.createdAt;
+          }
+        }
+      }
+    });
+
+    return stats;
+  }, [data]);
+
   const rows = (data ?? []).filter(
     (r) =>
       (!category || r.category === category) &&
@@ -44,6 +70,42 @@ export function StockPage() {
   return (
     <div>
       <PageHeader title={t('stock.title')} subtitle={t('stock.subtitle')} />
+
+      {/* Visual Category Dashboard Cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+        {CATEGORIES.map((c) => {
+          const stats = categoryStats[c.value] || { count: 0, totalStock: 0, lastCreated: null };
+          const isActive = category === c.value;
+          return (
+            <div
+              key={c.value}
+              onClick={() => setCategory(isActive ? '' : c.value)}
+              className={`card cursor-pointer p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-md ${
+                isActive ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'hover:border-primary-soft'
+              }`}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">{c.label}</p>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="font-display text-2xl font-bold text-content">
+                  {stats.count} <span className="text-xs font-normal text-content-muted">réf(s)</span>
+                </span>
+                {c.value !== 'VERRE' && c.value !== 'SERVICE' && (
+                  <span className="text-xs font-semibold text-content-muted">
+                    {stats.totalStock} en stock
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-[10px] text-content-faint">
+                {stats.lastCreated ? (
+                  <>Dernier enreg. : <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
+                ) : (
+                  'Aucun produit enregistré'
+                )}
+              </p>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
@@ -94,6 +156,7 @@ export function StockPage() {
                 <th className="table-cell text-right font-semibold">{t('common.price')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.quantity')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.threshold')}</th>
+                <th className="table-cell text-right font-semibold">Enregistré le</th>
                 <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -118,6 +181,9 @@ export function StockPage() {
                     )}
                   </td>
                   <td className="table-cell text-center text-content-muted">{r.unlimited ? '—' : r.minAlert}</td>
+                  <td className="table-cell text-right text-content-muted">
+                    {r.createdAt ? formatDateTime(r.createdAt) : '—'}
+                  </td>
                   <td className="table-cell">
                     <div className="flex items-center justify-end gap-2">
                       {r.low && <Badge tone="danger">{t('stock.lowBadge')}</Badge>}

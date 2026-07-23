@@ -29,7 +29,7 @@ import { listSuppliers } from '../../features/management/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
 const CATEGORIES = [
@@ -56,8 +56,8 @@ export function ProductsPage() {
   const [adjusting, setAdjusting] = useState<StockRow | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['products', search, category],
-    queryFn: () => listProducts({ search: search || undefined, category: category || undefined }),
+    queryKey: ['products', search],
+    queryFn: () => listProducts({ search: search || undefined, pageSize: 100 }),
   });
 
   // Quantités du magasin actif, indexées par produit, pour ajuster sans quitter le catalogue.
@@ -66,6 +66,45 @@ export function ProductsPage() {
     queryFn: () => getStock(branchId!, false),
     enabled: Boolean(branchId),
   });
+
+  const filteredProducts = useMemo(() => {
+    return (data?.items ?? []).filter((p) => !category || p.category === category);
+  }, [data?.items, category]);
+
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
+      MONTURE: { count: 0, totalStock: 0, lastCreated: null },
+      VERRE: { count: 0, totalStock: 0, lastCreated: null },
+      LENTILLE: { count: 0, totalStock: 0, lastCreated: null },
+      ACCESSOIRE: { count: 0, totalStock: 0, lastCreated: null },
+      SERVICE: { count: 0, totalStock: 0, lastCreated: null },
+    };
+
+    const items = data?.items ?? [];
+    items.forEach((p) => {
+      const cat = p.category;
+      if (stats[cat]) {
+        stats[cat].count++;
+        if (p.createdAt) {
+          if (!stats[cat].lastCreated || p.createdAt > stats[cat].lastCreated) {
+            stats[cat].lastCreated = p.createdAt;
+          }
+        }
+      }
+    });
+
+    if (stock) {
+      stock.forEach((s) => {
+        const cat = s.category;
+        if (stats[cat]) {
+          stats[cat].totalStock += s.quantity;
+        }
+      });
+    }
+
+    return stats;
+  }, [data?.items, stock]);
+
   const stockByProduct = useMemo(() => {
     const m = new Map<string, StockRow>();
     (stock ?? []).forEach((r) => m.set(r.productId, r));
@@ -117,6 +156,42 @@ export function ProductsPage() {
         }
       />
 
+      {/* Visual Category Dashboard Cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+        {CATEGORIES.map((c) => {
+          const stats = categoryStats[c.value] || { count: 0, totalStock: 0, lastCreated: null };
+          const isActive = category === c.value;
+          return (
+            <div
+              key={c.value}
+              onClick={() => setCategory(isActive ? '' : c.value)}
+              className={`card cursor-pointer p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-md ${
+                isActive ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'hover:border-primary-soft'
+              }`}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">{c.label}</p>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="font-display text-2xl font-bold text-content">
+                  {stats.count} <span className="text-xs font-normal text-content-muted">réf(s)</span>
+                </span>
+                {c.value !== 'VERRE' && c.value !== 'SERVICE' && (
+                  <span className="text-xs font-semibold text-content-muted">
+                    {stats.totalStock} en stock
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-[10px] text-content-faint">
+                {stats.lastCreated ? (
+                  <>Dernier enreg. : <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
+                ) : (
+                  'Aucun produit enregistré'
+                )}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
@@ -157,56 +232,65 @@ export function ProductsPage() {
         />
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Produit</th>
-                <th className="table-cell font-semibold">Référence</th>
-                <th className="table-cell font-semibold">Catégorie</th>
-                <th className="table-cell text-right font-semibold">Prix de vente</th>
-                <th className="table-cell text-center font-semibold">Stock</th>
-                <th className="table-cell text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((p) => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
-                  <td className="table-cell">
-                    <div className="font-medium text-content">{p.name}</div>
-                    {p.brand && <div className="text-xs text-content-faint">{p.brand}</div>}
-                  </td>
-                  <td className="table-cell font-mono text-xs text-content-muted">{p.sku}</td>
-                  <td className="table-cell">
-                    <Badge tone="info">{catLabel(p.category)}</Badge>
-                  </td>
-                  <td className="table-cell text-right font-semibold text-content">
-                    {formatCurrency(Number(p.sellPrice))}
-                  </td>
-                  <td className="table-cell text-center">
-                    {isMadeToOrderCategory(p.category) ? (
-                      <span className="text-xs font-semibold text-content-muted">Illimité</span>
-                    ) : (() => {
-                      const r = rowFor(p);
-                      const content = (
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="font-display text-base font-bold text-content">{r.quantity}</span>
-                          {r.low && <Badge tone="danger">Bas</Badge>}
-                        </span>
-                      );
-                      return canAdjust && branchId ? (
-                        <button
-                          onClick={() => setAdjusting(r)}
-                          className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
-                          title="Ajuster la quantité"
-                        >
-                          {content}
-                          <SlidersHorizontal className="h-3.5 w-3.5 text-content-faint" />
-                        </button>
-                      ) : (
-                        content
-                      );
-                    })()}
-                  </td>
+          {filteredProducts.length === 0 ? (
+            <div className="p-8 text-center text-sm text-content-muted">
+              Aucun produit trouvé dans cette catégorie.
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                  <th className="table-cell font-semibold">Produit</th>
+                  <th className="table-cell font-semibold">Référence</th>
+                  <th className="table-cell font-semibold">Catégorie</th>
+                  <th className="table-cell text-right font-semibold">Prix de vente</th>
+                  <th className="table-cell text-center font-semibold">Stock</th>
+                  <th className="table-cell text-right font-semibold">Enregistré le</th>
+                  <th className="table-cell text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p) => (
+                  <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
+                    <td className="table-cell">
+                      <div className="font-medium text-content">{p.name}</div>
+                      {p.brand && <div className="text-xs text-content-faint">{p.brand}</div>}
+                    </td>
+                    <td className="table-cell font-mono text-xs text-content-muted">{p.sku}</td>
+                    <td className="table-cell">
+                      <Badge tone="info">{catLabel(p.category)}</Badge>
+                    </td>
+                    <td className="table-cell text-right font-semibold text-content">
+                      {formatCurrency(Number(p.sellPrice))}
+                    </td>
+                    <td className="table-cell text-center">
+                      {isMadeToOrderCategory(p.category) ? (
+                        <span className="text-xs font-semibold text-content-muted">Illimité</span>
+                      ) : (() => {
+                        const r = rowFor(p);
+                        const content = (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="font-display text-base font-bold text-content">{r.quantity}</span>
+                            {r.low && <Badge tone="danger">Bas</Badge>}
+                          </span>
+                        );
+                        return canAdjust && branchId ? (
+                          <button
+                            onClick={() => setAdjusting(r)}
+                            className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
+                            title="Ajuster la quantité"
+                          >
+                            {content}
+                            <SlidersHorizontal className="h-3.5 w-3.5 text-content-faint" />
+                          </button>
+                        ) : (
+                          content
+                        );
+                      })()}
+                    </td>
+                    <td className="table-cell text-right text-content-muted">
+                      {p.createdAt ? formatDateTime(p.createdAt) : '—'}
+                    </td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
                       {canUpdate && (
@@ -230,6 +314,7 @@ export function ProductsPage() {
               ))}
             </tbody>
           </table>
+        )}
         </div>
       )}
 

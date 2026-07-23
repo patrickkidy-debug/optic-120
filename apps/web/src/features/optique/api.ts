@@ -37,9 +37,10 @@ export interface Product {
   isActive: boolean;
   /** Attributs libres (ex. type de verre + fournisseur pour la catégorie VERRE). */
   attributes?: Record<string, unknown> | null;
+  createdAt?: string;
 }
 
-export async function listProducts(params: { search?: string; category?: string } = {}) {
+export async function listProducts(params: { search?: string; category?: string; page?: number; pageSize?: number } = {}) {
   const { data } = await api.get<{ items: Product[]; total: number }>('/products', { params });
   return data;
 }
@@ -77,6 +78,7 @@ export interface StockRow {
   low: boolean;
   /** Stock illimité (verres fabriqués sur commande). */
   unlimited?: boolean;
+  createdAt?: string;
 }
 
 export async function getStock(branchId: string, lowStockOnly = false): Promise<StockRow[]> {

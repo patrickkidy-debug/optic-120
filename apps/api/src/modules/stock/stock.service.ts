@@ -89,6 +89,7 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
       minAlert: item?.minAlert ?? 0,
       low: unlimited ? false : item ? item.quantity <= item.minAlert : false,
       unlimited,
+      createdAt: p.createdAt,
     };
   });
 
