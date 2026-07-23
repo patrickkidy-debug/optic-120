@@ -106,6 +106,19 @@ export async function updateSupplier(id: string, input: SupplierUpdateInput) {
 }
 
 // Insurers
+export interface InsurerUpcoming {
+  items: { insurerId: string; name: string; amount: number; salesCount: number }[];
+  total: number;
+  quarterStart: string;
+  dueDate: string;
+}
+
+/** Paiements trimestriels à venir des assurances (trimestre civil en cours). */
+export async function getInsurerUpcoming(): Promise<InsurerUpcoming> {
+  const { data } = await api.get<InsurerUpcoming>('/insurance/upcoming');
+  return data;
+}
+
 export async function listInsurers(): Promise<Insurer[]> {
   const { data } = await api.get<{ insurers: Insurer[] }>('/insurance');
   return data.insurers;

@@ -4,9 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ShieldCheck, Pencil } from 'lucide-react';
 import { insurerCreateSchema, type InsurerCreateInput } from '@oculo/shared-types';
-import { listInsurers, createInsurer, updateInsurer, type Insurer } from '../../features/management/api';
+import { listInsurers, createInsurer, updateInsurer, getInsurerUpcoming, type Insurer } from '../../features/management/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
 const TYPES = [
@@ -23,6 +24,9 @@ export function InsurancePage() {
   const [editing, setEditing] = useState<Insurer | null>(null);
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers });
+  // Paiements trimestriels à venir (les assurances règlent chaque trimestre).
+  const { data: upcoming } = useQuery({ queryKey: ['insurer-upcoming'], queryFn: getInsurerUpcoming });
+  const pendingFor = (id: string) => upcoming?.items.find((x) => x.insurerId === id);
 
   return (
     <div>
@@ -31,6 +35,16 @@ export function InsurancePage() {
         subtitle="Mutuelles, tiers payant et prises en charge"
         actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nouvelle assurance</Button>}
       />
+
+      {upcoming && upcoming.total > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
+          <p className="text-sm text-content">
+            <span className="font-semibold">Paiements à venir ce trimestre :</span>{' '}
+            {formatCurrency(upcoming.total)}
+          </p>
+          <Badge tone="info">Échéance : {formatDate(upcoming.dueDate)}</Badge>
+        </div>
+      )}
 
       {isLoading ? (
         <PageLoader />
@@ -55,6 +69,16 @@ export function InsurancePage() {
                 {i.phone && <p>{i.phone}</p>}
                 {i.email && <p>{i.email}</p>}
               </div>
+              {(() => {
+                const p = pendingFor(i.id);
+                return p ? (
+                  <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
+                    <span className="text-content-muted">En attente ce trimestre : </span>
+                    <span className="font-semibold text-content">{formatCurrency(p.amount)}</span>
+                    <span className="text-content-faint"> · {p.salesCount} vente(s)</span>
+                  </div>
+                ) : null;
+              })()}
               {canUpdate && (
                 <button onClick={() => { setEditing(i); setOpen(true); }} className="btn-outline mt-3 h-8 w-full rounded-lg text-xs">
                   <Pencil className="h-3.5 w-3.5" /> Modifier

@@ -47,6 +47,12 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
     const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
     if (!branch) throw notFound('Succursale introuvable');
 
+    // Assureur (prise en charge) : doit appartenir à l'établissement.
+    if (input.insurerId) {
+      const insurer = await tx.insurer.findFirst({ where: { id: input.insurerId, tenantId } });
+      if (!insurer) throw badRequest('Assureur invalide');
+    }
+
     const productIds = input.items.map((i) => i.productId);
     const products = await tx.product.findMany({
       where: { id: { in: productIds }, tenantId, isActive: true },
@@ -102,6 +108,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         discountAmount: discount,
         taxAmount,
         insuranceAmount: insurance,
+        insurerId: input.insurerId ?? null,
         totalAmount: total,
         paidAmount: paidInit,
         currency: tenant?.currency ?? 'XOF',

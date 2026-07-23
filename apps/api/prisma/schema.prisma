@@ -383,6 +383,9 @@ model Sale {
   discountAmount  Decimal    @default(0) @db.Decimal(12, 2)
   taxAmount       Decimal    @default(0) @db.Decimal(12, 2)
   insuranceAmount Decimal    @default(0) @db.Decimal(12, 2)
+  // Assureur qui prend en charge insuranceAmount (suivi des paiements trimestriels).
+  insurerId       String?
+  insurer         Insurer?   @relation(fields: [insurerId], references: [id])
   totalAmount     Decimal    @db.Decimal(12, 2)
   paidAmount      Decimal    @default(0) @db.Decimal(12, 2)
   currency        String     @default("XOF")
@@ -400,6 +403,7 @@ model Sale {
   @@index([tenantId, branchId])
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  @@index([insurerId])
 }
 
 model SaleItem {
@@ -785,6 +789,8 @@ model Insurer {
   notes           String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  sales Sale[]
 
   @@index([tenantId])
 }

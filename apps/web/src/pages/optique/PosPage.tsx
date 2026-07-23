@@ -109,6 +109,8 @@ export function PosPage() {
         items: pos.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,
+        // Trace l'assureur pour le suivi des paiements trimestriels.
+        insurerId: pos.insuranceAmount > 0 && insurerId ? insurerId : undefined,
       }),
     onSuccess: (sale, type) => {
       if (type === 'QUOTE') {
@@ -315,6 +317,7 @@ export function PosPage() {
             qc.invalidateQueries({ queryKey: ['receivables'] });
             qc.invalidateQueries({ queryKey: ['sales'] });
             qc.invalidateQueries({ queryKey: ['finance-summary'] });
+            qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
           }}
         />
       )}

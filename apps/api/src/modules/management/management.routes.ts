@@ -177,6 +177,45 @@ async function insurersRoutes(app: FastifyInstance) {
     return reply.send({ insurers });
   });
 
+  // Paiements trimestriels à venir : montants pris en charge par chaque assureur
+  // sur le trimestre civil en cours, payables au début du trimestre suivant.
+  app.get('/upcoming', { preHandler: requirePermission('insurance.view') }, async (req, reply) => {
+    const now = new Date();
+    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    const quarterStart = new Date(now.getFullYear(), qStartMonth, 1);
+    const dueDate = new Date(now.getFullYear(), qStartMonth + 3, 1);
+
+    const groups = await req.db!.sale.groupBy({
+      by: ['insurerId'],
+      where: {
+        type: SaleType.SALE,
+        status: { in: PAID_LIKE },
+        insurerId: { not: null },
+        insuranceAmount: { gt: 0 },
+        createdAt: { gte: quarterStart },
+      },
+      _sum: { insuranceAmount: true },
+      _count: { _all: true },
+    });
+    const insurers = await req.db!.insurer.findMany({ select: { id: true, name: true } });
+    const items = groups
+      .map((g) => ({
+        insurerId: g.insurerId as string,
+        name: insurers.find((i) => i.id === g.insurerId)?.name ?? '—',
+        amount: Number(g._sum.insuranceAmount ?? 0),
+        salesCount: g._count._all,
+      }))
+      .filter((x) => x.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+    return reply.send({
+      items,
+      total: items.reduce((s, x) => s + x.amount, 0),
+      quarterStart: quarterStart.toISOString(),
+      dueDate: dueDate.toISOString(),
+    });
+  });
+
   app.post('/', { preHandler: requirePermission('insurance.create') }, async (req, reply) => {
     const input = clean(insurerCreateSchema.parse(req.body));
     const insurer = await req.db!.insurer.create({

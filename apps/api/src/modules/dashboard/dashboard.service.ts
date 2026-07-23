@@ -1,4 +1,4 @@
-import { SaleStatus, SaleType } from '@oculo/shared-types';
+import { SaleStatus, SaleType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 
 function startOfToday(): Date {
@@ -35,17 +35,17 @@ export async function getDashboard(tenantId: string, branchId?: string) {
   ] = await Promise.all([
     prisma.sale.aggregate({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } },
-      _sum: { paidAmount: true, totalAmount: true },
+      _sum: { paidAmount: true, totalAmount: true, insuranceAmount: true },
     }),
     prisma.sale.aggregate({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfMonth() } },
-      _sum: { paidAmount: true, totalAmount: true },
+      _sum: { paidAmount: true, totalAmount: true, insuranceAmount: true },
     }),
     prisma.sale.count({ where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } } }),
     prisma.customer.count({ where: { tenantId } }),
     prisma.stockItem.findMany({
       where: { tenantId, ...branchFilter },
-      select: { quantity: true, minAlert: true },
+      select: { quantity: true, minAlert: true, product: { select: { category: true } } },
     }),
     prisma.sale.findMany({
       where: { tenantId, ...branchFilter },
@@ -126,12 +126,24 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     quantity: Number(g._sum.quantity ?? 0),
   }));
 
+  // Répartition du CA : part prise en charge par les assurances vs encaissé
+  // auprès des clients (paidAmount inclut la part assurance, on la soustrait).
+  const todayInsurance = Number(todayAgg._sum.insuranceAmount ?? 0);
+  const monthInsurance = Number(monthAgg._sum.insuranceAmount ?? 0);
+
   return {
     todayRevenue: Number(todayAgg._sum.paidAmount ?? 0),
     monthRevenue: Number(monthAgg._sum.paidAmount ?? 0),
+    todayInsurance,
+    monthInsurance,
+    todayCollected: Math.max(0, Number(todayAgg._sum.paidAmount ?? 0) - todayInsurance),
+    monthCollected: Math.max(0, Number(monthAgg._sum.paidAmount ?? 0) - monthInsurance),
     todaySalesCount: todayCount,
     customersCount,
-    lowStockCount: lowStockItems.filter((i) => i.quantity <= i.minAlert).length,
+    // Verres (fabriqués sur commande) exclus des alertes de stock bas.
+    lowStockCount: lowStockItems.filter(
+      (i) => !isMadeToOrderCategory(i.product.category) && i.quantity <= i.minAlert,
+    ).length,
     recentSales: recentSales.map((s) => ({
       id: s.id,
       number: s.number,

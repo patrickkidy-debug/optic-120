@@ -32,6 +32,8 @@ import {
   Moon,
   Sunrise,
   Flame,
+  ShieldCheck,
+  HandCoins,
   type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -40,7 +42,8 @@ import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
 import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
-import { formatCurrency, formatDateTime } from '../lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
+import { getInsurerUpcoming } from '../features/management/api';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
 
@@ -387,6 +390,14 @@ export function DashboardPage() {
     enabled: isAdmin,
   });
 
+  // Paiements trimestriels à venir des assurances (visible avec insurance.view).
+  const canSeeInsurers = usePermission('insurance.view');
+  const { data: insurerUpcoming } = useQuery({
+    queryKey: ['insurer-upcoming'],
+    queryFn: getInsurerUpcoming,
+    enabled: canSeeInsurers,
+  });
+
   // On affiche tout de suite l'ossature de la page (titre + cartes en attente)
   // plutôt qu'un spinner plein écran : l'accès paraît instantané, les chiffres
   // se remplissent dès que getDashboard répond.
@@ -479,6 +490,76 @@ export function DashboardPage() {
         <KpiCard icon={ShoppingBag} label={t('dashboard.todaySales')} value={String(data.todaySalesCount)} tone="accent" />
         <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
       </div>
+
+      {/* Répartition du CA : encaissé auprès des clients vs pris en charge par les assurances. */}
+      <div className="mt-6 card p-5">
+        <h3 className="mb-4 font-display font-bold text-content">
+          Chiffre d'affaires — encaissé vs assurances
+        </h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MiniStat
+            icon={HandCoins}
+            label="Encaissé clients (jour)"
+            value={formatCurrency(data.todayCollected ?? 0)}
+            tone="success"
+          />
+          <MiniStat
+            icon={ShieldCheck}
+            label="Part assurances (jour)"
+            value={formatCurrency(data.todayInsurance ?? 0)}
+            tone="accent"
+          />
+          <MiniStat
+            icon={HandCoins}
+            label="Encaissé clients (mois)"
+            value={formatCurrency(data.monthCollected ?? 0)}
+            tone="success"
+          />
+          <MiniStat
+            icon={ShieldCheck}
+            label="Part assurances (mois)"
+            value={formatCurrency(data.monthInsurance ?? 0)}
+            tone="accent"
+          />
+        </div>
+      </div>
+
+      {/* Paiements trimestriels à venir des assurances. */}
+      {canSeeInsurers && insurerUpcoming && insurerUpcoming.items.length > 0 && (
+        <div className="mt-6 card p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display font-bold text-content">
+              Paiements assurances à venir
+            </h3>
+            <Badge tone="info">
+              Échéance : {formatDate(insurerUpcoming.dueDate)}
+            </Badge>
+          </div>
+          <div className="space-y-2">
+            {insurerUpcoming.items.map((i) => (
+              <div
+                key={i.insurerId}
+                className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-soft text-primary">
+                    <ShieldCheck className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-content">{i.name}</p>
+                    <p className="text-xs text-content-faint">{i.salesCount} vente(s) ce trimestre</p>
+                  </div>
+                </div>
+                <span className="font-display font-bold text-content">{formatCurrency(i.amount)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-between border-t pt-3 text-sm">
+            <span className="text-content-muted">Total attendu ce trimestre</span>
+            <span className="font-display font-bold text-content">{formatCurrency(insurerUpcoming.total)}</span>
+          </div>
+        </div>
+      )}
 
       <ForecastPanel />
 

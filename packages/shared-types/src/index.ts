@@ -892,6 +892,8 @@ export const saleCreateSchema = z.object({
   items: z.array(saleItemSchema).min(1, 'Au moins un article requis'),
   discountAmount: z.number().nonnegative().default(0),
   insuranceAmount: z.number().nonnegative().default(0),
+  /** Assureur prenant en charge insuranceAmount (suivi des paiements trimestriels). */
+  insurerId: z.string().uuid().optional(),
 });
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 

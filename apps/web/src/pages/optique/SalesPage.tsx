@@ -537,6 +537,8 @@ function QuoteModal({
         items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: discount,
         insuranceAmount: insurance,
+        // Trace l'assureur pour le suivi des paiements trimestriels.
+        insurerId: insurance > 0 && insurerId ? insurerId : undefined,
       }),
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),

@@ -309,6 +309,12 @@ export async function simulatePayment(paymentId: string, status: 'SUCCESS' | 'FA
 export interface DashboardData {
   todayRevenue: number;
   monthRevenue: number;
+  /** Part prise en charge par les assurances (jour / mois). */
+  todayInsurance?: number;
+  monthInsurance?: number;
+  /** Encaissé auprès des clients, hors part assurances (jour / mois). */
+  todayCollected?: number;
+  monthCollected?: number;
   todaySalesCount: number;
   customersCount: number;
   lowStockCount: number;
