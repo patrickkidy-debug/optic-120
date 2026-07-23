@@ -196,6 +196,7 @@ function ResetPasswordResultModal({
 function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
+  const [email, setEmail] = useState(user.email);
   const [roleId, setRoleId] = useState(user.role.id);
   const [branchIds, setBranchIds] = useState<string[]>(user.branches.map((b) => b.id));
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: listRoles });
@@ -205,7 +206,13 @@ function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }
     setBranchIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const mut = useMutation({
-    mutationFn: () => updateUser(user.id, { roleId, branchIds }),
+    mutationFn: () =>
+      updateUser(user.id, {
+        roleId,
+        branchIds,
+        // Email envoyé seulement s'il change (correction de faute de frappe).
+        ...(email.trim() && email.trim() !== user.email ? { email: email.trim() } : {}),
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       onClose();
@@ -216,6 +223,12 @@ function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }
   return (
     <Modal open onClose={onClose} title={`Modifier — ${user.firstName} ${user.lastName}`}>
       <div className="space-y-4">
+        <Field label="Email (identifiant de connexion)">
+          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <p className="mt-1 text-xs text-content-faint">
+            Corriger une faute de frappe ne touche à aucune donnée : seul l'identifiant change.
+          </p>
+        </Field>
         <Field label="Rôle">
           <select className="input" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
             {roles?.map((r) => (

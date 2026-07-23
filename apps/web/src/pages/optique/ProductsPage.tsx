@@ -96,7 +96,11 @@ export function ProductsPage() {
 
   const removeMut = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['stock'] });
+      qc.invalidateQueries({ queryKey: ['pos-stock'] });
+    },
   });
 
   return (
@@ -244,6 +248,7 @@ export function ProductsPage() {
           onClose={() => setAdjusting(null)}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ['stock'] });
+            qc.invalidateQueries({ queryKey: ['pos-stock'] });
             setAdjusting(null);
           }}
         />
@@ -477,6 +482,8 @@ function ProductModal({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.invalidateQueries({ queryKey: ['stock'] });
+      // Rafraîchit aussitôt le catalogue de la caisse et des devis.
+      qc.invalidateQueries({ queryKey: ['pos-stock'] });
       onClose();
     },
     onError: (e) => setServerError(apiErrorMessage(e)),

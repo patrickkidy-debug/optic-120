@@ -9,12 +9,22 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
+const CATEGORIES = [
+  { value: 'MONTURE', label: 'Montures' },
+  { value: 'VERRE', label: 'Verres' },
+  { value: 'LENTILLE', label: 'Lentilles' },
+  { value: 'ACCESSOIRE', label: 'Accessoires' },
+  { value: 'SERVICE', label: 'Services' },
+];
+const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
+
 export function StockPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canAdjust = usePermission('optique.stock.adjust');
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [editing, setEditing] = useState<StockRow | null>(null);
 
@@ -26,8 +36,9 @@ export function StockPage() {
 
   const rows = (data ?? []).filter(
     (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.sku.toLowerCase().includes(search.toLowerCase()),
+      (!category || r.category === category) &&
+      (r.name.toLowerCase().includes(search.toLowerCase()) ||
+        r.sku.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
@@ -50,6 +61,23 @@ export function StockPage() {
         >
           <AlertTriangle className="h-4 w-4" /> Stock faible
         </button>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setCategory('')}
+            className={`badge px-3 py-1.5 ${category === '' ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
+          >
+            Tous
+          </button>
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => setCategory(c.value)}
+              className={`badge px-3 py-1.5 ${category === c.value ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
@@ -62,6 +90,7 @@ export function StockPage() {
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">{t('common.product')}</th>
+                <th className="table-cell font-semibold">{t('common.category')}</th>
                 <th className="table-cell text-right font-semibold">{t('common.price')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.quantity')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.threshold')}</th>
@@ -74,6 +103,9 @@ export function StockPage() {
                   <td className="table-cell">
                     <div className="font-medium text-content">{r.name}</div>
                     <div className="text-xs text-content-faint">{r.sku}</div>
+                  </td>
+                  <td className="table-cell">
+                    <Badge tone="info">{catLabel(r.category)}</Badge>
                   </td>
                   <td className="table-cell text-right text-content-muted">
                     {formatCurrency(r.sellPrice)}
@@ -104,7 +136,16 @@ export function StockPage() {
       )}
 
       {editing && branchId && (
-        <AdjustModal row={editing} branchId={branchId} onClose={() => setEditing(null)} onSaved={() => qc.invalidateQueries({ queryKey: ['stock'] })} />
+        <AdjustModal
+          row={editing}
+          branchId={branchId}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ['stock'] });
+            // La caisse et les devis utilisent leur propre clé de cache.
+            qc.invalidateQueries({ queryKey: ['pos-stock'] });
+          }}
+        />
       )}
     </div>
   );

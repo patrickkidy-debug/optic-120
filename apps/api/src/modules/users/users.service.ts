@@ -65,6 +65,13 @@ export async function updateUser(
 ) {
   const user = await prisma.user.findFirst({ where: { id, tenantId } });
   if (!user) throw notFound('Utilisateur introuvable');
+  // Correction d'email (identifiant de connexion) : unicité insensible à la casse.
+  if (input.email) {
+    const clash = await prisma.user.findFirst({
+      where: { tenantId, id: { not: id }, email: { equals: input.email, mode: 'insensitive' } },
+    });
+    if (clash) throw conflict('Un utilisateur avec cet email existe déjà');
+  }
   if (input.roleId) {
     const role = await prisma.role.findFirst({ where: { id: input.roleId, tenantId } });
     if (!role) throw badRequest('Rôle invalide');
@@ -79,6 +86,7 @@ export async function updateUser(
       data: {
         firstName: input.firstName ?? undefined,
         lastName: input.lastName ?? undefined,
+        email: input.email ?? undefined,
         username: input.username ?? undefined,
         phone: (input as { phone?: string }).phone ?? undefined,
         roleId: input.roleId ?? undefined,
