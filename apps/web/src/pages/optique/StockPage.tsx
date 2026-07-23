@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Search, SlidersHorizontal, AlertTriangle } from 'lucide-react';
-import { getStock, adjustStock, type StockRow } from '../../features/optique/api';
+import { Boxes, Search, SlidersHorizontal, AlertTriangle, History } from 'lucide-react';
+import { getStock, adjustStock, getStockMovements, type StockRow } from '../../features/optique/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -27,6 +27,7 @@ export function StockPage() {
   const [category, setCategory] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
   const [editing, setEditing] = useState<StockRow | null>(null);
+  const [historyRow, setViewingHistory] = useState<StockRow | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock', branchId, lowOnly],
@@ -187,6 +188,14 @@ export function StockPage() {
                   <td className="table-cell">
                     <div className="flex items-center justify-end gap-2">
                       {r.low && <Badge tone="danger">{t('stock.lowBadge')}</Badge>}
+                      <button
+                        type="button"
+                        onClick={() => setViewingHistory(r)}
+                        className="btn-ghost h-8 rounded-lg px-2 text-xs flex items-center gap-1 text-primary hover:bg-primary-soft/20"
+                        title="Historique des mouvements"
+                      >
+                        <History className="h-3.5 w-3.5" /> Historique
+                      </button>
                       {canAdjust && !r.unlimited && (
                         <button onClick={() => setEditing(r)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <SlidersHorizontal className="h-3.5 w-3.5" /> Ajuster
@@ -210,7 +219,17 @@ export function StockPage() {
             qc.invalidateQueries({ queryKey: ['stock'] });
             // La caisse et les devis utilisent leur propre clé de cache.
             qc.invalidateQueries({ queryKey: ['pos-stock'] });
+            // Invalider aussi l'historique si ouvert
+            qc.invalidateQueries({ queryKey: ['stock-movements'] });
           }}
+        />
+      )}
+
+      {historyRow && branchId && (
+        <StockHistoryModal
+          row={historyRow}
+          branchId={branchId}
+          onClose={() => setViewingHistory(null)}
         />
       )}
     </div>
@@ -286,6 +305,98 @@ function AdjustModal({
           </Button>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+export function StockHistoryModal({
+  row,
+  branchId,
+  onClose,
+}: {
+  row: { productId: string; name: string };
+  branchId: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { data: movements, isLoading } = useQuery({
+    queryKey: ['stock-movements', row.productId, branchId],
+    queryFn: () => getStockMovements(row.productId, branchId),
+    enabled: Boolean(row.productId && branchId),
+  });
+
+  const getMovementTypeLabel = (type: string, qty: number) => {
+    switch (type) {
+      case 'PURCHASE_IN':
+        return 'Achat (Entrée)';
+      case 'SALE_OUT':
+        return 'Vente (Sortie)';
+      case 'RETURN_IN':
+        return 'Retour client (Entrée)';
+      case 'TRANSFER':
+        return qty > 0 ? 'Transfert (Entrée)' : 'Transfert (Sortie)';
+      case 'ADJUSTMENT':
+        return qty > 0 ? 'Ajustement (Entrée)' : 'Ajustement (Sortie)';
+      default:
+        return type;
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Historique des mouvements — ${row.name}`} size="md">
+      {isLoading ? (
+        <PageLoader />
+      ) : !movements || movements.length === 0 ? (
+        <div className="py-8 text-center text-sm text-content-muted">
+          Aucun mouvement de stock enregistré pour cet article.
+        </div>
+      ) : (
+        <div className="max-h-[60vh] overflow-y-auto pr-1">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b text-xs uppercase tracking-wider text-content-faint">
+                <th className="py-2 font-semibold">Date & Heure</th>
+                <th className="py-2 font-semibold">Type</th>
+                <th className="py-2 text-right font-semibold">Quantité</th>
+                <th className="py-2 pl-4 font-semibold">Motif / Réf</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.map((m) => {
+                const isEntry = m.quantity > 0;
+                return (
+                  <tr key={m.id} className="border-b last:border-0 hover:bg-surface-2/40">
+                    <td className="py-2.5 font-medium text-content-muted">
+                      {formatDateTime(m.createdAt)}
+                    </td>
+                    <td className="py-2.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isEntry
+                            ? 'bg-[color:var(--success)]/15 text-success'
+                            : 'bg-[color:var(--danger)]/15 text-danger'
+                        }`}
+                      >
+                        {getMovementTypeLabel(m.type, m.quantity)}
+                      </span>
+                    </td>
+                    <td
+                      className={`py-2.5 text-right font-display font-bold ${
+                        isEntry ? 'text-success' : 'text-danger'
+                      }`}
+                    >
+                      {isEntry ? `+${m.quantity}` : m.quantity}
+                    </td>
+                    <td className="py-2.5 pl-4 text-xs text-content-muted truncate max-w-[180px]" title={m.reason || '—'}>
+                      {m.reason || '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Modal>
   );
 }

@@ -104,6 +104,23 @@ export async function lowStockCount(branchId: string): Promise<number> {
   return data.count;
 }
 
+export interface StockMovement {
+  id: string;
+  type: 'PURCHASE_IN' | 'SALE_OUT' | 'ADJUSTMENT' | 'RETURN_IN' | 'TRANSFER';
+  quantity: number;
+  reason?: string | null;
+  saleId?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+}
+
+export async function getStockMovements(productId: string, branchId: string): Promise<StockMovement[]> {
+  const { data } = await api.get<{ movements: StockMovement[] }>('/stock/movements', {
+    params: { productId, branchId },
+  });
+  return data.movements;
+}
+
 export interface Customer {
   id: string;
   firstName: string;

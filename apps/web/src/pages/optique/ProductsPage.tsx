@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal, History } from 'lucide-react';
 import {
   productCreateSchema,
   type ProductCreateInput,
@@ -31,6 +31,7 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { StockHistoryModal } from './StockPage';
 
 const CATEGORIES = [
   { value: 'MONTURE', label: 'Montures' },
@@ -65,6 +66,7 @@ export function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [adjusting, setAdjusting] = useState<StockRow | null>(null);
+  const [historyRow, setViewingHistory] = useState<{ productId: string; name: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', search],
@@ -304,6 +306,14 @@ export function ProductsPage() {
                     </td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setViewingHistory({ productId: p.id, name: p.name })}
+                        className="btn-ghost h-8 w-8 rounded-lg p-0 text-primary"
+                        title="Historique des mouvements"
+                      >
+                        <History className="h-4 w-4" />
+                      </button>
                       {canUpdate && (
                         <button onClick={() => openEdit(p)} className="btn-ghost h-8 w-8 rounded-lg p-0">
                           <Pencil className="h-4 w-4" />
@@ -345,8 +355,17 @@ export function ProductsPage() {
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ['stock'] });
             qc.invalidateQueries({ queryKey: ['pos-stock'] });
+            // Invalider aussi l'historique si ouvert
+            qc.invalidateQueries({ queryKey: ['stock-movements'] });
             setAdjusting(null);
           }}
+        />
+      )}
+      {historyRow && branchId && (
+        <StockHistoryModal
+          row={historyRow}
+          branchId={branchId}
+          onClose={() => setViewingHistory(null)}
         />
       )}
     </div>
