@@ -147,27 +147,34 @@ export function PosPage() {
         {isLoading ? (
           <PageLoader />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {products.map((p) => (
-              <button
-                key={p.productId}
-                onClick={() =>
-                  pos.addLine({ productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice })
-                }
-                className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
-              >
-                <div className="flex items-start justify-between">
-                  <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
-                  {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
-                </div>
-                <div className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</div>
-                <div className="mt-1.5 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
-                <div className="text-xs text-content-faint">
-                  {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {products.slice(0, 10).map((p) => (
+                <button
+                  key={p.productId}
+                  onClick={() =>
+                    pos.addLine({ productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice })
+                  }
+                  className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
+                    {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</div>
+                  <div className="mt-1.5 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
+                  <div className="text-xs text-content-faint">
+                    {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {products.length > 10 && (
+              <p className="mt-3 text-xs text-center text-content-muted font-medium">
+                Affichage des 10 premiers résultats. Utilisez la recherche pour trouver d'autres articles.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -318,6 +325,10 @@ export function PosPage() {
             qc.invalidateQueries({ queryKey: ['sales'] });
             qc.invalidateQueries({ queryKey: ['finance-summary'] });
             qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
+            qc.invalidateQueries({ queryKey: ['pos-stock'] });
+            qc.invalidateQueries({ queryKey: ['stock'] });
+            qc.invalidateQueries({ queryKey: ['products'] });
+            qc.invalidateQueries({ queryKey: ['cash-current'] });
           }}
         />
       )}
