@@ -107,6 +107,7 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
           attributes: input.attributes as object | undefined,
           buyPrice: input.buyPrice,
           sellPrice: input.sellPrice,
+          createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
         },
       });
       const branches = await tx.branch.findMany({ where: { tenantId, isActive: true }, select: { id: true } });
@@ -174,7 +175,12 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
 
     const result = await req.db!.product.updateMany({
       where: { id },
-      data: { ...input, ...(sku ? { sku } : {}), attributes: input.attributes as object | undefined },
+      data: {
+        ...input,
+        ...(sku ? { sku } : {}),
+        attributes: input.attributes as object | undefined,
+        createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
+      },
     });
     if (result.count === 0) throw notFound('Produit introuvable');
     const product = await req.db!.product.findFirst({ where: { id } });

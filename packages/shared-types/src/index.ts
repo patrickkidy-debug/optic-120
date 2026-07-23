@@ -781,6 +781,7 @@ export const productCreateSchema = z.object({
   attributes: z.record(z.any()).optional(),
   buyPrice: z.number().nonnegative(),
   sellPrice: z.number().nonnegative(),
+  createdAt: z.string().optional(),
 });
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 

@@ -41,6 +41,17 @@ const CATEGORIES = [
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
+function toLocalDatetimeString(dateInput: string | Date): string {
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function ProductsPage() {
   const qc = useQueryClient();
   const canCreate = usePermission('optique.products.create');
@@ -467,6 +478,10 @@ function ProductModal({
 
   const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
 
+  const defaultCreatedAt = product?.createdAt
+    ? toLocalDatetimeString(product.createdAt)
+    : toLocalDatetimeString(new Date());
+
   const {
     register,
     handleSubmit,
@@ -484,8 +499,14 @@ function ProductModal({
           brand: product.brand ?? '',
           buyPrice: Number(product.buyPrice),
           sellPrice: Number(product.sellPrice),
+          createdAt: defaultCreatedAt,
         }
-      : { category: 'MONTURE', buyPrice: 0, sellPrice: 0 },
+      : {
+          category: 'MONTURE',
+          buyPrice: 0,
+          sellPrice: 0,
+          createdAt: defaultCreatedAt,
+        },
   });
 
   const category = watch('category');
@@ -551,7 +572,13 @@ function ProductModal({
             },
           }
         : values;
-      const saved = product ? await updateProduct(product.id, withAttrs) : await createProduct(withAttrs);
+
+      const payload = {
+        ...withAttrs,
+        createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
+      };
+
+      const saved = product ? await updateProduct(product.id, payload) : await createProduct(payload);
       // Appliquer le stock du magasin actif si la quantité ou le seuil ont changé.
       // (Pas pour les verres : stock illimité.)
       if (branchId && !isLens) {
@@ -607,9 +634,14 @@ function ProductModal({
             </select>
           </Field>
         </div>
-        <Field label="Marque (optionnel)">
-          <input className="input" {...register('brand')} />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Marque (optionnel)">
+            <input className="input" {...register('brand')} />
+          </Field>
+          <Field label="Date d'enregistrement">
+            <input type="datetime-local" className="input" {...register('createdAt')} />
+          </Field>
+        </div>
 
         {/* Verres : type de base + traitements → prix synchronisé depuis les Réglages. */}
         {isLens && (
