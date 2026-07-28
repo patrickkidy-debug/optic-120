@@ -4,7 +4,10 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
+      // Rafraîchit au retour sur l'onglet/la fenêtre : les quantités (produits,
+      // stock, caisse) et les tarifs (réglages) restent synchronisés entre
+      // sections sans rechargement manuel.
+      refetchOnWindowFocus: true,
       // Fraîcheur : données considérées « à jour » 30 s → pas de refetch au
       // changement de page dans cet intervalle (navigations instantanées).
       staleTime: 30_000,

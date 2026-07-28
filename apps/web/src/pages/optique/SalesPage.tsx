@@ -88,6 +88,10 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     qc.invalidateQueries({ queryKey: ['sales-report'] });
     qc.invalidateQueries({ queryKey: ['receivables'] });
     qc.invalidateQueries({ queryKey: ['finance-summary'] });
+    // Le stock bouge (conversion de devis, retour) : synchronise stock et caisse.
+    qc.invalidateQueries({ queryKey: ['stock'] });
+    qc.invalidateQueries({ queryKey: ['pos-stock'] });
+    qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
   }
 
   const cancelMut = useMutation({

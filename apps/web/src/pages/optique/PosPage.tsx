@@ -325,6 +325,9 @@ export function PosPage() {
             qc.invalidateQueries({ queryKey: ['sales'] });
             qc.invalidateQueries({ queryKey: ['finance-summary'] });
             qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
+            // Le stock a été décrémenté : rafraîchit stock, catalogue caisse et produits.
+            qc.invalidateQueries({ queryKey: ['stock'] });
+            qc.invalidateQueries({ queryKey: ['pos-stock'] });
             qc.invalidateQueries({ queryKey: ['pos-stock'] });
             qc.invalidateQueries({ queryKey: ['stock'] });
             qc.invalidateQueries({ queryKey: ['products'] });

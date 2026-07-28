@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Glasses, Plus, Printer, ReceiptText, FileText, Star } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
+import { lensBaseOptions, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { getCustomer, createPrescription, type Prescription } from '../../features/optique/api';
 import { printPrescription, type PrescriptionPatient } from '../../features/optique/prescriptionDocument';
 import type { CompanyInfo } from '../../features/optique/saleDocument';
@@ -198,7 +199,9 @@ function PrescriptionForm({
   onSaved: () => void;
 }) {
   const [error, setError] = useState('');
-  const { register, handleSubmit } = useForm<PrescriptionCreateInput>();
+  const [lensOther, setLensOther] = useState(false);
+  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
+  const { register, handleSubmit, setValue } = useForm<PrescriptionCreateInput>();
   const mut = useMutation({
     mutationFn: (v: PrescriptionCreateInput) => createPrescription(customerId, v),
     onSuccess: onSaved,
@@ -245,7 +248,28 @@ function PrescriptionForm({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Field label="Écart pupillaire (mm)"><input className="input" placeholder="62" {...register('pupillaryDistance')} /></Field>
-        <Field label="Type de verres"><input className="input" placeholder="Progressifs…" {...register('lensType')} /></Field>
+        <Field label="Type de verres">
+          {lensOther ? (
+            <input className="input" placeholder="Préciser le type" autoFocus {...register('lensType')} />
+          ) : (
+            <select
+              className="input"
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value === '__other__') {
+                  setLensOther(true);
+                  setValue('lensType', '');
+                } else setValue('lensType', e.target.value);
+              }}
+            >
+              <option value="">— Choisir —</option>
+              {lensBaseOptions(pricing).map((o) => (
+                <option key={o.key} value={o.label}>{o.label}</option>
+              ))}
+              <option value="__other__">Autre…</option>
+            </select>
+          )}
+        </Field>
         <Field label="Prescripteur"><input className="input" {...register('prescriberName')} /></Field>
       </div>
 
