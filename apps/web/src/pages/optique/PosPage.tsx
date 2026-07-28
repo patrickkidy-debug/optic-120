@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -318,6 +318,7 @@ export function PosPage() {
           onClose={() => setPaySale(null)}
           onPaid={() => {
             pos.clear();
+            setInsurerId('');
             setPaySale(null);
             qc.invalidateQueries({ queryKey: ['dashboard'] });
             qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
@@ -350,6 +351,9 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Délai avant que la caisse passe automatiquement à la vente suivante. */
+const AUTO_NEXT_SECONDS = 6;
+
 export function PaymentModal({
   sale,
   onClose,
@@ -372,7 +376,37 @@ export function PaymentModal({
   const [phase, setPhase] = useState<'choose' | 'collect' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
   const [instruction, setInstruction] = useState<string | null>(null);
+  // Compte à rebours avant de préparer automatiquement la vente suivante
+  // (null = arrêté, ex. le caissier a choisi d'imprimer et prend son temps).
+  const [autoNext, setAutoNext] = useState<number | null>(null);
+  const autoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const { data: collect } = useQuery({ queryKey: ['collect-info'], queryFn: getCollectInfo });
+
+  // Dès que le paiement est confirmé, on lance le compte à rebours : à la fin,
+  // la modale se referme et la page se réinitialise pour un nouvel encaissement,
+  // sans manipulation manuelle.
+  useEffect(() => {
+    if (phase !== 'done') return;
+    setAutoNext(AUTO_NEXT_SECONDS);
+    autoTimer.current = setInterval(() => {
+      setAutoNext((n) => (n !== null && n > 0 ? n - 1 : n));
+    }, 1000);
+    return () => {
+      if (autoTimer.current) clearInterval(autoTimer.current);
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (autoNext === 0) onPaid();
+    // onPaid démonte la modale : l'effet ne peut pas se redéclencher.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoNext]);
+
+  /** Stoppe le passage automatique (le caissier veut rester sur cet écran). */
+  function cancelAutoNext() {
+    if (autoTimer.current) clearInterval(autoTimer.current);
+    setAutoNext(null);
+  }
 
   // Montant à encaisser maintenant : borné à [1, solde dû]. S'il est inférieur
   // au solde, c'est un encaissement échelonné (acompte / tranche).
@@ -427,7 +461,14 @@ export function PaymentModal({
   }, [phase, paymentId]);
 
   return (
-    <Modal open onClose={onClose} title={`${t('pos.payment')} — ${sale.number}`} size="sm">
+    <Modal
+      open
+      // Après un encaissement, fermer (croix / clic extérieur) réinitialise aussi
+      // la page pour la vente suivante — sinon l'ancien panier resterait affiché.
+      onClose={settled > 0 ? onPaid : onClose}
+      title={`${t('pos.payment')} — ${sale.number}`}
+      size="sm"
+    >
       <div className="mb-4 rounded-xl bg-surface-2 p-3 text-center">
         <p className="text-xs text-content-muted">{t('pos.due')}</p>
         <p className="font-display text-2xl font-bold text-content">{formatCurrency(sale.due)}</p>
@@ -552,11 +593,23 @@ export function PaymentModal({
             <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.paid')}</p>
           )}
           <div className="mt-5 flex justify-center gap-2">
-            <Button variant="outline" onClick={downloadInvoice}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Imprimer prend du temps : on stoppe le passage automatique.
+                cancelAutoNext();
+                void downloadInvoice();
+              }}
+            >
               {t('sales.print')}
             </Button>
             <Button onClick={onPaid}>{onPaidLabel ?? t('pos.newSale')}</Button>
           </div>
+          {autoNext !== null && autoNext > 0 && (
+            <p className="mt-3 text-xs text-content-faint">
+              {onPaidLabel ? 'Fermeture' : 'Nouvelle vente'} automatique dans {autoNext}s…
+            </p>
+          )}
         </div>
       )}
     </Modal>
