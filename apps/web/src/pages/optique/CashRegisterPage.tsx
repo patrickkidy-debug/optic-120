@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lock, Unlock, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Lock, Unlock, Wallet, CheckCircle2, AlertTriangle, Banknote, Smartphone, CreditCard } from 'lucide-react';
 import {
   getCurrentRegister,
+  getRegisterSummary,
   openRegister,
   closeRegister,
   type CashRegister,
@@ -13,6 +14,24 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { PageHeader, PageLoader, Button, Field, Badge } from '../../components/ui';
 
+/** Libellés commerciaux des moyens d'encaissement. */
+const METHOD_LABELS: Record<string, string> = {
+  CASH: 'Espèces',
+  CARD: 'Carte',
+  WAVE: 'Wave',
+  ORANGE_MONEY: 'Orange Money',
+  MTN_MOMO: 'MTN MoMo',
+  MOOV_MONEY: 'Moov Money',
+  FREE_MONEY: 'Free Money',
+  MPESA: 'M-Pesa',
+  EMOLA: 'e-Mola',
+  MKESH: 'mKesh',
+  MULTICAIXA: 'Multicaixa Express',
+  UNITEL_MONEY: 'Unitel Money',
+  VINTI4: 'Vinti4',
+};
+const methodIcon = (m: string) => (m === 'CASH' ? Banknote : m === 'CARD' ? CreditCard : Smartphone);
+
 export function CashRegisterPage() {
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
@@ -21,6 +40,7 @@ export function CashRegisterPage() {
 
   const [opening, setOpening] = useState('');
   const [closing, setClosing] = useState('');
+  const [closingTouched, setClosingTouched] = useState(false);
   const [closeResult, setCloseResult] = useState<{ expected: number; counted: number } | null>(null);
 
   const { data: register, isLoading } = useQuery({
@@ -28,6 +48,19 @@ export function CashRegisterPage() {
     queryFn: () => getCurrentRegister(branchId!),
     enabled: Boolean(branchId),
   });
+
+  // Résumé en direct des encaissements de la session (par moyen de paiement).
+  const { data: summary } = useQuery({
+    queryKey: ['cash-summary', register?.id],
+    queryFn: () => getRegisterSummary(register!.id),
+    enabled: Boolean(register?.id),
+  });
+
+  // Le montant de fermeture s'actualise automatiquement avec les espèces reçues
+  // (fond + ventes espèces), tant que le caissier ne l'a pas saisi manuellement.
+  useEffect(() => {
+    if (summary && !closingTouched) setClosing(String(summary.expectedCash));
+  }, [summary, closingTouched]);
 
   const openMut = useMutation({
     mutationFn: () => openRegister(branchId!, Math.max(0, Math.round(Number(opening) || 0))),
@@ -44,7 +77,9 @@ export function CashRegisterPage() {
     onSuccess: (res) => {
       setCloseResult({ expected: res.expectedAmount, counted: Number(res.register.closingAmount ?? 0) });
       setClosing('');
+      setClosingTouched(false);
       qc.invalidateQueries({ queryKey: ['cash-current'] });
+      qc.invalidateQueries({ queryKey: ['cash-summary'] });
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -101,8 +136,44 @@ export function CashRegisterPage() {
               <SummaryRow label="Ouverte le" value={formatDateTime(register.openedAt)} />
               <SummaryRow label="Fond de caisse" value={formatCurrency(Number(register.openingAmount))} />
 
+              {/* Détail des encaissements de la session, par moyen de paiement. */}
+              <div className="mt-4 rounded-xl border border-line bg-surface-2/50 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
+                  Encaissements du jour
+                </p>
+                {!summary || summary.byMethod.length === 0 ? (
+                  <p className="text-sm text-content-muted">Aucun encaissement depuis l'ouverture.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {summary.byMethod.map((m) => {
+                      const Icon = methodIcon(m.method);
+                      return (
+                        <div key={m.method} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-content-muted">
+                            <Icon className="h-4 w-4 text-primary" />
+                            {METHOD_LABELS[m.method] ?? m.method}
+                            <span className="text-xs text-content-faint">· {m.count}</span>
+                          </span>
+                          <span className="font-medium text-content">{formatCurrency(m.amount)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="mt-1 flex items-center justify-between border-t pt-1.5">
+                      <span className="text-sm font-semibold text-content">Total encaissé</span>
+                      <span className="font-display font-bold text-content">{formatCurrency(summary.total)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {canClose ? (
                 <div className="mt-4 border-t pt-4">
+                  {summary && (
+                    <SummaryRow
+                      label="Espèces attendues (fond + ventes espèces)"
+                      value={formatCurrency(summary.expectedCash)}
+                    />
+                  )}
                   <Field label="Montant compté en caisse (espèces)">
                     <input
                       type="number"
@@ -110,9 +181,17 @@ export function CashRegisterPage() {
                       className="input text-right font-semibold"
                       placeholder="0"
                       value={closing}
-                      onChange={(e) => setClosing(e.target.value)}
+                      onChange={(e) => {
+                        setClosingTouched(true);
+                        setClosing(e.target.value);
+                      }}
                     />
                   </Field>
+                  {summary && !closingTouched && (
+                    <p className="mt-1 text-xs text-content-faint">
+                      Pré-rempli avec les espèces reçues aujourd'hui — ajustez-le au comptage réel.
+                    </p>
+                  )}
                   <Button
                     className="mt-3 w-full"
                     loading={closeMut.isPending}

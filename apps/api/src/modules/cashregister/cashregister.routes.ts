@@ -19,6 +19,40 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ register });
   });
 
+  // Résumé en direct de la session : encaissements par moyen de paiement depuis
+  // l'ouverture, total du jour et espèces attendues (fond + espèces reçues).
+  app.get('/:id/summary', { preHandler: requirePermission('optique.cashregister.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const register = await req.db!.cashRegister.findFirst({ where: { id } });
+    if (!register) throw notFound('Caisse introuvable');
+
+    const groups = await req.db!.payment.groupBy({
+      by: ['method'],
+      where: {
+        status: 'SUCCESS',
+        createdAt: { gte: register.openedAt },
+        sale: { branchId: register.branchId },
+      },
+      _sum: { amount: true },
+      _count: { _all: true },
+    });
+    const byMethod = groups
+      .map((g) => ({ method: g.method, amount: Number(g._sum.amount ?? 0), count: g._count._all }))
+      .filter((m) => m.amount !== 0)
+      .sort((a, b) => b.amount - a.amount);
+    const cash = byMethod.find((m) => m.method === 'CASH')?.amount ?? 0;
+    const total = byMethod.reduce((s, m) => s + m.amount, 0);
+
+    return reply.send({
+      byMethod,
+      cash,
+      total,
+      openingAmount: Number(register.openingAmount),
+      expectedCash: Number(register.openingAmount) + cash,
+      openedAt: register.openedAt,
+    });
+  });
+
   app.post('/open', { preHandler: requirePermission('optique.cashregister.open') }, async (req, reply) => {
     const input = cashOpenSchema.parse(req.body);
     assertBranchAccess(req, input.branchId);

@@ -11,6 +11,21 @@ export interface CashRegister {
   status: 'OPEN' | 'CLOSED';
 }
 
+export interface RegisterSummary {
+  byMethod: { method: string; amount: number; count: number }[];
+  cash: number;
+  total: number;
+  openingAmount: number;
+  expectedCash: number;
+  openedAt: string;
+}
+
+/** Encaissements par moyen depuis l'ouverture de la caisse (résumé en direct). */
+export async function getRegisterSummary(id: string): Promise<RegisterSummary> {
+  const { data } = await api.get<RegisterSummary>(`/cashregister/${id}/summary`);
+  return data;
+}
+
 export async function getCurrentRegister(branchId: string): Promise<CashRegister | null> {
   const { data } = await api.get<{ register: CashRegister | null }>('/cashregister/current', {
     params: { branchId },

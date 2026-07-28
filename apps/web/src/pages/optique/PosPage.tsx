@@ -328,6 +328,8 @@ export function PosPage() {
             // Le stock a été décrémenté : rafraîchit stock, catalogue caisse et produits.
             qc.invalidateQueries({ queryKey: ['stock'] });
             qc.invalidateQueries({ queryKey: ['pos-stock'] });
+            // Résumé de la session de caisse (encaissements du jour).
+            qc.invalidateQueries({ queryKey: ['cash-summary'] });
             qc.invalidateQueries({ queryKey: ['pos-stock'] });
             qc.invalidateQueries({ queryKey: ['stock'] });
             qc.invalidateQueries({ queryKey: ['products'] });

@@ -92,6 +92,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     qc.invalidateQueries({ queryKey: ['stock'] });
     qc.invalidateQueries({ queryKey: ['pos-stock'] });
     qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
+    qc.invalidateQueries({ queryKey: ['cash-summary'] });
   }
 
   const cancelMut = useMutation({
