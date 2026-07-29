@@ -1018,9 +1018,20 @@ export const consultationCreateSchema = z.object({
   visualField: z.string().max(1000).optional().or(z.literal('')),
   diagnosis: z.string().max(1000).optional().or(z.literal('')),
   prescription: z.string().max(1000).optional().or(z.literal('')),
+  lensType: z.string().max(60).optional().or(z.literal('')),
   notes: z.string().max(2000).optional().or(z.literal('')),
 });
 export type ConsultationCreateInput = z.infer<typeof consultationCreateSchema>;
+
+/** Réservation de démonstration gratuite depuis le tableau de bord. */
+export const demoRequestCreateSchema = z.object({
+  contactName: z.string().min(2, 'Nom requis').max(120),
+  contactEmail: z.string().email('Email invalide'),
+  contactPhone: z.string().max(40).optional().or(z.literal('')),
+  preferredAt: z.string().min(1, 'Date souhaitée requise'),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type DemoRequestCreateInput = z.infer<typeof demoRequestCreateSchema>;
 
 export const appointmentCreateSchema = z.object({
   patientId: z.string().uuid(),

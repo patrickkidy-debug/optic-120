@@ -38,6 +38,9 @@ import {
   Copy,
   Check,
   MessageCircle,
+  CalendarClock,
+  CalendarPlus,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -63,7 +66,14 @@ import {
   type PlatformUser,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
-import { listPendingPayments, confirmPayment } from '../../features/billing/api';
+import {
+  listPendingPayments,
+  confirmPayment,
+  listDemoRequests,
+  setDemoRequestStatus,
+  type DemoRequest,
+} from '../../features/billing/api';
+import { googleCalendarUrl, downloadIcs } from '../../lib/calendar';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal } from '../../components/ui';
@@ -129,7 +139,7 @@ function Delta({ value }: { value: string }) {
   );
 }
 
-type Tab = 'subs' | 'payments' | 'users' | 'plans' | 'support' | 'finance' | 'team';
+type Tab = 'subs' | 'payments' | 'demos' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -204,6 +214,7 @@ export function PlatformPage() {
           { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
           { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
+          { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
           { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
@@ -227,6 +238,7 @@ export function PlatformPage() {
         {tab === 'finance' && <FinanceTab />}
         {tab === 'subs' && <SubscriptionsTab />}
         {tab === 'payments' && <PaymentsTab />}
+        {tab === 'demos' && <DemosTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'plans' && <PlansTab />}
@@ -864,6 +876,128 @@ function PaymentsTab() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const DEMO_STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' | 'info' }> = {
+  PENDING: { label: 'En attente', tone: 'warning' },
+  CONFIRMED: { label: 'Confirmée', tone: 'success' },
+  DONE: { label: 'Réalisée', tone: 'neutral' },
+  CANCELLED: { label: 'Annulée', tone: 'danger' },
+};
+
+/** Événement agenda dérivé d'une réservation de démo. */
+function demoEvent(d: DemoRequest) {
+  const who = d.tenantName || d.contactName;
+  const details = [
+    `Contact : ${d.contactName}`,
+    d.contactEmail && `Email : ${d.contactEmail}`,
+    d.contactPhone && `Tél : ${d.contactPhone}`,
+    d.notes && `Note : ${d.notes}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return { title: `Démo OculoSaaS — ${who}`, start: new Date(d.preferredAt), details };
+}
+
+function DemosTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['platform-demos'], queryFn: listDemoRequests });
+  const mut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => setDemoRequestStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-demos'] }),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0)
+    return <EmptyState icon={CalendarClock} title="Aucune réservation de démo" />;
+
+  return (
+    <div className="space-y-3">
+      {data.map((d) => {
+        const st = DEMO_STATUS[d.status] ?? { label: d.status, tone: 'neutral' as const };
+        const ev = demoEvent(d);
+        return (
+          <div key={d.id} className="card p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-display font-bold text-content">{d.tenantName || d.contactName}</h4>
+                  <Badge tone={st.tone}>{st.label}</Badge>
+                </div>
+                <div className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <CalendarClock className="h-4 w-4" /> {formatDateTime(d.preferredAt)}
+                </div>
+                <div className="mt-1 text-xs text-content-faint">
+                  {d.contactName} · {d.contactEmail}
+                  {d.contactPhone ? ` · ${d.contactPhone}` : ''} · reçu le {formatDateTime(d.createdAt)}
+                </div>
+                {d.notes && <p className="mt-2 whitespace-pre-wrap text-sm text-content-muted">{d.notes}</p>}
+              </div>
+
+              {/* Ajout à l'agenda */}
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <a
+                  href={googleCalendarUrl(ev)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary h-8 rounded-lg px-3 text-xs"
+                >
+                  <CalendarPlus className="h-3.5 w-3.5" /> Google Agenda
+                </a>
+                <button
+                  onClick={() => downloadIcs(`demo-${d.tenantName || d.contactName}`, ev)}
+                  className="btn-outline h-8 rounded-lg px-3 text-xs"
+                >
+                  <Download className="h-3.5 w-3.5" /> .ics
+                </button>
+              </div>
+            </div>
+
+            {/* Suivi : statut + contact */}
+            <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+              {d.contactPhone && (
+                <a
+                  href={waLink(d.contactPhone)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-outline h-8 rounded-lg px-3 text-xs text-[#128C7E]"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                </a>
+              )}
+              {d.status !== 'CONFIRMED' && d.status !== 'CANCELLED' && (
+                <button
+                  onClick={() => mut.mutate({ id: d.id, status: 'CONFIRMED' })}
+                  className="btn-outline h-8 rounded-lg px-3 text-xs text-success"
+                >
+                  <Check className="h-3.5 w-3.5" /> Confirmer
+                </button>
+              )}
+              {d.status !== 'DONE' && (
+                <button
+                  onClick={() => mut.mutate({ id: d.id, status: 'DONE' })}
+                  className="btn-ghost h-8 rounded-lg px-3 text-xs text-content-muted"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5" /> Marquer réalisée
+                </button>
+              )}
+              {d.status !== 'CANCELLED' && (
+                <button
+                  onClick={() => {
+                    if (confirm('Annuler cette réservation de démo ?')) mut.mutate({ id: d.id, status: 'CANCELLED' });
+                  }}
+                  className="btn-ghost h-8 rounded-lg px-3 text-xs text-danger"
+                >
+                  Annuler
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

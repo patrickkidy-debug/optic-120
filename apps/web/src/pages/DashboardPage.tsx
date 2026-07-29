@@ -42,6 +42,7 @@ import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard } from '../features/optique/api';
 import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
+import { DemoBooking } from '../components/DemoBooking';
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
 import { getInsurerUpcoming } from '../features/management/api';
 
@@ -474,6 +475,9 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Proposition de démonstration gratuite (essai / sans abonnement actif). */}
+      <DemoBooking />
 
       {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

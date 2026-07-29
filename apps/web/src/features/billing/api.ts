@@ -78,6 +78,36 @@ export async function getPlanStatus(): Promise<PlanStatus | null> {
   const { data } = await api.get<{ status: PlanStatus | null }>('/billing/plan-status');
   return data.status;
 }
+export interface DemoRequest {
+  id: string;
+  tenantId: string | null;
+  tenantName: string | null;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  preferredAt: string;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export async function bookDemo(input: {
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  preferredAt: string;
+  notes?: string;
+}): Promise<DemoRequest> {
+  const { data } = await api.post<{ demo: DemoRequest }>('/billing/demo-request', input);
+  return data.demo;
+}
+
+/** Dernière réservation de démo de l'établissement (état du bouton). */
+export async function getMyDemoRequest(): Promise<DemoRequest | null> {
+  const { data } = await api.get<{ demo: DemoRequest | null }>('/billing/demo-request/mine');
+  return data.demo;
+}
+
 export async function getInvoices(): Promise<SubInvoice[]> {
   const { data } = await api.get<{ invoices: SubInvoice[] }>('/billing/invoices');
   return data.invoices;
@@ -169,6 +199,16 @@ export async function listPendingPayments(): Promise<PendingPayment[]> {
 
 export async function confirmPayment(id: string): Promise<void> {
   await api.post(`/platform/payments/${id}/confirm`);
+}
+
+/** Réservations de démonstration (console fondateur). */
+export async function listDemoRequests(): Promise<DemoRequest[]> {
+  const { data } = await api.get<{ demos: DemoRequest[] }>('/platform/demo-requests');
+  return data.demos;
+}
+export async function setDemoRequestStatus(id: string, status: string): Promise<DemoRequest> {
+  const { data } = await api.patch<{ demo: DemoRequest }>(`/platform/demo-requests/${id}`, { status });
+  return data.demo;
 }
 
 export interface PlatformStats {

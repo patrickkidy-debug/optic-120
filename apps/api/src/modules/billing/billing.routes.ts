@@ -1,9 +1,15 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { subscribeSchema, subscriptionPaySchema, PaymentStatus } from '@oculo/shared-types';
+import {
+  subscribeSchema,
+  subscriptionPaySchema,
+  demoRequestCreateSchema,
+  PaymentStatus,
+} from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { notFound } from '../../lib/http-error.js';
+import { prisma } from '../../lib/prisma.js';
 import { isProd } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
@@ -30,6 +36,46 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   app.get('/plan-status', async (req, reply) => {
     const status = await billing.getSubscriptionStatus(req.auth!.tenantId);
     return reply.send({ status });
+  });
+
+  // Réservation d'une démonstration gratuite depuis le tableau de bord.
+  // Ouverte à tout utilisateur connecté (essai ou sans abonnement actif).
+  app.post('/demo-request', async (req, reply) => {
+    const input = demoRequestCreateSchema.parse(req.body);
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.auth!.tenantId },
+      select: { name: true },
+    });
+    const demo = await prisma.demoRequest.create({
+      data: {
+        tenantId: req.auth!.tenantId,
+        tenantName: tenant?.name ?? null,
+        contactName: input.contactName,
+        contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone || null,
+        preferredAt: new Date(input.preferredAt),
+        notes: input.notes || null,
+        createdById: req.auth!.userId,
+      },
+    });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'DEMO_REQUESTED',
+      entity: 'DemoRequest',
+      entityId: demo.id,
+      ...requestMeta(req),
+    });
+    return reply.status(201).send({ demo });
+  });
+
+  // Dernière réservation de démo de l'établissement (pour l'état du bouton).
+  app.get('/demo-request/mine', async (req, reply) => {
+    const demo = await prisma.demoRequest.findFirst({
+      where: { tenantId: req.auth!.tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return reply.send({ demo });
   });
 
   app.get('/plans', { preHandler: requirePermission('billing.view') }, async (_req, reply) => {

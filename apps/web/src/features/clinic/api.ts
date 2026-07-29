@@ -39,6 +39,7 @@ export interface Consultation {
   visualField: string | null;
   diagnosis: string | null;
   prescription: string | null;
+  lensType: string | null;
   notes: string | null;
   patient?: { firstName: string; lastName: string };
 }

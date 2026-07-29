@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Stethoscope, Plus } from 'lucide-react';
+import { Stethoscope, Plus, Glasses } from 'lucide-react';
 import type { ConsultationCreateInput } from '@oculo/shared-types';
+import { lensBaseOptions, lensLabel, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listConsultations, createConsultation, listPatients } from '../../features/clinic/api';
-import { usePermission } from '../../store/auth';
+import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
@@ -34,6 +35,7 @@ export function ConsultationsPage() {
                 <th className="table-cell font-semibold">Date</th>
                 <th className="table-cell font-semibold">Patient</th>
                 <th className="table-cell font-semibold">Diagnostic</th>
+                <th className="table-cell font-semibold">Verres</th>
                 <th className="table-cell font-semibold">AV OD / OG</th>
               </tr>
             </thead>
@@ -45,6 +47,7 @@ export function ConsultationsPage() {
                     {c.patient ? `${c.patient.firstName} ${c.patient.lastName}` : '—'}
                   </td>
                   <td className="table-cell">{c.diagnosis ? <Badge tone="info">{c.diagnosis}</Badge> : '—'}</td>
+                  <td className="table-cell text-content-muted">{c.lensType ?? '—'}</td>
                   <td className="table-cell text-content-muted">
                     {c.visualAcuityRight ?? '—'} / {c.visualAcuityLeft ?? '—'}
                   </td>
@@ -63,6 +66,8 @@ export function ConsultationsPage() {
 function NewConsultationModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
+  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
+  const lensOptions = lensBaseOptions(pricing);
   const { data: patients } = useQuery({ queryKey: ['patients', ''], queryFn: () => listPatients() });
   const { register, handleSubmit } = useForm<ConsultationCreateInput>();
 
@@ -88,7 +93,38 @@ function NewConsultationModal({ onClose }: { onClose: () => void }) {
           <Field label="Tonométrie OG"><input className="input" {...register('tonometryLeft')} /></Field>
         </div>
         <Field label="Diagnostic"><input className="input" {...register('diagnosis')} /></Field>
-        <Field label="Prescription"><textarea className="input min-h-[60px]" {...register('prescription')} /></Field>
+
+        {/* Ordonnance optique : réfraction par œil + type de verres recommandé. */}
+        <div className="rounded-xl border border-line bg-surface-2/40 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-content">
+            <Glasses className="h-4 w-4 text-primary" /> Ordonnance
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Réfraction OD (sph/cyl/axe/add)">
+              <input className="input" placeholder="ex : -1.25 (-0.50 × 90°) Add +2.00" {...register('refractionRight')} />
+            </Field>
+            <Field label="Réfraction OG (sph/cyl/axe/add)">
+              <input className="input" placeholder="ex : -1.00 (-0.75 × 85°) Add +2.00" {...register('refractionLeft')} />
+            </Field>
+          </div>
+          <div className="mt-3">
+            <Field label="Type de verres recommandé">
+              <select className="input" {...register('lensType')}>
+                <option value="">— Aucun —</option>
+                {lensOptions.map((b) => {
+                  const label = lensLabel(pricing, b.key, []);
+                  return <option key={b.key} value={label}>{label}</option>;
+                })}
+              </select>
+            </Field>
+          </div>
+          <div className="mt-3">
+            <Field label="Prescription / remarques">
+              <textarea className="input min-h-[60px]" {...register('prescription')} />
+            </Field>
+          </div>
+        </div>
+
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>

@@ -180,22 +180,22 @@ export function PosPage() {
 
       {/* Panier */}
       <div className="lg:col-span-2">
-        <div className="card sticky top-20 flex max-h-[calc(100vh-7rem)] flex-col">
+        <div className="card sticky top-20 flex max-h-[calc(100vh-4.5rem)] min-h-[70vh] flex-col">
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <ShoppingCart className="h-5 w-5 text-primary" />
             <h2 className="font-display font-bold text-content">{t('pos.cart')}</h2>
             <span className="ml-auto text-sm text-content-muted">{pos.lines.length} article(s)</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-2">
+          <div className="min-h-[18rem] flex-1 overflow-y-auto px-4 py-2">
             {pos.lines.length === 0 ? (
               <p className="py-10 text-center text-sm text-content-muted">{t('pos.emptyCart')}</p>
             ) : (
               <div className="space-y-2">
                 {pos.lines.map((l) => (
-                  <div key={l.productId} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2">
+                  <div key={l.productId} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-content">{l.name}</p>
+                      <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
                       <div className="mt-0.5 flex items-center gap-1">
                         <input
                           type="number"

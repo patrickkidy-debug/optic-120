@@ -57,6 +57,24 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, status: result?.status });
   });
 
+  // Réservations de démonstration gratuite (suivi commercial).
+  app.get('/demo-requests', async (_req, reply) => {
+    const demos = await prisma.demoRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+    });
+    return reply.send({ demos });
+  });
+
+  app.patch('/demo-requests/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { status } = (req.body ?? {}) as { status?: string };
+    const allowed = ['PENDING', 'CONFIRMED', 'DONE', 'CANCELLED'];
+    const next = allowed.includes(status ?? '') ? (status as string) : 'PENDING';
+    const demo = await prisma.demoRequest.update({ where: { id }, data: { status: next } });
+    return reply.send({ demo });
+  });
+
   // Tickets de support (console fondateur).
   app.get('/support', async (_req, reply) => {
     return reply.send({ tickets: await support.listTickets() });

@@ -644,12 +644,34 @@ model Consultation {
   visualField       String?
   diagnosis         String?
   prescription      String?
+  lensType          String?
   notes             String?
   createdById       String?
   createdAt         DateTime @default(now())
 
   @@index([tenantId, patientId])
   @@index([tenantId])
+}
+
+/// Réservation de démonstration gratuite demandée depuis le tableau de bord par
+/// un établissement en essai ou sans abonnement actif. Consultée dans la console
+/// fondateur (non isolée par tenant : suivi commercial global). Le nom de
+/// l'établissement est figé à la création pour l'affichage.
+model DemoRequest {
+  id           String   @id @default(uuid())
+  tenantId     String?
+  tenantName   String?
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  preferredAt  DateTime
+  notes        String?
+  status       String   @default("PENDING")
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Appointment {
