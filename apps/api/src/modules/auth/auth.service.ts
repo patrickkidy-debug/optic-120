@@ -796,15 +796,13 @@ export async function verifyUserPassword(userId: string, password: string): Prom
  */
 export async function changePassword(
   userId: string,
-  currentPassword: string,
   newPassword: string,
   meta: RequestMeta,
 ): Promise<SessionResult> {
   const user = await loadUser({ id: userId });
   if (!user) throw unauthorized();
-  if (!(await verifyPassword(user.passwordHash, currentPassword))) {
-    throw badRequest('Mot de passe actuel incorrect');
-  }
+  // La session active fait foi : pas d'ancien mot de passe requis (utile après
+  // un mot de passe temporaire). Toutes les autres sessions sont révoquées.
   const newHash = await hashPassword(newPassword);
   await prisma.$transaction([
     prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } }),

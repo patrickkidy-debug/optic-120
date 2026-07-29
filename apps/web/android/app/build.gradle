@@ -1,8 +1,29 @@
 apply plugin: 'com.android.application'
 
+// Signature de publication (release). Les identifiants du keystore ne sont JAMAIS
+// versionnés : ils sont lus depuis `android/keystore.properties` (fichier local,
+// ignoré par git). Sans ce fichier, la build reste normale (non signée release).
+// Un APK signé avec une vraie clé de release est bien mieux accepté (moins de
+// « fichier dangereux ») qu'un APK debug ou non signé.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.oculosaas.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.oculosaas.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -20,6 +41,10 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Signe automatiquement en release dès que keystore.properties existe.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

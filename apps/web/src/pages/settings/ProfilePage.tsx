@@ -853,7 +853,6 @@ function InvoiceCustomizationCard() {
 }
 
 function ChangePasswordCard() {
-  const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -871,9 +870,8 @@ function ChangePasswordCard() {
     }
     setBusy(true);
     try {
-      await changePassword(current, next);
+      await changePassword(next);
       setMsg({ ok: 'Mot de passe modifié. Vos autres appareils ont été déconnectés.' });
-      setCurrent('');
       setNext('');
       setConfirm('');
     } catch (e) {
@@ -889,14 +887,11 @@ function ChangePasswordCard() {
         <ShieldCheck className="h-5 w-5 text-primary" />
         <h3 className="font-display font-bold text-content">Mot de passe</h3>
       </div>
+      <p className="mb-3 max-w-sm text-sm text-content-muted">
+        Saisissez simplement votre nouveau mot de passe et confirmez-le. Pratique si vous vous êtes
+        connecté avec un mot de passe temporaire.
+      </p>
       <div className="max-w-sm space-y-3">
-        <Field label="Mot de passe actuel">
-          <PasswordInput
-            autoComplete="current-password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-          />
-        </Field>
         <Field label="Nouveau mot de passe">
           <PasswordInput
             autoComplete="new-password"
@@ -914,7 +909,7 @@ function ChangePasswordCard() {
         </Field>
         {msg.err && <p className="text-sm text-danger">{msg.err}</p>}
         {msg.ok && <p className="text-sm text-success">{msg.ok}</p>}
-        <Button onClick={submit} loading={busy} disabled={!current || !next || !confirm}>
+        <Button onClick={submit} loading={busy} disabled={!next || !confirm}>
           Changer le mot de passe
         </Button>
       </div>

@@ -727,9 +727,13 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
-/** Changement de mot de passe par un utilisateur connecté (exige l'ancien). */
+/**
+ * Changement de mot de passe par un utilisateur connecté. La session active
+ * suffit (pas d'ancien mot de passe demandé) : permet à un utilisateur arrivé
+ * avec un mot de passe temporaire de définir directement le sien. Les autres
+ * sessions sont révoquées côté serveur après le changement.
+ */
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
   newPassword: passwordSchema,
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
