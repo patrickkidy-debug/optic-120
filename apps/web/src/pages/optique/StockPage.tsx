@@ -1,11 +1,18 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Search, SlidersHorizontal, AlertTriangle, History } from 'lucide-react';
-import { getStock, adjustStock, getStockMovements, type StockRow } from '../../features/optique/api';
+import { Boxes, Search, SlidersHorizontal, AlertTriangle, History, Trash2 } from 'lucide-react';
+import {
+  getStock,
+  adjustStock,
+  getStockMovements,
+  deleteProduct,
+  type StockRow,
+} from '../../features/optique/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
@@ -23,6 +30,7 @@ export function StockPage() {
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canAdjust = usePermission('optique.stock.adjust');
+  const canDelete = usePermission('optique.products.delete');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
@@ -81,6 +89,14 @@ export function StockPage() {
     const qty = rows.reduce((s, r) => s + (r.unlimited ? 0 : r.quantity), 0);
     return { refs: rows.length, qty };
   }, [search, rows]);
+
+  // Retrait d'un article du stock : le produit est désactivé et toutes les vues
+  // (stock, caisse, étiquettes, tableau de bord…) sont rafraîchies aussitôt.
+  const removeMut = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => invalidateProductViews(qc),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
 
   return (
     <div>
@@ -229,6 +245,18 @@ export function StockPage() {
                           <SlidersHorizontal className="h-3.5 w-3.5" /> Ajuster
                         </button>
                       )}
+                      {canDelete && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Retirer « ${r.name} » du stock et du catalogue ?`))
+                              removeMut.mutate(r.productId);
+                          }}
+                          className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
+                          title="Retirer du stock et du catalogue"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -243,13 +271,7 @@ export function StockPage() {
           row={editing}
           branchId={branchId}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ['stock'] });
-            // La caisse et les devis utilisent leur propre clé de cache.
-            qc.invalidateQueries({ queryKey: ['pos-stock'] });
-            // Invalider aussi l'historique si ouvert
-            qc.invalidateQueries({ queryKey: ['stock-movements'] });
-          }}
+          onSaved={() => invalidateProductViews(qc)}
         />
       )}
 

@@ -29,6 +29,7 @@ import { listSuppliers } from '../../features/management/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { StockHistoryModal } from './StockPage';
@@ -154,11 +155,10 @@ export function ProductsPage() {
 
   const removeMut = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['products'] });
-      qc.invalidateQueries({ queryKey: ['stock'] });
-      qc.invalidateQueries({ queryKey: ['pos-stock'] });
-    },
+    // Le produit disparaît du catalogue : on rafraîchit le stock partout
+    // (stock, caisse, étiquettes, tableau de bord, badge stock faible…).
+    onSuccess: () => invalidateProductViews(qc),
+    onError: (e) => alert(apiErrorMessage(e)),
   });
 
   return (
@@ -373,10 +373,7 @@ export function ProductsPage() {
           branchId={branchId}
           onClose={() => setAdjusting(null)}
           onSaved={() => {
-            qc.invalidateQueries({ queryKey: ['stock'] });
-            qc.invalidateQueries({ queryKey: ['pos-stock'] });
-            // Invalider aussi l'historique si ouvert
-            qc.invalidateQueries({ queryKey: ['stock-movements'] });
+            invalidateProductViews(qc);
             setAdjusting(null);
           }}
         />
@@ -631,10 +628,8 @@ function ProductModal({
       return saved;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['products'] });
-      qc.invalidateQueries({ queryKey: ['stock'] });
-      // Rafraîchit aussitôt le catalogue de la caisse et des devis.
-      qc.invalidateQueries({ queryKey: ['pos-stock'] });
+      // Rafraîchit aussitôt le stock partout (caisse, devis, étiquettes…).
+      invalidateProductViews(qc);
       onClose();
     },
     onError: (e) => setServerError(apiErrorMessage(e)),
