@@ -84,6 +84,12 @@ export function ProductsPage() {
     return (data?.items ?? []).filter((p) => !category || p.category === category);
   }, [data?.items, category]);
 
+  const stockByProduct = useMemo(() => {
+    const m = new Map<string, StockRow>();
+    (stock ?? []).forEach((r) => m.set(r.productId, r));
+    return m;
+  }, [stock]);
+
   const categoryStats = useMemo(() => {
     const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
       MONTURE: { count: 0, totalStock: 0, lastCreated: null },
@@ -93,11 +99,16 @@ export function ProductsPage() {
       SERVICE: { count: 0, totalStock: 0, lastCreated: null },
     };
 
+    // Stats sur les produits AFFICHÉS (la liste est déjà filtrée par la
+    // recherche côté serveur) : quand on cherche une monture, les cartes
+    // montrent le stock de cette recherche, pas le stock global du système.
     const items = data?.items ?? [];
     items.forEach((p) => {
       const cat = p.category;
       if (stats[cat]) {
         stats[cat].count++;
+        const s = stockByProduct.get(p.id);
+        if (s && !s.unlimited) stats[cat].totalStock += s.quantity;
         if (p.createdAt) {
           if (!stats[cat].lastCreated || p.createdAt > stats[cat].lastCreated) {
             stats[cat].lastCreated = p.createdAt;
@@ -106,23 +117,18 @@ export function ProductsPage() {
       }
     });
 
-    if (stock) {
-      stock.forEach((s) => {
-        const cat = s.category;
-        if (stats[cat]) {
-          stats[cat].totalStock += s.quantity;
-        }
-      });
-    }
-
     return stats;
-  }, [data?.items, stock]);
+  }, [data?.items, stockByProduct]);
 
-  const stockByProduct = useMemo(() => {
-    const m = new Map<string, StockRow>();
-    (stock ?? []).forEach((r) => m.set(r.productId, r));
-    return m;
-  }, [stock]);
+  // Synthèse de la recherche : références trouvées + unités en stock cumulées.
+  const searchSummary = useMemo(() => {
+    if (!search.trim()) return null;
+    const qty = filteredProducts.reduce((sum, p) => {
+      const s = stockByProduct.get(p.id);
+      return sum + (s && !s.unlimited ? s.quantity : 0);
+    }, 0);
+    return { refs: filteredProducts.length, qty };
+  }, [search, filteredProducts, stockByProduct]);
   const rowFor = (p: Product): StockRow =>
     stockByProduct.get(p.id) ?? {
       productId: p.id,
@@ -233,6 +239,20 @@ export function ProductsPage() {
           ))}
         </div>
       </div>
+
+      {/* Résultat de la recherche : total de références et d'unités trouvées. */}
+      {searchSummary && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+          <Search className="h-4 w-4 text-primary" />
+          <span className="text-content">
+            <b>{searchSummary.refs}</b> référence(s) trouvée(s)
+          </span>
+          <span className="text-content-faint">·</span>
+          <span className="text-content">
+            <b>{searchSummary.qty}</b> unité(s) en stock pour cette recherche
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <PageLoader />

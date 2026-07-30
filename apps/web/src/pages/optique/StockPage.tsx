@@ -35,6 +35,18 @@ export function StockPage() {
     enabled: Boolean(branchId),
   });
 
+  // Lignes correspondant à la recherche (avant filtre catégorie) : les cartes
+  // reflètent le produit recherché, pas le stock global du système.
+  const searched = useMemo(
+    () =>
+      (data ?? []).filter(
+        (r) =>
+          r.name.toLowerCase().includes(search.toLowerCase()) ||
+          r.sku.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [data, search],
+  );
+
   const categoryStats = useMemo(() => {
     const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
       MONTURE: { count: 0, totalStock: 0, lastCreated: null },
@@ -44,8 +56,7 @@ export function StockPage() {
       SERVICE: { count: 0, totalStock: 0, lastCreated: null },
     };
 
-    const items = data ?? [];
-    items.forEach((r) => {
+    searched.forEach((r) => {
       const cat = r.category;
       if (stats[cat]) {
         stats[cat].count++;
@@ -59,14 +70,17 @@ export function StockPage() {
     });
 
     return stats;
-  }, [data]);
+  }, [searched]);
 
-  const rows = (data ?? []).filter(
-    (r) =>
-      (!category || r.category === category) &&
-      (r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.sku.toLowerCase().includes(search.toLowerCase())),
-  );
+  const rows = searched.filter((r) => !category || r.category === category);
+
+  // Synthèse de la recherche : nombre de références trouvées + unités en stock
+  // (les verres illimités ne comptent pas dans les unités).
+  const searchSummary = useMemo(() => {
+    if (!search.trim()) return null;
+    const qty = rows.reduce((s, r) => s + (r.unlimited ? 0 : r.quantity), 0);
+    return { refs: rows.length, qty };
+  }, [search, rows]);
 
   return (
     <div>
@@ -142,6 +156,20 @@ export function StockPage() {
           ))}
         </div>
       </div>
+
+      {/* Résultat de la recherche : total de références et d'unités trouvées. */}
+      {searchSummary && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+          <Search className="h-4 w-4 text-primary" />
+          <span className="text-content">
+            <b>{searchSummary.refs}</b> référence(s) trouvée(s)
+          </span>
+          <span className="text-content-faint">·</span>
+          <span className="text-content">
+            <b>{searchSummary.qty}</b> unité(s) en stock pour cette recherche
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <PageLoader />
