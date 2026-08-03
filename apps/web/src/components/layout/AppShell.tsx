@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { EmailVerifyBanner } from '../EmailVerifyBanner';
 import { TrialBanner } from '../TrialBanner';
 import { SupportChatWidget } from '../SupportChatWidget';
 import { ProductTourProvider } from '../../features/tour';
@@ -85,7 +84,10 @@ export function AppShell() {
       <div className="lg:pl-64">
         <Topbar />
         <TrialBanner />
-        <EmailVerifyBanner />
+        {/* Bandeau de confirmation d'email retiré : la vérification n'est pas
+            encore opérationnelle, le message serait donc sans issue pour
+            l'utilisateur. Remonter <EmailVerifyBanner /> ici le jour où
+            l'envoi des emails sera actif. */}
         <main className="mx-auto max-w-7xl animate-fade-in px-4 py-6 sm:px-6">
           <Suspense fallback={<PageLoader />}>
             <Outlet />
