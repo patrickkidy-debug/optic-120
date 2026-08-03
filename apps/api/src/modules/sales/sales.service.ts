@@ -78,7 +78,10 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
       where: { id: tenantId },
       select: { vatRate: true, currency: true },
     });
-    const vatFraction = (tenant?.vatRate ?? VAT_RATE * 100) / 100;
+    // Un taux fourni par la caisse s'applique à cette vente uniquement
+    // (exonération ou taux différent), sinon on prend celui de l'établissement.
+    const vatPercent = input.vatRate ?? tenant?.vatRate ?? VAT_RATE * 100;
+    const vatFraction = vatPercent / 100;
 
     const discount = input.discountAmount ?? 0;
     const insurance = input.insuranceAmount ?? 0;

@@ -899,8 +899,17 @@ export const saleCreateSchema = z.object({
   insuranceAmount: z.number().nonnegative().default(0),
   /** Assureur prenant en charge insuranceAmount (suivi des paiements trimestriels). */
   insurerId: z.string().uuid().optional(),
+  /**
+   * Taux de TVA de CETTE vente en % (0 = exonéré). Omis → taux de
+   * l'établissement. Permet de vendre hors taxe ou à un taux différent
+   * ponctuellement, sans modifier les réglages.
+   */
+  vatRate: z.number().min(0).max(100).optional(),
 });
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
+
+/** Taux de TVA proposés en caisse (en %). 0 = vente exonérée. */
+export const VAT_RATE_PRESETS = [0, 5, 10, 18, 20] as const;
 
 export const paymentMethodEnum = z.enum([
   PaymentMethod.CASH,

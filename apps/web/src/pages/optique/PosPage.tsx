@@ -17,7 +17,7 @@ import {
 import type { PaymentMethod } from '@oculo/shared-types';
 import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { getStock, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
-import { CustomerSearch, LensComposer } from '../../features/optique/SaleTools';
+import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
 import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -68,6 +68,8 @@ export function PosPage() {
   const pos = usePosStore();
   const [search, setSearch] = useState('');
   const [insurerId, setInsurerId] = useState('');
+  // Taux de TVA de la vente en cours (null = taux de l'établissement).
+  const [vatRate, setVatRate] = useState<number | null>(null);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
   const { data: insurers } = useQuery({
@@ -83,7 +85,10 @@ export function PosPage() {
   });
   const pricing = user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
 
-  const totals = computeTotals(pos, user?.tenantVatRate ?? undefined);
+  // Taux effectif : celui choisi en caisse, sinon celui de l'établissement.
+  const defaultVat = user?.tenantVatRate ?? 18;
+  const effectiveVat = vatRate ?? defaultVat;
+  const totals = computeTotals(pos, effectiveVat);
 
   // Prise en charge synchronisée avec l'assureur choisi : dès que le total change
   // (ajout/retrait d'article, remise), la part assurance est recalculée à son
@@ -111,10 +116,13 @@ export function PosPage() {
         insuranceAmount: pos.insuranceAmount,
         // Trace l'assureur pour le suivi des paiements trimestriels.
         insurerId: pos.insuranceAmount > 0 && insurerId ? insurerId : undefined,
+        // Taux de TVA choisi pour cette vente (omis = taux de l'établissement).
+        vatRate: vatRate ?? undefined,
       }),
     onSuccess: (sale, type) => {
       if (type === 'QUOTE') {
         pos.clear();
+        setVatRate(null);
         alert(`Devis ${sale.number} créé.`);
       } else {
         setPaySale({ id: sale.id, due: Number(sale.totalAmount) - Number(sale.paidAmount), number: sale.number });
@@ -278,9 +286,15 @@ export function PosPage() {
               </label>
             )}
 
+            {/* TVA : exonérer ou appliquer un taux différent pour cette vente. */}
+            <VatSelect value={vatRate} defaultRate={defaultVat} onChange={setVatRate} />
+
             <div className="space-y-1 text-sm">
               <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />
-              <Row label={`${t('pos.tax')} (${user?.tenantVatRate ?? 18} %)`} value={formatCurrency(totals.taxAmount)} />
+              <Row
+                label={effectiveVat === 0 ? `${t('pos.tax')} — exonéré` : `${t('pos.tax')} (${effectiveVat} %)`}
+                value={formatCurrency(totals.taxAmount)}
+              />
               <div className="my-1 border-t" />
               <div className="flex justify-between font-display text-lg font-bold text-content">
                 <span>{t('pos.due')}</span>
@@ -319,6 +333,8 @@ export function PosPage() {
           onPaid={() => {
             pos.clear();
             setInsurerId('');
+            // La TVA revient au taux de l'établissement pour la vente suivante.
+            setVatRate(null);
             setPaySale(null);
             qc.invalidateQueries({ queryKey: ['dashboard'] });
             qc.invalidateQueries({ queryKey: ['admin-dashboard'] });

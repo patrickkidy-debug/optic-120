@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, X, UserPlus, Glasses, Plus } from 'lucide-react';
+import { Search, X, UserPlus, Glasses, Plus, Percent } from 'lucide-react';
 import {
   customerCreateSchema,
   type CustomerCreateInput,
   lensBaseOptions,
   LENS_TREATMENTS,
   computeLensPrice,
+  VAT_RATE_PRESETS,
   type LensTreatmentKey,
   type LensPricing,
 } from '@oculo/shared-types';
@@ -16,6 +17,76 @@ import { listCustomers, createCustomer, ensureLensProduct, type Customer } from 
 import { Button, Modal, Field } from '../../components/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
+
+/**
+ * Choix du taux de TVA appliqué à la vente en cours : taux de l'établissement
+ * (défaut), exonération (0 %), taux courant ou taux libre. `value` est le taux
+ * en % ; `null` signifie « garder celui des réglages ».
+ */
+export function VatSelect({
+  value,
+  defaultRate,
+  onChange,
+}: {
+  value: number | null;
+  defaultRate: number;
+  onChange: (rate: number | null) => void;
+}) {
+  // « Autre » reste sélectionné tant qu'on saisit un taux hors liste.
+  const isPreset = value === null || (VAT_RATE_PRESETS as readonly number[]).includes(value);
+  const [custom, setCustom] = useState(!isPreset);
+
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-1.5 text-xs text-content-muted">
+        <Percent className="h-3.5 w-3.5 text-primary" /> TVA appliquée
+      </label>
+      <select
+        className="input"
+        value={custom ? 'custom' : value === null ? 'default' : String(value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === 'custom') {
+            setCustom(true);
+            onChange(value ?? defaultRate);
+          } else if (v === 'default') {
+            setCustom(false);
+            onChange(null);
+          } else {
+            setCustom(false);
+            onChange(Number(v));
+          }
+        }}
+      >
+        <option value="default">Taux de l'établissement ({defaultRate} %)</option>
+        <option value="0">Sans TVA — exonéré (0 %)</option>
+        {VAT_RATE_PRESETS.filter((r) => r > 0).map((r) => (
+          <option key={r} value={r}>
+            {r} %
+          </option>
+        ))}
+        <option value="custom">Autre taux…</option>
+      </select>
+      {custom && (
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="0.1"
+            className="input h-9 w-24 text-right"
+            value={value ?? ''}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              onChange(e.target.value === '' ? 0 : Math.min(100, Math.max(0, n)));
+            }}
+          />
+          <span className="text-xs text-content-faint">% appliqué à cette vente</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Sélecteur de client par recherche (nom ou téléphone), avec création à la volée.

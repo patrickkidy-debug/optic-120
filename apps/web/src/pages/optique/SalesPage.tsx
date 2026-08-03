@@ -26,7 +26,7 @@ import {
   createSale,
   type SaleListItem,
 } from '../../features/optique/api';
-import { CustomerSearch, LensComposer } from '../../features/optique/SaleTools';
+import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -480,6 +480,8 @@ function QuoteModal({
   const [insurerId, setInsurerId] = useState('');
   const [insurance, setInsurance] = useState(0);
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  // Taux de TVA de ce devis (null = taux de l'établissement).
+  const [vatRate, setVatRate] = useState<number | null>(null);
 
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
@@ -520,9 +522,11 @@ function QuoteModal({
     );
   }
 
+  // Taux effectif : celui choisi pour ce devis, sinon celui de l'établissement.
+  const effectiveVat = vatRate ?? vatPct;
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const taxBase = Math.max(0, subtotal - discount);
-  const taxAmount = Math.round(taxBase * (vatPct / 100));
+  const taxAmount = Math.round(taxBase * (effectiveVat / 100));
   const total = taxBase + taxAmount;
 
   // Prise en charge synchronisée avec l'assureur : suit le total en temps réel.
@@ -544,6 +548,8 @@ function QuoteModal({
         insuranceAmount: insurance,
         // Trace l'assureur pour le suivi des paiements trimestriels.
         insurerId: insurance > 0 && insurerId ? insurerId : undefined,
+        // Taux de TVA choisi pour ce devis (omis = taux de l'établissement).
+        vatRate: vatRate ?? undefined,
       }),
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),
@@ -683,13 +689,18 @@ function QuoteModal({
               </label>
             )}
 
+            {/* TVA : exonérer ou appliquer un taux différent pour ce devis. */}
+            <div className="mt-2">
+              <VatSelect value={vatRate} defaultRate={vatPct} onChange={setVatRate} />
+            </div>
+
             <div className="mt-3 space-y-1 border-t pt-3 text-sm">
               <div className="flex justify-between text-content-muted">
                 <span>{t('common.subtotal')}</span>
                 <span className="text-content">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-content-muted">
-                <span>TVA ({vatPct} %)</span>
+                <span>{effectiveVat === 0 ? 'TVA — exonéré' : `TVA (${effectiveVat} %)`}</span>
                 <span className="text-content">{formatCurrency(taxAmount)}</span>
               </div>
               <div className="flex justify-between font-display text-lg font-bold text-content">
