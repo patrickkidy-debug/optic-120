@@ -217,6 +217,16 @@ export interface SaleDetailItem {
   product: { name: string; sku: string };
 }
 
+/** Encaissement rattaché à une vente (détail des moyens de paiement). */
+export interface SalePayment {
+  id: string;
+  method: string;
+  status: string;
+  amount: string;
+  provider?: string | null;
+  createdAt: string;
+}
+
 export interface SaleDetail {
   id: string;
   number: string;
@@ -233,6 +243,7 @@ export interface SaleDetail {
   customerId?: string | null;
   insurerId?: string | null;
   items: SaleDetailItem[];
+  payments?: SalePayment[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
   branch: { name: string; city?: string | null; address?: string | null; phone?: string | null };
   cashier?: { firstName: string; lastName: string } | null;

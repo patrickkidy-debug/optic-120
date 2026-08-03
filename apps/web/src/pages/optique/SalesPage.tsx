@@ -12,6 +12,7 @@ import {
   Trash2,
   Loader2,
   Pencil,
+  Eye,
   Banknote,
   FileSpreadsheet,
   Printer,
@@ -76,6 +77,9 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   // Pièce en cours de modification (chargée en détail avant d'ouvrir la modale).
   const [editing, setEditing] = useState<SaleDetail | null>(null);
   const [loadingEdit, setLoadingEdit] = useState<string | null>(null);
+  // Fiche détaillée (articles, montants, encaissements) affichée à la demande.
+  const [detail, setDetail] = useState<SaleDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
@@ -157,6 +161,18 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       alert(apiErrorMessage(e));
     } finally {
       setLoadingEdit(null);
+    }
+  }
+
+  /** Ouvre la fiche détaillée (articles, montants, encaissements). */
+  async function openDetail(id: string) {
+    setLoadingDetail(id);
+    try {
+      setDetail(await getSale(id));
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setLoadingDetail(null);
     }
   }
 
@@ -317,6 +333,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                 {!isQuote && <th className="table-cell font-semibold">Moyen</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.amount')}</th>
                 {!isQuote && <th className="table-cell text-right font-semibold">{t('sales.paid')}</th>}
+                {!isQuote && <th className="table-cell text-right font-semibold">Reste</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.date')}</th>
                 <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
@@ -350,6 +367,21 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                       {formatCurrency(Number(s.paidAmount))}
                     </td>
                   )}
+                  {!isQuote &&
+                    (() => {
+                      const due = Number(s.totalAmount) - Number(s.paidAmount);
+                      return (
+                        <td className="table-cell text-right">
+                          {s.status === 'CANCELLED' ? (
+                            <span className="text-content-faint">—</span>
+                          ) : due > 0 ? (
+                            <span className="font-semibold text-warning">{formatCurrency(due)}</span>
+                          ) : (
+                            <span className="text-success">Soldé</span>
+                          )}
+                        </td>
+                      );
+                    })()}
                   <td className="table-cell text-right text-content-muted">
                     {formatDateTime(s.createdAt)}
                   </td>
@@ -388,6 +420,19 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                           <Download className="h-3.5 w-3.5" />
                         )}
                         PDF
+                      </button>
+                      <button
+                        onClick={() => openDetail(s.id)}
+                        disabled={loadingDetail === s.id}
+                        className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
+                        title="Voir le détail et les encaissements"
+                      >
+                        {loadingDetail === s.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                        Détails
                       </button>
                       {canUpdate && s.status !== 'CANCELLED' && (
                         <button
@@ -478,11 +523,43 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
         <QuoteModal
           editing={editing}
           onClose={() => setEditing(null)}
-          onCreated={() => {
+          onCreated={async (saleId) => {
             setEditing(null);
             // Le stock et les montants ont bougé : on rafraîchit toutes les vues.
             refreshSalesViews();
+            // Enchaîne sur l'encaissement s'il reste un solde à percevoir.
+            try {
+              const fresh = await getSale(saleId);
+              const due = Number(fresh.totalAmount) - Number(fresh.paidAmount);
+              if (fresh.type === 'SALE' && due > 0 && canPay) {
+                setPaySale({ id: fresh.id, due, number: fresh.number });
+              }
+            } catch {
+              /* la liste est déjà à jour : on n'interrompt pas l'utilisateur */
+            }
           }}
+        />
+      )}
+
+      {detail && (
+        <SaleDetailModal
+          sale={detail}
+          onClose={() => setDetail(null)}
+          onCollect={
+            detail.type === 'SALE' &&
+            canPay &&
+            detail.status !== 'CANCELLED' &&
+            Number(detail.totalAmount) - Number(detail.paidAmount) > 0
+              ? () => {
+                  setPaySale({
+                    id: detail.id,
+                    due: Number(detail.totalAmount) - Number(detail.paidAmount),
+                    number: detail.number,
+                  });
+                  setDetail(null);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -497,6 +574,164 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Libellé lisible d'un statut d'encaissement. */
+const PAYMENT_STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
+  SUCCESS: { label: 'Réussi', tone: 'success' },
+  PENDING: { label: 'En attente', tone: 'warning' },
+  FAILED: { label: 'Échoué', tone: 'danger' },
+};
+
+/**
+ * Fiche détaillée d'une vente / d'un devis : articles, décomposition des
+ * montants et historique des encaissements par moyen de paiement. Propose
+ * d'encaisser le solde directement s'il en reste un.
+ */
+function SaleDetailModal({
+  sale,
+  onClose,
+  onCollect,
+}: {
+  sale: SaleDetail;
+  onClose: () => void;
+  onCollect?: () => void;
+}) {
+  const due = Number(sale.totalAmount) - Number(sale.paidAmount);
+  const payments = sale.payments ?? [];
+
+  return (
+    <Modal open onClose={onClose} title={`Détail — ${sale.number}`} size="lg">
+      <div className="space-y-4">
+        {/* En-tête : client, statut, date */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-2 p-3 text-sm">
+          <div>
+            <p className="font-medium text-content">
+              {sale.customer ? `${sale.customer.firstName} ${sale.customer.lastName}` : 'Client de passage'}
+            </p>
+            <p className="text-xs text-content-faint">
+              {formatDateTime(sale.createdAt)}
+              {sale.cashier ? ` · ${sale.cashier.firstName} ${sale.cashier.lastName}` : ''}
+              {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
+            </p>
+          </div>
+          <Badge tone={statusTone(sale.status)}>{STATUS_LABEL[sale.status] ?? sale.status}</Badge>
+        </div>
+
+        {/* Articles */}
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                <th className="table-cell font-semibold">Article</th>
+                <th className="table-cell text-center font-semibold">Qté</th>
+                <th className="table-cell text-right font-semibold">P.U.</th>
+                <th className="table-cell text-right font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sale.items.map((i) => (
+                <tr key={i.id} className="border-b last:border-0">
+                  <td className="table-cell">
+                    <div className="text-content">{i.product.name}</div>
+                    <div className="font-mono text-[11px] text-content-faint">{i.product.sku}</div>
+                  </td>
+                  <td className="table-cell text-center text-content-muted">{i.quantity}</td>
+                  <td className="table-cell text-right text-content-muted">{formatCurrency(Number(i.unitPrice))}</td>
+                  <td className="table-cell text-right font-medium text-content">
+                    {formatCurrency(Number(i.lineTotal))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Décomposition des montants */}
+        <div className="space-y-1 rounded-xl border p-3 text-sm">
+          <AmountRow label="Sous-total" value={Number(sale.subtotal)} />
+          {Number(sale.discountAmount) > 0 && (
+            <AmountRow label="Remise" value={-Number(sale.discountAmount)} />
+          )}
+          <AmountRow
+            label={Number(sale.taxAmount) === 0 ? 'TVA — exonéré' : 'TVA'}
+            value={Number(sale.taxAmount)}
+          />
+          {Number(sale.insuranceAmount) > 0 && (
+            <AmountRow label="Prise en charge assurance" value={Number(sale.insuranceAmount)} />
+          )}
+          <div className="my-1 border-t" />
+          <div className="flex justify-between font-display text-lg font-bold text-content">
+            <span>Total</span>
+            <span>{formatCurrency(Number(sale.totalAmount))}</span>
+          </div>
+          <AmountRow label="Déjà encaissé" value={Number(sale.paidAmount)} />
+          <div className="flex justify-between font-semibold">
+            <span className="text-content-muted">Reste à payer</span>
+            <span className={due > 0 ? 'text-warning' : 'text-success'}>
+              {due > 0 ? formatCurrency(due) : 'Soldé'}
+            </span>
+          </div>
+        </div>
+
+        {/* Encaissements par moyen de paiement */}
+        <div>
+          <h4 className="mb-2 text-sm font-semibold text-content">Encaissements</h4>
+          {payments.length === 0 ? (
+            <p className="rounded-xl bg-surface-2 p-3 text-sm text-content-muted">
+              Aucun encaissement enregistré pour cette pièce.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {payments.map((p) => {
+                const st = PAYMENT_STATUS[p.status] ?? { label: p.status, tone: 'neutral' as const };
+                return (
+                  <div
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-content">
+                        {PAYMENT_LABEL[p.method] ?? p.method}
+                      </span>
+                      <Badge tone={st.tone}>{st.label}</Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-content-faint">{formatDateTime(p.createdAt)}</span>
+                      <span className="font-display font-bold text-content">
+                        {formatCurrency(Number(p.amount))}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t pt-3">
+          <Button variant="outline" onClick={onClose}>
+            Fermer
+          </Button>
+          {onCollect && (
+            <Button variant="accent" onClick={onCollect}>
+              <Banknote className="h-4 w-4" /> Encaisser {formatCurrency(due)}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function AmountRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between text-content-muted">
+      <span>{label}</span>
+      <span className="text-content">{formatCurrency(value)}</span>
     </div>
   );
 }
