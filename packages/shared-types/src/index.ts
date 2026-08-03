@@ -911,6 +911,22 @@ export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 /** Taux de TVA proposés en caisse (en %). 0 = vente exonérée. */
 export const VAT_RATE_PRESETS = [0, 5, 10, 18, 20] as const;
 
+/**
+ * Modification d'une vente ou d'un devis existant (permission
+ * `optique.sales.update`). Les montants sont recalculés côté serveur et le
+ * stock est réajusté sur la différence entre l'ancien et le nouveau contenu.
+ * Seuls les champs fournis sont modifiés.
+ */
+export const saleUpdateSchema = z.object({
+  customerId: z.string().uuid().nullable().optional(),
+  items: z.array(saleItemSchema).min(1, 'Au moins un article requis').optional(),
+  discountAmount: z.number().nonnegative().optional(),
+  insuranceAmount: z.number().nonnegative().optional(),
+  insurerId: z.string().uuid().nullable().optional(),
+  vatRate: z.number().min(0).max(100).optional(),
+});
+export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
+
 export const paymentMethodEnum = z.enum([
   PaymentMethod.CASH,
   PaymentMethod.WAVE,

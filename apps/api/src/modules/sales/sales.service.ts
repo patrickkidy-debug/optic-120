@@ -6,7 +6,7 @@ import {
   VAT_RATE,
   MADE_TO_ORDER_CATEGORIES,
 } from '@oculo/shared-types';
-import type { SaleCreateInput, PaymentMethod } from '@oculo/shared-types';
+import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
@@ -172,6 +172,227 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
 
 /** Fidélité : 1 point gagné par tranche de FCFA dépensés (1 point = 25 FCFA de remise). */
 export const LOYALTY_POINT_PER = 1000;
+
+/** Vrai si le stock a déjà été décrémenté pour cette vente. */
+function hasMovedStock(type: string, status: string): boolean {
+  return (
+    type === SaleType.SALE &&
+    ([SaleStatus.CONFIRMED, SaleStatus.PARTIALLY_PAID, SaleStatus.PAID] as string[]).includes(status)
+  );
+}
+
+/**
+ * Modifie une vente ou un devis existant : articles, remise, prise en charge,
+ * assureur, taux de TVA et client. Les montants sont TOUJOURS recalculés côté
+ * serveur, le stock est réajusté sur la DIFFÉRENCE entre l'ancien et le nouveau
+ * contenu, et les points de fidélité suivent le nouveau total.
+ *
+ * Refusé si la vente est annulée, si c'est un retour, ou si un retour existe
+ * déjà — dans ces cas l'historique doit rester intact.
+ */
+export async function updateSale(
+  tenantId: string,
+  saleId: string,
+  userId: string,
+  input: SaleUpdateInput,
+) {
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findFirst({ where: { id: saleId, tenantId }, include: { items: true } });
+    if (!sale) throw notFound('Vente introuvable');
+    if (sale.type === SaleType.RETURN) throw conflict("Un retour ne peut pas être modifié");
+    if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente annulée : modification impossible');
+    const returned = await tx.sale.count({ where: { tenantId, originalSaleId: sale.id } });
+    if (returned > 0) throw conflict('Un retour existe pour cette vente : modification impossible');
+
+    if (input.insurerId) {
+      const insurer = await tx.insurer.findFirst({ where: { id: input.insurerId, tenantId } });
+      if (!insurer) throw badRequest('Assureur invalide');
+    }
+    if (input.customerId) {
+      const customer = await tx.customer.findFirst({ where: { id: input.customerId, tenantId } });
+      if (!customer) throw badRequest('Client invalide');
+    }
+
+    // Nouvelles lignes (ou reprise des lignes existantes si non fournies).
+    const targetIds = (input.items ?? sale.items).map((i) => i.productId);
+    const allIds = [...new Set([...targetIds, ...sale.items.map((i) => i.productId)])];
+    const products = await tx.product.findMany({ where: { id: { in: allIds }, tenantId } });
+    const byId = new Map(products.map((p) => [p.id, p]));
+
+    const lines: ComputedLine[] = input.items
+      ? input.items.map((i) => {
+          const p = byId.get(i.productId);
+          if (!p || !p.isActive) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
+          const unitPrice =
+            i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
+          return {
+            productId: i.productId,
+            quantity: i.quantity,
+            unitPrice,
+            lineTotal: unitPrice * i.quantity,
+            name: p.name,
+            category: p.category,
+          };
+        })
+      : sale.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          lineTotal: Number(i.lineTotal),
+          name: byId.get(i.productId)?.name ?? '',
+          category: byId.get(i.productId)?.category ?? '',
+        }));
+
+    const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
+    const discount = input.discountAmount ?? Number(sale.discountAmount);
+    const insurance = input.insuranceAmount ?? Number(sale.insuranceAmount);
+
+    // Taux de TVA : celui fourni, sinon on conserve celui appliqué à l'origine
+    // (déduit des montants enregistrés) pour ne pas retaxer une vente exonérée.
+    let vatPercent: number;
+    if (input.vatRate != null) {
+      vatPercent = input.vatRate;
+    } else {
+      const prevBase = Math.max(0, Number(sale.subtotal) - Number(sale.discountAmount));
+      const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { vatRate: true } });
+      vatPercent =
+        prevBase > 0
+          ? Math.round((Number(sale.taxAmount) / prevBase) * 10000) / 100
+          : (tenant?.vatRate ?? VAT_RATE * 100);
+    }
+    const taxBase = Math.max(0, subtotal - discount);
+    const taxAmount = Math.round(taxBase * (vatPercent / 100));
+    const total = taxBase + taxAmount;
+
+    // Encaissements réels déjà enregistrés : le nouveau total ne peut pas
+    // descendre en dessous (sinon il faut passer par un retour / avoir).
+    const isSale = sale.type === SaleType.SALE;
+    const payAgg = await tx.payment.aggregate({
+      where: { saleId: sale.id, status: PaymentStatus.SUCCESS },
+      _sum: { amount: true },
+    });
+    const paidByPayments = Number(payAgg._sum.amount ?? 0);
+    if (paidByPayments > total) {
+      throw badRequest(
+        `Le nouveau total est inférieur au montant déjà encaissé (${paidByPayments}). Enregistrez un retour à la place.`,
+      );
+    }
+    const newPaid = isSale ? Math.min(total, paidByPayments + Math.min(insurance, total)) : 0;
+    const status = !isSale
+      ? SaleStatus.DRAFT
+      : newPaid >= total
+        ? SaleStatus.PAID
+        : newPaid > 0
+          ? SaleStatus.PARTIALLY_PAID
+          : SaleStatus.CONFIRMED;
+
+    // Réajustement du stock sur la différence, uniquement si la vente avait
+    // déjà bougé le stock (un devis n'en consomme pas).
+    if (input.items && hasMovedStock(sale.type, sale.status)) {
+      const oldQty = new Map<string, number>();
+      sale.items.forEach((i) => oldQty.set(i.productId, (oldQty.get(i.productId) ?? 0) + i.quantity));
+      const newQty = new Map<string, number>();
+      lines.forEach((l) => newQty.set(l.productId, (newQty.get(l.productId) ?? 0) + l.quantity));
+
+      for (const productId of new Set([...oldQty.keys(), ...newQty.keys()])) {
+        const category = byId.get(productId)?.category ?? '';
+        // Verres fabriqués sur commande : pas de stock à réajuster.
+        if (MADE_TO_ORDER_CATEGORIES.includes(category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
+        const delta = (newQty.get(productId) ?? 0) - (oldQty.get(productId) ?? 0);
+        if (delta === 0) continue;
+
+        const item = await tx.stockItem.findFirst({
+          where: { productId, branchId: sale.branchId, tenantId },
+        });
+        const label = byId.get(productId)?.name ?? productId;
+        if (!item) {
+          if (delta > 0) throw badRequest(`Stock insuffisant pour « ${label} »`);
+          continue;
+        }
+        if (delta > 0 && item.quantity < delta) {
+          throw badRequest(`Stock insuffisant pour « ${label} »`);
+        }
+        await tx.stockItem.update({
+          where: { id: item.id },
+          data: { quantity: item.quantity - delta },
+        });
+        await tx.stockMovement.create({
+          data: {
+            tenantId,
+            stockItemId: item.id,
+            type: delta > 0 ? StockMovementType.SALE_OUT : StockMovementType.RETURN_IN,
+            quantity: -delta,
+            reason: `Modification ${sale.number}`,
+            saleId: sale.id,
+            createdById: userId,
+          },
+        });
+      }
+    }
+
+    // Points de fidélité : suivent le nouveau total (et le nouveau client).
+    if (isSale) {
+      const prevCustomer = sale.customerId;
+      const nextCustomer = input.customerId === undefined ? sale.customerId : input.customerId;
+      const prevPts = Math.floor(Number(sale.totalAmount) / LOYALTY_POINT_PER);
+      const nextPts = Math.floor(total / LOYALTY_POINT_PER);
+      if (prevCustomer === nextCustomer) {
+        const delta = nextPts - prevPts;
+        if (nextCustomer && delta !== 0) {
+          await tx.customer.update({
+            where: { id: nextCustomer },
+            data: { loyaltyPoints: { increment: delta } },
+          });
+        }
+      } else {
+        if (prevCustomer && prevPts > 0) {
+          await tx.customer.update({
+            where: { id: prevCustomer },
+            data: { loyaltyPoints: { decrement: prevPts } },
+          });
+        }
+        if (nextCustomer && nextPts > 0) {
+          await tx.customer.update({
+            where: { id: nextCustomer },
+            data: { loyaltyPoints: { increment: nextPts } },
+          });
+        }
+      }
+    }
+
+    if (input.items) {
+      await tx.saleItem.deleteMany({ where: { saleId: sale.id } });
+    }
+
+    return tx.sale.update({
+      where: { id: sale.id },
+      data: {
+        customerId: input.customerId === undefined ? undefined : input.customerId,
+        insurerId: input.insurerId === undefined ? undefined : input.insurerId,
+        subtotal,
+        discountAmount: discount,
+        taxAmount,
+        insuranceAmount: insurance,
+        totalAmount: total,
+        paidAmount: newPaid,
+        status,
+        ...(input.items
+          ? {
+              items: {
+                create: lines.map((l) => ({
+                  productId: l.productId,
+                  quantity: l.quantity,
+                  unitPrice: l.unitPrice,
+                  lineTotal: l.lineTotal,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: { items: { include: { product: true } }, customer: true },
+    });
+  });
+}
 
 /**
  * Crée un retour / avoir pour une vente : réapprovisionne le stock, enregistre

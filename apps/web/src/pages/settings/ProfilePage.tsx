@@ -752,8 +752,8 @@ function InvoiceCustomizationCard() {
       currency: 'XOF',
       createdAt: now,
       items: [
-        { id: '1', quantity: 1, unitPrice: '75000', lineTotal: '75000', product: { name: 'Monture Ray-Ban RB5154', sku: 'RB-5154' } },
-        { id: '2', quantity: 2, unitPrice: '10000', lineTotal: '20000', product: { name: 'Verre unifocal anti-reflet', sku: 'VERR-UNI' } },
+        { id: '1', productId: 'demo-1', quantity: 1, unitPrice: '75000', lineTotal: '75000', product: { name: 'Monture Ray-Ban RB5154', sku: 'RB-5154' } },
+        { id: '2', productId: 'demo-2', quantity: 2, unitPrice: '10000', lineTotal: '20000', product: { name: 'Verre unifocal anti-reflet', sku: 'VERR-UNI' } },
       ],
       customer: { firstName: 'Awa', lastName: 'Diop', phone: '+225 07 00 00 00 00', email: null },
       branch: {

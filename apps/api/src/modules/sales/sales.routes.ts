@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { saleCreateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
+import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { forbidden, notFound } from '../../lib/http-error.js';
@@ -148,6 +148,24 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       ...requestMeta(req),
     });
     return reply.status(201).send({ sale });
+  });
+
+  // Modification d'une vente ou d'un devis (articles, remise, prise en charge,
+  // assureur, TVA, client). Le stock et les montants sont réajustés côté serveur.
+  app.patch('/:id', { preHandler: requirePermission('optique.sales.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = saleUpdateSchema.parse(req.body);
+    const sale = await salesService.updateSale(req.auth!.tenantId, id, req.auth!.userId, input);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: sale.type === SaleType.QUOTE ? 'QUOTE_UPDATED' : 'SALE_UPDATED',
+      entity: 'Sale',
+      entityId: id,
+      metadata: { number: sale.number, total: Number(sale.totalAmount) },
+      ...requestMeta(req),
+    });
+    return reply.send({ sale });
   });
 
   app.patch('/:id/cancel', { preHandler: requirePermission('optique.sales.cancel') }, async (req, reply) => {

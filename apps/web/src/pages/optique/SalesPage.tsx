@@ -11,6 +11,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Pencil,
   Banknote,
   FileSpreadsheet,
   Printer,
@@ -24,7 +25,9 @@ import {
   getSale,
   getStock,
   createSale,
+  updateSale,
   type SaleListItem,
+  type SaleDetail,
 } from '../../features/optique/api';
 import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
@@ -67,8 +70,12 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const canQuote = usePermission('optique.quotes.create');
   const canRefund = usePermission('optique.sales.refund');
   const canPay = usePermission('optique.sales.create');
+  const canUpdate = usePermission('optique.sales.update');
   const user = useAuthStore((s) => s.user);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  // Pièce en cours de modification (chargée en détail avant d'ouvrir la modale).
+  const [editing, setEditing] = useState<SaleDetail | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
@@ -140,6 +147,18 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
 
   const clientName = (s: SaleListItem) =>
     s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '';
+
+  /** Charge le détail de la pièce puis ouvre la modale de modification. */
+  async function openEdit(id: string) {
+    setLoadingEdit(id);
+    try {
+      setEditing(await getSale(id));
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setLoadingEdit(null);
+    }
+  }
 
   /** Récupère TOUT l'historique (toutes les pages) pour l'export. */
   async function fetchAllSales(): Promise<SaleListItem[]> {
@@ -370,6 +389,21 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         )}
                         PDF
                       </button>
+                      {canUpdate && s.status !== 'CANCELLED' && (
+                        <button
+                          onClick={() => openEdit(s.id)}
+                          disabled={loadingEdit === s.id}
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+                          title={isQuote ? 'Modifier ce devis' : 'Modifier cette vente'}
+                        >
+                          {loadingEdit === s.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Pencil className="h-3.5 w-3.5" />
+                          )}
+                          Modifier
+                        </button>
+                      )}
                       {!isQuote &&
                         canPay &&
                         s.status !== 'CANCELLED' &&
@@ -440,6 +474,18 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
         />
       )}
 
+      {editing && (
+        <QuoteModal
+          editing={editing}
+          onClose={() => setEditing(null)}
+          onCreated={() => {
+            setEditing(null);
+            // Le stock et les montants ont bougé : on rafraîchit toutes les vues.
+            refreshSalesViews();
+          }}
+        />
+      )}
+
       {paySale && (
         <PaymentModal
           sale={paySale}
@@ -463,25 +509,49 @@ interface QuoteLine {
   quantity: number;
 }
 
+/**
+ * Modale de composition d'une vente / d'un devis. Sans `editing`, elle crée un
+ * devis ; avec `editing`, elle modifie la pièce existante (articles, prix,
+ * remise, prise en charge, TVA, client) — le serveur réajuste stock et montants.
+ */
 function QuoteModal({
   onClose,
   onCreated,
+  editing,
 }: {
   onClose: () => void;
   onCreated: (saleId: string) => void;
+  editing?: SaleDetail;
 }) {
   const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
   const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
+  const isEdit = Boolean(editing);
   const [search, setSearch] = useState('');
-  const [customerId, setCustomerId] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [insurerId, setInsurerId] = useState('');
-  const [insurance, setInsurance] = useState(0);
-  const [lines, setLines] = useState<QuoteLine[]>([]);
-  // Taux de TVA de ce devis (null = taux de l'établissement).
-  const [vatRate, setVatRate] = useState<number | null>(null);
+  const [customerId, setCustomerId] = useState(editing?.customerId ?? '');
+  const [discount, setDiscount] = useState(Number(editing?.discountAmount ?? 0));
+  const [insurerId, setInsurerId] = useState(editing?.insurerId ?? '');
+  const [insurance, setInsurance] = useState(Number(editing?.insuranceAmount ?? 0));
+  const [lines, setLines] = useState<QuoteLine[]>(
+    editing
+      ? editing.items.map((i) => ({
+          productId: i.productId,
+          name: i.product.name,
+          sku: i.product.sku,
+          unitPrice: Number(i.unitPrice),
+          quantity: i.quantity,
+        }))
+      : [],
+  );
+  // Taux de TVA appliqué (null = taux de l'établissement). En modification, on
+  // repart du taux réellement appliqué à la pièce.
+  const [vatRate, setVatRate] = useState<number | null>(() => {
+    if (!editing) return null;
+    const base = Math.max(0, Number(editing.subtotal) - Number(editing.discountAmount));
+    if (base <= 0) return null;
+    return Math.round((Number(editing.taxAmount) / base) * 10000) / 100;
+  });
 
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
@@ -537,26 +607,46 @@ function QuoteModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, total]);
 
+  const items = lines.map((l) => ({
+    productId: l.productId,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+  }));
+
   const createMut = useMutation({
     mutationFn: () =>
-      createSale({
-        branchId: branchId!,
-        customerId: customerId || undefined,
-        type: 'QUOTE',
-        items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
-        discountAmount: discount,
-        insuranceAmount: insurance,
-        // Trace l'assureur pour le suivi des paiements trimestriels.
-        insurerId: insurance > 0 && insurerId ? insurerId : undefined,
-        // Taux de TVA choisi pour ce devis (omis = taux de l'établissement).
-        vatRate: vatRate ?? undefined,
-      }),
+      editing
+        ? updateSale(editing.id, {
+            customerId: customerId || null,
+            items,
+            discountAmount: discount,
+            insuranceAmount: insurance,
+            insurerId: insurance > 0 && insurerId ? insurerId : null,
+            vatRate: vatRate ?? undefined,
+          })
+        : createSale({
+            branchId: branchId!,
+            customerId: customerId || undefined,
+            type: 'QUOTE',
+            items,
+            discountAmount: discount,
+            insuranceAmount: insurance,
+            // Trace l'assureur pour le suivi des paiements trimestriels.
+            insurerId: insurance > 0 && insurerId ? insurerId : undefined,
+            // Taux de TVA choisi pour ce devis (omis = taux de l'établissement).
+            vatRate: vatRate ?? undefined,
+          }),
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
   return (
-    <Modal open onClose={onClose} title={t('sales.newQuote')} size="lg">
+    <Modal
+      open
+      onClose={onClose}
+      title={isEdit ? `Modifier ${editing!.number}` : t('sales.newQuote')}
+      size="lg"
+    >
       {!branchId ? (
         <PageLoader />
       ) : (
@@ -718,7 +808,7 @@ function QuoteModal({
                 loading={createMut.isPending}
                 onClick={() => createMut.mutate()}
               >
-                Créer le devis
+                {isEdit ? 'Enregistrer les modifications' : 'Créer le devis'}
               </Button>
             </div>
           </div>

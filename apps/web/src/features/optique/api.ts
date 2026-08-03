@@ -5,6 +5,7 @@ import type {
   CustomerCreateInput,
   PrescriptionCreateInput,
   SaleCreateInput,
+  SaleUpdateInput,
   PaymentMethod,
   LensProductInput,
 } from '@oculo/shared-types';
@@ -209,6 +210,7 @@ export interface SaleListItem {
 
 export interface SaleDetailItem {
   id: string;
+  productId: string;
   quantity: number;
   unitPrice: string;
   lineTotal: string;
@@ -228,6 +230,8 @@ export interface SaleDetail {
   paidAmount: string;
   currency: string;
   createdAt: string;
+  customerId?: string | null;
+  insurerId?: string | null;
   items: SaleDetailItem[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
   branch: { name: string; city?: string | null; address?: string | null; phone?: string | null };
@@ -236,6 +240,12 @@ export interface SaleDetail {
 
 export async function getSale(id: string): Promise<SaleDetail> {
   const { data } = await api.get(`/sales/${id}`);
+  return data.sale as SaleDetail;
+}
+
+/** Modifie une vente ou un devis (permission optique.sales.update). */
+export async function updateSale(id: string, input: SaleUpdateInput): Promise<SaleDetail> {
+  const { data } = await api.patch(`/sales/${id}`, input);
   return data.sale as SaleDetail;
 }
 
