@@ -29,6 +29,7 @@ import {
   generateResetToken,
 } from '../../lib/tokens.js';
 import { recordAudit } from '../../lib/audit.js';
+import { mergeOpticalSettings } from '../../lib/optical-settings.js';
 import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensurePendingSubscription } from '../billing/billing.service.js';
@@ -87,6 +88,9 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     tenantInvoiceSettings: (user.tenant.invoiceSettings as InvoiceSettings | null) ?? null,
     tenantLensPricing: (user.tenant.lensPricing as LensPricing | null) ?? null,
     tenantWhatsappTemplates: (user.tenant.whatsappTemplates as WhatsappTemplates | null) ?? null,
+    // Réglages métier du cabinet : la caisse en a besoin (valeur du point de
+    // fidélité, garantie proposée par défaut).
+    tenantOpticalSettings: mergeOpticalSettings(user.tenant.opticalSettings),
     emailVerified: user.emailVerifiedAt != null,
   };
 }

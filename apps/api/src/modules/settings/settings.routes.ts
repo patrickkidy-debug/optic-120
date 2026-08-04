@@ -23,6 +23,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         lensPricing: true,
         initialInvestment: true,
         whatsappTemplates: true,
+        opticalSettings: true,
       },
     });
     return reply.send({
@@ -37,6 +38,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         lensPricing: (tenant?.lensPricing as unknown) ?? null,
         initialInvestment: tenant?.initialInvestment ?? null,
         whatsappTemplates: (tenant?.whatsappTemplates as unknown) ?? null,
+        opticalSettings: (tenant?.opticalSettings as unknown) ?? null,
       },
     });
   });
@@ -65,6 +67,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
           input.initialInvestment === undefined ? undefined : input.initialInvestment,
         whatsappTemplates:
           input.whatsappTemplates === undefined ? undefined : input.whatsappTemplates,
+        opticalSettings:
+          input.opticalSettings === undefined ? undefined : input.opticalSettings,
       },
       select: {
         name: true,
@@ -77,6 +81,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         lensPricing: true,
         initialInvestment: true,
         whatsappTemplates: true,
+        opticalSettings: true,
       },
     });
     return reply.send({
@@ -91,6 +96,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         lensPricing: (tenant.lensPricing as unknown) ?? null,
         initialInvestment: tenant.initialInvestment ?? null,
         whatsappTemplates: (tenant.whatsappTemplates as unknown) ?? null,
+        opticalSettings: (tenant.opticalSettings as unknown) ?? null,
       },
     });
   });

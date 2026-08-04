@@ -9,6 +9,7 @@ import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
+import { getOpticalSettings } from '../../lib/optical-settings.js';
 
 function nullifyEmpty<T extends Record<string, unknown>>(obj: T): T {
   const out = { ...obj } as Record<string, unknown>;
@@ -135,8 +136,11 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
   app.get('/renewals', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
     const MONTH = 30 * 24 * 60 * 60 * 1000;
     const now = Date.now();
-    const rxCutoff = new Date(now - 18 * MONTH); // ordonnance de plus de 18 mois
-    const saleCutoff = new Date(now - 12 * MONTH); // aucun achat depuis 12 mois
+    // Seuils paramétrables dans les réglages du cabinet (valeurs par défaut :
+    // 18 mois pour l'ordonnance, 12 mois sans achat).
+    const settings = await getOpticalSettings(req.auth!.tenantId);
+    const rxCutoff = new Date(now - settings.prescriptionReminderMonths * MONTH);
+    const saleCutoff = new Date(now - settings.purchaseReminderMonths * MONTH);
 
     const rxGrouped = await req.db!.opticalPrescription.groupBy({
       by: ['customerId'],

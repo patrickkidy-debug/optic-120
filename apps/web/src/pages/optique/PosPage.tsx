@@ -15,9 +15,21 @@ import {
   QrCode,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
-import { paymentMethodsForCountry, CURRENCY_FORMAT, type SupportedCurrency, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
+import {
+  paymentMethodsForCountry,
+  CURRENCY_FORMAT,
+  type SupportedCurrency,
+  DEFAULT_LENS_PRICING,
+  DEFAULT_OPTICAL_SETTINGS,
+} from '@oculo/shared-types';
 import { getStock, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
-import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
+import {
+  CustomerSearch,
+  LensComposer,
+  VatSelect,
+  LoyaltyRedeem,
+  WarrantySelect,
+} from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
 import { getCollectInfo } from '../../features/settings/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -70,6 +82,9 @@ export function PosPage() {
   const [insurerId, setInsurerId] = useState('');
   // Taux de TVA de la vente en cours (null = taux de l'établissement).
   const [vatRate, setVatRate] = useState<number | null>(null);
+  // Points de fidélité convertis en remise + garantie accordée sur cette vente.
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [warrantyMonths, setWarrantyMonths] = useState<number | null>(null);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
   const { data: insurers } = useQuery({
@@ -88,7 +103,14 @@ export function PosPage() {
   // Taux effectif : celui choisi en caisse, sinon celui de l'établissement.
   const defaultVat = user?.tenantVatRate ?? 18;
   const effectiveVat = vatRate ?? defaultVat;
-  const totals = computeTotals(pos, effectiveVat);
+  // Réglages du cabinet (valeur du point, garantie par défaut).
+  const optical = user?.tenantOpticalSettings ?? DEFAULT_OPTICAL_SETTINGS;
+  // La remise fidélité s'ajoute à la remise saisie — même calcul que le serveur.
+  const loyaltyDiscount = Math.round(loyaltyPoints * optical.loyaltyPointValue);
+  const totals = computeTotals(
+    { ...pos, discountAmount: pos.discountAmount + loyaltyDiscount },
+    effectiveVat,
+  );
 
   // Prise en charge synchronisée avec l'assureur choisi : dès que le total change
   // (ajout/retrait d'article, remise), la part assurance est recalculée à son
@@ -118,11 +140,15 @@ export function PosPage() {
         insurerId: pos.insuranceAmount > 0 && insurerId ? insurerId : undefined,
         // Taux de TVA choisi pour cette vente (omis = taux de l'établissement).
         vatRate: vatRate ?? undefined,
+        // Points de fidélité escomptés et garantie accordée (ventes seulement).
+        loyaltyPointsUsed: loyaltyPoints > 0 ? loyaltyPoints : undefined,
+        warrantyMonths: type === 'SALE' && warrantyMonths !== null ? warrantyMonths : undefined,
       }),
     onSuccess: (sale, type) => {
       if (type === 'QUOTE') {
         pos.clear();
         setVatRate(null);
+        setLoyaltyPoints(0);
         alert(`Devis ${sale.number} créé.`);
       } else {
         setPaySale({ id: sale.id, due: Number(sale.totalAmount) - Number(sale.paidAmount), number: sale.number });
@@ -286,11 +312,36 @@ export function PosPage() {
               </label>
             )}
 
-            {/* TVA : exonérer ou appliquer un taux différent pour cette vente. */}
-            <VatSelect value={vatRate} defaultRate={defaultVat} onChange={setVatRate} />
+            {/* Fidélité : convertit les points du client en remise. */}
+            <LoyaltyRedeem
+              customerId={pos.customerId}
+              subtotal={totals.subtotal}
+              pointValue={optical.loyaltyPointValue}
+              value={loyaltyPoints}
+              onChange={setLoyaltyPoints}
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              {/* TVA : exonérer ou appliquer un taux différent pour cette vente. */}
+              <div className="col-span-2">
+                <VatSelect value={vatRate} defaultRate={defaultVat} onChange={setVatRate} />
+              </div>
+              <div className="col-span-2">
+                <WarrantySelect
+                  value={warrantyMonths ?? optical.defaultWarrantyMonths}
+                  onChange={setWarrantyMonths}
+                />
+              </div>
+            </div>
 
             <div className="space-y-1 text-sm">
               <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />
+              {loyaltyPoints > 0 && (
+                <Row
+                  label={`Fidélité (${loyaltyPoints} pt)`}
+                  value={`- ${formatCurrency(Math.round(loyaltyPoints * optical.loyaltyPointValue))}`}
+                />
+              )}
               <Row
                 label={effectiveVat === 0 ? `${t('pos.tax')} — exonéré` : `${t('pos.tax')} (${effectiveVat} %)`}
                 value={formatCurrency(totals.taxAmount)}
@@ -333,8 +384,10 @@ export function PosPage() {
           onPaid={() => {
             pos.clear();
             setInsurerId('');
-            // La TVA revient au taux de l'établissement pour la vente suivante.
+            // La TVA, la fidélité et la garantie repartent des réglages.
             setVatRate(null);
+            setLoyaltyPoints(0);
+            setWarrantyMonths(null);
             setPaySale(null);
             qc.invalidateQueries({ queryKey: ['dashboard'] });
             qc.invalidateQueries({ queryKey: ['admin-dashboard'] });

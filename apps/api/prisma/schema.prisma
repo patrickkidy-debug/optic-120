@@ -47,6 +47,9 @@ model Tenant {
   whatsappTemplates Json?
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.
   paymentConfig Json?
+  // Réglages métier optique : validité des ordonnances, seuils de relance,
+  // garantie par défaut, valeur du point de fidélité. null = valeurs par défaut.
+  opticalSettings Json?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -275,25 +278,38 @@ model StockMovement {
   quantity    Int // signé : +entrée, -sortie
   reason      String?
   saleId      String?
+  // Réception fournisseur : origine et coût d'achat unitaire, pour tracer
+  // les entrées de stock (PURCHASE_IN) et suivre les prix d'achat.
+  supplierId  String?
+  supplier    Supplier?         @relation(fields: [supplierId], references: [id])
+  unitCost    Decimal?          @db.Decimal(12, 2)
   createdById String?
   createdAt   DateTime          @default(now())
 
   @@index([tenantId, stockItemId])
   @@index([tenantId])
+  @@index([supplierId])
 }
 
 /* ---------------- CUSTOMERS / SALES ---------------- */
 
 model Customer {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   firstName     String
   lastName      String
   phone         String?
   email         String?
-  loyaltyPoints Int      @default(0)
-  createdAt     DateTime @default(now())
+  // Fiche client complète : indispensable pour les relances (anniversaire,
+  // renouvellement) et les conseils liés à l'âge (presbytie).
+  dateOfBirth   DateTime?
+  gender        Gender?
+  address       String?
+  profession    String?
+  notes         String?
+  loyaltyPoints Int       @default(0)
+  createdAt     DateTime  @default(now())
 
   sales         Sale[]
   prescriptions OpticalPrescription[]
@@ -329,6 +345,9 @@ model OpticalPrescription {
   ogNearPd          String? // écart pupillaire de près OG (mm)
   vertex            String? // distance verre-œil (mm)
   pantoTilt         String? // angle pantoscopique (°)
+  /// Fin de validité de l'ordonnance (calculée à la création depuis les
+  /// réglages de l'établissement, modifiable). Pilote les relances.
+  expiresAt         DateTime?
   createdById       String?
   createdAt         DateTime @default(now())
 
@@ -389,6 +408,12 @@ model Sale {
   totalAmount     Decimal    @db.Decimal(12, 2)
   paidAmount      Decimal    @default(0) @db.Decimal(12, 2)
   currency        String     @default("XOF")
+  // Garantie accordée sur l'équipement vendu (monture/verres) : durée en mois
+  // et date d'échéance figée à la vente, pour trancher un litige en SAV.
+  warrantyMonths  Int?
+  warrantyEndsAt  DateTime?
+  // Remise accordée en points de fidélité (montant déjà inclus dans discountAmount).
+  loyaltyPointsUsed Int      @default(0)
   // Retour/avoir : référence la vente d'origine remboursée.
   originalSaleId  String?
   originalSale    Sale?      @relation("SaleReturns", fields: [originalSaleId], references: [id])
@@ -795,6 +820,8 @@ model Supplier {
   notes       String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  stockMovements StockMovement[]
 
   @@index([tenantId])
 }

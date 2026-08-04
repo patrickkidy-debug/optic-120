@@ -814,8 +814,26 @@ export const customerCreateSchema = z.object({
   lastName: z.string().min(1).max(80),
   phone: z.string().max(40).optional(),
   email: z.string().email().optional().or(z.literal('')),
+  // Fiche complète : sert aux relances et aux conseils liés à l'âge.
+  dateOfBirth: z.string().optional().or(z.literal('')),
+  gender: z.enum([Gender.MALE, Gender.FEMALE, Gender.OTHER]).optional().or(z.literal('')),
+  address: z.string().max(200).optional().or(z.literal('')),
+  profession: z.string().max(120).optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
 });
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
+
+/** Âge en années à partir d'une date de naissance (null si absente/invalide). */
+export function ageFromBirthDate(dob: string | Date | null | undefined): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
 
 /** Ordonnance optique (prescription de verres : sphère/cylindre/axe/addition). */
 const opt = z.string().max(20).optional().or(z.literal(''));
@@ -840,8 +858,84 @@ export const prescriptionCreateSchema = z.object({
   ogNearPd: opt,
   vertex: opt,
   pantoTilt: opt,
+  /** Fin de validité ; vide = calculée depuis les réglages de l'établissement. */
+  expiresAt: z.string().optional().or(z.literal('')),
 });
 export type PrescriptionCreateInput = z.infer<typeof prescriptionCreateSchema>;
+
+/* ------------------------ Réglages métier optique ------------------------ */
+
+/**
+ * Paramètres du cabinet : durée de validité d'une ordonnance, seuils de
+ * relance, garantie accordée par défaut et valeur d'un point de fidélité.
+ * Remplacent les valeurs codées en dur.
+ */
+export const opticalSettingsSchema = z.object({
+  /** Validité d'une ordonnance, en mois. */
+  prescriptionValidityMonths: z.number().int().min(1).max(120).default(18),
+  /** Relance « nouvelle ordonnance » passé ce délai, en mois. */
+  prescriptionReminderMonths: z.number().int().min(1).max(120).default(18),
+  /** Relance « pas d'achat depuis », en mois. */
+  purchaseReminderMonths: z.number().int().min(1).max(120).default(12),
+  /** Garantie proposée par défaut sur une vente, en mois (0 = aucune). */
+  defaultWarrantyMonths: z.number().int().min(0).max(120).default(12),
+  /** Valeur d'un point de fidélité, en unité monétaire. */
+  loyaltyPointValue: z.number().min(0).max(10000).default(25),
+});
+export type OpticalSettings = z.infer<typeof opticalSettingsSchema>;
+
+export const DEFAULT_OPTICAL_SETTINGS: OpticalSettings = {
+  prescriptionValidityMonths: 18,
+  prescriptionReminderMonths: 18,
+  purchaseReminderMonths: 12,
+  defaultWarrantyMonths: 12,
+  loyaltyPointValue: 25,
+};
+
+/** Garanties proposées en caisse (en mois). */
+export const WARRANTY_PRESETS = [0, 3, 6, 12, 24] as const;
+
+/* --------------------------- Opérations de stock --------------------------- */
+
+const stockLineSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().int().positive(),
+});
+
+/** Réception d'une commande fournisseur : entrée de stock tracée + coût. */
+export const stockReceiveSchema = z.object({
+  branchId: z.string().uuid(),
+  supplierId: z.string().uuid().optional(),
+  reference: z.string().max(80).optional().or(z.literal('')),
+  items: z
+    .array(stockLineSchema.extend({ unitCost: z.number().nonnegative().optional() }))
+    .min(1, 'Au moins un article'),
+});
+export type StockReceiveInput = z.infer<typeof stockReceiveSchema>;
+
+/** Transfert de stock entre deux magasins. */
+export const stockTransferSchema = z
+  .object({
+    fromBranchId: z.string().uuid(),
+    toBranchId: z.string().uuid(),
+    reason: z.string().max(200).optional().or(z.literal('')),
+    items: z.array(stockLineSchema).min(1, 'Au moins un article'),
+  })
+  .refine((v) => v.fromBranchId !== v.toBranchId, {
+    message: 'Les magasins source et destination doivent être différents',
+    path: ['toBranchId'],
+  });
+export type StockTransferInput = z.infer<typeof stockTransferSchema>;
+
+/** Inventaire physique : quantités comptées, régularisées en une fois. */
+export const stockCountSchema = z.object({
+  branchId: z.string().uuid(),
+  note: z.string().max(200).optional().or(z.literal('')),
+  items: z
+    .array(z.object({ productId: z.string().uuid(), countedQuantity: z.number().int().min(0) }))
+    .min(1, 'Au moins un article'),
+});
+export type StockCountInput = z.infer<typeof stockCountSchema>;
 
 /* --- Commandes de verres (laboratoire) & SAV / réparations --- */
 export const LENS_ORDER_STATUSES = ['ORDERED', 'RECEIVED', 'MOUNTED', 'DELIVERED', 'CANCELLED'] as const;
@@ -905,6 +999,10 @@ export const saleCreateSchema = z.object({
    * ponctuellement, sans modifier les réglages.
    */
   vatRate: z.number().min(0).max(100).optional(),
+  /** Garantie accordée, en mois (0 ou omis = aucune). */
+  warrantyMonths: z.number().int().min(0).max(120).optional(),
+  /** Points de fidélité du client convertis en remise sur cette vente. */
+  loyaltyPointsUsed: z.number().int().min(0).optional(),
 });
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 
@@ -1458,6 +1556,8 @@ export const brandingUpdateSchema = z.object({
   initialInvestment: z.number().nonnegative().optional(),
   /** Modèles de messages WhatsApp par étape de vente. */
   whatsappTemplates: whatsappTemplatesSchema.optional(),
+  /** Réglages métier optique (validité ordonnance, relances, garantie, fidélité). */
+  opticalSettings: opticalSettingsSchema.partial().optional(),
 });
 export type BrandingUpdateInput = z.infer<typeof brandingUpdateSchema>;
 
@@ -1499,6 +1599,8 @@ export interface AuthUser {
   tenantLensPricing: LensPricing | null;
   /** Modèles de messages WhatsApp par étape (null = modèles par défaut). */
   tenantWhatsappTemplates: WhatsappTemplates | null;
+  /** Réglages métier optique (validité ordonnance, garantie, fidélité). */
+  tenantOpticalSettings: OpticalSettings;
   /** Vrai uniquement pour l'éditeur du SaaS (console plateforme, MRR…). */
   isPlatformOperator: boolean;
   /** Vrai une fois l'adresse email confirmée. */

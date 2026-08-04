@@ -224,7 +224,18 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
   const { register, handleSubmit, formState: { errors } } = useForm<CustomerCreateInput>({
     resolver: zodResolver(customerCreateSchema),
     defaultValues: customer
-      ? { firstName: customer.firstName, lastName: customer.lastName, phone: customer.phone ?? '', email: customer.email ?? '' }
+      ? {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone ?? '',
+          email: customer.email ?? '',
+          // L'input date attend `YYYY-MM-DD`.
+          dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.slice(0, 10) : '',
+          gender: (customer.gender as CustomerCreateInput['gender']) ?? '',
+          address: customer.address ?? '',
+          profession: customer.profession ?? '',
+          notes: customer.notes ?? '',
+        }
       : {},
   });
 
@@ -245,6 +256,34 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
           <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Date de naissance">
+            <input className="input" type="date" {...register('dateOfBirth')} />
+          </Field>
+          <Field label="Genre">
+            <select className="input" {...register('gender')}>
+              <option value="">— Non précisé —</option>
+              <option value="MALE">Masculin</option>
+              <option value="FEMALE">Féminin</option>
+              <option value="OTHER">Autre</option>
+            </select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Profession">
+            <input className="input" {...register('profession')} placeholder="Enseignant, chauffeur…" />
+          </Field>
+          <Field label="Adresse">
+            <input className="input" {...register('address')} placeholder="Quartier, ville" />
+          </Field>
+        </div>
+        <Field label="Notes">
+          <textarea
+            className="input min-h-[60px]"
+            {...register('notes')}
+            placeholder="Antécédents, préférences de monture, remarques…"
+          />
+        </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>

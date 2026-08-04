@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Glasses, Plus, Printer, ReceiptText, FileText, Star } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
-import { lensBaseOptions, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
+import { lensBaseOptions, DEFAULT_LENS_PRICING, ageFromBirthDate } from '@oculo/shared-types';
 import { getCustomer, createPrescription, type Prescription } from '../../features/optique/api';
 import { printPrescription, type PrescriptionPatient } from '../../features/optique/prescriptionDocument';
 import type { CompanyInfo } from '../../features/optique/saleDocument';
@@ -56,6 +56,19 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
               <p className="text-sm text-content-muted">
                 {customer.phone ?? '—'}{customer.email ? ` · ${customer.email}` : ''}
               </p>
+              {/* Âge, profession et adresse : contexte utile au conseil (presbytie,
+                  usage professionnel des verres) et aux relances. */}
+              {(() => {
+                const age = ageFromBirthDate(customer.dateOfBirth);
+                const bits = [
+                  age !== null ? `${age} ans` : null,
+                  customer.profession || null,
+                  customer.address || null,
+                ].filter(Boolean);
+                return bits.length > 0 ? (
+                  <p className="text-xs text-content-faint">{bits.join(' · ')}</p>
+                ) : null;
+              })()}
               <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-0.5 text-xs font-bold text-white">
                 <Star className="h-3.5 w-3.5" /> {customer.loyaltyPoints ?? 0} points de fidélité
               </p>
@@ -141,7 +154,19 @@ function PrescriptionCard({
   return (
     <div className="rounded-xl border p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-content">{formatDate(rx.date)}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-content">{formatDate(rx.date)}</span>
+          {/* Validité : une ordonnance périmée doit être refaite avant de
+              commander des verres — on l'annonce clairement. */}
+          {rx.expiresAt &&
+            (new Date(rx.expiresAt) < new Date() ? (
+              <Badge tone="danger">Expirée le {formatDate(rx.expiresAt)}</Badge>
+            ) : (
+              <span className="text-xs text-content-faint">
+                Valide jusqu'au {formatDate(rx.expiresAt)}
+              </span>
+            ))}
+        </div>
         <div className="flex items-center gap-2">
           {rx.lensType && <Badge tone="info">{rx.lensType}</Badge>}
           <button

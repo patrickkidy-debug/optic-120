@@ -13,6 +13,7 @@ import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
+import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -76,14 +77,37 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
     // elle doit être figée sur la vente, pas supposée.
     const tenant = await tx.tenant.findUnique({
       where: { id: tenantId },
-      select: { vatRate: true, currency: true },
+      select: { vatRate: true, currency: true, opticalSettings: true },
     });
     // Un taux fourni par la caisse s'applique à cette vente uniquement
     // (exonération ou taux différent), sinon on prend celui de l'établissement.
     const vatPercent = input.vatRate ?? tenant?.vatRate ?? VAT_RATE * 100;
     const vatFraction = vatPercent / 100;
 
-    const discount = input.discountAmount ?? 0;
+    // Fidélité : les points du client sont convertis en remise. On vérifie le
+    // solde réel côté serveur et on plafonne la remise au sous-total.
+    const settings = mergeOpticalSettings(tenant?.opticalSettings);
+    let pointsUsed = 0;
+    let loyaltyDiscount = 0;
+    if (input.loyaltyPointsUsed && input.loyaltyPointsUsed > 0) {
+      if (!input.customerId) throw badRequest('Un client est requis pour utiliser des points');
+      const customer = await tx.customer.findFirst({
+        where: { id: input.customerId, tenantId },
+        select: { loyaltyPoints: true },
+      });
+      if (!customer) throw badRequest('Client invalide');
+      if (input.loyaltyPointsUsed > customer.loyaltyPoints) {
+        throw badRequest(`Solde insuffisant : ${customer.loyaltyPoints} point(s) disponible(s)`);
+      }
+      const maxPoints =
+        settings.loyaltyPointValue > 0
+          ? Math.floor(subtotal / settings.loyaltyPointValue)
+          : 0;
+      pointsUsed = Math.min(input.loyaltyPointsUsed, maxPoints);
+      loyaltyDiscount = Math.round(pointsUsed * settings.loyaltyPointValue);
+    }
+
+    const discount = (input.discountAmount ?? 0) + loyaltyDiscount;
     const insurance = input.insuranceAmount ?? 0;
     const taxBase = Math.max(0, subtotal - discount);
     const taxAmount = Math.round(taxBase * vatFraction);
@@ -115,6 +139,17 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         totalAmount: total,
         paidAmount: paidInit,
         currency: tenant?.currency ?? 'XOF',
+        loyaltyPointsUsed: pointsUsed,
+        // Garantie : durée retenue (ou celle par défaut du cabinet) et échéance
+        // figée à la vente, pour trancher un litige SAV plus tard.
+        ...(isSale
+          ? (() => {
+              const months = input.warrantyMonths ?? settings.defaultWarrantyMonths;
+              return months > 0
+                ? { warrantyMonths: months, warrantyEndsAt: addMonths(new Date(), months) }
+                : {};
+            })()
+          : {}),
         items: {
           create: lines.map((l) => ({
             productId: l.productId,
@@ -154,13 +189,15 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         });
       }
 
-      // Fidélité : 1 point par tranche de LOYALTY_POINT_PER FCFA dépensés.
+      // Fidélité : 1 point gagné par tranche de LOYALTY_POINT_PER dépensés,
+      // moins les points dépensés en remise sur cette même vente.
       if (input.customerId) {
-        const pts = Math.floor(total / LOYALTY_POINT_PER);
-        if (pts > 0) {
+        const earned = Math.floor(total / LOYALTY_POINT_PER);
+        const net = earned - pointsUsed;
+        if (net !== 0) {
           await tx.customer.update({
             where: { id: input.customerId },
-            data: { loyaltyPoints: { increment: pts } },
+            data: { loyaltyPoints: { increment: net } },
           });
         }
       }

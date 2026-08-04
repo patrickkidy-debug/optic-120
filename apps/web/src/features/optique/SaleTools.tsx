@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, X, UserPlus, Glasses, Plus, Percent } from 'lucide-react';
+import { Search, X, UserPlus, Glasses, Plus, Percent, Star, ShieldCheck } from 'lucide-react';
 import {
   customerCreateSchema,
   type CustomerCreateInput,
@@ -10,6 +10,7 @@ import {
   LENS_TREATMENTS,
   computeLensPrice,
   VAT_RATE_PRESETS,
+  WARRANTY_PRESETS,
   type LensTreatmentKey,
   type LensPricing,
 } from '@oculo/shared-types';
@@ -85,6 +86,114 @@ export function VatSelect({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Utilisation des points de fidélité du client sur la vente en cours. Les
+ * points sont convertis en remise ; le serveur revérifie le solde. Masqué tant
+ * qu'aucun client n'est choisi ou que son solde est vide.
+ */
+export function LoyaltyRedeem({
+  customerId,
+  subtotal,
+  pointValue,
+  value,
+  onChange,
+}: {
+  customerId: string | null;
+  subtotal: number;
+  pointValue: number;
+  value: number;
+  onChange: (points: number) => void;
+}) {
+  const { data: customers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => listCustomers(),
+    enabled: Boolean(customerId),
+  });
+  const customer = customers?.find((c) => c.id === customerId);
+  const available = customer?.loyaltyPoints ?? 0;
+
+  // On ne peut pas escompter plus que le panier ne vaut.
+  const maxByCart = pointValue > 0 ? Math.floor(subtotal / pointValue) : 0;
+  const max = Math.min(available, maxByCart);
+
+  // Le client change (ou son solde) : on borne la remise déjà saisie.
+  useEffect(() => {
+    if (value > max) onChange(max);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [max]);
+
+  if (!customerId || available <= 0 || pointValue <= 0) return null;
+
+  return (
+    <div className="rounded-xl border border-accent/25 bg-accent/5 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-content">
+          <Star className="h-3.5 w-3.5 text-accent" />
+          Fidélité — {available} point(s)
+        </label>
+        {value > 0 && (
+          <button onClick={() => onChange(0)} className="text-xs text-content-faint hover:text-danger">
+            Retirer
+          </button>
+        )}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          type="number"
+          min={0}
+          max={max}
+          className="input h-8 w-24 text-right"
+          value={value || ''}
+          placeholder="0"
+          onChange={(e) => {
+            const n = Math.floor(Number(e.target.value) || 0);
+            onChange(Math.min(Math.max(0, n), max));
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => onChange(max)}
+          disabled={max <= 0}
+          className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50"
+        >
+          Tout utiliser
+        </button>
+        <span className="text-xs text-content-muted">
+          = {formatCurrency(Math.round(value * pointValue))} de remise
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Durée de garantie accordée sur la vente (0 = aucune). */
+export function WarrantySelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (months: number) => void;
+}) {
+  return (
+    <label className="block text-xs text-content-muted">
+      <span className="flex items-center gap-1.5">
+        <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Garantie
+      </span>
+      <select
+        className="input mt-1"
+        value={String(value)}
+        onChange={(e) => onChange(Number(e.target.value))}
+      >
+        {WARRANTY_PRESETS.map((m) => (
+          <option key={m} value={m}>
+            {m === 0 ? 'Aucune garantie' : `${m} mois`}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

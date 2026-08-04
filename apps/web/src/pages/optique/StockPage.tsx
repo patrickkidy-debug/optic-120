@@ -1,7 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Boxes, Search, SlidersHorizontal, AlertTriangle, History, Trash2 } from 'lucide-react';
+import {
+  Boxes,
+  Search,
+  SlidersHorizontal,
+  AlertTriangle,
+  History,
+  Trash2,
+  PackagePlus,
+  ArrowLeftRight,
+  ClipboardCheck,
+} from 'lucide-react';
 import {
   getStock,
   adjustStock,
@@ -13,6 +23,7 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
+import { ReceiveStockModal, TransferStockModal, StockCountModal } from './StockOperations';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
@@ -31,6 +42,9 @@ export function StockPage() {
   const branchId = useUIStore((s) => s.activeBranchId);
   const canAdjust = usePermission('optique.stock.adjust');
   const canDelete = usePermission('optique.products.delete');
+  const canTransfer = usePermission('optique.stock.transfer');
+  // Opération de stock ouverte : réception, transfert ou inventaire.
+  const [operation, setOperation] = useState<'receive' | 'transfer' | 'count' | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
@@ -100,7 +114,29 @@ export function StockPage() {
 
   return (
     <div>
-      <PageHeader title={t('stock.title')} subtitle={t('stock.subtitle')} />
+      <PageHeader
+        title={t('stock.title')}
+        subtitle={t('stock.subtitle')}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {canAdjust && (
+              <Button variant="outline" onClick={() => setOperation('receive')}>
+                <PackagePlus className="h-4 w-4" /> Réception
+              </Button>
+            )}
+            {canTransfer && (
+              <Button variant="outline" onClick={() => setOperation('transfer')}>
+                <ArrowLeftRight className="h-4 w-4" /> Transfert
+              </Button>
+            )}
+            {canAdjust && (
+              <Button onClick={() => setOperation('count')}>
+                <ClipboardCheck className="h-4 w-4" /> Inventaire
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Visual Category Dashboard Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
@@ -281,6 +317,17 @@ export function StockPage() {
           branchId={branchId}
           onClose={() => setViewingHistory(null)}
         />
+      )}
+
+      {/* Opérations de stock : réception fournisseur, transfert, inventaire. */}
+      {operation === 'receive' && branchId && (
+        <ReceiveStockModal branchId={branchId} onClose={() => setOperation(null)} />
+      )}
+      {operation === 'transfer' && branchId && (
+        <TransferStockModal branchId={branchId} onClose={() => setOperation(null)} />
+      )}
+      {operation === 'count' && branchId && (
+        <StockCountModal branchId={branchId} onClose={() => setOperation(null)} />
       )}
     </div>
   );

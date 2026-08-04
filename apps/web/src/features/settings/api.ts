@@ -1,5 +1,6 @@
 import { api } from '../../lib/api';
-import type { PaymentConfigInput, BrandingUpdateInput, InvoiceSettings, LensPricing, WhatsappTemplates } from '@oculo/shared-types';
+import type { PaymentConfigInput, BrandingUpdateInput, InvoiceSettings, LensPricing, WhatsappTemplates, OpticalSettings } from '@oculo/shared-types';
+import { DEFAULT_OPTICAL_SETTINGS } from '@oculo/shared-types';
 import { useAuthStore } from '../../store/auth';
 
 export interface MaskedPaymentConfig {
@@ -60,6 +61,8 @@ export interface Branding {
   lensPricing: LensPricing | null;
   initialInvestment: number | null;
   whatsappTemplates: WhatsappTemplates | null;
+  /** Réglages métier optique (null = valeurs par défaut). */
+  opticalSettings: Partial<OpticalSettings> | null;
 }
 
 export async function getBranding(): Promise<Branding> {
@@ -83,6 +86,10 @@ export async function updateBranding(input: BrandingUpdateInput): Promise<Brandi
       tenantInvoiceSettings: data.branding.invoiceSettings,
       tenantLensPricing: data.branding.lensPricing,
       tenantWhatsappTemplates: data.branding.whatsappTemplates,
+      tenantOpticalSettings: {
+        ...DEFAULT_OPTICAL_SETTINGS,
+        ...(data.branding.opticalSettings ?? {}),
+      },
     });
   }
   return data.branding;

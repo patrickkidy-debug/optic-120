@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus } from 'lucide-react';
 import { useAuthStore, usePermission } from '../../store/auth';
@@ -22,8 +22,8 @@ import { getBranding, updateBranding } from '../../features/settings/api';
 import { RestartTourCard } from '../../features/tour';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
-import type { InvoiceSettings, LensPricing } from '@oculo/shared-types';
-import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES } from '@oculo/shared-types';
+import type { InvoiceSettings, LensPricing, OpticalSettings } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_OPTICAL_SETTINGS } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
@@ -467,11 +467,131 @@ export function ProfilePage() {
 
       {active === 'documents' && canBranding && (
         <div className="space-y-4">
+          <OpticalSettingsCard />
           <InvoiceCustomizationCard />
           <LensPricingCard />
           <WhatsappTemplatesCard />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Réglages métier du cabinet : validité des ordonnances, délais de relance,
+ * garantie proposée par défaut et valeur du point de fidélité. Remplacent les
+ * valeurs qui étaient codées en dur.
+ */
+function OpticalSettingsCard() {
+  const qc = useQueryClient();
+  const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
+  const [form, setForm] = useState<OpticalSettings | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  // Valeurs du serveur au premier chargement, puis état local pendant l'édition.
+  const values = form ?? { ...DEFAULT_OPTICAL_SETTINGS, ...(branding?.opticalSettings ?? {}) };
+  const set = (patch: Partial<OpticalSettings>) => setForm({ ...values, ...patch });
+
+  const mut = useMutation({
+    mutationFn: () => updateBranding({ opticalSettings: values }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['branding'] });
+      // Les relances dépendent de ces seuils.
+      qc.invalidateQueries({ queryKey: ['renewals'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  const Row = ({
+    label,
+    hint,
+    value,
+    onChange,
+    suffix,
+    min = 0,
+  }: {
+    label: string;
+    hint: string;
+    value: number;
+    onChange: (n: number) => void;
+    suffix: string;
+    min?: number;
+  }) => (
+    <div className="flex items-center justify-between gap-3 border-b py-2.5 last:border-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-content">{label}</p>
+        <p className="text-xs text-content-faint">{hint}</p>
+      </div>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <input
+          type="number"
+          min={min}
+          value={value}
+          onChange={(e) => onChange(Math.max(min, Number(e.target.value) || 0))}
+          className="input h-9 w-24 text-right"
+        />
+        <span className="text-xs text-content-faint">{suffix}</span>
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="card p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <Glasses className="h-5 w-5 text-primary" />
+        <h3 className="font-display font-bold text-content">Réglages du cabinet</h3>
+      </div>
+      <p className="mb-3 text-xs text-content-faint">
+        Pilotent la validité des ordonnances, les relances clients, la garantie et la fidélité.
+      </p>
+
+      <Row
+        label="Validité d'une ordonnance"
+        hint="Durée après laquelle une ordonnance est marquée expirée."
+        value={values.prescriptionValidityMonths}
+        onChange={(n) => set({ prescriptionValidityMonths: n })}
+        suffix="mois"
+        min={1}
+      />
+      <Row
+        label="Relance « nouvelle ordonnance »"
+        hint="Le client apparaît dans Renouvellements passé ce délai."
+        value={values.prescriptionReminderMonths}
+        onChange={(n) => set({ prescriptionReminderMonths: n })}
+        suffix="mois"
+        min={1}
+      />
+      <Row
+        label="Relance « sans achat »"
+        hint="Le client apparaît dans Renouvellements s'il n'a rien acheté depuis."
+        value={values.purchaseReminderMonths}
+        onChange={(n) => set({ purchaseReminderMonths: n })}
+        suffix="mois"
+        min={1}
+      />
+      <Row
+        label="Garantie par défaut"
+        hint="Proposée automatiquement en caisse (0 = aucune)."
+        value={values.defaultWarrantyMonths}
+        onChange={(n) => set({ defaultWarrantyMonths: n })}
+        suffix="mois"
+      />
+      <Row
+        label="Valeur d'un point de fidélité"
+        hint="Remise obtenue par point utilisé en caisse."
+        value={values.loyaltyPointValue}
+        onChange={(n) => set({ loyaltyPointValue: n })}
+        suffix="FCFA"
+      />
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button onClick={() => mut.mutate()} loading={mut.isPending}>
+          <Save className="h-4 w-4" /> Enregistrer
+        </Button>
+        {saved && <span className="text-sm text-success">Enregistré ✓</span>}
+      </div>
     </div>
   );
 }

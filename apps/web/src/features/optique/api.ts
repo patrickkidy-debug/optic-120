@@ -128,7 +128,46 @@ export interface Customer {
   lastName: string;
   phone?: string | null;
   email?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  address?: string | null;
+  profession?: string | null;
+  notes?: string | null;
   loyaltyPoints?: number;
+}
+
+/* ---------------- Opérations de stock (réception / transfert / inventaire) ---------------- */
+
+/** Réception d'une commande fournisseur : entrée de stock tracée avec coût. */
+export async function receiveStock(input: {
+  branchId: string;
+  supplierId?: string;
+  reference?: string;
+  items: { productId: string; quantity: number; unitCost?: number }[];
+}): Promise<{ lines: number; received: number }> {
+  const { data } = await api.post('/stock/receive', input);
+  return data;
+}
+
+/** Transfert de stock entre deux magasins. */
+export async function transferStock(input: {
+  fromBranchId: string;
+  toBranchId: string;
+  reason?: string;
+  items: { productId: string; quantity: number }[];
+}): Promise<{ lines: number; moved: number }> {
+  const { data } = await api.post('/stock/transfer', input);
+  return data;
+}
+
+/** Inventaire physique : régularise le stock sur les quantités comptées. */
+export async function applyStockCount(input: {
+  branchId: string;
+  note?: string;
+  items: { productId: string; countedQuantity: number }[];
+}): Promise<{ counted: number; adjusted: number; net: number }> {
+  const { data } = await api.post('/stock/count', input);
+  return data;
 }
 
 export async function listCustomers(search?: string): Promise<Customer[]> {
@@ -162,6 +201,8 @@ export interface Prescription {
   pupillaryDistance: string | null;
   lensType: string | null;
   notes: string | null;
+  /** Fin de validité de l'ordonnance (null = non renseignée). */
+  expiresAt?: string | null;
 }
 
 export async function getCustomer(id: string) {

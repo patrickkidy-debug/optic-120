@@ -65,6 +65,211 @@ export async function adjustStock(tenantId: string, input: AdjustStockInput, use
   });
 }
 
+/**
+ * Récupère (ou crée) la ligne de stock d'un produit dans une succursale.
+ * Mutualisé par la réception, le transfert et l'inventaire.
+ */
+async function ensureStockItem(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tenantId: string,
+  productId: string,
+  branchId: string,
+) {
+  const existing = await tx.stockItem.findFirst({ where: { productId, branchId, tenantId } });
+  if (existing) return existing;
+  return tx.stockItem.create({
+    data: { tenantId, productId, branchId, quantity: 0, minAlert: 0 },
+  });
+}
+
+/**
+ * Réception d'une commande fournisseur : entrée de stock tracée (PURCHASE_IN)
+ * avec le fournisseur et le coût d'achat unitaire. Met à jour le prix d'achat
+ * du produit quand un coût est fourni, pour suivre les marges.
+ */
+export async function receiveStock(
+  tenantId: string,
+  userId: string,
+  input: {
+    branchId: string;
+    supplierId?: string;
+    reference?: string;
+    items: { productId: string; quantity: number; unitCost?: number }[];
+  },
+) {
+  return prisma.$transaction(async (tx) => {
+    const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
+    if (!branch) throw notFound('Succursale introuvable');
+    if (input.supplierId) {
+      const supplier = await tx.supplier.findFirst({ where: { id: input.supplierId, tenantId } });
+      if (!supplier) throw badRequest('Fournisseur invalide');
+    }
+
+    const reason = input.reference
+      ? `Réception fournisseur — ${input.reference}`
+      : 'Réception fournisseur';
+    let received = 0;
+
+    for (const line of input.items) {
+      const product = await tx.product.findFirst({ where: { id: line.productId, tenantId } });
+      if (!product) throw badRequest(`Produit introuvable : ${line.productId}`);
+
+      const item = await ensureStockItem(tx, tenantId, line.productId, input.branchId);
+      await tx.stockItem.update({
+        where: { id: item.id },
+        data: { quantity: item.quantity + line.quantity },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          stockItemId: item.id,
+          type: StockMovementType.PURCHASE_IN,
+          quantity: line.quantity,
+          reason,
+          supplierId: input.supplierId ?? null,
+          unitCost: line.unitCost ?? null,
+          createdById: userId,
+        },
+      });
+      // Dernier prix d'achat connu : sert au calcul de marge.
+      if (line.unitCost != null && line.unitCost >= 0) {
+        await tx.product.update({
+          where: { id: line.productId },
+          data: { buyPrice: line.unitCost },
+        });
+      }
+      received += line.quantity;
+    }
+
+    return { lines: input.items.length, received };
+  });
+}
+
+/**
+ * Transfert de stock entre deux magasins : sortie de la source et entrée dans
+ * la destination, tracées des deux côtés. Rejeté si la source est insuffisante.
+ */
+export async function transferStock(
+  tenantId: string,
+  userId: string,
+  input: {
+    fromBranchId: string;
+    toBranchId: string;
+    reason?: string;
+    items: { productId: string; quantity: number }[];
+  },
+) {
+  return prisma.$transaction(async (tx) => {
+    const [from, to] = await Promise.all([
+      tx.branch.findFirst({ where: { id: input.fromBranchId, tenantId } }),
+      tx.branch.findFirst({ where: { id: input.toBranchId, tenantId } }),
+    ]);
+    if (!from) throw notFound('Magasin source introuvable');
+    if (!to) throw notFound('Magasin destination introuvable');
+
+    let moved = 0;
+    for (const line of input.items) {
+      const product = await tx.product.findFirst({ where: { id: line.productId, tenantId } });
+      if (!product) throw badRequest(`Produit introuvable : ${line.productId}`);
+
+      const source = await tx.stockItem.findFirst({
+        where: { productId: line.productId, branchId: input.fromBranchId, tenantId },
+      });
+      if (!source || source.quantity < line.quantity) {
+        throw badRequest(`Stock insuffisant pour « ${product.name} » dans ${from.name}`);
+      }
+
+      await tx.stockItem.update({
+        where: { id: source.id },
+        data: { quantity: source.quantity - line.quantity },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          stockItemId: source.id,
+          type: StockMovementType.TRANSFER,
+          quantity: -line.quantity,
+          reason: `Transfert vers ${to.name}${input.reason ? ` — ${input.reason}` : ''}`,
+          createdById: userId,
+        },
+      });
+
+      const target = await ensureStockItem(tx, tenantId, line.productId, input.toBranchId);
+      await tx.stockItem.update({
+        where: { id: target.id },
+        data: { quantity: target.quantity + line.quantity },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          stockItemId: target.id,
+          type: StockMovementType.TRANSFER,
+          quantity: line.quantity,
+          reason: `Transfert depuis ${from.name}${input.reason ? ` — ${input.reason}` : ''}`,
+          createdById: userId,
+        },
+      });
+      moved += line.quantity;
+    }
+
+    return { lines: input.items.length, moved };
+  });
+}
+
+/**
+ * Inventaire physique : aligne le stock théorique sur les quantités comptées.
+ * Seuls les écarts donnent lieu à un mouvement d'ajustement, tracé avec la
+ * quantité théorique et la quantité comptée.
+ */
+export async function applyStockCount(
+  tenantId: string,
+  userId: string,
+  input: {
+    branchId: string;
+    note?: string;
+    items: { productId: string; countedQuantity: number }[];
+  },
+) {
+  return prisma.$transaction(async (tx) => {
+    const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
+    if (!branch) throw notFound('Succursale introuvable');
+
+    const stamp = new Date().toLocaleDateString('fr-FR');
+    let adjusted = 0;
+    let net = 0;
+
+    for (const line of input.items) {
+      const product = await tx.product.findFirst({ where: { id: line.productId, tenantId } });
+      if (!product) continue;
+
+      const item = await ensureStockItem(tx, tenantId, line.productId, input.branchId);
+      const delta = line.countedQuantity - item.quantity;
+      if (delta === 0) continue;
+
+      await tx.stockItem.update({
+        where: { id: item.id },
+        data: { quantity: line.countedQuantity },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          stockItemId: item.id,
+          type: StockMovementType.ADJUSTMENT,
+          quantity: delta,
+          reason:
+            `Inventaire du ${stamp} — théorique ${item.quantity}, compté ${line.countedQuantity}` +
+            (input.note ? ` (${input.note})` : ''),
+          createdById: userId,
+        },
+      });
+      adjusted += 1;
+      net += delta;
+    }
+
+    return { counted: input.items.length, adjusted, net };
+  });
+}
+
 /** Liste l'état du stock pour une succursale (tous les produits actifs). */
 export async function getStockForBranch(tenantId: string, branchId: string, lowStockOnly: boolean) {
   const products = await prisma.product.findMany({
