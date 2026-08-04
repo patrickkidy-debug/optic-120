@@ -14,6 +14,7 @@ import {
   Pencil,
   Eye,
   Banknote,
+  ShieldCheck,
   FileSpreadsheet,
   Printer,
   MessageCircle,
@@ -57,6 +58,7 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: 'Annulée',
 };
 const PAYMENT_LABEL: Record<string, string> = {
+  INSURANCE: 'Assurance',
   CASH: 'Espèces', CARD: 'Carte', WAVE: 'Wave', ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', FREE_MONEY: 'Free Money',
   MPESA: 'M-Pesa', EMOLA: 'e-Mola', MKESH: 'mKesh', MULTICAIXA: 'Multicaixa',
@@ -195,12 +197,15 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       const rows = await fetchAllSales();
       downloadCsv(
         `${isQuote ? 'devis' : 'ventes'}_${new Date().toISOString().slice(0, 10)}.csv`,
-        ['N°', 'Date', 'Client', 'Statut', 'Total', 'Payé', 'Reste'],
+        ['N°', 'Date', 'Client', 'Statut', 'Moyen', 'Total', 'Payé', 'Reste'],
         rows.map((s) => [
           s.number,
           new Date(s.createdAt).toLocaleString('fr-FR'),
           clientName(s),
           STATUS_LABEL[s.status] ?? s.status,
+          (s.paymentMethods ?? [])
+            .map((m) => (m === 'INSURANCE' && s.insurerName ? s.insurerName : PAYMENT_LABEL[m] ?? m))
+            .join(' + '),
           Number(s.totalAmount),
           Number(s.paidAmount),
           Number(s.totalAmount) - Number(s.paidAmount),
@@ -351,11 +356,25 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                   {!isQuote && (
                     <td className="table-cell text-content-muted">
                       {s.paymentMethods && s.paymentMethods.length > 0 ? (
-                        <span className="text-xs">
-                          {s.paymentMethods.map((m) => PAYMENT_LABEL[m] ?? m).join(' + ')}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {s.paymentMethods.map((m) => (
+                            <span
+                              key={m}
+                              className={`badge px-2 py-0.5 text-[11px] ${
+                                m === 'INSURANCE'
+                                  ? 'bg-accent/15 text-accent'
+                                  : 'bg-surface-3 text-content-muted'
+                              }`}
+                              title={m === 'INSURANCE' ? s.insurerName ?? 'Prise en charge assurance' : undefined}
+                            >
+                              {m === 'INSURANCE' && s.insurerName
+                                ? s.insurerName
+                                : PAYMENT_LABEL[m] ?? m}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
-                        '—'
+                        <span className="text-xs">Non encaissée</span>
                       )}
                     </td>
                   )}
@@ -601,6 +620,7 @@ function SaleDetailModal({
 }) {
   const due = Number(sale.totalAmount) - Number(sale.paidAmount);
   const payments = sale.payments ?? [];
+  const insured = Number(sale.insuranceAmount ?? 0);
 
   return (
     <Modal open onClose={onClose} title={`Détail — ${sale.number}`} size="lg">
@@ -679,12 +699,27 @@ function SaleDetailModal({
         {/* Encaissements par moyen de paiement */}
         <div>
           <h4 className="mb-2 text-sm font-semibold text-content">Encaissements</h4>
-          {payments.length === 0 ? (
+          {payments.length === 0 && insured <= 0 ? (
             <p className="rounded-xl bg-surface-2 p-3 text-sm text-content-muted">
               Aucun encaissement enregistré pour cette pièce.
             </p>
           ) : (
             <div className="space-y-1.5">
+              {/* La part assurance n'est pas un paiement encaissé au comptoir :
+                  on l'affiche comme moyen à part entière pour que le détail
+                  soit complet, même sur une vente 100 % prise en charge. */}
+              {insured > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/10 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-accent" />
+                    <span className="font-medium text-content">
+                      {sale.insurerName ?? 'Assurance'}
+                    </span>
+                    <Badge tone="info">Prise en charge</Badge>
+                  </div>
+                  <span className="font-display font-bold text-content">{formatCurrency(insured)}</span>
+                </div>
+              )}
               {payments.map((p) => {
                 const st = PAYMENT_STATUS[p.status] ?? { label: p.status, tone: 'neutral' as const };
                 return (

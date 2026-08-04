@@ -33,6 +33,7 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
         include: {
           customer: true,
           branch: true,
+          insurer: { select: { name: true } },
           _count: { select: { items: true } },
           // Moyens d'encaissement réellement utilisés (paiements réussis).
           payments: { where: { status: 'SUCCESS' }, select: { method: true } },
@@ -41,10 +42,16 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       req.db!.sale.count({ where }),
     ]);
     // Méthodes distinctes par vente (une vente échelonnée peut cumuler plusieurs
-    // moyens : espèces + Wave, par exemple).
+    // moyens : espèces + Wave, par exemple). La part prise en charge par une
+    // assurance n'est pas un paiement enregistré : on l'expose explicitement
+    // pour qu'elle apparaisse comme les autres moyens.
     const items = rows.map((s) => ({
       ...s,
-      paymentMethods: [...new Set(s.payments.map((p) => p.method))],
+      paymentMethods: [
+        ...(Number(s.insuranceAmount) > 0 ? ['INSURANCE'] : []),
+        ...new Set(s.payments.map((p) => p.method)),
+      ],
+      insurerName: s.insurer?.name ?? null,
     }));
     return reply.send({ items, total, page, pageSize });
   });
@@ -123,11 +130,14 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
         customer: true,
         branch: true,
         payments: true,
+        insurer: { select: { name: true } },
         cashier: { select: { firstName: true, lastName: true } },
       },
     });
     if (!sale) throw notFound('Vente introuvable');
-    return reply.send({ sale });
+    // Nom de l'assureur exposé à plat : la part prise en charge s'affiche comme
+    // un moyen de règlement dans le détail de la vente.
+    return reply.send({ sale: { ...sale, insurerName: sale.insurer?.name ?? null } });
   });
 
   app.post('/', async (req, reply) => {

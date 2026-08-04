@@ -204,8 +204,14 @@ export interface SaleListItem {
   createdAt: string;
   customer?: { firstName: string; lastName: string; phone?: string | null } | null;
   branch: { name: string };
-  /** Moyens d'encaissement utilisés (paiements réussis), sans doublon. */
+  /**
+   * Moyens d'encaissement utilisés (paiements réussis), sans doublon.
+   * `INSURANCE` est ajouté en tête quand une part est prise en charge.
+   */
   paymentMethods?: string[];
+  /** Assureur ayant pris en charge une part de la vente, le cas échéant. */
+  insurerName?: string | null;
+  insuranceAmount?: string;
 }
 
 export interface SaleDetailItem {
@@ -242,6 +248,8 @@ export interface SaleDetail {
   createdAt: string;
   customerId?: string | null;
   insurerId?: string | null;
+  /** Assureur ayant pris en charge une part de la vente, le cas échéant. */
+  insurerName?: string | null;
   items: SaleDetailItem[];
   payments?: SalePayment[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
