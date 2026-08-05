@@ -220,49 +220,67 @@ export function SubscriptionPage() {
         </div>
       )}
 
+      {/* Échéance atteinte : on présente TOUTES les offres pour que le client
+          règle directement celle qu'il veut, sans être poussé vers une seule. */}
       {(() => {
-        const standard = plans?.find((p) => p.code === 'STANDARD');
         const needsActivation =
           !!sub && (sub.status !== 'ACTIVE' || new Date(sub.currentPeriodEnd).getTime() <= Date.now());
-        if (!standard || !needsActivation || !canManage) return null;
+        if (!plans || plans.length === 0 || !needsActivation || !canManage) return null;
         const expired = new Date(sub!.currentPeriodEnd).getTime() <= Date.now();
         return (
           <div className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">
-                  <Sparkles className="h-3.5 w-3.5" /> Offre recommandée
-                </span>
-                <h3 className="mt-3 font-display text-2xl font-extrabold text-content">
-                  Continuez avec l'offre {standard.name}
-                </h3>
-                <p className="mt-1 max-w-xl text-sm text-content-muted">
-                  {expired
-                    ? "Votre essai gratuit est terminé. Gardez l'accès complet à toutes les fonctionnalités de votre espace."
-                    : "Activez dès maintenant pour continuer sans interruption après votre essai gratuit."}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-content">
-                  {standard.features.slice(0, 4).map((f) => (
-                    <span key={f} className="inline-flex items-center gap-1.5">
-                      <Check className="h-4 w-4 shrink-0 text-primary" /> {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="shrink-0 text-center">
-                <div className="font-display text-3xl font-extrabold text-gradient">
-                  {formatCurrency(planPrice(standard.code, currency))}
-                </div>
-                <div className="text-xs text-content-muted">par mois</div>
-                <Button
-                  className="mt-3 w-full px-6 shadow-glow sm:w-auto"
-                  onClick={() =>
-                    setPayFor({ kind: 'plan', id: standard.id, label: standard.name, amount: planPrice(standard.code, currency) })
-                  }
-                >
-                  Activer l'offre {standard.name}
-                </Button>
-              </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">
+              <Sparkles className="h-3.5 w-3.5" /> Choisissez votre offre
+            </span>
+            <h3 className="mt-3 font-display text-2xl font-extrabold text-content">
+              {expired ? 'Réactivez votre espace' : 'Activez votre abonnement'}
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-content-muted">
+              {expired
+                ? 'Votre période est terminée. Sélectionnez l’offre qui vous convient et réglez-la directement — vous retrouvez l’accès immédiatement.'
+                : 'Sélectionnez librement l’offre qui vous convient pour continuer sans interruption.'}
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {plans.map((p) => {
+                const isCurrent = sub?.plan.code === p.code;
+                return (
+                  <div
+                    key={p.id}
+                    className="flex flex-col rounded-xl border bg-surface p-4 transition hover:border-primary hover:shadow-card-md"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-display font-bold text-content">{p.name}</h4>
+                      {isCurrent && <Badge tone="info">Offre actuelle</Badge>}
+                    </div>
+                    <p className="mt-1 font-display text-xl font-extrabold text-gradient">
+                      {formatCurrency(planPrice(p.code, currency))}
+                      <span className="text-xs font-normal text-content-muted"> / mois</span>
+                    </p>
+                    <ul className="mt-2 flex-1 space-y-1">
+                      {p.features.slice(0, 4).map((f) => (
+                        <li key={f} className="flex items-start gap-1.5 text-xs text-content-muted">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className="mt-3 w-full"
+                      variant={isCurrent ? undefined : 'outline'}
+                      onClick={() =>
+                        setPayFor({
+                          kind: 'plan',
+                          id: p.id,
+                          label: p.name,
+                          amount: planPrice(p.code, currency),
+                        })
+                      }
+                    >
+                      Payer {p.name}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
