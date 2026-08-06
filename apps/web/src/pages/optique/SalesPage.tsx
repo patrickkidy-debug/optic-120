@@ -34,6 +34,7 @@ import {
   type SaleDetail,
 } from '../../features/optique/api';
 import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
+import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
@@ -824,8 +825,12 @@ function QuoteModal({
     if (base <= 0) return null;
     return Math.round((Number(editing.taxAmount) / base) * 10000) / 100;
   });
-  // Ordonnance jointe au document (facultative).
+  // Ordonnance jointe au document (facultative), et saisie à la volée si le
+  // client n'en a pas encore d'enregistrée.
   const [prescriptionId, setPrescriptionId] = useState(editing?.prescriptionId ?? '');
+  const [addingRx, setAddingRx] = useState(false);
+  const canCreateRx = usePermission('optique.prescriptions.create');
+  const qc = useQueryClient();
 
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
@@ -1075,12 +1080,24 @@ function QuoteModal({
               <VatSelect value={vatRate} defaultRate={vatPct} onChange={setVatRate} />
             </div>
 
-            {/* Ordonnance jointe (facultative) : reprise sur le document imprimé. */}
+            {/* Ordonnance jointe (facultative) : reprise sur le document imprimé.
+                Si le client n'en a pas encore, on peut la saisir ici même. */}
             {customerId && (
-              <label className="mt-2 block text-xs text-content-muted">
-                <span className="flex items-center gap-1.5">
-                  <Glasses className="h-3.5 w-3.5 text-primary" /> Joindre une ordonnance
-                </span>
+              <div className="mt-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-xs text-content-muted">
+                    <Glasses className="h-3.5 w-3.5 text-primary" /> Joindre une ordonnance
+                  </span>
+                  {canCreateRx && !addingRx && (
+                    <button
+                      type="button"
+                      onClick={() => setAddingRx(true)}
+                      className="btn-ghost h-7 rounded-lg px-2 text-xs text-primary"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Nouvelle
+                    </button>
+                  )}
+                </div>
                 <select
                   className="input mt-1"
                   value={prescriptionId}
@@ -1095,12 +1112,30 @@ function QuoteModal({
                     </option>
                   ))}
                 </select>
-                {prescriptions && prescriptions.length === 0 && (
+                {prescriptions && prescriptions.length === 0 && !addingRx && (
                   <span className="mt-1 block text-[11px] text-content-faint">
-                    Ce client n'a pas encore d'ordonnance enregistrée.
+                    Ce client n'a pas encore d'ordonnance —{' '}
+                    {canCreateRx ? 'cliquez sur « Nouvelle » pour la saisir.' : 'aucune à joindre.'}
                   </span>
                 )}
-              </label>
+
+                {addingRx && (
+                  <div className="mt-2">
+                    <PrescriptionForm
+                      customerId={customerId}
+                      title="Ordonnance du client"
+                      onClose={() => setAddingRx(false)}
+                      onSaved={(rx) => {
+                        // Disponible aussitôt dans la liste, et jointe au devis.
+                        qc.invalidateQueries({ queryKey: ['prescriptions', customerId] });
+                        qc.invalidateQueries({ queryKey: ['customer', customerId] });
+                        setPrescriptionId(rx.id);
+                        setAddingRx(false);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="mt-3 space-y-1 border-t pt-3 text-sm">
