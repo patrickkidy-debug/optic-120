@@ -240,6 +240,12 @@ export interface PlatformUser {
   isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  /** Abonnement de l'établissement du compte. */
+  subscriptionStatus: string | null;
+  subscriptionEndsAt: string | null;
+  planName: string | null;
+  /** Vrai si l'abonnement est actif ET la période encore valide (hors essai). */
+  isPaid: boolean;
 }
 
 export async function listPlatformUsers(): Promise<PlatformUser[]> {

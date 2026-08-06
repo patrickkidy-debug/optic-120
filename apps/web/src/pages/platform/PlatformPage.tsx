@@ -527,6 +527,8 @@ function UsersTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-users'], queryFn: listPlatformUsers });
   const [query, setQuery] = useState('');
+  // Filtre d'état : « Comptes actifs » par défaut sur « Tous ».
+  const [status, setStatus] = useState<'all' | 'paid' | 'active' | 'inactive'>('all');
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['platform-users'] });
   const activeMut = useMutation({
@@ -545,24 +547,83 @@ function UsersTab() {
   });
   const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
 
+  const counts = useMemo(() => {
+    const rows = data ?? [];
+    return {
+      all: rows.length,
+      // Compte utilisable ET établissement à jour de paiement.
+      paid: rows.filter((u) => u.isActive && u.isPaid).length,
+      active: rows.filter((u) => u.isActive).length,
+      inactive: rows.filter((u) => !u.isActive).length,
+    };
+  }, [data]);
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.tenantName.toLowerCase().includes(q) ||
-        (u.phone ?? '').replace(/\s/g, '').includes(q.replace(/\s/g, '')),
-    );
-  }, [data, query]);
+    let rows = data.filter((u) => {
+      if (status === 'paid') return u.isActive && u.isPaid;
+      if (status === 'active') return u.isActive;
+      if (status === 'inactive') return !u.isActive;
+      return true;
+    });
+    if (q) {
+      rows = rows.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          u.tenantName.toLowerCase().includes(q) ||
+          (u.phone ?? '').replace(/\s/g, '').includes(q.replace(/\s/g, '')),
+      );
+    }
+    // Sur les vues filtrées, on met en tête ceux qui se sont connectés le plus
+    // récemment : c'est la vraie photo de l'usage de la plateforme.
+    if (status === 'active' || status === 'paid') {
+      rows = [...rows].sort(
+        (a, b) =>
+          new Date(b.lastLoginAt ?? 0).getTime() - new Date(a.lastLoginAt ?? 0).getTime(),
+      );
+    }
+    return rows;
+  }, [data, query, status]);
 
   if (isLoading) return <PageLoader />;
   if (!data || data.length === 0) return <EmptyState icon={Users} title="Aucun utilisateur" />;
 
+  const FILTERS = [
+    { key: 'all' as const, label: 'Tous', count: counts.all },
+    { key: 'paid' as const, label: 'Actifs & payés', count: counts.paid },
+    { key: 'active' as const, label: 'Actifs', count: counts.active },
+    { key: 'inactive' as const, label: 'Inactifs', count: counts.inactive },
+  ];
+
   return (
     <div>
+      {/* Filtre par état du compte : « Comptes actifs » isole ceux qui peuvent
+          réellement se connecter. */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setStatus(f.key)}
+            className={`badge px-3 py-1.5 text-xs ${
+              status === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
+            }`}
+          >
+            {f.key === 'paid' && <BadgeCheck className="h-3.5 w-3.5" />}
+            {f.key === 'active' && <ShieldCheck className="h-3.5 w-3.5" />}
+            {f.label} ({f.count})
+          </button>
+        ))}
+        {(status === 'active' || status === 'paid') && (
+          <span className="ml-1 text-xs text-content-faint">
+            {status === 'paid' ? 'Comptes actifs dont l’abonnement est en cours' : 'Comptes actifs'}
+            {' — '}
+            triés par dernière connexion, {filtered.length} sur {counts.all}
+          </span>
+        )}
+      </div>
+
       <div className="relative mb-3 max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
         <input
@@ -579,6 +640,7 @@ function UsersTab() {
               <th className="table-cell font-semibold">Utilisateur</th>
               <th className="table-cell font-semibold">Téléphone</th>
               <th className="table-cell font-semibold">Établissement</th>
+              <th className="table-cell font-semibold">Abonnement</th>
               <th className="table-cell font-semibold">Rôle</th>
               <th className="table-cell font-semibold">Statut</th>
               <th className="table-cell font-semibold">Dernière connexion</th>
@@ -586,6 +648,13 @@ function UsersTab() {
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="table-cell text-center text-sm text-content-muted">
+                  Aucun compte ne correspond à ce filtre.
+                </td>
+              </tr>
+            )}
             {filtered.map((u) => (
               <tr key={u.id} className="border-b last:border-0 hover:bg-surface-2/50">
                 <td className="table-cell">
@@ -609,6 +678,21 @@ function UsersTab() {
                   )}
                 </td>
                 <td className="table-cell text-content-muted">{u.tenantName}</td>
+                <td className="table-cell">
+                  {u.isPaid ? (
+                    <div className="flex flex-col gap-0.5">
+                      <Badge tone="success">Payé</Badge>
+                      <span className="text-[10px] text-content-faint">
+                        {u.planName}
+                        {u.subscriptionEndsAt ? ` · jusqu'au ${formatDate(u.subscriptionEndsAt)}` : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <Badge tone={STATUS[u.subscriptionStatus ?? '']?.tone ?? 'neutral'}>
+                      {STATUS[u.subscriptionStatus ?? '']?.label ?? 'Aucun'}
+                    </Badge>
+                  )}
+                </td>
                 <td className="table-cell text-content-muted">{u.roleLabel}</td>
                 <td className="table-cell">
                   <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Actif' : 'Inactif'}</Badge>

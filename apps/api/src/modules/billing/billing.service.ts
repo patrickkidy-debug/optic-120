@@ -527,22 +527,44 @@ export async function listAllUsers(limit = 200) {
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
-      tenant: { select: { name: true, slug: true } },
+      tenant: {
+        select: {
+          name: true,
+          slug: true,
+          // Abonnement de l'établissement : permet de distinguer, côté console,
+          // les comptes réellement payants des essais et des impayés.
+          subscription: { select: { status: true, currentPeriodEnd: true, plan: { select: { name: true } } } },
+        },
+      },
       role: { select: { name: true } },
     },
   });
-  return users.map((u) => ({
-    id: u.id,
-    name: `${u.firstName} ${u.lastName}`,
-    email: u.email,
-    phone: u.phone,
-    tenantName: u.tenant.name,
-    tenantSlug: u.tenant.slug,
-    roleLabel: u.role.name,
-    isActive: u.isActive,
-    lastLoginAt: u.lastLoginAt,
-    createdAt: u.createdAt,
-  }));
+  const now = Date.now();
+  return users.map((u) => {
+    const sub = u.tenant.subscription;
+    // « Payé » = abonnement actif ET période encore valide (un essai ou une
+    // période échue ne compte pas, même si le statut stocké dit ACTIVE).
+    const isPaid =
+      !!sub &&
+      sub.status === SubscriptionStatus.ACTIVE &&
+      sub.currentPeriodEnd.getTime() > now;
+    return {
+      id: u.id,
+      name: `${u.firstName} ${u.lastName}`,
+      email: u.email,
+      phone: u.phone,
+      tenantName: u.tenant.name,
+      tenantSlug: u.tenant.slug,
+      roleLabel: u.role.name,
+      isActive: u.isActive,
+      lastLoginAt: u.lastLoginAt,
+      createdAt: u.createdAt,
+      subscriptionStatus: sub?.status ?? null,
+      subscriptionEndsAt: sub?.currentPeriodEnd ?? null,
+      planName: sub?.plan.name ?? null,
+      isPaid,
+    };
+  });
 }
 
 export async function listAllSubscriptions() {
