@@ -1003,6 +1003,8 @@ export const saleCreateSchema = z.object({
   warrantyMonths: z.number().int().min(0).max(120).optional(),
   /** Points de fidélité du client convertis en remise sur cette vente. */
   loyaltyPointsUsed: z.number().int().min(0).optional(),
+  /** Ordonnance à joindre au document (facultatif). */
+  prescriptionId: z.string().uuid().optional(),
 });
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 
@@ -1022,6 +1024,8 @@ export const saleUpdateSchema = z.object({
   insuranceAmount: z.number().nonnegative().optional(),
   insurerId: z.string().uuid().nullable().optional(),
   vatRate: z.number().min(0).max(100).optional(),
+  /** Ordonnance jointe au document (null = détacher). */
+  prescriptionId: z.string().uuid().nullable().optional(),
 });
 export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
 

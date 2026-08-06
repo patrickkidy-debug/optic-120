@@ -131,6 +131,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
         branch: true,
         payments: true,
         insurer: { select: { name: true } },
+        // Ordonnance jointe : reprise sur le devis / la facture imprimés.
+        prescription: true,
         cashier: { select: { firstName: true, lastName: true } },
       },
     });

@@ -111,6 +111,57 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
 
   const validityDays =
     company.quoteValidityDays && company.quoteValidityDays > 0 ? company.quoteValidityDays : 30;
+  // Ordonnance jointe (facultative) : correction reprise sur le document pour
+  // que le client ait le devis et sa correction sur la même page.
+  const rx = sale.prescription;
+  const rxCell = (v: string | null | undefined) =>
+    `<td style="padding:8px 12px;text-align:center;border-bottom:1px solid #e2e8f0;">${
+      v ? esc(v) : '—'
+    }</td>`;
+  const rxRow = (
+    label: string,
+    sph: string | null | undefined,
+    cyl: string | null | undefined,
+    axis: string | null | undefined,
+    add: string | null | undefined,
+  ) =>
+    `<tr>
+      <td style="padding:8px 12px;font-weight:600;border-bottom:1px solid #e2e8f0;">${label}</td>
+      ${rxCell(sph)}${rxCell(cyl)}${rxCell(axis)}${rxCell(add)}
+    </tr>`;
+  const rxExtras = rx
+    ? [
+        rx.pupillaryDistance ? `Écart pupillaire : ${esc(rx.pupillaryDistance)} mm` : '',
+        rx.lensType ? `Type de verres : ${esc(rx.lensType)}` : '',
+        rx.prescriberName ? `Prescripteur : ${esc(rx.prescriberName)}` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+  const prescriptionBlock = rx
+    ? `<div style="margin-top:26px;page-break-inside:avoid;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">
+          Ordonnance jointe — ${frDate(rx.date)}
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">
+          <thead>
+            <tr style="background:#f1f5f9;color:#334155;">
+              <th style="padding:8px 12px;text-align:left;">Œil</th>
+              <th style="padding:8px 12px;text-align:center;">Sphère</th>
+              <th style="padding:8px 12px;text-align:center;">Cylindre</th>
+              <th style="padding:8px 12px;text-align:center;">Axe</th>
+              <th style="padding:8px 12px;text-align:center;">Addition</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rxRow('OD (droit)', rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
+            ${rxRow('OG (gauche)', rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
+          </tbody>
+        </table>
+        ${rxExtras ? `<div style="margin-top:6px;font-size:12px;color:#475569;">${rxExtras}</div>` : ''}
+      </div>`
+    : '';
+
   const paymentBlock = isQuote
     ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">Ce devis est valable ${validityDays} jours à compter de sa date d'émission. Sous réserve de disponibilité des articles en stock.</p>`
     : `<table style="width:100%;border-collapse:collapse;">
@@ -185,6 +236,8 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     </div>
 
     ${paymentBlock}
+
+    ${prescriptionBlock}
 
     ${
       company.footerNote

@@ -291,6 +291,9 @@ export interface SaleDetail {
   insurerId?: string | null;
   /** Assureur ayant pris en charge une part de la vente, le cas échéant. */
   insurerName?: string | null;
+  /** Ordonnance jointe au document (facultative). */
+  prescriptionId?: string | null;
+  prescription?: Prescription | null;
   items: SaleDetailItem[];
   payments?: SalePayment[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;

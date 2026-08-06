@@ -15,6 +15,7 @@ import {
   Eye,
   Banknote,
   ShieldCheck,
+  Glasses,
   FileSpreadsheet,
   Printer,
   MessageCircle,
@@ -28,6 +29,7 @@ import {
   getStock,
   createSale,
   updateSale,
+  listPrescriptions,
   type SaleListItem,
   type SaleDetail,
 } from '../../features/optique/api';
@@ -40,7 +42,7 @@ import { downloadCsv } from '../../lib/csv';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
-import { formatCurrency, formatDateTime } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { sendWhatsappForStage } from '../../lib/whatsapp';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 
@@ -822,11 +824,20 @@ function QuoteModal({
     if (base <= 0) return null;
     return Math.round((Number(editing.taxAmount) / base) * 10000) / 100;
   });
+  // Ordonnance jointe au document (facultative).
+  const [prescriptionId, setPrescriptionId] = useState(editing?.prescriptionId ?? '');
 
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
     queryFn: () => getStock(branchId!),
     enabled: Boolean(branchId),
+  });
+
+  // Ordonnances du client sélectionné : proposées pour être jointes au devis.
+  const { data: prescriptions } = useQuery({
+    queryKey: ['prescriptions', customerId],
+    queryFn: () => listPrescriptions(customerId),
+    enabled: Boolean(customerId),
   });
   const canSeeInsurers = usePermission('insurance.view');
   const { data: insurers } = useQuery({
@@ -893,6 +904,7 @@ function QuoteModal({
             insuranceAmount: insurance,
             insurerId: insurance > 0 && insurerId ? insurerId : null,
             vatRate: vatRate ?? undefined,
+            prescriptionId: prescriptionId || null,
           })
         : createSale({
             branchId: branchId!,
@@ -905,6 +917,8 @@ function QuoteModal({
             insurerId: insurance > 0 && insurerId ? insurerId : undefined,
             // Taux de TVA choisi pour ce devis (omis = taux de l'établissement).
             vatRate: vatRate ?? undefined,
+            // Ordonnance jointe au document (facultative).
+            prescriptionId: prescriptionId || undefined,
           }),
     onSuccess: (sale) => onCreated(sale.id),
     onError: (e) => alert(apiErrorMessage(e)),
@@ -966,7 +980,14 @@ function QuoteModal({
           {/* Devis en cours */}
           <div className="flex flex-col">
             <div className="mb-2">
-              <CustomerSearch value={customerId || null} onChange={(id) => setCustomerId(id ?? '')} />
+              <CustomerSearch
+                value={customerId || null}
+                onChange={(id) => {
+                  setCustomerId(id ?? '');
+                  // L'ordonnance appartient au client précédent : on la détache.
+                  setPrescriptionId('');
+                }}
+              />
             </div>
 
             <div className="max-h-44 flex-1 space-y-1 overflow-y-auto">
@@ -1053,6 +1074,34 @@ function QuoteModal({
             <div className="mt-2">
               <VatSelect value={vatRate} defaultRate={vatPct} onChange={setVatRate} />
             </div>
+
+            {/* Ordonnance jointe (facultative) : reprise sur le document imprimé. */}
+            {customerId && (
+              <label className="mt-2 block text-xs text-content-muted">
+                <span className="flex items-center gap-1.5">
+                  <Glasses className="h-3.5 w-3.5 text-primary" /> Joindre une ordonnance
+                </span>
+                <select
+                  className="input mt-1"
+                  value={prescriptionId}
+                  onChange={(e) => setPrescriptionId(e.target.value)}
+                  disabled={!prescriptions || prescriptions.length === 0}
+                >
+                  <option value="">Aucune</option>
+                  {prescriptions?.map((rx) => (
+                    <option key={rx.id} value={rx.id}>
+                      {formatDate(rx.date)}
+                      {rx.lensType ? ` — ${rx.lensType}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {prescriptions && prescriptions.length === 0 && (
+                  <span className="mt-1 block text-[11px] text-content-faint">
+                    Ce client n'a pas encore d'ordonnance enregistrée.
+                  </span>
+                )}
+              </label>
+            )}
 
             <div className="mt-3 space-y-1 border-t pt-3 text-sm">
               <div className="flex justify-between text-content-muted">

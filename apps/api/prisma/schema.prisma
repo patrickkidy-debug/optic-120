@@ -351,6 +351,8 @@ model OpticalPrescription {
   createdById       String?
   createdAt         DateTime @default(now())
 
+  sales             Sale[]
+
   @@index([tenantId, customerId])
   @@index([tenantId])
 }
@@ -414,6 +416,10 @@ model Sale {
   warrantyEndsAt  DateTime?
   // Remise accordée en points de fidélité (montant déjà inclus dans discountAmount).
   loyaltyPointsUsed Int      @default(0)
+  // Ordonnance jointe au devis / à la vente (facultatif) : reprise sur le
+  // document imprimé pour que le client ait tout sur une seule page.
+  prescriptionId  String?
+  prescription    OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
   // Retour/avoir : référence la vente d'origine remboursée.
   originalSaleId  String?
   originalSale    Sale?      @relation("SaleReturns", fields: [originalSaleId], references: [id])
@@ -429,6 +435,7 @@ model Sale {
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
   @@index([insurerId])
+  @@index([prescriptionId])
 }
 
 model SaleItem {

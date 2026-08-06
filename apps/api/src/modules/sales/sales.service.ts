@@ -54,6 +54,19 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
       if (!insurer) throw badRequest('Assureur invalide');
     }
 
+    // Ordonnance jointe (facultative) : doit appartenir à l'établissement et,
+    // si un client est renseigné, être bien celle de ce client.
+    if (input.prescriptionId) {
+      const rx = await tx.opticalPrescription.findFirst({
+        where: { id: input.prescriptionId, tenantId },
+        select: { customerId: true },
+      });
+      if (!rx) throw badRequest('Ordonnance invalide');
+      if (input.customerId && rx.customerId !== input.customerId) {
+        throw badRequest("L'ordonnance n'appartient pas à ce client");
+      }
+    }
+
     const productIds = input.items.map((i) => i.productId);
     const products = await tx.product.findMany({
       where: { id: { in: productIds }, tenantId, isActive: true },
@@ -136,6 +149,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         taxAmount,
         insuranceAmount: insurance,
         insurerId: input.insurerId ?? null,
+        prescriptionId: input.prescriptionId ?? null,
         totalAmount: total,
         paidAmount: paidInit,
         currency: tenant?.currency ?? 'XOF',
@@ -248,6 +262,17 @@ export async function updateSale(
     if (input.customerId) {
       const customer = await tx.customer.findFirst({ where: { id: input.customerId, tenantId } });
       if (!customer) throw badRequest('Client invalide');
+    }
+    if (input.prescriptionId) {
+      const targetCustomer = input.customerId === undefined ? sale.customerId : input.customerId;
+      const rx = await tx.opticalPrescription.findFirst({
+        where: { id: input.prescriptionId, tenantId },
+        select: { customerId: true },
+      });
+      if (!rx) throw badRequest('Ordonnance invalide');
+      if (targetCustomer && rx.customerId !== targetCustomer) {
+        throw badRequest("L'ordonnance n'appartient pas à ce client");
+      }
     }
 
     // Nouvelles lignes (ou reprise des lignes existantes si non fournies).
@@ -406,6 +431,7 @@ export async function updateSale(
       data: {
         customerId: input.customerId === undefined ? undefined : input.customerId,
         insurerId: input.insurerId === undefined ? undefined : input.insurerId,
+        prescriptionId: input.prescriptionId === undefined ? undefined : input.prescriptionId,
         subtotal,
         discountAmount: discount,
         taxAmount,
