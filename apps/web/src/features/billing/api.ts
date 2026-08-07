@@ -129,6 +129,19 @@ export interface ManualSubscribeResult {
   planName: string;
 }
 
+export interface PayInfo {
+  /** Une passerelle de paiement en ligne est configurée. */
+  gateway: boolean;
+  /** Coordonnées Mobile Money de l'éditeur pour un règlement direct. */
+  manual: { number: string; name: string | null; network: string | null } | null;
+}
+
+/** Moyens de règlement disponibles pour l'abonnement. */
+export async function getPayInfo(): Promise<PayInfo> {
+  const { data } = await api.get<PayInfo>('/billing/pay-info');
+  return data;
+}
+
 export async function subscribeManual(planId: string): Promise<ManualSubscribeResult> {
   const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId });
   return data;

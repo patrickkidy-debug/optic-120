@@ -20,6 +20,8 @@ import {
   payInvoice,
   billingPaymentStatus,
   simulateBillingPayment,
+  getPayInfo,
+  subscribeManual,
   type Plan,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
@@ -135,7 +137,20 @@ export function SubscriptionPage() {
   }, []);
 
   // Offre présélectionnée depuis la landing (?plan=CODE).
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+
+  // « Activer l'abonnement » (bandeau d'essai) arrive avec ?pay=1 : on ouvre
+  // aussitôt le paiement de l'offre en cours, même si on est déjà sur la page.
+  useEffect(() => {
+    if (params.get('pay') !== '1' || !sub || !canManage) return;
+    setPayFor({
+      kind: 'plan',
+      id: sub.plan.id,
+      label: sub.plan.name,
+      amount: planPrice(sub.plan.code, currency),
+    });
+    setParams({}, { replace: true });
+  }, [params, sub, canManage, currency, setParams]);
   const autoOpened = useRef(false);
   const [autoLaunch, setAutoLaunch] = useState(false);
   useEffect(() => {
@@ -442,10 +457,21 @@ function BillingPaymentModal({
   onPaid: () => void;
 }) {
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
+  const [phase, setPhase] = useState<'choose' | 'pending' | 'done' | 'manual'>('choose');
   const [error, setError] = useState('');
   const [isSimulation, setIsSimulation] = useState(false);
   const purchaseTracked = useRef(false);
+
+  // Moyens réellement disponibles (passerelle en ligne, règlement direct).
+  const { data: payInfo } = useQuery({ queryKey: ['pay-info'], queryFn: getPayInfo });
+
+  // Règlement Mobile Money direct : crée la facture et le paiement en attente ;
+  // le fondateur confirme ensuite depuis la console (onglet « À confirmer »).
+  const manualMut = useMutation({
+    mutationFn: () => subscribeManual(target.id),
+    onSuccess: () => setPhase('manual'),
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
 
   const payMut = useMutation({
     mutationFn: (method: PaymentMethod) =>
@@ -502,27 +528,100 @@ function BillingPaymentModal({
     <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">
       {phase === 'choose' && (
         <>
-          <p className="mb-2 text-sm text-content-muted">Choisissez votre moyen de paiement</p>
-          <div className="grid grid-cols-2 gap-2">
-            {METHODS.map((m) => (
-              <button
-                key={m.value}
-                onClick={() => payMut.mutate(m.value)}
-                disabled={payMut.isPending}
-                className="card flex flex-col items-center gap-1.5 p-3 transition hover:border-primary"
-              >
-                <m.icon className="h-5 w-5 text-primary" />
-                <span className="text-xs font-medium text-content">{m.label}</span>
-              </button>
-            ))}
-          </div>
-          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+          {/* Paiement en ligne : uniquement si une passerelle est configurée. */}
+          {payInfo?.gateway !== false && (
+            <>
+              <p className="mb-2 text-sm text-content-muted">Choisissez votre moyen de paiement</p>
+              <div className="grid grid-cols-2 gap-2">
+                {METHODS.map((m) => (
+                  <button
+                    key={m.value}
+                    onClick={() => payMut.mutate(m.value)}
+                    disabled={payMut.isPending || manualMut.isPending}
+                    className="card flex flex-col items-center gap-1.5 p-3 transition hover:border-primary"
+                  >
+                    <m.icon className="h-5 w-5 text-primary" />
+                    <span className="text-xs font-medium text-content">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 border-t pt-3">
+                <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
+                <PaymentMethodLogos />
+              </div>
+            </>
+          )}
 
-          <div className="mt-4 border-t pt-3">
-            <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
-            <PaymentMethodLogos />
-          </div>
+          {/* Règlement direct sur le numéro de l'éditeur : toujours proposé si
+              configuré, et seule option quand aucune passerelle n'est active. */}
+          {target.kind === 'plan' && payInfo?.manual && (
+            <div className={payInfo.gateway ? 'mt-4 border-t pt-3' : ''}>
+              <p className="text-sm font-medium text-content">
+                {payInfo.gateway ? 'Ou payer directement par Mobile Money' : 'Payer par Mobile Money'}
+              </p>
+              <div className="mt-2 rounded-xl bg-surface-2 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-content-muted">Numéro</span>
+                  <span className="font-bold text-content">{payInfo.manual.number}</span>
+                </div>
+                {payInfo.manual.name && (
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Nom</span>
+                    <span className="font-semibold text-content">{payInfo.manual.name}</span>
+                  </div>
+                )}
+                {payInfo.manual.network && (
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Réseau</span>
+                    <span className="text-content">{payInfo.manual.network}</span>
+                  </div>
+                )}
+                <div className="mt-1 flex justify-between border-t pt-1">
+                  <span className="text-content-muted">Montant</span>
+                  <span className="font-display font-bold text-content">
+                    {formatCurrency(target.amount)}
+                  </span>
+                </div>
+              </div>
+              <Button
+                className="mt-3 w-full"
+                variant={payInfo.gateway ? 'outline' : undefined}
+                loading={manualMut.isPending}
+                onClick={() => manualMut.mutate()}
+              >
+                J'ai payé — enregistrer ma demande
+              </Button>
+              <p className="mt-1.5 text-xs text-content-faint">
+                Envoyez le montant au numéro ci-dessus, puis cliquez : nous confirmons votre
+                paiement et votre abonnement s'active.
+              </p>
+            </div>
+          )}
+
+          {/* Rien n'est disponible : on le dit clairement au lieu d'échouer. */}
+          {payInfo && !payInfo.gateway && !payInfo.manual && (
+            <p className="rounded-xl bg-[color:var(--warning)]/10 p-3 text-sm text-content">
+              Le paiement en ligne n'est pas encore disponible. Contactez-nous depuis la page Aide
+              pour activer votre abonnement.
+            </p>
+          )}
+
+          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         </>
+      )}
+
+      {phase === 'manual' && (
+        <div className="py-6 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
+          <p className="mt-3 font-display text-lg font-bold text-content">Demande enregistrée</p>
+          <p className="mt-1 text-sm text-content-muted">
+            Dès que nous aurons vérifié votre versement, votre abonnement sera activé. Vous
+            n'avez rien d'autre à faire.
+          </p>
+          <Button className="mt-5" onClick={onClose}>
+            Fermer
+          </Button>
+        </div>
       )}
 
       {phase === 'pending' && (

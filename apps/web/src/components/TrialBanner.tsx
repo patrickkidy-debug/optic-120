@@ -39,7 +39,12 @@ export function TrialBanner() {
           continuer sans interruption.
         </span>
       </div>
-      <Link to="/parametres/abonnement" className="btn-primary h-8 shrink-0 rounded-lg px-3 text-xs">
+      {/* `?pay=1` ouvre directement le choix du moyen de paiement : sans ce
+          paramètre, un clic depuis la page Abonnement ne faisait rien. */}
+      <Link
+        to="/parametres/abonnement?pay=1"
+        className="btn-primary h-8 shrink-0 rounded-lg px-3 text-xs"
+      >
         Activer l'abonnement
       </Link>
     </div>

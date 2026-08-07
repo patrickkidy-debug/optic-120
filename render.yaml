@@ -79,6 +79,16 @@ services:
         sync: false # clé secrète Moneroo (dashboard Moneroo > API)
       - key: MONEROO_WEBHOOK_SECRET
         sync: false # secret du webhook Moneroo (vérification des notifications)
+      # --- Encaissement MANUEL des abonnements (repli sans passerelle) ---
+      # Renseigne au moins PLATFORM_PAY_NUMBER pour que le client puisse payer
+      # sur ton Mobile Money : il clique « J'ai payé », tu confirmes depuis la
+      # console (onglet « À confirmer ») et son abonnement s'active.
+      - key: PLATFORM_PAY_NUMBER
+        sync: false # ex. +225 07 00 00 00 00
+      - key: PLATFORM_PAY_NAME
+        sync: false # nom affiché au client (titulaire du compte)
+      - key: PLATFORM_PAY_NETWORK
+        sync: false # ex. Wave, Orange Money
       # --- Publicité Facebook : API de Conversion (CAPI) ---
       # Le pixel a déjà une valeur par défaut ; il suffit de fournir le jeton
       # d'accès (Events Manager > Paramètres > API de conversion) pour activer

@@ -55,6 +55,13 @@ const envSchema = z.object({
   MONEROO_BASE_URL: z.string().default('https://api.moneroo.io/v1'),
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
+  // Encaissement MANUEL des abonnements : numéro Mobile Money de l'éditeur sur
+  // lequel le client règle directement, puis le fondateur confirme depuis la
+  // console. Permet de vendre même sans passerelle configurée.
+  PLATFORM_PAY_NUMBER: z.string().optional().default(''),
+  PLATFORM_PAY_NAME: z.string().optional().default(''),
+  PLATFORM_PAY_NETWORK: z.string().optional().default(''),
+
   // PayTech — passerelle de paiement (Wave, Orange Money, Free Money, cartes).
   // Clés de la PLATEFORME (encaissement des abonnements). Tant que la clé API
   // est vide → mode simulation.

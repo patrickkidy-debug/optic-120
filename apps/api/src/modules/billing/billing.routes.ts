@@ -10,7 +10,7 @@ import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { notFound } from '../../lib/http-error.js';
 import { prisma } from '../../lib/prisma.js';
-import { isProd } from '../../config/env.js';
+import { isProd, env } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
 import { resolvePlatformProvider } from './platform-provider.js';
@@ -76,6 +76,30 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       orderBy: { createdAt: 'desc' },
     });
     return reply.send({ demo });
+  });
+
+  // Moyens de règlement disponibles pour l'abonnement : passerelle en ligne
+  // et/ou virement Mobile Money direct sur le numéro de l'éditeur. Permet à
+  // l'écran d'abonnement de toujours proposer une façon de payer.
+  app.get('/pay-info', async (_req, reply) => {
+    let gateway = false;
+    try {
+      resolvePlatformProvider();
+      gateway = true;
+    } catch {
+      // Aucune passerelle configurée : seul le règlement manuel reste possible.
+      gateway = false;
+    }
+    return reply.send({
+      gateway,
+      manual: env.PLATFORM_PAY_NUMBER
+        ? {
+            number: env.PLATFORM_PAY_NUMBER,
+            name: env.PLATFORM_PAY_NAME || null,
+            network: env.PLATFORM_PAY_NETWORK || null,
+          }
+        : null,
+    });
   });
 
   app.get('/plans', { preHandler: requirePermission('billing.view') }, async (_req, reply) => {
