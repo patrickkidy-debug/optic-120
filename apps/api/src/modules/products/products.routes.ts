@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { ProductCategory } from '@prisma/client';
 import {
   productCreateSchema,
@@ -187,11 +188,44 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ product });
   });
 
-  // Suppression douce (désactivation) pour préserver l'historique des ventes.
+  /**
+   * Suppression définitive du produit et de ses lignes de stock (cascade).
+   * Un produit déjà vendu ne peut pas disparaître sans détruire les lignes des
+   * factures passées : dans ce cas seulement, on le retire du catalogue en le
+   * désactivant, et on le signale à l'appelant.
+   */
   app.delete('/:id', { preHandler: requirePermission('optique.products.delete') }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const result = await req.db!.product.updateMany({ where: { id }, data: { isActive: false } });
-    if (result.count === 0) throw notFound('Produit introuvable');
-    return reply.send({ ok: true });
+    const product = await req.db!.product.findFirst({ where: { id } });
+    if (!product) throw notFound('Produit introuvable');
+
+    const soldLines = await req.db!.saleItem.count({ where: { productId: id } });
+    if (soldLines > 0) {
+      await req.db!.product.updateMany({ where: { id }, data: { isActive: false } });
+      await recordAudit({
+        tenantId: req.auth!.tenantId,
+        userId: req.auth!.userId,
+        action: 'PRODUCT_DEACTIVATED',
+        entity: 'Product',
+        entityId: id,
+        metadata: { name: product.name, soldLines },
+        ...requestMeta(req),
+      });
+      return reply.send({ ok: true, deleted: false, soldLines });
+    }
+
+    // Jamais vendu : suppression réelle (les StockItem et leurs mouvements
+    // partent en cascade).
+    await req.db!.product.deleteMany({ where: { id } });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PRODUCT_DELETED',
+      entity: 'Product',
+      entityId: id,
+      metadata: { name: product.name, sku: product.sku },
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true, deleted: true });
   });
 }

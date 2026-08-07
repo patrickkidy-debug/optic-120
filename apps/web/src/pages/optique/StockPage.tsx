@@ -108,7 +108,15 @@ export function StockPage() {
   // (stock, caisse, étiquettes, tableau de bord…) sont rafraîchies aussitôt.
   const removeMut = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => invalidateProductViews(qc),
+    onSuccess: (res) => {
+      invalidateProductViews(qc);
+      // Un produit déjà vendu ne peut pas être effacé : on explique pourquoi.
+      if (!res.deleted) {
+        alert(
+          `Ce produit figure sur ${res.soldLines} ligne(s) de vente : il ne peut pas être effacé sans casser vos factures. Il a été retiré du catalogue et du stock.`,
+        );
+      }
+    },
     onError: (e) => alert(apiErrorMessage(e)),
   });
 

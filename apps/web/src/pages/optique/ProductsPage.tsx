@@ -157,7 +157,15 @@ export function ProductsPage() {
     mutationFn: deleteProduct,
     // Le produit disparaît du catalogue : on rafraîchit le stock partout
     // (stock, caisse, étiquettes, tableau de bord, badge stock faible…).
-    onSuccess: () => invalidateProductViews(qc),
+    onSuccess: (res) => {
+      invalidateProductViews(qc);
+      // Un produit déjà vendu ne peut pas être effacé : on explique pourquoi.
+      if (!res.deleted) {
+        alert(
+          `Ce produit figure sur ${res.soldLines} ligne(s) de vente : il ne peut pas être effacé sans casser vos factures. Il a été retiré du catalogue et du stock.`,
+        );
+      }
+    },
     onError: (e) => alert(apiErrorMessage(e)),
   });
 

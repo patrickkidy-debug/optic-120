@@ -56,8 +56,18 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
   return data.product;
 }
 
-export async function deleteProduct(id: string) {
-  await api.delete(`/products/${id}`);
+/**
+ * Supprime définitivement un produit. Un produit déjà vendu ne peut pas
+ * disparaître (les lignes de factures en dépendent) : il est alors retiré du
+ * catalogue et `deleted` vaut false.
+ */
+export async function deleteProduct(id: string): Promise<{
+  ok: boolean;
+  deleted: boolean;
+  soldLines?: number;
+}> {
+  const { data } = await api.delete(`/products/${id}`);
+  return data;
 }
 
 /** Crée/réutilise un produit verre configuré (type + traitements) au prix des Réglages. */

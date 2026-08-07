@@ -11,7 +11,10 @@ const config: CapacitorConfig = {
   appName: 'OculoSaaS',
   webDir: 'dist',
   server: {
-    url: 'https://oculosaas.com',
+    // L'app s'ouvre sur la connexion, pas sur la vitrine marketing : celui qui
+    // l'a installée veut accéder à son espace. (Le routeur redirige de toute
+    // façon « / » vers /login en natif.)
+    url: 'https://oculosaas.com/login',
     cleartext: false,
   },
   backgroundColor: '#080c16',

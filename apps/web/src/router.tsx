@@ -89,6 +89,21 @@ function PublicOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Vrai dans l'application mobile empaquetée (Capacitor). La vitrine
+ * marketing n'y a pas sa place : celui qui a installé l'app veut se connecter.
+ */
+function isNativeApp(): boolean {
+  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return cap?.isNativePlatform?.() ?? false;
+}
+
+/** Accueil : vitrine sur le web, écran de connexion dans l'app mobile. */
+function Home() {
+  if (isNativeApp()) return <Navigate to="/login" replace />;
+  return <PublicOnly>{pub(<LandingPage />)}</PublicOnly>;
+}
+
 function perm(permission: string, el: ReactNode) {
   return <RequirePermission permission={permission}>{el}</RequirePermission>;
 }
@@ -101,7 +116,7 @@ function OperatorOnly({ children }: { children: ReactNode }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly> },
+  { path: '/', element: <Home /> },
   // URLs localisees : cibles canoniques du hreflang. Un lien /pt partage sur
   // WhatsApp doit ouvrir la vitrine en portugais, quel que soit le visiteur.
   ...LOCALES.map((l) => ({
