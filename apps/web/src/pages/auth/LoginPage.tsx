@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { warmUpApi } from '../../lib/warmup';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loginSchema, type LoginInput, type EstablishmentChoice } from '@oculo/shared-types';
@@ -23,6 +24,7 @@ export function LoginPage() {
   const [selectionToken, setSelectionToken] = useState('');
   const [selecting, setSelecting] = useState(false);
   const google = useGoogleAuthFlow('/dashboard');
+  const [slow, setSlow] = useState(false);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
   const [googleWhatsapp, setGoogleWhatsapp] = useState('');
@@ -32,6 +34,24 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
+
+  // Réveille l'API dès l'ouverture de l'écran : l'hébergement met le service
+  // en veille, et sans cela la toute première requête (la connexion) semblait
+  // bloquée pendant tout le démarrage.
+  useEffect(() => {
+    warmUpApi();
+  }, []);
+
+  // Au-delà de quelques secondes, on explique l'attente plutôt que de laisser
+  // tourner un bouton muet.
+  useEffect(() => {
+    if (!isSubmitting) {
+      setSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, [isSubmitting]);
 
   async function onSubmit(values: LoginInput) {
     setServerError('');
@@ -250,6 +270,12 @@ export function LoginPage() {
           </Link>
         </div>
 
+        {slow && isSubmitting && (
+          <p className="text-center text-xs text-content-muted">
+            Démarrage du serveur en cours — cela peut prendre jusqu'à une minute la
+            première fois. Merci de patienter.
+          </p>
+        )}
         <Button type="submit" loading={isSubmitting} className="w-full">
           {t('auth.login')}
         </Button>
