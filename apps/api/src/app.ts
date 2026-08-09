@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import { corsOrigins } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
+import { prisma } from './lib/prisma.js';
 
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { rbacRoutes } from './modules/rbac/rbac.routes.js';
@@ -26,6 +27,9 @@ import { platformRoutes } from './modules/billing/platform.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { supportRoutes } from './modules/support/support.routes.js';
 import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
+
+/** Horodatage de démarrage : distingue un redéploiement d'un simple réveil. */
+const startedAt = new Date();
 
 export async function buildApp() {
   const app = Fastify({
@@ -58,6 +62,30 @@ export async function buildApp() {
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
 
   app.get('/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
+
+  /**
+   * État du déploiement : révision livrée et présence des colonnes récentes.
+   * Sert à trancher « le code est-il vraiment en ligne ? » quand une
+   * fonctionnalité ne se comporte pas comme en local — sans exposer de donnée
+   * métier. La lecture porte sur le catalogue système, pas sur un tenant.
+   */
+  app.get('/version', async () => {
+    let productPhotoColumns: string[] = [];
+    try {
+      const rows = await prisma.$queryRaw<{ column_name: string }[]>`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'Product' AND column_name IN ('photoUrl', 'photos')
+      `;
+      productPhotoColumns = rows.map((r) => r.column_name).sort();
+    } catch {
+      productPhotoColumns = [];
+    }
+    return {
+      commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'local',
+      startedAt: startedAt.toISOString(),
+      productPhotoColumns,
+    };
+  });
 
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(rbacRoutes, { prefix: '/rbac' });

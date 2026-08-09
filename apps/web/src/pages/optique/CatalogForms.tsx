@@ -106,6 +106,15 @@ function useSaveProduct({
       const saved = product?.id
         ? await updateProduct(product.id, payload)
         : await createProduct(payload);
+
+      // Le serveur renvoie la fiche telle qu'il l'a enregistrée. Si la photo
+      // envoyée n'y figure pas, on le dit : mieux vaut un message clair qu'une
+      // vignette manquante sans explication.
+      if (base.photoUrl && !saved?.photoUrl) {
+        throw new Error(
+          "La photo n'a pas été conservée par le serveur. Réessayez dans un instant ; si le problème persiste, signalez-le.",
+        );
+      }
       if (applyStock && branchId) {
         const delta = base.qty - (stockRow?.quantity ?? 0);
         if (delta !== 0 || base.minAlert !== (stockRow?.minAlert ?? 0)) {
