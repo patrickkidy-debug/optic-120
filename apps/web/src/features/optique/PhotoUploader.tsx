@@ -11,6 +11,9 @@ import { Modal } from '../../components/ui';
  */
 const MAIN_SIZE = 800;
 const EXTRA_SIZE = 640;
+/** Budget de poids par image : le corps JSON complet doit rester sous 6 Mo. */
+const MAIN_MAX_BYTES = 600 * 1024;
+const EXTRA_MAX_BYTES = 400 * 1024;
 
 /**
  * Galerie photo d'un produit : photo principale + photos secondaires.
@@ -43,19 +46,28 @@ export function PhotoUploader({
     try {
       let main = photoUrl;
       const extra = [...photos];
+      const problems: string[] = [];
+
       for (const file of list) {
-        if (!main) {
-          main = await fileToResizedDataUrl(file, MAIN_SIZE);
-        } else if (extra.length < MAX_PRODUCT_PHOTOS) {
-          extra.push(await fileToResizedDataUrl(file, EXTRA_SIZE));
-        } else {
-          setError(`Maximum ${MAX_PRODUCT_PHOTOS} photos secondaires.`);
-          break;
+        if (main && extra.length >= MAX_PRODUCT_PHOTOS) {
+          problems.push(`« ${file.name} » ignorée : maximum ${MAX_PRODUCT_PHOTOS} photos secondaires.`);
+          continue;
+        }
+        // Une image en échec ne doit pas faire perdre les autres : on la
+        // signale nommément et on poursuit le lot.
+        try {
+          if (!main) {
+            main = await fileToResizedDataUrl(file, MAIN_SIZE, MAIN_MAX_BYTES);
+          } else {
+            extra.push(await fileToResizedDataUrl(file, EXTRA_SIZE, EXTRA_MAX_BYTES));
+          }
+        } catch (e) {
+          problems.push(`« ${file.name} » : ${e instanceof Error ? e.message : 'image invalide'}`);
         }
       }
+
       onChange({ photoUrl: main, photos: extra });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Image invalide');
+      setError(problems.join('\n'));
     } finally {
       setBusy(false);
     }
@@ -190,7 +202,9 @@ export function PhotoUploader({
         )}
       </div>
 
-      {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+      {error && (
+        <p className="mt-1.5 whitespace-pre-line text-xs text-danger">{error}</p>
+      )}
 
       {zoom && (
         <Modal open onClose={() => setZoom(null)} title="Aperçu" size="lg">

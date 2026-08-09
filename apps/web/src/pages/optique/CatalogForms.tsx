@@ -101,7 +101,11 @@ function useSaveProduct({
         photos: base.photos,
         attributes,
       };
-      const saved = product ? await updateProduct(product.id, payload) : await createProduct(payload);
+      // Une duplication arrive avec un identifiant vide : c'est une création,
+      // pas une modification de la fiche d'origine.
+      const saved = product?.id
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload);
       if (applyStock && branchId) {
         const delta = base.qty - (stockRow?.quantity ?? 0);
         if (delta !== 0 || base.minAlert !== (stockRow?.minAlert ?? 0)) {
