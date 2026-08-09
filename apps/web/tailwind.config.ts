@@ -45,7 +45,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Manrope', 'Outfit', 'Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: '0.65rem',
@@ -53,9 +53,12 @@ export default {
         '2xl': '1.15rem',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(2,6,23,0.18), 0 4px 14px rgba(2,6,23,0.12)',
-        'card-lg': '0 8px 30px rgba(2,6,23,0.22)',
-        glow: '0 0 0 1px var(--primary-soft), 0 8px 24px rgba(37,99,235,0.18)',
+        // Pilotées par le thème (voir tokens.css) : discrètes en clair,
+        // sculptantes en sombre.
+        card: 'var(--shadow-card)',
+        'card-md': 'var(--shadow-card-md)',
+        'card-lg': 'var(--shadow-card-lg)',
+        glow: '0 0 0 1px var(--primary-soft), 0 8px 24px rgba(124,58,237,0.18)',
       },
       keyframes: {
         'fade-in': {

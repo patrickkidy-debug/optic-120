@@ -48,10 +48,46 @@
   ::selection {
     background: var(--primary-soft);
   }
+  /* Titres : l'interlettrage resserré donne aux gros titres l'assise
+     typographique du modèle (Manrope), sans toucher au balisage. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+  /* Accessibilité : un anneau net au clavier, jamais à la souris. Les champs
+     de saisie ont déjà leur propre anneau (.input) — on évite le doublon. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary-rgb));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .input:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
+  /* Chiffres alignés en colonne dans les tableaux : les montants se comparent
+     à l'œil au lieu de danser d'une ligne à l'autre. */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Respecte le réglage système « animations réduites ». */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   /* Scrollbar premium */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -71,6 +107,10 @@
 @layer components {
   .card {
     @apply rounded-2xl border bg-surface shadow-card;
+    transition:
+      box-shadow 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
   }
   .input {
     @apply w-full rounded-xl border bg-surface-2 px-3.5 py-2.5 text-sm text-content
@@ -107,10 +147,28 @@
       transition hover:bg-surface-2 hover:text-content;
   }
   .nav-link-active {
-    @apply bg-primary-soft text-content;
+    @apply relative bg-primary-soft font-semibold text-content;
+  }
+  /* Liseré vertical sur l'élément actif : on repère la page courante d'un
+     coup d'œil, même quand plusieurs entrées sont survolées. */
+  .nav-link-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 1.25rem;
+    border-radius: 0 999px 999px 0;
+    background: rgb(var(--primary-rgb));
   }
   .table-cell {
     @apply px-4 py-3 text-sm;
+  }
+  /* En-tête de tableau : légèrement teinté pour détacher les colonnes du
+     contenu, comme dans le modèle. */
+  thead tr {
+    background: rgb(var(--surface-3-rgb) / 0.5);
   }
 }
 

@@ -59,6 +59,13 @@
   --danger-rgb: 239 68 68;
 
   --ring: rgba(139, 92, 246, 0.5);
+
+  /* Ombres propres au thème : en sombre elles sculptent le relief, en clair
+     elles doivent rester quasi invisibles (sinon les cartes paraissent sales). */
+  --shadow-card: 0 1px 2px rgba(2, 6, 23, 0.18), 0 4px 14px rgba(2, 6, 23, 0.12);
+  --shadow-card-md: 0 4px 12px rgba(2, 6, 23, 0.22), 0 2px 4px rgba(2, 6, 23, 0.14);
+  --shadow-card-lg: 0 8px 30px rgba(2, 6, 23, 0.22);
+
   --gradient-hero: linear-gradient(135deg, #0b1120 0%, #111a2e 55%, #0e2440 100%);
   /* Dégradé de marque (identique à la page d'accueil) : violet → rose → orange */
   --gradient-brand: linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%);
@@ -109,6 +116,12 @@
   --danger-rgb: 220 38 38;
 
   --ring: rgba(124, 58, 237, 0.4);
+
+  /* Clair : ombres très basses, la hiérarchie vient surtout de la bordure. */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --shadow-card-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-card-lg: 0 12px 28px rgba(15, 23, 42, 0.09), 0 2px 6px rgba(15, 23, 42, 0.05);
+
   --gradient-hero: linear-gradient(135deg, #f3ecff 0%, #ffffff 58%, #ffeede 100%);
   /* Dégradé de marque (identique à la page d'accueil) : violet → rose → orange */
   --gradient-brand: linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%);
