@@ -3,11 +3,16 @@
 # Le frontend est déployé séparément sur Vercel.
 # Sur render.com : New > Blueprint > sélectionne ce repo.
 # ============================================================
-databases:
-  - name: oculosaas-db
-    databaseName: oculo
-    plan: free # passe en "starter" pour la production
-    region: frankfurt # région la plus proche de l'Afrique de l'Ouest
+# Base Render historique — NON UTILISÉE en production (suspendue par Render).
+# La production tourne sur Supabase via DATABASE_URL, renseignée dans le
+# dashboard. Ce bloc est laissé en commentaire plutôt que supprimé : retirer
+# une base d'un blueprint peut déclencher sa suppression, et c'est une
+# décision à prendre en connaissance de cause.
+# databases:
+#   - name: oculosaas-db
+#     databaseName: oculo
+#     plan: free
+#     region: frankfurt
 
 services:
   - type: web
@@ -33,10 +38,14 @@ services:
       - key: NODE_ENV
         value: production
       # Pas besoin de définir le port : Render fournit $PORT, que le serveur lit en priorité.
+      # La base de production est Supabase (connexion Postgres directe), PAS la
+      # base Render ci-dessous. Tant que cette valeur était dérivée de
+      # `oculosaas-db` via `fromDatabase`, la suspension de cette base rendait
+      # la valeur irrésolvable et FAISAIT ÉCHOUER TOUS LES DÉPLOIEMENTS —
+      # l'instance en vol continuait de tourner, figée sur du code ancien.
+      # On la gère donc à la main dans le dashboard Render.
       - key: DATABASE_URL
-        fromDatabase:
-          name: oculosaas-db
-          property: connectionString
+        sync: false # chaîne de connexion Supabase (Project settings > Database)
       # --- À renseigner dans le dashboard Render ---
       - key: CORS_ORIGIN
         sync: false # URL(s) du frontend, séparées par des virgules si plusieurs.

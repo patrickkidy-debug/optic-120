@@ -217,6 +217,8 @@ export interface Prescription {
   notes: string | null;
   /** Fin de validité de l'ordonnance (null = non renseignée). */
   expiresAt?: string | null;
+  /** Photo / scan d'ordonnance papier (data URL). */
+  photoUrl?: string | null;
 }
 
 export async function getCustomer(id: string) {
@@ -235,6 +237,20 @@ export async function listPrescriptions(customerId: string): Promise<Prescriptio
 export async function createPrescription(customerId: string, input: PrescriptionCreateInput) {
   const { data } = await api.post(`/customers/${customerId}/prescriptions`, input);
   return data.prescription as Prescription;
+}
+
+export async function updatePrescription(
+  customerId: string,
+  prescriptionId: string,
+  input: Partial<PrescriptionCreateInput>,
+) {
+  const { data } = await api.patch(`/customers/${customerId}/prescriptions/${prescriptionId}`, input);
+  return data.prescription as Prescription;
+}
+
+export async function deletePrescription(customerId: string, prescriptionId: string) {
+  const { data } = await api.delete(`/customers/${customerId}/prescriptions/${prescriptionId}`);
+  return data;
 }
 
 export async function createSale(input: SaleCreateInput) {

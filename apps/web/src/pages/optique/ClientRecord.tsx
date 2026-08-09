@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Glasses, Plus, Printer, ReceiptText, FileText, Star } from 'lucide-react';
+import { Glasses, Plus, Printer, ReceiptText, FileText, Star, Eye } from 'lucide-react';
 import { ageFromBirthDate } from '@oculo/shared-types';
 import { getCustomer, type Prescription } from '../../features/optique/api';
 import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
@@ -149,6 +149,8 @@ function PrescriptionCard({
   patient: PrescriptionPatient;
   company: CompanyInfo;
 }) {
+  const [zoom, setZoom] = useState(false);
+
   return (
     <div className="rounded-xl border p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -176,6 +178,32 @@ function PrescriptionCard({
           </button>
         </div>
       </div>
+
+      {rx.photoUrl && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2">
+          <div
+            className="relative h-14 w-20 cursor-pointer overflow-hidden rounded-md border bg-surface-2 transition hover:opacity-90"
+            onClick={() => setZoom(true)}
+            title="Cliquez pour agrandir le scan"
+          >
+            <img src={rx.photoUrl} alt="Scan ordonnance papier" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition hover:opacity-100">
+              <Eye className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 text-xs">
+            <p className="font-semibold text-content">Scan de l'ordonnance papier</p>
+            <button
+              type="button"
+              onClick={() => setZoom(true)}
+              className="mt-0.5 inline-flex items-center gap-1 font-medium text-primary underline hover:text-primary-hover"
+            >
+              <Eye className="h-3 w-3" /> Voir le document original
+            </button>
+          </div>
+        </div>
+      )}
+
       <table className="w-full text-center text-sm">
         <thead>
           <tr className="text-xs uppercase text-content-faint">
@@ -208,7 +236,14 @@ function PrescriptionCard({
         {rx.prescriberName && <span>Prescripteur : {rx.prescriberName}</span>}
       </div>
       {rx.notes && <p className="mt-1 text-xs text-content-muted">{rx.notes}</p>}
+
+      {zoom && rx.photoUrl && (
+        <Modal open onClose={() => setZoom(false)} title="Scan de l'ordonnance papier" size="lg">
+          <img src={rx.photoUrl} alt="Ordonnance papier agrandie" className="max-h-[75vh] w-full object-contain" />
+        </Modal>
+      )}
     </div>
   );
 }
+
 

@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import { Glasses } from 'lucide-react';
+import { Glasses, ImagePlus, Trash2, Eye, Loader2 } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
 import { lensBaseOptions, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { createPrescription, type Prescription } from './api';
 import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { Button, Field } from '../../components/ui';
+import { fileToResizedDataUrl } from '../../lib/image';
+import { Button, Field, Modal } from '../../components/ui';
 
 /**
  * Saisie d'une ordonnance optique, rattachée à un client. Partagée par la
@@ -28,13 +29,33 @@ export function PrescriptionForm({
 }) {
   const [error, setError] = useState('');
   const [lensOther, setLensOther] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [zoomPhoto, setZoomPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   const { register, handleSubmit, setValue } = useForm<PrescriptionCreateInput>();
   const mut = useMutation({
-    mutationFn: (v: PrescriptionCreateInput) => createPrescription(customerId, v),
+    mutationFn: (v: PrescriptionCreateInput) =>
+      createPrescription(customerId, { ...v, photoUrl: photoUrl || undefined }),
     onSuccess: onSaved,
     onError: (e) => setError(apiErrorMessage(e)),
   });
+
+  async function handleFileSelected(file: File) {
+    setUploadBusy(true);
+    setError('');
+    try {
+      // 1024px max dimension, max 600KB output
+      const resized = await fileToResizedDataUrl(file, 1024, 600 * 1024);
+      setPhotoUrl(resized);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur lors du traitement de la photo');
+    } finally {
+      setUploadBusy(false);
+    }
+  }
 
   const cell = 'input px-2 py-1.5 text-center text-sm';
 
@@ -46,6 +67,84 @@ export function PrescriptionForm({
       <h4 className="flex items-center gap-2 font-semibold text-content">
         <Glasses className="h-4 w-4 text-primary" /> {title}
       </h4>
+
+      {/* Upload Scan / Photo de l'ordonnance papier */}
+      <div className="rounded-xl border border-dashed border-primary/40 bg-surface/80 p-3">
+        <p className="mb-2 text-xs font-semibold text-content">
+          Scan / Photo de l'ordonnance papier (facultatif)
+        </p>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleFileSelected(file);
+            e.target.value = '';
+          }}
+        />
+
+        {photoUrl ? (
+          <div className="flex items-center gap-3">
+            <div className="group relative h-20 w-28 overflow-hidden rounded-lg border bg-surface-2">
+              <img src={photoUrl} alt="Ordonnance papier" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => setZoomPhoto(true)}
+                  className="rounded bg-white/90 p-1 text-slate-900"
+                  title="Agrandir"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrl('')}
+                  className="rounded bg-white/90 p-1 text-danger"
+                  title="Supprimer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="badge bg-success/10 text-xs font-medium text-success">
+                Photo d'ordonnance jointe
+              </span>
+              <p className="text-xs text-content-faint">
+                L'image est enregistrée avec les données de réfraction.
+              </p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs text-primary underline hover:text-primary-hover"
+              >
+                Remplacer l'image
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadBusy}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface-2/60 p-3 text-xs font-medium text-content-muted transition hover:border-primary hover:text-primary"
+          >
+            {uploadBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <ImagePlus className="h-4 w-4 text-primary" />
+            )}
+            <span>
+              {uploadBusy
+                ? 'Traitement de la photo...'
+                : 'Ajouter une photo ou scan de l\'ordonnance papier'}
+            </span>
+          </button>
+        )}
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -126,6 +225,13 @@ export function PrescriptionForm({
         <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
         <Button type="submit" loading={mut.isPending}>Enregistrer l'ordonnance</Button>
       </div>
+
+      {zoomPhoto && photoUrl && (
+        <Modal open onClose={() => setZoomPhoto(false)} title="Ordonnance papier" size="lg">
+          <img src={photoUrl} alt="Ordonnance papier agrandie" className="max-h-[75vh] w-full object-contain" />
+        </Modal>
+      )}
     </form>
   );
 }
+

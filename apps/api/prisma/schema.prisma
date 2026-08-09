@@ -358,6 +358,8 @@ model OpticalPrescription {
   /// Fin de validité de l'ordonnance (calculée à la création depuis les
   /// réglages de l'établissement, modifiable). Pilote les relances.
   expiresAt         DateTime?
+  /// Photo / scan d'ordonnance papier (data URL redimensionnée)
+  photoUrl          String?
   createdById       String?
   createdAt         DateTime @default(now())
 

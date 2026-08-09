@@ -26,6 +26,7 @@ import {
   type StockRow,
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
+import { PhotoUploader } from '../../features/optique/PhotoUploader';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -606,6 +607,8 @@ function ProductModal({
     Boolean(attrs.index && !LENS_INDICES.some((i) => i.id === attrs.index)),
   );
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
+  const [photoUrl, setPhotoUrl] = useState<string>(product?.photoUrl ?? '');
+  const [photos, setPhotos] = useState<string[]>(product?.photos ?? []);
   const [supplierOther, setSupplierOther] = useState(false);
   // Stock du magasin actif : quantité + seuil d'alerte, réglables dès la création.
   const [qty, setQty] = useState(stockRow?.quantity ?? 0);
@@ -634,6 +637,8 @@ function ProductModal({
           brand: product.brand ?? '',
           buyPrice: Number(product.buyPrice),
           sellPrice: Number(product.sellPrice),
+          photoUrl: product.photoUrl ?? '',
+          photos: product.photos ?? [],
           createdAt: defaultCreatedAt,
         }
       : {
@@ -710,6 +715,8 @@ function ProductModal({
 
       const payload = {
         ...withAttrs,
+        photoUrl: photoUrl || undefined,
+        photos: photos.length ? photos : undefined,
         createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
       };
 
@@ -737,6 +744,16 @@ function ProductModal({
   return (
     <Modal open onClose={onClose} title={product ? 'Modifier le produit' : 'Nouveau produit'}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
+        {/* Gallery photo du produit */}
+        <PhotoUploader
+          photoUrl={photoUrl}
+          photos={photos}
+          onChange={(next) => {
+            setPhotoUrl(next.photoUrl);
+            setPhotos(next.photos);
+          }}
+        />
+
         <Field label="Nom du produit">
           <input className="input" {...register('name')} />
           {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}

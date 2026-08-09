@@ -1035,6 +1035,8 @@ export const prescriptionCreateSchema = z.object({
   pantoTilt: opt,
   /** Fin de validité ; vide = calculée depuis les réglages de l'établissement. */
   expiresAt: z.string().optional().or(z.literal('')),
+  /** Photo / scan d'ordonnance papier (data URL). */
+  photoUrl: z.string().optional().or(z.literal('')),
 });
 export type PrescriptionCreateInput = z.infer<typeof prescriptionCreateSchema>;
 

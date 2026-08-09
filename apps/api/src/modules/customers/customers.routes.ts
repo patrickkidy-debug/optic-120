@@ -129,4 +129,42 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(201).send({ prescription });
     },
   );
+
+  app.patch(
+    '/:id/prescriptions/:prescriptionId',
+    { preHandler: requirePermission('optique.prescriptions.create') },
+    async (req, reply) => {
+      const { id, prescriptionId } = req.params as { id: string; prescriptionId: string };
+      const existing = await req.db!.opticalPrescription.findFirst({
+        where: { id: prescriptionId, customerId: id },
+      });
+      if (!existing) throw notFound('Ordonnance introuvable');
+      const input = clean(prescriptionCreateSchema.partial().parse(req.body));
+      const { date, expiresAt, ...rest } = input;
+      const prescription = await req.db!.opticalPrescription.update({
+        where: { id: prescriptionId },
+        data: {
+          ...(date ? { date: new Date(date) } : {}),
+          ...(expiresAt !== undefined ? { expiresAt: toDate(expiresAt) } : {}),
+          ...rest,
+        },
+      });
+      return reply.send({ prescription });
+    },
+  );
+
+  app.delete(
+    '/:id/prescriptions/:prescriptionId',
+    { preHandler: requirePermission('optique.prescriptions.create') },
+    async (req, reply) => {
+      const { id, prescriptionId } = req.params as { id: string; prescriptionId: string };
+      const existing = await req.db!.opticalPrescription.findFirst({
+        where: { id: prescriptionId, customerId: id },
+      });
+      if (!existing) throw notFound('Ordonnance introuvable');
+      await req.db!.opticalPrescription.delete({ where: { id: prescriptionId } });
+      return reply.send({ ok: true });
+    },
+  );
 }
+
