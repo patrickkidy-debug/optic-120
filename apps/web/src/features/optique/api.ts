@@ -496,9 +496,14 @@ export interface LensOrder {
   category: string | null;
   supplierName: string | null;
   description: string;
+  odLens: string | null;
+  ogLens: string | null;
+  frameProductId: string | null;
+  frameProduct: { id: string; name: string; brand: string | null; photoUrl: string | null } | null;
   status: LensOrderStatus;
   expectedAt: string | null;
   deliveredAt: string | null;
+  notifiedAt: string | null;
   cost: string | number | null;
   notes: string | null;
   createdAt: string;
@@ -519,6 +524,24 @@ export async function createLensOrder(input: LensOrderCreateInput): Promise<void
 }
 export async function setLensOrderStatus(id: string, status: LensOrderStatus): Promise<void> {
   await api.patch(`/optique/lens-orders/${id}`, { status });
+}
+
+/** Entrée du journal d'activité d'une commande (créée, statut changé, rappel envoyé). */
+export interface LensOrderEvent {
+  id: string;
+  action: string;
+  metadata: { from?: string; to?: string; number?: string } | null;
+  createdAt: string;
+  userName: string | null;
+}
+export async function getLensOrderTimeline(id: string): Promise<LensOrderEvent[]> {
+  const { data } = await api.get<{ events: LensOrderEvent[] }>(`/optique/lens-orders/${id}/timeline`);
+  return data.events;
+}
+/** Marque le client comme prévenu (bouton « Notifier le client »). */
+export async function notifyLensOrderClient(id: string): Promise<{ notifiedAt: string }> {
+  const { data } = await api.post<{ ok: boolean; notifiedAt: string }>(`/optique/lens-orders/${id}/notified`);
+  return data;
 }
 
 export interface Repair {

@@ -245,6 +245,7 @@ model Product {
 
   stockItems StockItem[]
   saleItems  SaleItem[]
+  lensOrders LensOrder[]
 
   @@unique([tenantId, sku])
   @@index([tenantId])
@@ -375,10 +376,20 @@ enum SaleType {
   RETURN
 }
 
+/// Workflow Kanban des commandes de verres. MOUNTED est conservé (valeur
+/// Postgres irréversible sans recréer le type) mais n'est plus produit :
+/// les commandes existantes y ont été basculées vers READY par migration.
 enum LensOrderStatus {
+  TO_ORDER
   ORDERED
+  LAB_CONFIRMED
+  IN_PRODUCTION
+  SHIPPED
   RECEIVED
+  CONTROL
+  MOUNTING
   MOUNTED
+  READY
   DELIVERED
   CANCELLED
 }
@@ -472,11 +483,19 @@ model LensOrder {
   customerId   String?
   customer     Customer?       @relation(fields: [customerId], references: [id])
   category     String? // VERRES | LENTILLES | ACCESSOIRE | MONTURE | AUTRE
-  supplierName String?
+  supplierName String? // laboratoire / fournisseur
   description  String // ex. « Verres progressifs 1.6 anti-reflet »
-  status       LensOrderStatus @default(ORDERED)
+  // Détail par œil (catégorie VERRES) : affiché tel quel sur la carte Kanban.
+  odLens       String?
+  ogLens       String?
+  // Monture associée (facultative) : sert de vignette sur la carte Kanban.
+  frameProductId String?
+  frameProduct   Product? @relation(fields: [frameProductId], references: [id], onDelete: SetNull)
+  status       LensOrderStatus @default(TO_ORDER)
   expectedAt   DateTime?
   deliveredAt  DateTime? // date de remise au client (calcul du délai de livraison)
+  // Dernier rappel WhatsApp envoyé au client depuis la fiche commande.
+  notifiedAt   DateTime?
   cost         Decimal?        @db.Decimal(12, 2)
   notes        String?
   createdById  String?
@@ -486,6 +505,7 @@ model LensOrder {
   @@unique([tenantId, number])
   @@index([tenantId, status])
   @@index([tenantId, customerId])
+  @@index([frameProductId])
 }
 
 /** Réparation / SAV d'une monture ou d'un équipement. */

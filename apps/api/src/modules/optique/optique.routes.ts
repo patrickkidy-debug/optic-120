@@ -10,6 +10,8 @@ import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { getOpticalSettings } from '../../lib/optical-settings.js';
+import { recordAudit, requestMeta } from '../../lib/audit.js';
+import { prisma } from '../../lib/prisma.js';
 
 function nullifyEmpty<T extends Record<string, unknown>>(obj: T): T {
   const out = { ...obj } as Record<string, unknown>;
@@ -42,7 +44,11 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       where,
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { customer: { select: { firstName: true, lastName: true, phone: true } } },
+      include: {
+        customer: { select: { firstName: true, lastName: true, phone: true } },
+        // Vignette Kanban : nom + photo de la monture associée, si choisie.
+        frameProduct: { select: { id: true, name: true, brand: true, photoUrl: true } },
+      },
     });
     return reply.send({ orders });
   });
@@ -61,6 +67,11 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/lens-orders', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const input = nullifyEmpty(lensOrderCreateSchema.parse(req.body));
+    // La monture choisie doit appartenir à l'établissement (vignette Kanban).
+    if (input.frameProductId) {
+      const frame = await req.db!.product.findFirst({ where: { id: input.frameProductId } });
+      if (!frame) throw notFound('Monture introuvable');
+    }
     const order = await retryOnDuplicateNumber(async () =>
       req.db!.lensOrder.create({
         data: {
@@ -70,6 +81,9 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
           category: input.category ?? null,
           supplierName: input.supplierName ?? null,
           description: input.description,
+          odLens: input.odLens ?? null,
+          ogLens: input.ogLens ?? null,
+          frameProductId: input.frameProductId || null,
           expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
           cost: input.cost ?? null,
           notes: input.notes ?? null,
@@ -77,19 +91,83 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
         },
       }),
     );
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'LENS_ORDER_CREATED',
+      entity: 'LensOrder',
+      entityId: order.id,
+      metadata: { number: order.number },
+      ...requestMeta(req),
+    });
     return reply.status(201).send({ order });
   });
 
+  // Déplacement d'une carte Kanban : change le statut, horodate la remise au
+  // premier passage à « Livré », et journalise (date + utilisateur) pour la
+  // timeline de la fiche commande.
   app.patch('/lens-orders/:id', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const { status } = lensOrderStatusSchema.parse(req.body);
-    const current = await req.db!.lensOrder.findFirst({ where: { id }, select: { deliveredAt: true } });
+    const current = await req.db!.lensOrder.findFirst({ where: { id }, select: { status: true, deliveredAt: true, number: true } });
     if (!current) throw notFound('Commande introuvable');
-    // Horodate la remise au client au premier passage à « Livré » (pour le délai).
     const data: { status: typeof status; deliveredAt?: Date } = { status };
     if (status === 'DELIVERED' && !current.deliveredAt) data.deliveredAt = new Date();
     await req.db!.lensOrder.updateMany({ where: { id }, data });
+    if (current.status !== status) {
+      await recordAudit({
+        tenantId: req.auth!.tenantId,
+        userId: req.auth!.userId,
+        action: 'LENS_ORDER_STATUS_CHANGED',
+        entity: 'LensOrder',
+        entityId: id,
+        metadata: { number: current.number, from: current.status, to: status },
+        ...requestMeta(req),
+      });
+    }
     return reply.send({ ok: true, status });
+  });
+
+  // Timeline de la fiche commande : entrées du journal d'audit pour cette
+  // commande (créations, changements de statut, rappels client), triées
+  // chronologiquement, avec le nom de l'utilisateur à l'origine.
+  app.get('/lens-orders/:id/timeline', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const order = await req.db!.lensOrder.findFirst({ where: { id }, select: { id: true } });
+    if (!order) throw notFound('Commande introuvable');
+    const events = await prisma.auditLog.findMany({
+      where: { tenantId: req.auth!.tenantId, entity: 'LensOrder', entityId: id },
+      orderBy: { createdAt: 'asc' },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+    return reply.send({
+      events: events.map((e) => ({
+        id: e.id,
+        action: e.action,
+        metadata: e.metadata,
+        createdAt: e.createdAt,
+        userName: e.user ? `${e.user.firstName} ${e.user.lastName}` : null,
+      })),
+    });
+  });
+
+  // Rappel client envoyé (bouton « Notifier le client ») : horodate et journalise.
+  app.post('/lens-orders/:id/notified', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const order = await req.db!.lensOrder.findFirst({ where: { id }, select: { number: true } });
+    if (!order) throw notFound('Commande introuvable');
+    const notifiedAt = new Date();
+    await req.db!.lensOrder.updateMany({ where: { id }, data: { notifiedAt } });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'LENS_ORDER_CLIENT_NOTIFIED',
+      entity: 'LensOrder',
+      entityId: id,
+      metadata: { number: order.number },
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true, notifiedAt });
   });
 
   /* -------------------- SAV / Réparations -------------------- */

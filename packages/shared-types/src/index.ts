@@ -1115,8 +1115,43 @@ export const stockCountSchema = z.object({
 export type StockCountInput = z.infer<typeof stockCountSchema>;
 
 /* --- Commandes de verres (laboratoire) & SAV / réparations --- */
-export const LENS_ORDER_STATUSES = ['ORDERED', 'RECEIVED', 'MOUNTED', 'DELIVERED', 'CANCELLED'] as const;
+
+/**
+ * Colonnes du Kanban des commandes de verres, dans l'ordre d'affichage.
+ * CANCELLED existe côté données (une commande annulée doit rester traçable)
+ * mais n'est volontairement PAS une colonne du tableau : elle se déclenche
+ * depuis une carte et les commandes annulées sont retirées du plateau.
+ */
+export const LENS_ORDER_BOARD_STATUSES = [
+  'TO_ORDER',
+  'ORDERED',
+  'LAB_CONFIRMED',
+  'IN_PRODUCTION',
+  'SHIPPED',
+  'RECEIVED',
+  'CONTROL',
+  'MOUNTING',
+  'READY',
+  'DELIVERED',
+] as const;
+/** Toutes les valeurs possibles en base, colonnes du plateau + annulée. */
+export const LENS_ORDER_STATUSES = [...LENS_ORDER_BOARD_STATUSES, 'CANCELLED'] as const;
 export type LensOrderStatus = (typeof LENS_ORDER_STATUSES)[number];
+
+export const LENS_ORDER_STATUS_LABELS: Record<LensOrderStatus, string> = {
+  TO_ORDER: 'À commander',
+  ORDERED: 'Commandé',
+  LAB_CONFIRMED: 'Confirmé laboratoire',
+  IN_PRODUCTION: 'En fabrication',
+  SHIPPED: 'Expédié',
+  RECEIVED: 'Reçu',
+  CONTROL: 'Contrôle',
+  MOUNTING: 'Montage',
+  READY: 'Prêt',
+  DELIVERED: 'Livré',
+  CANCELLED: 'Annulé',
+};
+
 export const REPAIR_STATUSES = ['RECEIVED', 'IN_PROGRESS', 'READY', 'DELIVERED', 'CANCELLED'] as const;
 export type RepairStatus = (typeof REPAIR_STATUSES)[number];
 
@@ -1130,6 +1165,11 @@ export const lensOrderCreateSchema = z.object({
   category: z.enum(LENS_ORDER_CATEGORIES).optional(),
   supplierName: z.string().max(120).optional().or(z.literal('')),
   description: z.string().trim().min(2).max(400),
+  /** Détail par œil (catégorie VERRES) : affiché tel quel sur la carte Kanban. */
+  odLens: z.string().max(200).optional().or(z.literal('')),
+  ogLens: z.string().max(200).optional().or(z.literal('')),
+  /** Monture associée (facultative) : sert de vignette Kanban. */
+  frameProductId: z.string().uuid().optional().or(z.literal('')),
   expectedAt: z.string().optional().or(z.literal('')),
   cost: z.coerce.number().min(0).optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
