@@ -38,6 +38,10 @@ export interface Product {
   isActive: boolean;
   /** Attributs libres (ex. type de verre + fournisseur pour la catégorie VERRE). */
   attributes?: Record<string, unknown> | null;
+  /** Photo principale du catalogue visuel (data URL). */
+  photoUrl?: string | null;
+  /** Photos secondaires : absentes des listes, présentes sur la fiche. */
+  photos?: string[] | null;
   createdAt?: string;
 }
 

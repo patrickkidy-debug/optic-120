@@ -22,7 +22,9 @@ const SKU_PREFIX: Record<string, string> = {
   VERRE: 'VER',
   LENTILLE: 'LEN',
   ACCESSOIRE: 'ACC',
+  ENTRETIEN: 'ENT',
   SERVICE: 'SVC',
+  AUTRE: 'DIV',
 };
 
 export async function productsRoutes(app: FastifyInstance): Promise<void> {
@@ -43,12 +45,29 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
       ];
     }
 
+    // `photos` (secondaires) est volontairement exclu : ces data URLs pèsent
+    // lourd et ne servent que sur la fiche produit, jamais dans la liste.
     const [items, total] = await Promise.all([
       req.db!.product.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
+        select: {
+          id: true,
+          tenantId: true,
+          sku: true,
+          category: true,
+          brand: true,
+          name: true,
+          attributes: true,
+          photoUrl: true,
+          buyPrice: true,
+          sellPrice: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       req.db!.product.count({ where }),
     ]);
@@ -106,6 +125,8 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
           brand: input.brand,
           name: input.name,
           attributes: input.attributes as object | undefined,
+          photoUrl: input.photoUrl || null,
+          photos: input.photos as object | undefined,
           buyPrice: input.buyPrice,
           sellPrice: input.sellPrice,
           createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
@@ -180,6 +201,9 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
         ...input,
         ...(sku ? { sku } : {}),
         attributes: input.attributes as object | undefined,
+        // Chaîne vide = photo retirée par l'utilisateur.
+        photoUrl: input.photoUrl === undefined ? undefined : input.photoUrl || null,
+        photos: input.photos as object | undefined,
         createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
       },
     });

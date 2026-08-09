@@ -215,7 +215,11 @@ enum ProductCategory {
   VERRE
   LENTILLE
   ACCESSOIRE
+  /// Produits d'entretien (sprays, lingettes, solutions lentilles…)
+  ENTRETIEN
   SERVICE
+  /// Divers, hors des familles ci-dessus
+  AUTRE
 }
 
 model Product {
@@ -227,6 +231,12 @@ model Product {
   brand      String?
   name       String
   attributes Json?
+  /// Photo principale (data URL redimensionnée) : donnée centrale du catalogue
+  /// visuel, chargée avec la liste.
+  photoUrl   String?
+  /// Photos secondaires (tableau de data URLs). Volontairement EXCLUE des
+  /// listes : on ne la charge que sur la fiche produit.
+  photos     Json?
   buyPrice   Decimal         @db.Decimal(12, 2)
   sellPrice  Decimal         @db.Decimal(12, 2)
   isActive   Boolean         @default(true)

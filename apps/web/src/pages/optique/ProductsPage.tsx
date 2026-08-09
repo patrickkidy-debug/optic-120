@@ -33,13 +33,20 @@ import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { StockHistoryModal } from './StockPage';
+import { FrameCatalog, FrameDetail } from './FrameCatalog';
+import { LensCatalog } from './LensCatalog';
+import { FrameFormModal, LensFormModal } from './CatalogForms';
+import { usePosStore } from '../../store/pos';
+import { useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
   { value: 'MONTURE', label: 'Montures' },
   { value: 'VERRE', label: 'Verres' },
   { value: 'LENTILLE', label: 'Lentilles' },
   { value: 'ACCESSOIRE', label: 'Accessoires' },
+  { value: 'ENTRETIEN', label: "Produits d'entretien" },
   { value: 'SERVICE', label: 'Services' },
+  { value: 'AUTRE', label: 'Autres' },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -60,6 +67,7 @@ export function ProductsPage() {
   const canUpdate = usePermission('optique.products.update');
   const canDelete = usePermission('optique.products.delete');
   const canAdjust = usePermission('optique.stock.adjust');
+  const canSell = usePermission('optique.sales.create');
   const branchId = useUIStore((s) => s.activeBranchId);
 
   const [search, setSearch] = useState('');
@@ -68,6 +76,11 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [adjusting, setAdjusting] = useState<StockRow | null>(null);
   const [historyRow, setViewingHistory] = useState<{ productId: string; name: string } | null>(null);
+  // Formulaires dédiés du catalogue visuel (monture / verre) et fiche monture.
+  const [frameForm, setFrameForm] = useState<{ product: Product | null } | null>(null);
+  const [lensForm, setLensForm] = useState<{ product: Product | null } | null>(null);
+  const [frameDetail, setFrameDetail] = useState<Product | null>(null);
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', search],
@@ -153,6 +166,34 @@ export function ProductsPage() {
     setModalOpen(true);
   }
 
+  /** Duplique un produit : même fiche, sans identifiant ni référence. */
+  function duplicateOf(p: Product): Product {
+    return { ...p, id: '', sku: '' } as Product;
+  }
+
+  /** Envoie le produit en caisse, prêt à encaisser. */
+  function sellProduct(p: Product) {
+    const pos = usePosStore.getState();
+    pos.addLine({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice) });
+    navigate('/optique/caisse');
+  }
+
+  const catalogActions = {
+    onView: (p: Product) => setFrameDetail(p),
+    onEdit: (p: Product) =>
+      p.category === 'VERRE' ? setLensForm({ product: p }) : setFrameForm({ product: p }),
+    onDuplicate: (p: Product) =>
+      p.category === 'VERRE'
+        ? setLensForm({ product: duplicateOf(p) })
+        : setFrameForm({ product: duplicateOf(p) }),
+    onSell: sellProduct,
+    onDelete: canDelete
+      ? (p: Product) => {
+          if (confirm(`Supprimer « ${p.name} » ?`)) removeMut.mutate(p.id);
+        }
+      : undefined,
+  };
+
   const removeMut = useMutation({
     mutationFn: deleteProduct,
     // Le produit disparaît du catalogue : on rafraîchit le stock partout
@@ -176,8 +217,21 @@ export function ProductsPage() {
         subtitle="Montures, verres, lentilles et accessoires"
         actions={
           canCreate && (
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Nouveau produit
+            <Button
+              onClick={() => {
+                // Le bouton suit la famille affichée : on ne saisit pas une
+                // monture avec le formulaire générique.
+                if (category === 'MONTURE') setFrameForm({ product: null });
+                else if (category === 'VERRE') setLensForm({ product: null });
+                else openCreate();
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {category === 'MONTURE'
+                ? 'Ajouter une monture'
+                : category === 'VERRE'
+                  ? 'Ajouter un verre'
+                  : 'Nouveau produit'}
             </Button>
           )
         }
@@ -264,6 +318,23 @@ export function ProductsPage() {
 
       {isLoading ? (
         <PageLoader />
+      ) : category === 'MONTURE' ? (
+        <FrameCatalog
+          products={filteredProducts}
+          stockByProduct={stockByProduct}
+          actions={catalogActions}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          canSell={canSell}
+        />
+      ) : category === 'VERRE' ? (
+        <LensCatalog
+          products={filteredProducts}
+          actions={catalogActions}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          canSell={canSell}
+        />
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Package}
@@ -367,6 +438,26 @@ export function ProductsPage() {
         </div>
       )}
 
+      {frameForm && (
+        <FrameFormModal
+          product={frameForm.product?.id ? frameForm.product : frameForm.product}
+          branchId={branchId}
+          stockRow={frameForm.product?.id ? stockByProduct.get(frameForm.product.id) : undefined}
+          onClose={() => setFrameForm(null)}
+        />
+      )}
+      {lensForm && (
+        <LensFormModal
+          product={lensForm.product}
+          branchId={branchId}
+          onClose={() => setLensForm(null)}
+        />
+      )}
+      {frameDetail && (
+        <Modal open onClose={() => setFrameDetail(null)} title={frameDetail.name} size="lg">
+          <FrameDetail p={frameDetail} stock={stockByProduct.get(frameDetail.id)} />
+        </Modal>
+      )}
       {modalOpen && (
         <ProductModal
           product={editing}

@@ -9,7 +9,11 @@ export const ProductCategory = {
   VERRE: 'VERRE',
   LENTILLE: 'LENTILLE',
   ACCESSOIRE: 'ACCESSOIRE',
+  /** Sprays, lingettes, solutions pour lentilles... */
+  ENTRETIEN: 'ENTRETIEN',
   SERVICE: 'SERVICE',
+  /** Divers, hors des familles ci-dessus. */
+  AUTRE: 'AUTRE',
 } as const;
 export type ProductCategory = (typeof ProductCategory)[keyof typeof ProductCategory];
 
@@ -773,8 +777,175 @@ export const productCategoryEnum = z.enum([
   ProductCategory.VERRE,
   ProductCategory.LENTILLE,
   ProductCategory.ACCESSOIRE,
+  ProductCategory.ENTRETIEN,
   ProductCategory.SERVICE,
+  ProductCategory.AUTRE,
 ]);
+
+/* ============================================================
+ * CATALOGUE OPTIQUE — référentiels montures & verres
+ * Ces listes alimentent les formulaires et les filtres du catalogue.
+ * Les attributs correspondants vivent dans `Product.attributes` (JSON) :
+ * aucune migration n'est nécessaire pour en ajouter un.
+ * ============================================================ */
+
+/** Nombre maximum de photos secondaires par produit (poids de la base). */
+export const MAX_PRODUCT_PHOTOS = 5;
+
+/** Familles affichées dans le catalogue, dans l'ordre des onglets. */
+export const CATALOG_FAMILIES = [
+  { key: ProductCategory.MONTURE, label: 'Montures' },
+  { key: ProductCategory.VERRE, label: 'Verres' },
+  { key: ProductCategory.LENTILLE, label: 'Lentilles' },
+  { key: ProductCategory.ACCESSOIRE, label: 'Accessoires' },
+  { key: ProductCategory.ENTRETIEN, label: "Produits d'entretien" },
+  { key: ProductCategory.AUTRE, label: 'Autres' },
+] as const;
+
+/* ------------------------------ MONTURES ------------------------------ */
+
+export const FRAME_GENDERS = ['Homme', 'Femme', 'Mixte', 'Enfant', 'Junior'] as const;
+
+export const FRAME_SHAPES = [
+  'Rectangulaire',
+  'Carrée',
+  'Ronde',
+  'Ovale',
+  'Papillon',
+  'Aviateur',
+  'Pantos',
+  'Cat-eye',
+  'Sans monture',
+] as const;
+
+export const FRAME_MATERIALS = [
+  'Acétate',
+  'Métal',
+  'Titane',
+  'Acier inoxydable',
+  'TR90',
+  'Bois',
+  'Mixte',
+] as const;
+
+/** Couleurs courantes, avec leur rendu pour la pastille du filtre. */
+export const FRAME_COLORS = [
+  { name: 'Noir', hex: '#111827' },
+  { name: 'Écaille', hex: '#8b5e34' },
+  { name: 'Marron', hex: '#6b4423' },
+  { name: 'Or', hex: '#d4af37' },
+  { name: 'Argent', hex: '#c0c5ce' },
+  { name: 'Bleu', hex: '#2563eb' },
+  { name: 'Rouge', hex: '#dc2626' },
+  { name: 'Rose', hex: '#ec4899' },
+  { name: 'Vert', hex: '#16a34a' },
+  { name: 'Transparent', hex: '#e5e7eb' },
+  { name: 'Blanc', hex: '#f8fafc' },
+] as const;
+
+/** Attributs propres à une monture (stockés dans `attributes`). */
+export const frameAttributesSchema = z.object({
+  model: z.string().max(80).optional().or(z.literal('')),
+  gender: z.string().max(20).optional().or(z.literal('')),
+  shape: z.string().max(30).optional().or(z.literal('')),
+  color: z.string().max(30).optional().or(z.literal('')),
+  material: z.string().max(30).optional().or(z.literal('')),
+  /** Taille façon optique : 52-18-140 (calibre-pont-branches). */
+  size: z.string().max(20).optional().or(z.literal('')),
+  ean: z.string().max(40).optional().or(z.literal('')),
+  location: z.string().max(60).optional().or(z.literal('')),
+  supplier: z.string().max(80).optional().or(z.literal('')),
+});
+export type FrameAttributes = z.infer<typeof frameAttributesSchema>;
+
+/* ------------------------------- VERRES ------------------------------- */
+
+/**
+ * Familles de verres. `visual` pilote l'illustration de la carte : le verre
+ * se reconnaît d'un coup d'œil sans lire la fiche.
+ */
+export const LENS_FAMILIES = [
+  { key: 'UNIFOCAL', label: 'Unifocal', visual: 'single' },
+  { key: 'PROGRESSIF', label: 'Progressif', visual: 'progressive' },
+  { key: 'BIFOCAL', label: 'Bifocal', visual: 'bifocal' },
+  { key: 'MI_DISTANCE', label: 'Mi-distance', visual: 'mid' },
+  { key: 'PHOTOCHROMIQUE', label: 'Photochromique', visual: 'photochromic' },
+  { key: 'SOLAIRE', label: 'Solaire', visual: 'sun' },
+  { key: 'ANTI_FATIGUE', label: 'Anti-fatigue', visual: 'single' },
+  { key: 'ORDINATEUR', label: 'Ordinateur', visual: 'computer' },
+  { key: 'PERSONNALISE', label: 'Personnalisé', visual: 'single' },
+] as const;
+export type LensFamilyKey = (typeof LENS_FAMILIES)[number]['key'];
+export type LensVisual = (typeof LENS_FAMILIES)[number]['visual'];
+
+export const LENS_MATERIALS = [
+  'Organique (CR-39)',
+  'Polycarbonate',
+  'Trivex',
+  'Minéral',
+  'Haut indice',
+] as const;
+
+export const LENS_TINTS = [
+  'Incolore',
+  'Gris',
+  'Brun',
+  'Vert',
+  'Dégradé gris',
+  'Dégradé brun',
+  'Polarisé',
+  'Miroir',
+] as const;
+
+export const LENS_DESIGNS = ['Sphérique', 'Asphérique', 'Bi-asphérique', 'Double face'] as const;
+
+export const LENS_USAGES = [
+  'Vision de loin',
+  'Vision de près',
+  'Vision intermédiaire',
+  'Toutes distances',
+  'Écrans',
+  'Conduite',
+  'Sport',
+  'Soleil',
+] as const;
+
+/** Attributs propres à un verre (stockés dans `attributes`). */
+export const lensAttributesSchema = z.object({
+  /** Famille : clé de LENS_FAMILIES. */
+  family: z.string().max(30).optional().or(z.literal('')),
+  range: z.string().max(80).optional().or(z.literal('')),
+  index: z.string().max(10).optional().or(z.literal('')),
+  material: z.string().max(40).optional().or(z.literal('')),
+  treatments: z.array(z.string().max(40)).optional(),
+  tint: z.string().max(30).optional().or(z.literal('')),
+  design: z.string().max(30).optional().or(z.literal('')),
+  usage: z.string().max(40).optional().or(z.literal('')),
+  /** Verre haut de gamme : mis en avant dans le catalogue. */
+  premium: z.boolean().optional(),
+});
+export type LensAttributes = z.infer<typeof lensAttributesSchema>;
+
+/** Illustration à utiliser pour un verre, d'après sa famille. */
+export function lensVisualFor(family: string | null | undefined): LensVisual {
+  return LENS_FAMILIES.find((f) => f.key === family)?.visual ?? 'single';
+}
+
+/**
+ * Étiquettes d'un verre pour la carte et la comparaison : famille, indice,
+ * traitements, teinte, gamme premium. Libellés courts, prêts à afficher.
+ */
+export function lensTags(attrs: LensAttributes | null | undefined): string[] {
+  if (!attrs) return [];
+  const family = LENS_FAMILIES.find((f) => f.key === attrs.family)?.label;
+  return [
+    family,
+    attrs.index ? `Indice ${attrs.index}` : null,
+    ...(attrs.treatments ?? []),
+    attrs.tint && attrs.tint !== 'Incolore' ? attrs.tint : null,
+    attrs.premium ? 'Premium' : null,
+  ].filter((t): t is string => Boolean(t));
+}
 
 export const productCreateSchema = z.object({
   // Référence facultative : générée côté serveur si absente (verres, accessoires…).
@@ -783,6 +954,10 @@ export const productCreateSchema = z.object({
   brand: z.string().max(80).optional(),
   name: z.string().min(1).max(160),
   attributes: z.record(z.any()).optional(),
+  /** Photo principale (data URL) : donnee centrale du catalogue visuel. */
+  photoUrl: z.string().optional().or(z.literal('')),
+  /** Photos secondaires (data URLs), plafonnees pour preserver la base. */
+  photos: z.array(z.string()).max(MAX_PRODUCT_PHOTOS).optional(),
   buyPrice: z.number().nonnegative(),
   sellPrice: z.number().nonnegative(),
   createdAt: z.string().optional(),
