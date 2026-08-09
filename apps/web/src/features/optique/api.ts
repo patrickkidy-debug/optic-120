@@ -451,7 +451,7 @@ export interface DashboardData {
     branch: string;
     createdAt: string;
   }[];
-  revenueByDay: { date: string; revenue: number }[];
+  revenueByDay: { date: string; revenue: number; sales: number }[];
   paymentBreakdown: { method: string; total: number }[];
   monthSalesCount: number;
   avgBasket: number;
@@ -459,6 +459,8 @@ export interface DashboardData {
   weekRevenue: number;
   prevWeekRevenue: number;
   topProducts: { name: string; revenue: number; quantity: number }[];
+  activeCustomers?: number;
+  activeCustomersPrev?: number;
 }
 
 export async function getDashboard(branchId?: string): Promise<DashboardData> {
@@ -478,6 +480,38 @@ export interface AdminDashboardData {
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
   const { data } = await api.get<{ admin: AdminDashboardData }>('/dashboard/admin');
   return data.admin;
+}
+
+export type DashboardRange = '7d' | '30d' | '3m' | '12m';
+export interface SeriesPoint {
+  date: string;
+  revenue: number;
+  sales: number;
+  collected: number;
+  margin: number;
+}
+/** Série multi-métrique (CA/ventes/encaissé/marge) pour le graphique interactif. */
+export async function getDashboardSeries(range: DashboardRange, branchId?: string): Promise<SeriesPoint[]> {
+  const { data } = await api.get<{ series: SeriesPoint[] }>('/dashboard/series', {
+    params: { range, ...(branchId ? { branchId } : {}) },
+  });
+  return data.series;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'sale' | 'payment' | 'lens_order' | 'consultation' | 'stock_in';
+  label: string;
+  detail: string | null;
+  amount: number | null;
+  at: string;
+}
+/** Fil d'activité du jour (ventes, paiements, commandes labo, consultations, réceptions stock). */
+export async function getDashboardActivity(branchId?: string): Promise<ActivityItem[]> {
+  const { data } = await api.get<{ activity: ActivityItem[] }>('/dashboard/activity', {
+    params: branchId ? { branchId } : {},
+  });
+  return data.activity;
 }
 
 /* ---------------- Commandes de verres (labo) & SAV ---------------- */
@@ -585,6 +619,8 @@ export interface Renewal {
   reorder: boolean;
   lastPrescriptionAt?: string | null;
   lastPurchaseAt?: string | null;
+  lastLensType?: string | null;
+  recommendedAt?: string | null;
 }
 export async function listRenewals(): Promise<Renewal[]> {
   const { data } = await api.get<{ renewals: Renewal[] }>('/optique/renewals');

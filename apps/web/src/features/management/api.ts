@@ -119,6 +119,28 @@ export async function getInsurerUpcoming(): Promise<InsurerUpcoming> {
   return data;
 }
 
+export interface InsuranceSummary {
+  paid: number;
+  pending: number;
+  late: number;
+  toCollect: number;
+}
+
+/** Résumé des remboursements assurance (payé / en attente / en retard), 24 derniers mois. */
+export async function getInsuranceSummary(): Promise<InsuranceSummary> {
+  const { data } = await api.get<InsuranceSummary>('/insurance/summary');
+  return data;
+}
+
+/** Marque comme reçu le remboursement d'un assureur pour le trimestre débutant à quarterStart. */
+export async function markInsurancePaid(insurerId: string, quarterStart: string): Promise<number> {
+  const { data } = await api.post<{ ok: boolean; count: number }>('/insurance/mark-paid', {
+    insurerId,
+    quarterStart,
+  });
+  return data.count;
+}
+
 export async function listInsurers(): Promise<Insurer[]> {
   const { data } = await api.get<{ insurers: Insurer[] }>('/insurance');
   return data.insurers;

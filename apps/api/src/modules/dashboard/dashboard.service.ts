@@ -1,4 +1,4 @@
-import { SaleStatus, SaleType, isMadeToOrderCategory } from '@oculo/shared-types';
+import { SaleStatus, SaleType, StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 
 function startOfToday(): Date {
@@ -32,6 +32,8 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     newCustomersMonth,
     topProductGroups,
     prevWeekAgg,
+    activeCustomersRaw,
+    activeCustomersPrevRaw,
   ] = await Promise.all([
     prisma.sale.aggregate({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } },
@@ -92,22 +94,54 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       },
       _sum: { paidAmount: true },
     }),
+    // Clients actifs : au moins un achat sur les 30 derniers jours (et les 30
+    // précédents, pour calculer une évolution).
+    prisma.sale.findMany({
+      where: {
+        ...saleBase,
+        status: { in: PAID_LIKE },
+        customerId: { not: null },
+        createdAt: { gte: new Date(Date.now() - 30 * 24 * 3600 * 1000) },
+      },
+      distinct: ['customerId'],
+      select: { customerId: true },
+    }),
+    prisma.sale.findMany({
+      where: {
+        ...saleBase,
+        status: { in: PAID_LIKE },
+        customerId: { not: null },
+        createdAt: {
+          gte: new Date(Date.now() - 60 * 24 * 3600 * 1000),
+          lt: new Date(Date.now() - 30 * 24 * 3600 * 1000),
+        },
+      },
+      distinct: ['customerId'],
+      select: { customerId: true },
+    }),
   ]);
 
-  // Série des 7 derniers jours.
-  const days: { date: string; revenue: number }[] = [];
+  // Série des 7 derniers jours (CA encaissé + nombre de ventes, pour le mini
+  // graphique et le panier moyen quotidien côté client).
+  const days: { date: string; revenue: number; sales: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - i);
-    days.push({ date: d.toISOString().slice(0, 10), revenue: 0 });
+    days.push({ date: d.toISOString().slice(0, 10), revenue: 0, sales: 0 });
   }
   const indexByDate = new Map(days.map((d, idx) => [d.date, idx]));
   for (const s of weekSales) {
     const key = s.createdAt.toISOString().slice(0, 10);
     const idx = indexByDate.get(key);
-    if (idx !== undefined) days[idx].revenue += Number(s.paidAmount);
+    if (idx !== undefined) {
+      days[idx].revenue += Number(s.paidAmount);
+      days[idx].sales += 1;
+    }
   }
+
+  const activeCustomers = activeCustomersRaw.length;
+  const activeCustomersPrev = activeCustomersPrevRaw.length;
 
   const weekRevenue = days.reduce((sum, d) => sum + d.revenue, 0);
   const prevWeekRevenue = Number(prevWeekAgg._sum.paidAmount ?? 0);
@@ -166,7 +200,224 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     weekRevenue,
     prevWeekRevenue,
     topProducts,
+    activeCustomers,
+    activeCustomersPrev,
   };
+}
+
+export type DashboardRange = '7d' | '30d' | '3m' | '12m';
+type Granularity = 'day' | 'week' | 'month';
+
+function granularityForRange(range: DashboardRange): Granularity {
+  if (range === '7d' || range === '30d') return 'day';
+  if (range === '3m') return 'week';
+  return 'month';
+}
+function rangeStart(range: DashboardRange): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (range === '7d') d.setDate(d.getDate() - 6);
+  else if (range === '30d') d.setDate(d.getDate() - 29);
+  else if (range === '3m') d.setDate(d.getDate() - 7 * 12);
+  else d.setMonth(d.getMonth() - 11);
+  return d;
+}
+function bucketKey(date: Date, granularity: Granularity): string {
+  if (granularity === 'day') return date.toISOString().slice(0, 10);
+  if (granularity === 'week') {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const dayIdx = (d.getDay() + 6) % 7; // 0 = lundi
+    d.setDate(d.getDate() - dayIdx);
+    return d.toISOString().slice(0, 10);
+  }
+  return date.toISOString().slice(0, 7);
+}
+function buildBuckets(range: DashboardRange): string[] {
+  const granularity = granularityForRange(range);
+  const cursor = rangeStart(range);
+  const now = new Date();
+  const keys: string[] = [];
+  while (cursor <= now) {
+    const key = bucketKey(cursor, granularity);
+    if (keys[keys.length - 1] !== key) keys.push(key);
+    if (granularity === 'day') cursor.setDate(cursor.getDate() + 1);
+    else if (granularity === 'week') cursor.setDate(cursor.getDate() + 7);
+    else cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return keys;
+}
+
+/**
+ * Série multi-métrique (CA, ventes, encaissé, marge) pour le graphique
+ * interactif du tableau de bord. Bucketing quotidien (7j/30j), hebdomadaire
+ * (3 mois) ou mensuel (12 mois). La marge est approximée avec le prix
+ * d'achat ACTUEL du produit : le SaleItem ne conserve pas de coût
+ * historique, donc une variation de prix d'achat rétroactive légèrement
+ * la marge des ventes passées.
+ */
+export async function getSeries(tenantId: string, branchId: string | undefined, range: DashboardRange) {
+  const branchFilter = branchId ? { branchId } : {};
+  const saleBase = { tenantId, type: SaleType.SALE, ...branchFilter };
+  const granularity = granularityForRange(range);
+  const since = rangeStart(range);
+
+  const [sales, items] = await Promise.all([
+    prisma.sale.findMany({
+      where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: since } },
+      select: { createdAt: true, paidAmount: true, insuranceAmount: true },
+    }),
+    prisma.saleItem.findMany({
+      where: { sale: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: since } } },
+      select: {
+        quantity: true,
+        lineTotal: true,
+        sale: { select: { createdAt: true } },
+        product: { select: { buyPrice: true } },
+      },
+    }),
+  ]);
+
+  const keys = buildBuckets(range);
+  const byKey = new Map(
+    keys.map((k) => [k, { date: k, revenue: 0, sales: 0, collected: 0, margin: 0 }]),
+  );
+
+  for (const s of sales) {
+    const row = byKey.get(bucketKey(s.createdAt, granularity));
+    if (!row) continue;
+    const paid = Number(s.paidAmount);
+    const insurance = Number(s.insuranceAmount ?? 0);
+    row.revenue += paid;
+    row.sales += 1;
+    row.collected += Math.max(0, paid - insurance);
+  }
+  for (const it of items) {
+    const row = byKey.get(bucketKey(it.sale.createdAt, granularity));
+    if (!row) continue;
+    row.margin += Number(it.lineTotal) - Number(it.product.buyPrice) * it.quantity;
+  }
+
+  return keys.map((k) => byKey.get(k)!);
+}
+
+/**
+ * Fil d'activité du jour : ventes, paiements réussis, commandes de verres
+ * créées, consultations et réceptions de stock, fusionnés et triés du plus
+ * récent au plus ancien.
+ */
+export async function getActivity(tenantId: string, branchId?: string) {
+  const branchFilter = branchId ? { branchId } : {};
+  const start = startOfToday();
+
+  const [sales, payments, lensOrders, consultations, movements] = await Promise.all([
+    prisma.sale.findMany({
+      where: { tenantId, type: SaleType.SALE, ...branchFilter, createdAt: { gte: start } },
+      select: {
+        id: true,
+        number: true,
+        paidAmount: true,
+        createdAt: true,
+        customer: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.payment.findMany({
+      where: {
+        tenantId,
+        status: 'SUCCESS',
+        createdAt: { gte: start },
+        ...(branchId ? { sale: { branchId } } : {}),
+      },
+      select: { id: true, amount: true, method: true, createdAt: true, sale: { select: { number: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.lensOrder.findMany({
+      where: { tenantId, createdAt: { gte: start } },
+      select: { id: true, number: true, description: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.consultation.findMany({
+      where: { tenantId, createdAt: { gte: start } },
+      select: { id: true, createdAt: true, patient: { select: { firstName: true, lastName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.stockMovement.findMany({
+      where: {
+        tenantId,
+        type: StockMovementType.PURCHASE_IN,
+        createdAt: { gte: start },
+        ...(branchId ? { stockItem: { branchId } } : {}),
+      },
+      select: {
+        id: true,
+        quantity: true,
+        createdAt: true,
+        stockItem: { select: { product: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+  ]);
+
+  type Row = {
+    id: string;
+    type: 'sale' | 'payment' | 'lens_order' | 'consultation' | 'stock_in';
+    label: string;
+    detail: string | null;
+    amount: number | null;
+    at: Date;
+  };
+
+  const items: Row[] = [
+    ...sales.map((s) => ({
+      id: `sale-${s.id}`,
+      type: 'sale' as const,
+      label: `Vente ${s.number}`,
+      detail: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : null,
+      amount: Number(s.paidAmount),
+      at: s.createdAt,
+    })),
+    ...payments.map((p) => ({
+      id: `payment-${p.id}`,
+      type: 'payment' as const,
+      label: `Paiement ${p.sale.number}`,
+      detail: p.method,
+      amount: Number(p.amount),
+      at: p.createdAt,
+    })),
+    ...lensOrders.map((o) => ({
+      id: `lens-${o.id}`,
+      type: 'lens_order' as const,
+      label: `Commande verres ${o.number}`,
+      detail: o.description,
+      amount: null,
+      at: o.createdAt,
+    })),
+    ...consultations.map((c) => ({
+      id: `consult-${c.id}`,
+      type: 'consultation' as const,
+      label: 'Consultation',
+      detail: `${c.patient.firstName} ${c.patient.lastName}`,
+      amount: null,
+      at: c.createdAt,
+    })),
+    ...movements.map((m) => ({
+      id: `stock-${m.id}`,
+      type: 'stock_in' as const,
+      label: 'Réception stock',
+      detail: `${m.stockItem.product.name} (+${m.quantity})`,
+      amount: null,
+      at: m.createdAt,
+    })),
+  ];
+
+  items.sort((a, b) => b.at.getTime() - a.at.getTime());
+  return items.slice(0, 20);
 }
 
 /**

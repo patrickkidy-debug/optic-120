@@ -9,7 +9,7 @@ import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound } from '../../lib/http-error.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
-import { getOpticalSettings } from '../../lib/optical-settings.js';
+import { getOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { prisma } from '../../lib/prisma.js';
 
@@ -249,13 +249,35 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       where: { id: { in: ids } },
       select: { id: true, firstName: true, lastName: true, phone: true, email: true },
     });
-    const renewals = customers.map((c) => ({
-      ...c,
-      renewPrescription: rxDue.has(c.id),
-      reorder: saleDue.has(c.id),
-      lastPrescriptionAt: rxLast.get(c.id) ?? null,
-      lastPurchaseAt: saleLast.get(c.id) ?? null,
-    }));
+    // Type de verre de la dernière ordonnance (affiché dans la liste de relance).
+    const lastRx = await req.db!.opticalPrescription.findMany({
+      where: { customerId: { in: ids } },
+      orderBy: { date: 'desc' },
+      select: { customerId: true, lensType: true },
+    });
+    const lensTypeByCustomer = new Map<string, string | null>();
+    for (const p of lastRx) if (!lensTypeByCustomer.has(p.customerId)) lensTypeByCustomer.set(p.customerId, p.lensType);
+
+    const renewals = customers.map((c) => {
+      const rxAt = rxLast.get(c.id) ?? null;
+      const saleAt = saleLast.get(c.id) ?? null;
+      // Date recommandée pour recontacter : basée sur le motif de relance le
+      // plus pertinent (ordonnance si due, sinon réachat).
+      const recommendedAt = rxDue.has(c.id) && rxAt
+        ? addMonths(rxAt, settings.prescriptionReminderMonths)
+        : saleAt
+          ? addMonths(saleAt, settings.purchaseReminderMonths)
+          : null;
+      return {
+        ...c,
+        renewPrescription: rxDue.has(c.id),
+        reorder: saleDue.has(c.id),
+        lastPrescriptionAt: rxAt,
+        lastPurchaseAt: saleAt,
+        lastLensType: lensTypeByCustomer.get(c.id) ?? null,
+        recommendedAt,
+      };
+    });
     return reply.send({ renewals });
   });
 }

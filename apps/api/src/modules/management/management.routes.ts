@@ -13,7 +13,7 @@ import {
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
-import { notFound } from '../../lib/http-error.js';
+import { notFound, badRequest } from '../../lib/http-error.js';
 
 function toDate(v?: string | null): Date | null {
   return v ? new Date(v) : null;
@@ -239,6 +239,64 @@ async function insurersRoutes(app: FastifyInstance) {
     if (res.count === 0) throw notFound('Assurance introuvable');
     const insurer = await req.db!.insurer.findFirst({ where: { id } });
     return reply.send({ insurer });
+  });
+
+  // Résumé des remboursements assurance (widget tableau de bord) : payé
+  // (marqué manuellement), en attente (trimestre en cours) et en retard
+  // (échéance passée). Fenêtre glissante de 24 mois pour borner le scan.
+  app.get('/summary', { preHandler: requirePermission('insurance.view') }, async (req, reply) => {
+    const now = new Date();
+    const since = new Date(now);
+    since.setMonth(since.getMonth() - 24);
+    const sales = await req.db!.sale.findMany({
+      where: {
+        type: SaleType.SALE,
+        status: { in: PAID_LIKE },
+        insurerId: { not: null },
+        insuranceAmount: { gt: 0 },
+        createdAt: { gte: since },
+      },
+      select: { insuranceAmount: true, insurerPaidAt: true, createdAt: true },
+    });
+
+    let paid = 0;
+    let pending = 0;
+    let late = 0;
+    for (const s of sales) {
+      const amount = Number(s.insuranceAmount);
+      if (s.insurerPaidAt) {
+        paid += amount;
+        continue;
+      }
+      const qStartMonth = Math.floor(s.createdAt.getMonth() / 3) * 3;
+      const dueDate = new Date(s.createdAt.getFullYear(), qStartMonth + 3, 1);
+      if (dueDate < now) late += amount;
+      else pending += amount;
+    }
+
+    return reply.send({ paid, pending, late, toCollect: pending + late });
+  });
+
+  // Marque comme reçu le remboursement d'un assureur pour un trimestre donné
+  // (action groupée depuis le widget Assurances / la page à venir).
+  app.post('/mark-paid', { preHandler: requirePermission('insurance.update') }, async (req, reply) => {
+    const { insurerId, quarterStart } = req.body as { insurerId?: string; quarterStart?: string };
+    if (!insurerId || !quarterStart) throw badRequest('insurerId et quarterStart requis');
+    const start = new Date(quarterStart);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 3);
+    const res = await req.db!.sale.updateMany({
+      where: {
+        insurerId,
+        type: SaleType.SALE,
+        status: { in: PAID_LIKE },
+        insuranceAmount: { gt: 0 },
+        insurerPaidAt: null,
+        createdAt: { gte: start, lt: end },
+      },
+      data: { insurerPaidAt: new Date() },
+    });
+    return reply.send({ ok: true, count: res.count });
   });
 }
 

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,7 +11,7 @@ import {
   Tooltip,
   Filler,
 } from 'chart.js';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Doughnut } from 'react-chartjs-2';
 import {
   Banknote,
   TrendingUp,
@@ -34,17 +35,25 @@ import {
   Flame,
   ShieldCheck,
   HandCoins,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
-import { getDashboard, getAdminDashboard } from '../features/optique/api';
+import { getDashboard, getAdminDashboard, listLensOrders } from '../features/optique/api';
 import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { DemoBooking } from '../components/DemoBooking';
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
 import { getInsurerUpcoming } from '../features/management/api';
+import { PerformanceChart } from '../components/dashboard/PerformanceChart';
+import { WorkflowKanbanWidget } from '../components/dashboard/WorkflowKanban';
+import { ActivityFeed } from '../components/dashboard/ActivityFeed';
+import { StockSummary } from '../components/dashboard/StockSummary';
+import { RenewalsWidget } from '../components/dashboard/RenewalsWidget';
+import { InsuranceWidget } from '../components/dashboard/InsuranceWidget';
+import { AlertsToday } from '../components/dashboard/AlertsToday';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
 
@@ -399,45 +408,30 @@ export function DashboardPage() {
     enabled: canSeeInsurers,
   });
 
+  // Permissions des nouveaux widgets (workflow verres, stock, renouvellements).
+  const canSeeOrders = usePermission('optique.sales.view');
+  const canSeeCustomers = usePermission('optique.customers.view');
+  const canSeeStock = usePermission('optique.stock.view');
+
+  // Commandes en cours (KPI + widgets) : même clé de cache que la page
+  // Commandes de verres, pour éviter une requête réseau redondante.
+  const { data: lensOrders } = useQuery({
+    queryKey: ['lens-orders'],
+    queryFn: () => listLensOrders(),
+    enabled: canSeeOrders,
+  });
+  const ongoingOrders = (lensOrders ?? []).filter((o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
+
   // On affiche tout de suite l'ossature de la page (titre + cartes en attente)
   // plutôt qu'un spinner plein écran : l'accès paraît instantané, les chiffres
   // se remplissent dès que getDashboard répond.
   if (isLoading || !data) return <DashboardSkeleton welcome={`${t('dashboard.welcome')}, ${user?.firstName ?? ''}`} title={t('dashboard.title')} />;
 
-  const lineData = {
-    labels: data.revenueByDay.map((d) => d.date.slice(5)),
-    datasets: [
-      {
-        data: data.revenueByDay.map((d) => d.revenue),
-        borderColor: (ctx: { chart: ChartJS }) => {
-          const { ctx: c, chartArea } = ctx.chart;
-          if (!chartArea) return '#7c3aed';
-          const g = c.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-          g.addColorStop(0, '#7c3aed');
-          g.addColorStop(1, '#0d9488');
-          return g;
-        },
-        backgroundColor: (ctx: { chart: ChartJS }) => {
-          const { ctx: c, chartArea } = ctx.chart;
-          if (!chartArea) return 'rgba(124,58,237,0.12)';
-          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          g.addColorStop(0, 'rgba(124,58,237,0.28)');
-          g.addColorStop(0.6, 'rgba(124,58,237,0.05)');
-          g.addColorStop(1, 'rgba(124,58,237,0)');
-          return g;
-        },
-        fill: true,
-        tension: 0.45,
-        cubicInterpolationMode: 'monotone' as const,
-        borderWidth: 2.5,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: '#7c3aed',
-        pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
-      },
-    ],
-  };
+  const salesByDay = data.revenueByDay.map((d) => d.sales ?? 0);
+  const todaySalesTrendPrev = salesByDay.slice(0, -1);
+  const avgPrevDailySales = todaySalesTrendPrev.length
+    ? todaySalesTrendPrev.reduce((a, b) => a + b, 0) / todaySalesTrendPrev.length
+    : 0;
 
   const hasPayments = data.paymentBreakdown.length > 0;
   const doughnutData = {
@@ -462,6 +456,14 @@ export function DashboardPage() {
             {t('dashboard.welcome')}, {user?.firstName} 👋
           </h1>
           <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/optique/caisse" className="btn-primary h-9 rounded-xl px-3.5 text-sm">
+              <ShoppingCart className="h-4 w-4" /> Nouvelle vente
+            </Link>
+            <Link to="/optique/clients" className="btn-outline h-9 rounded-xl px-3.5 text-sm">
+              <UserPlus className="h-4 w-4" /> Nouveau client
+            </Link>
+          </div>
         </div>
         <div className="flex max-w-lg items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent p-3.5 shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500">
           <span className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 shadow-sm", motivation.color)}>
@@ -480,7 +482,7 @@ export function DashboardPage() {
       <DemoBooking />
 
       {/* KPI principaux */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard icon={Banknote} label={t('dashboard.todayRevenueFull')} value={formatCurrency(data.todayRevenue)} tone="primary" />
         <KpiCard
           icon={TrendingUp}
@@ -491,8 +493,34 @@ export function DashboardPage() {
           deltaLabel={t('dashboard.vsPrev7d')}
           spark={(data.revenueByDay ?? []).map((d) => d.revenue)}
         />
-        <KpiCard icon={ShoppingBag} label={t('dashboard.todaySales')} value={String(data.todaySalesCount)} tone="accent" />
+        <KpiCard
+          icon={ShoppingBag}
+          label={t('dashboard.todaySales')}
+          value={String(data.todaySalesCount)}
+          tone="accent"
+          delta={pctDelta(data.todaySalesCount ?? 0, avgPrevDailySales)}
+          deltaLabel="vs moy. 6j"
+          spark={salesByDay}
+        />
         <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
+        {data.activeCustomers !== undefined && (
+          <KpiCard
+            icon={Users}
+            label="Clients actifs (30j)"
+            value={String(data.activeCustomers)}
+            tone="accent"
+            delta={pctDelta(data.activeCustomers ?? 0, data.activeCustomersPrev ?? 0)}
+            deltaLabel="vs 30j préc."
+          />
+        )}
+        {canSeeOrders && (
+          <KpiCard icon={ClipboardList} label="Commandes en cours" value={String(ongoingOrders)} tone="success" />
+        )}
+      </div>
+
+      {/* Workflow des commandes de verres, en un coup d'œil. */}
+      <div className="mt-6">
+        <WorkflowKanbanWidget enabled={canSeeOrders} />
       </div>
 
       {/* Répartition du CA : encaissé auprès des clients vs pris en charge par les assurances. */}
@@ -583,50 +611,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card p-5 lg:col-span-2">
-          <h3 className="mb-4 font-display font-bold text-content">{t('dashboard.revenue7d')}</h3>
-          <div className="h-64">
-            <Line
-              data={lineData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    backgroundColor: '#0f172a',
-                    padding: 10,
-                    cornerRadius: 10,
-                    displayColors: false,
-                    titleColor: '#94a3b8',
-                    bodyColor: '#fff',
-                    bodyFont: { weight: 'bold' },
-                    callbacks: { label: (c) => formatCurrency(Number(c.parsed.y)) },
-                  },
-                },
-                scales: {
-                  x: {
-                    grid: { display: false },
-                    border: { display: false },
-                    ticks: { color: '#94a3b8', maxTicksLimit: 8, font: { size: 11 } },
-                  },
-                  y: {
-                    grid: { color: 'rgba(148,163,184,0.12)' },
-                    border: { display: false },
-                    ticks: {
-                      color: '#94a3b8',
-                      maxTicksLimit: 5,
-                      font: { size: 11 },
-                      callback: (v: string | number) =>
-                        new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(v)),
-                    },
-                  },
-                },
-              }}
-            />
-          </div>
-        </div>
+        <PerformanceChart branchId={branchId} />
 
         <div className="card p-5">
           <h3 className="mb-4 font-display font-bold text-content">{t('dashboard.paymentMethods')}</h3>
@@ -648,6 +633,24 @@ export function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Activité du jour + alertes à traiter. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ActivityFeed branchId={branchId} />
+        <AlertsToday
+          lowStockCount={data.lowStockCount}
+          canOrders={canSeeOrders}
+          canCustomers={canSeeCustomers}
+          canInsurance={canSeeInsurers}
+        />
+      </div>
+
+      {/* Stock, renouvellements et assurances. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <StockSummary branchId={branchId} enabled={canSeeStock} />
+        <RenewalsWidget enabled={canSeeCustomers} />
+        <InsuranceWidget enabled={canSeeInsurers} />
       </div>
 
       <div className="card mt-6 overflow-hidden">

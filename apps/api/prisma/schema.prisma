@@ -430,6 +430,10 @@ model Sale {
   // Assureur qui prend en charge insuranceAmount (suivi des paiements trimestriels).
   insurerId       String?
   insurer         Insurer?   @relation(fields: [insurerId], references: [id])
+  // Date à laquelle le remboursement de l'assureur a été effectivement reçu
+  // (marqué manuellement) : distingue le "recouvré" du simplement "attendu"
+  // dans le widget Assurances du tableau de bord.
+  insurerPaidAt   DateTime?
   totalAmount     Decimal    @db.Decimal(12, 2)
   paidAmount      Decimal    @default(0) @db.Decimal(12, 2)
   currency        String     @default("XOF")
