@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   Star,
-  TrendingUp,
   CalendarDays,
   LineChart,
   Lock,
@@ -18,7 +17,6 @@ import {
   Database,
   Gauge,
   Network,
-  Maximize2,
   Smartphone,
   Images,
   SlidersHorizontal,
@@ -196,48 +194,48 @@ function Reveal({
 }
 
 /**
- * Présentation animée (motion design) : la présentation HTML/CSS animée
- * (`/promo-complete.html`) intégrée via une iframe silencieuse. Le lien ouvre la
- * version complète (lecture, plein écran, téléchargement).
+ * Mosaïque de vraies photos de montures (produit, pas illustration) : la
+ * première chose qu'un visiteur voit dans le hero. Remplace l'ancienne vidéo
+ * de présentation par quelque chose de plus immédiatement visuel.
  */
-function DemoVideo() {
+function HeroFrames() {
   const { t } = useTranslation();
   return (
     <div className="relative">
-      <div className="glass-card overflow-hidden rounded-[28px] p-2 shadow-card-lg">
-        <div className="aspect-video overflow-hidden rounded-[22px]">
-          <iframe
-            title="Présentation animée OculoSaaS"
-            src="/promo-complete.html?embed=1"
-            className="h-full w-full bg-black"
-            loading="lazy"
-            allow="autoplay; fullscreen"
-            style={{ border: 0 }}
-          />
-        </div>
+      <div className="glass-card grid grid-cols-2 gap-3 rounded-[28px] p-3 shadow-card-lg">
+        <img
+          src="/images/montures/flatlay-collection.jpg"
+          alt="Collection de montures optiques"
+          className="row-span-2 h-full w-full rounded-[20px] object-cover"
+          style={{ aspectRatio: '1 / 1.35' }}
+          loading="eager"
+        />
+        <img
+          src="/images/montures/sunglasses-red-tortoise.jpg"
+          alt="Lunettes de soleil rouge et écaille"
+          className="h-full w-full rounded-[20px] object-cover"
+          style={{ aspectRatio: '4 / 3' }}
+          loading="lazy"
+        />
+        <img
+          src="/images/montures/black-rectangular.jpg"
+          alt="Monture rectangulaire noire"
+          className="h-full w-full rounded-[20px] object-cover"
+          style={{ aspectRatio: '4 / 3' }}
+          loading="lazy"
+        />
       </div>
-      {/* Badge flottant. Posé sur la vidéo sombre : blanc plein plutôt que verre
-          dépoli, qui virerait au gris sale sur ce fond. */}
+      {/* Badge flottant : blanc plein pour rester lisible sur les photos claires. */}
       <div className="float-slow absolute -right-3 top-6 hidden rounded-2xl border border-line bg-surface p-3 shadow-card-lg sm:block">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-cyan/15 text-cyan">
-            <TrendingUp className="h-5 w-5" />
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-primary">
+            <Images className="h-5 w-5" />
           </span>
           <div>
-            <div className="text-sm font-bold text-content">{t('landing.realtime')}</div>
-            <div className="text-xs text-content-muted">{t('landing.realtimeSub')}</div>
+            <div className="text-sm font-bold text-content">{t('landing.catalogBadge')}</div>
+            <div className="text-xs text-content-muted">{t('landing.catalogBadgeSub')}</div>
           </div>
         </div>
-      </div>
-      <div className="mt-4 text-center">
-        <a
-          href="/promo-complete.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-content-muted transition hover:text-primary"
-        >
-          <Maximize2 className="h-4 w-4" /> {t('landing.fullscreen')}
-        </a>
       </div>
     </div>
   );
@@ -298,12 +296,11 @@ function DashboardMock() {
 }
 
 const CATALOG_ITEMS = [
-  { brand: 'Arnette Sun', name: 'Arnette Sun', ref: 'MON-942HZ', tags: ['Homme', 'Rectangulaire'], price: '0 FCFA', badge: 'Rupture', ok: false },
-  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', tags: ['Femme', 'Ovale'], price: '180 000 FCFA', badge: 'Rupture', ok: false },
-  { brand: '—', name: 'Dolce et Gabbana', ref: 'PLK 13', tags: ['Femme', 'Carrée'], price: '59 000 FCFA', badge: 'Disponible · 11', ok: true },
-  { brand: 'Ray Ban', name: 'Henry Queen', ref: 'H4156LK', tags: ['Mixte', 'Rectangulaire'], price: '30 000 FCFA', badge: 'Rupture', ok: false },
-  { brand: 'Arnette', name: 'Arnette', ref: 'ARN789', tags: [], price: '196 000 FCFA', badge: 'Disponible · 32', ok: true },
-  { brand: '—', name: '+ 1 autre monture', ref: 'Disponible · 51', tags: [], price: '', badge: '', ok: true },
+  { brand: 'Arnette Sun', name: 'Arnette Sun', ref: 'MON-942HZ', price: '0 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/sunglasses-red-tortoise.jpg' },
+  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', price: '180 000 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/tortoiseshell-browline.jpg' },
+  { brand: '—', name: 'Dolce et Gabbana', ref: 'PLK 13', price: '59 000 FCFA', badge: 'Disponible · 11', ok: true, img: '/images/montures/tortoiseshell-oval.jpg' },
+  { brand: 'Ray Ban', name: 'Henry Queen', ref: 'H4156LK', price: '30 000 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/black-rectangular.jpg' },
+  { brand: 'Arnette', name: 'Arnette', ref: 'ARN789', price: '196 000 FCFA', badge: 'Disponible · 32', ok: true, img: '/images/montures/two-eyewear-white.jpg' },
 ];
 
 function CatalogMock() {
@@ -338,23 +335,23 @@ function CatalogMock() {
               <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes marques ⌄</span>
               <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes formes ⌄</span>
               <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">En stock</span>
-              <span className="ml-auto text-content-faint">6 monture(s)</span>
+              <span className="ml-auto text-content-faint">5 monture(s)</span>
             </div>
             <div className="grid grid-cols-3 gap-2.5">
               {CATALOG_ITEMS.map((it) => (
                 <div key={it.ref} className="overflow-hidden rounded-xl border border-line bg-surface">
-                  <div className="relative flex h-14 items-center justify-center bg-surface-2/60">
+                  <div className="relative h-14 overflow-hidden bg-surface-2/60">
                     {it.badge && (
                       <span
                         className={clsx(
-                          'absolute left-1.5 top-1.5 rounded-full px-1.5 py-[1px] text-[7px] font-bold',
-                          it.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger',
+                          'absolute left-1.5 top-1.5 z-10 rounded-full px-1.5 py-[1px] text-[7px] font-bold',
+                          it.ok ? 'bg-success/90 text-white' : 'bg-danger/90 text-white',
                         )}
                       >
                         {it.badge}
                       </span>
                     )}
-                    <Images className="h-5 w-5 text-content-faint/60" />
+                    <img src={it.img} alt={it.name} className="h-full w-full object-cover" loading="lazy" />
                   </div>
                   <div className="p-2">
                     <div className="truncate text-[9px] font-bold uppercase tracking-wide text-primary">
@@ -538,7 +535,7 @@ export function LandingPage() {
             </Reveal>
 
             <Reveal delay={150}>
-              <DemoVideo />
+              <HeroFrames />
             </Reveal>
           </div>
         </section>
