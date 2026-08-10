@@ -281,7 +281,7 @@ function CatalogMock() {
               <span className="ml-auto text-content-faint">5 monture(s)</span>
             </div>
             <div className="grid grid-cols-3 gap-2.5">
-              {CATALOG_ITEMS.map((it) => (
+              {CATALOG_ITEMS.map((it, i) => (
                 <div key={it.ref} className="overflow-hidden rounded-xl border border-line bg-surface">
                   <div className="relative h-14 overflow-hidden bg-surface-2/60">
                     {it.badge && (
@@ -294,7 +294,17 @@ function CatalogMock() {
                         {it.badge}
                       </span>
                     )}
-                    <img src={it.img} alt={it.name} className="h-full w-full object-cover" loading="lazy" />
+                    <img
+                      src={it.img}
+                      alt={it.name}
+                      width={200}
+                      height={120}
+                      className="h-full w-full object-cover"
+                      loading="eager"
+                      // Visible sans défilement (hero) : priorité haute sur les 2 premières,
+                      // qui déterminent le LCP (Largest Contentful Paint) de la page.
+                      fetchPriority={i < 2 ? 'high' : 'auto'}
+                    />
                   </div>
                   <div className="p-2">
                     <div className="truncate text-[9px] font-bold uppercase tracking-wide text-primary">
@@ -415,9 +425,11 @@ export function LandingPage() {
 
       <main className="relative z-10">
         {/* Hero */}
+        {/* Hero : contenu visible sans défilement, rendu immédiat (pas de
+            fondu au scroll — celui-ci retarderait le LCP de la page). */}
         <section className="relative px-4 pb-24 pt-16 sm:px-8 lg:pt-24">
           <div className="mx-auto grid max-w-[1280px] items-center gap-12 lg:grid-cols-2">
-            <Reveal>
+            <div>
               <div className="flex flex-col gap-6">
                 <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5">
                   <ShieldCheck className="h-4 w-4 text-primary" />
@@ -475,11 +487,11 @@ export function LandingPage() {
                   ))}
                 </div>
               </div>
-            </Reveal>
+            </div>
 
-            <Reveal delay={150}>
+            <div>
               <CatalogMock />
-            </Reveal>
+            </div>
           </div>
         </section>
 
@@ -497,7 +509,7 @@ export function LandingPage() {
                 <video
                   className="aspect-video w-full rounded-[22px] bg-black"
                   controls
-                  preload="metadata"
+                  preload="none"
                   poster="/videos/demo-dashboard-poster.jpg"
                 >
                   <source src="/videos/demo-dashboard.mp4" type="video/mp4" />
