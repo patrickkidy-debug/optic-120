@@ -20,6 +20,9 @@ import {
   Network,
   Maximize2,
   Smartphone,
+  Images,
+  SlidersHorizontal,
+  Boxes,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -99,6 +102,12 @@ const SHOWCASE = [
   { icon: CalendarDays, key: 'show1', tone: 'primary' as const },
   { icon: LineChart, key: 'show2', tone: 'cyan' as const },
   { icon: Wallet, key: 'show3', tone: 'accent' as const },
+];
+
+const CATALOG_SHOWCASE = [
+  { icon: Images, key: 'cat1', tone: 'primary' as const },
+  { icon: SlidersHorizontal, key: 'cat2', tone: 'cyan' as const },
+  { icon: Boxes, key: 'cat3', tone: 'accent' as const },
 ];
 
 const PAYMENTS = [
@@ -284,6 +293,87 @@ function DashboardMock() {
         </div>
       </div>
       <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[110%] w-[110%] -translate-x-1/2 -translate-y-1/2 bg-primary/15" />
+    </div>
+  );
+}
+
+const CATALOG_ITEMS = [
+  { brand: 'Arnette Sun', name: 'Arnette Sun', ref: 'MON-942HZ', tags: ['Homme', 'Rectangulaire'], price: '0 FCFA', badge: 'Rupture', ok: false },
+  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', tags: ['Femme', 'Ovale'], price: '180 000 FCFA', badge: 'Rupture', ok: false },
+  { brand: '—', name: 'Dolce et Gabbana', ref: 'PLK 13', tags: ['Femme', 'Carrée'], price: '59 000 FCFA', badge: 'Disponible · 11', ok: true },
+  { brand: 'Ray Ban', name: 'Henry Queen', ref: 'H4156LK', tags: ['Mixte', 'Rectangulaire'], price: '30 000 FCFA', badge: 'Rupture', ok: false },
+  { brand: 'Arnette', name: 'Arnette', ref: 'ARN789', tags: [], price: '196 000 FCFA', badge: 'Disponible · 32', ok: true },
+  { brand: '—', name: '+ 1 autre monture', ref: 'Disponible · 51', tags: [], price: '', badge: '', ok: true },
+];
+
+function CatalogMock() {
+  return (
+    <div className="relative">
+      <div className="glass-card rounded-[32px] p-4 shadow-card-lg">
+        <div className="overflow-hidden rounded-2xl border border-line bg-bg-subtle">
+          <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
+            <div className="flex gap-2">
+              <span className="h-3 w-3 rounded-full bg-danger/50" />
+              <span className="h-3 w-3 rounded-full bg-accent/50" />
+              <span className="h-3 w-3 rounded-full bg-primary/50" />
+            </div>
+            <div className="font-mono text-xs text-content-muted">oculosaas.com/optique/produits</div>
+            <div className="w-10" />
+          </div>
+          <div className="p-5">
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {['Tous', 'Montures', 'Verres', 'Lentilles', 'Accessoires'].map((tab) => (
+                <span
+                  key={tab}
+                  className={clsx(
+                    'rounded-full px-3 py-1 text-[10px] font-bold',
+                    tab === 'Montures' ? 'bg-primary text-white' : 'bg-surface-2/70 text-content-muted',
+                  )}
+                >
+                  {tab}
+                </span>
+              ))}
+            </div>
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-content-muted">
+              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes marques ⌄</span>
+              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes formes ⌄</span>
+              <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">En stock</span>
+              <span className="ml-auto text-content-faint">6 monture(s)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {CATALOG_ITEMS.map((it) => (
+                <div key={it.ref} className="overflow-hidden rounded-xl border border-line bg-surface">
+                  <div className="relative flex h-14 items-center justify-center bg-surface-2/60">
+                    {it.badge && (
+                      <span
+                        className={clsx(
+                          'absolute left-1.5 top-1.5 rounded-full px-1.5 py-[1px] text-[7px] font-bold',
+                          it.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger',
+                        )}
+                      >
+                        {it.badge}
+                      </span>
+                    )}
+                    <Images className="h-5 w-5 text-content-faint/60" />
+                  </div>
+                  <div className="p-2">
+                    <div className="truncate text-[9px] font-bold uppercase tracking-wide text-primary">
+                      {it.brand}
+                    </div>
+                    <div className="truncate text-[10.5px] font-bold text-content">{it.name}</div>
+                    {it.price && (
+                      <div className="mt-1 font-display text-[10.5px] font-extrabold text-content">
+                        {it.price}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[110%] w-[110%] -translate-x-1/2 -translate-y-1/2 bg-accent/15" />
     </div>
   );
 }
@@ -522,6 +612,40 @@ export function LandingPage() {
             </Reveal>
             <Reveal delay={150}>
               <DashboardMock />
+            </Reveal>
+          </div>
+        </section>
+
+        {/* Aperçu catalogue produits */}
+        <section id="catalogue" className="px-4 py-24 sm:px-8">
+          <div className="mx-auto grid max-w-[1280px] items-center gap-16 lg:grid-cols-2">
+            <Reveal className="lg:order-2">
+              <div>
+                <h2 className="mb-8 font-display text-3xl font-extrabold text-content sm:text-4xl">
+                  {t('landing.catalogTitle')}
+                </h2>
+                <div className="flex flex-col gap-8">
+                  {CATALOG_SHOWCASE.map((s) => (
+                    <div key={s.key} className="flex gap-4">
+                      <div
+                        className={clsx(
+                          'grid h-12 w-12 shrink-0 place-items-center rounded-lg',
+                          s.tone === 'primary' ? 'glass-card neon-border' : 'glass-card',
+                        )}
+                      >
+                        <s.icon className={clsx('h-5 w-5', TONE_TEXT[s.tone])} />
+                      </div>
+                      <div>
+                        <h4 className="mb-1 font-bold text-content">{t(`landing.${s.key}`)}</h4>
+                        <p className="text-sm text-content-muted">{t(`landing.${s.key}Text`)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={150} className="lg:order-1">
+              <CatalogMock />
             </Reveal>
           </div>
         </section>
