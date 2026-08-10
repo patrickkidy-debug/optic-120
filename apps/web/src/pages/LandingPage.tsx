@@ -483,6 +483,30 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* Démo vidéo */}
+        <section className="px-4 pb-8 pt-4 sm:px-8">
+          <div className="mx-auto max-w-[1000px]">
+            <Reveal className="mb-10 text-center">
+              <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
+                {t('landing.demoTitle')}
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-content-muted">{t('landing.demoSubtitle')}</p>
+            </Reveal>
+            <Reveal delay={100}>
+              <div className="glass-card overflow-hidden rounded-[28px] p-2 shadow-card-lg">
+                <video
+                  className="aspect-video w-full rounded-[22px] bg-black"
+                  controls
+                  preload="metadata"
+                  poster="/videos/demo-dashboard-poster.jpg"
+                >
+                  <source src="/videos/demo-dashboard.mp4" type="video/mp4" />
+                </video>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
         {/* Avantages */}
         <section id="fonctionnalites" className="px-4 py-24 sm:px-8">
           <div className="mx-auto max-w-[1280px]">
