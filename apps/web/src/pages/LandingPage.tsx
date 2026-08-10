@@ -19,6 +19,7 @@ import {
   Gauge,
   Network,
   Maximize2,
+  Smartphone,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -415,6 +416,13 @@ export function LandingPage() {
                     {t('landing.seePricing')}
                   </a>
                 </div>
+                <a
+                  href="/downloads/OculoSaaS.apk"
+                  download
+                  className="glass-card glass-hover inline-flex w-fit items-center gap-2.5 rounded-xl px-6 py-3 text-sm font-semibold text-content"
+                >
+                  <Smartphone className="h-4 w-4 text-primary" /> {t('landing.downloadAndroid')}
+                </a>
                 <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
                   <span className="inline-flex items-center gap-1.5">
                     <Check className="h-4 w-4 text-cyan" /> {t('landing.check1')}
