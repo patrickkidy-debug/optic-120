@@ -18,9 +18,6 @@ import {
   Gauge,
   Network,
   Smartphone,
-  Images,
-  SlidersHorizontal,
-  Boxes,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG } from '@oculo/shared-types';
@@ -100,12 +97,6 @@ const SHOWCASE = [
   { icon: CalendarDays, key: 'show1', tone: 'primary' as const },
   { icon: LineChart, key: 'show2', tone: 'cyan' as const },
   { icon: Wallet, key: 'show3', tone: 'accent' as const },
-];
-
-const CATALOG_SHOWCASE = [
-  { icon: Images, key: 'cat1', tone: 'primary' as const },
-  { icon: SlidersHorizontal, key: 'cat2', tone: 'cyan' as const },
-  { icon: Boxes, key: 'cat3', tone: 'accent' as const },
 ];
 
 const PAYMENTS = [
@@ -189,54 +180,6 @@ function Reveal({
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
-    </div>
-  );
-}
-
-/**
- * Mosaïque de vraies photos de montures (produit, pas illustration) : la
- * première chose qu'un visiteur voit dans le hero. Remplace l'ancienne vidéo
- * de présentation par quelque chose de plus immédiatement visuel.
- */
-function HeroFrames() {
-  const { t } = useTranslation();
-  return (
-    <div className="relative">
-      <div className="glass-card grid grid-cols-2 gap-3 rounded-[28px] p-3 shadow-card-lg">
-        <img
-          src="/images/montures/flatlay-collection.jpg"
-          alt="Collection de montures optiques"
-          className="row-span-2 h-full w-full rounded-[20px] object-cover"
-          style={{ aspectRatio: '1 / 1.35' }}
-          loading="eager"
-        />
-        <img
-          src="/images/montures/sunglasses-red-tortoise.jpg"
-          alt="Lunettes de soleil rouge et écaille"
-          className="h-full w-full rounded-[20px] object-cover"
-          style={{ aspectRatio: '4 / 3' }}
-          loading="lazy"
-        />
-        <img
-          src="/images/montures/black-rectangular.jpg"
-          alt="Monture rectangulaire noire"
-          className="h-full w-full rounded-[20px] object-cover"
-          style={{ aspectRatio: '4 / 3' }}
-          loading="lazy"
-        />
-      </div>
-      {/* Badge flottant : blanc plein pour rester lisible sur les photos claires. */}
-      <div className="float-slow absolute -right-3 top-6 hidden rounded-2xl border border-line bg-surface p-3 shadow-card-lg sm:block">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-primary">
-            <Images className="h-5 w-5" />
-          </span>
-          <div>
-            <div className="text-sm font-bold text-content">{t('landing.catalogBadge')}</div>
-            <div className="text-xs text-content-muted">{t('landing.catalogBadgeSub')}</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -535,7 +478,7 @@ export function LandingPage() {
             </Reveal>
 
             <Reveal delay={150}>
-              <HeroFrames />
+              <CatalogMock />
             </Reveal>
           </div>
         </section>
@@ -609,40 +552,6 @@ export function LandingPage() {
             </Reveal>
             <Reveal delay={150}>
               <DashboardMock />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Aperçu catalogue produits */}
-        <section id="catalogue" className="px-4 py-24 sm:px-8">
-          <div className="mx-auto grid max-w-[1280px] items-center gap-16 lg:grid-cols-2">
-            <Reveal className="lg:order-2">
-              <div>
-                <h2 className="mb-8 font-display text-3xl font-extrabold text-content sm:text-4xl">
-                  {t('landing.catalogTitle')}
-                </h2>
-                <div className="flex flex-col gap-8">
-                  {CATALOG_SHOWCASE.map((s) => (
-                    <div key={s.key} className="flex gap-4">
-                      <div
-                        className={clsx(
-                          'grid h-12 w-12 shrink-0 place-items-center rounded-lg',
-                          s.tone === 'primary' ? 'glass-card neon-border' : 'glass-card',
-                        )}
-                      >
-                        <s.icon className={clsx('h-5 w-5', TONE_TEXT[s.tone])} />
-                      </div>
-                      <div>
-                        <h4 className="mb-1 font-bold text-content">{t(`landing.${s.key}`)}</h4>
-                        <p className="text-sm text-content-muted">{t(`landing.${s.key}Text`)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-            <Reveal delay={150} className="lg:order-1">
-              <CatalogMock />
             </Reveal>
           </div>
         </section>
