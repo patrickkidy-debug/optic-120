@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Glasses, ImagePlus, Trash2, Eye, Loader2 } from 'lucide-react';
 import type { PrescriptionCreateInput } from '@oculo/shared-types';
 import { lensBaseOptions, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
-import { createPrescription, type Prescription } from './api';
+import { createPrescription, updatePrescription, type Prescription } from './api';
 import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { fileToResizedDataUrl } from '../../lib/image';
@@ -18,27 +18,58 @@ import { Button, Field, Modal } from '../../components/ui';
  */
 export function PrescriptionForm({
   customerId,
+  prescription,
   onClose,
   onSaved,
-  title = 'Nouvelle ordonnance optique',
+  title,
 }: {
   customerId: string;
+  /** Ordonnance existante à modifier. Absent = création d'une nouvelle ordonnance. */
+  prescription?: Prescription;
   onClose: () => void;
   onSaved: (rx: Prescription) => void;
   title?: string;
 }) {
+  const isEdit = Boolean(prescription);
   const [error, setError] = useState('');
-  const [lensOther, setLensOther] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
+  const [lensOther, setLensOther] = useState(
+    () => Boolean(prescription?.lensType) && !lensBaseOptions(pricing).some((o) => o.label === prescription!.lensType),
+  );
+  const [photoUrl, setPhotoUrl] = useState<string>(prescription?.photoUrl ?? '');
   const [uploadBusy, setUploadBusy] = useState(false);
   const [zoomPhoto, setZoomPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
-  const { register, handleSubmit, setValue } = useForm<PrescriptionCreateInput>();
+  const { register, handleSubmit, setValue } = useForm<PrescriptionCreateInput>({
+    defaultValues: prescription
+      ? {
+          odSphere: prescription.odSphere ?? undefined,
+          odCylinder: prescription.odCylinder ?? undefined,
+          odAxis: prescription.odAxis ?? undefined,
+          odAddition: prescription.odAddition ?? undefined,
+          ogSphere: prescription.ogSphere ?? undefined,
+          ogCylinder: prescription.ogCylinder ?? undefined,
+          ogAxis: prescription.ogAxis ?? undefined,
+          ogAddition: prescription.ogAddition ?? undefined,
+          pupillaryDistance: prescription.pupillaryDistance ?? undefined,
+          lensType: prescription.lensType ?? undefined,
+          prescriberName: prescription.prescriberName ?? undefined,
+          odHeight: prescription.odHeight ?? undefined,
+          ogHeight: prescription.ogHeight ?? undefined,
+          odNearPd: prescription.odNearPd ?? undefined,
+          ogNearPd: prescription.ogNearPd ?? undefined,
+          vertex: prescription.vertex ?? undefined,
+          pantoTilt: prescription.pantoTilt ?? undefined,
+          notes: prescription.notes ?? undefined,
+        }
+      : undefined,
+  });
   const mut = useMutation({
     mutationFn: (v: PrescriptionCreateInput) =>
-      createPrescription(customerId, { ...v, photoUrl: photoUrl || undefined }),
+      isEdit
+        ? updatePrescription(customerId, prescription!.id, { ...v, photoUrl: photoUrl || undefined })
+        : createPrescription(customerId, { ...v, photoUrl: photoUrl || undefined }),
     onSuccess: onSaved,
     onError: (e) => setError(apiErrorMessage(e)),
   });
@@ -65,7 +96,8 @@ export function PrescriptionForm({
       className="space-y-3 rounded-xl border border-primary/30 bg-primary-soft/40 p-4"
     >
       <h4 className="flex items-center gap-2 font-semibold text-content">
-        <Glasses className="h-4 w-4 text-primary" /> {title}
+        <Glasses className="h-4 w-4 text-primary" />{' '}
+        {title ?? (isEdit ? "Modifier l'ordonnance optique" : 'Nouvelle ordonnance optique')}
       </h4>
 
       {/* Upload Scan / Photo de l'ordonnance papier */}
@@ -184,7 +216,7 @@ export function PrescriptionForm({
           ) : (
             <select
               className="input"
-              defaultValue=""
+              defaultValue={prescription?.lensType ?? ''}
               onChange={(e) => {
                 if (e.target.value === '__other__') {
                   setLensOther(true);
@@ -223,7 +255,9 @@ export function PrescriptionForm({
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" loading={mut.isPending}>Enregistrer l'ordonnance</Button>
+        <Button type="submit" loading={mut.isPending}>
+          {isEdit ? 'Enregistrer les modifications' : "Enregistrer l'ordonnance"}
+        </Button>
       </div>
 
       {zoomPhoto && photoUrl && (

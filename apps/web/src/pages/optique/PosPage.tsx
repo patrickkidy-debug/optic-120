@@ -22,7 +22,15 @@ import {
   DEFAULT_LENS_PRICING,
   DEFAULT_OPTICAL_SETTINGS,
 } from '@oculo/shared-types';
-import { getStock, createSale, addPayment, paymentStatus, simulatePayment, getSale } from '../../features/optique/api';
+import {
+  getStock,
+  createSale,
+  addPayment,
+  paymentStatus,
+  simulatePayment,
+  getSale,
+  listPrescriptions,
+} from '../../features/optique/api';
 import {
   CustomerSearch,
   LensComposer,
@@ -93,6 +101,14 @@ export function PosPage() {
     enabled: canSeeInsurers,
   });
 
+  // Ordonnance du client sélectionné : jointe automatiquement (la plus
+  // récente) pour qu'elle apparaisse sur le devis/la facture imprimée.
+  const { data: prescriptions } = useQuery({
+    queryKey: ['prescriptions', pos.customerId],
+    queryFn: () => listPrescriptions(pos.customerId!),
+    enabled: Boolean(pos.customerId),
+  });
+
   const { data: stock, isLoading } = useQuery({
     queryKey: ['pos-stock', branchId],
     queryFn: () => getStock(branchId!),
@@ -136,6 +152,8 @@ export function PosPage() {
         items: pos.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,
+        // Ordonnance la plus récente du client, si elle en a une enregistrée.
+        prescriptionId: prescriptions?.[0]?.id,
         // Trace l'assureur pour le suivi des paiements trimestriels.
         insurerId: pos.insuranceAmount > 0 && insurerId ? insurerId : undefined,
         // Taux de TVA choisi pour cette vente (omis = taux de l'établissement).

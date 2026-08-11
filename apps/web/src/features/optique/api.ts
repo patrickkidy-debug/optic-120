@@ -215,6 +215,12 @@ export interface Prescription {
   pupillaryDistance: string | null;
   lensType: string | null;
   notes: string | null;
+  odHeight?: string | null;
+  ogHeight?: string | null;
+  odNearPd?: string | null;
+  ogNearPd?: string | null;
+  vertex?: string | null;
+  pantoTilt?: string | null;
   /** Fin de validité de l'ordonnance (null = non renseignée). */
   expiresAt?: string | null;
   /** Photo / scan d'ordonnance papier (data URL). */

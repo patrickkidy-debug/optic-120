@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Glasses, Plus, Printer, ReceiptText, FileText, Star, Eye } from 'lucide-react';
+import { Glasses, Plus, Printer, Pencil, ReceiptText, FileText, Star, Eye } from 'lucide-react';
 import { ageFromBirthDate } from '@oculo/shared-types';
 import { getCustomer, type Prescription } from '../../features/optique/api';
 import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
@@ -19,6 +19,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
   const canCreate = usePermission('optique.prescriptions.create');
   const canQuote = usePermission('optique.quotes.create');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Prescription | null>(null);
 
   const company: CompanyInfo = {
     name: user?.tenantName ?? 'OculoSaaS',
@@ -96,6 +97,18 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
             />
           )}
 
+          {editing && (
+            <PrescriptionForm
+              customerId={customerId}
+              prescription={editing}
+              onClose={() => setEditing(null)}
+              onSaved={() => {
+                qc.invalidateQueries({ queryKey: ['customer', customerId] });
+                setEditing(null);
+              }}
+            />
+          )}
+
           <div>
             <div className="mb-2 flex items-center gap-2">
               <Glasses className="h-4 w-4 text-primary" />
@@ -111,6 +124,8 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
                     rx={p}
                     patient={{ firstName: customer.firstName, lastName: customer.lastName, phone: customer.phone }}
                     company={company}
+                    canEdit={canCreate}
+                    onEdit={() => setEditing(p)}
                   />
                 ))}
               </div>
@@ -144,10 +159,14 @@ function PrescriptionCard({
   rx,
   patient,
   company,
+  canEdit,
+  onEdit,
 }: {
   rx: Prescription;
   patient: PrescriptionPatient;
   company: CompanyInfo;
+  canEdit: boolean;
+  onEdit: () => void;
 }) {
   const [zoom, setZoom] = useState(false);
 
@@ -169,6 +188,15 @@ function PrescriptionCard({
         </div>
         <div className="flex items-center gap-2">
           {rx.lensType && <Badge tone="info">{rx.lensType}</Badge>}
+          {canEdit && (
+            <button
+              onClick={onEdit}
+              className="btn-ghost h-7 w-7 rounded-lg p-0"
+              title="Modifier l'ordonnance"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             onClick={() => printPrescription(rx, patient, company)}
             className="btn-ghost h-7 w-7 rounded-lg p-0"

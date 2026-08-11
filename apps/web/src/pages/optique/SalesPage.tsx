@@ -844,6 +844,14 @@ function QuoteModal({
     queryFn: () => listPrescriptions(customerId),
     enabled: Boolean(customerId),
   });
+  // Si le client a une ordonnance enregistrée, on la joint automatiquement
+  // (la plus récente) pour qu'elle apparaisse sur le document imprimé sans
+  // action manuelle. Ne touche jamais une pièce déjà enregistrée (édition),
+  // ni un choix déjà fait par l'utilisateur.
+  useEffect(() => {
+    if (editing || prescriptionId || !prescriptions || prescriptions.length === 0) return;
+    setPrescriptionId(prescriptions[0].id);
+  }, [prescriptions, editing, prescriptionId]);
   const canSeeInsurers = usePermission('insurance.view');
   const { data: insurers } = useQuery({
     queryKey: ['insurers'],
