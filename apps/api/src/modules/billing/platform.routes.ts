@@ -6,7 +6,7 @@ import {
   userActiveSchema,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { forbidden, notFound } from '../../lib/http-error.js';
+import { forbidden, notFound, badRequest } from '../../lib/http-error.js';
 import { prisma } from '../../lib/prisma.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
@@ -277,5 +277,26 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       ...requestMeta(req),
     });
     return reply.send({ tempPassword });
+  });
+
+  // Réinitialise l'historique de vente + clients d'un établissement (stock
+  // conservé). confirm=false (par défaut) : aperçu des compteurs seulement.
+  // Action irréversible une fois confirm=true — journalisée.
+  app.post('/tenants/reset-history', async (req, reply) => {
+    const { email, confirm } = (req.body ?? {}) as { email?: string; confirm?: boolean };
+    if (!email) throw badRequest('email requis');
+    const result = await platform.resetTenantHistoryByEmail(email, confirm === true);
+    if (result.executed) {
+      await recordAudit({
+        tenantId: result.tenantId,
+        userId: req.auth!.userId,
+        action: 'PLATFORM_TENANT_HISTORY_RESET',
+        entity: 'Tenant',
+        entityId: result.tenantId,
+        metadata: { email, counts: result.counts },
+        ...requestMeta(req),
+      });
+    }
+    return reply.send(result);
   });
 }

@@ -181,3 +181,54 @@ export async function forceLogoutUser(userId: string): Promise<{ tenantId: strin
   });
   return { tenantId: user.tenantId };
 }
+
+/**
+ * Réinitialisation de l'historique de vente + clients d'un établissement,
+ * en conservant intégralement le stock (produits, quantités, mouvements).
+ *
+ * Supprime définitivement : Payment, SaleItem, Sale, OpticalPrescription,
+ * Customer. Détache (sans supprimer) : LensOrder.customerId, Repair.customerId.
+ * Ne touche jamais Product/StockItem/StockMovement.
+ *
+ * `confirm: false` (par défaut) renvoie uniquement les compteurs, sans rien
+ * supprimer — sert d'aperçu avant l'action réelle, irréversible.
+ */
+export async function resetTenantHistoryByEmail(email: string, confirm: boolean) {
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { id: true, email: true, tenantId: true, tenant: { select: { name: true } } },
+  });
+  if (!user) throw notFound(`Aucun utilisateur pour l'email "${email}"`);
+  const { tenantId } = user;
+
+  const counts = async () => {
+    const [sales, saleItems, payments, prescriptions, customers, lensOrders, repairs] = await Promise.all([
+      prisma.sale.count({ where: { tenantId } }),
+      prisma.saleItem.count({ where: { sale: { tenantId } } }),
+      prisma.payment.count({ where: { tenantId } }),
+      prisma.opticalPrescription.count({ where: { tenantId } }),
+      prisma.customer.count({ where: { tenantId } }),
+      prisma.lensOrder.count({ where: { tenantId, customerId: { not: null } } }),
+      prisma.repair.count({ where: { tenantId, customerId: { not: null } } }),
+    ]);
+    return { sales, saleItems, payments, prescriptions, customers, lensOrdersDetached: lensOrders, repairsDetached: repairs };
+  };
+
+  const before = await counts();
+
+  if (!confirm) {
+    return { tenantId, tenantName: user.tenant.name, executed: false, counts: before };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.deleteMany({ where: { tenantId } });
+    await tx.saleItem.deleteMany({ where: { sale: { tenantId } } });
+    await tx.sale.deleteMany({ where: { tenantId } });
+    await tx.opticalPrescription.deleteMany({ where: { tenantId } });
+    await tx.lensOrder.updateMany({ where: { tenantId, customerId: { not: null } }, data: { customerId: null } });
+    await tx.repair.updateMany({ where: { tenantId, customerId: { not: null } }, data: { customerId: null } });
+    await tx.customer.deleteMany({ where: { tenantId } });
+  });
+
+  return { tenantId, tenantName: user.tenant.name, executed: true, counts: before };
+}
