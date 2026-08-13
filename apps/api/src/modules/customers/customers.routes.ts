@@ -76,14 +76,24 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ customer });
   });
 
-  // Fiche client + historique des ventes et ordonnances.
+  // Fiche client complète : ordonnances, achats (avec articles), commandes
+  // de verres et réparations — tout ce qui est rattaché au client.
   app.get('/:id', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const customer = await req.db!.customer.findFirst({
       where: { id },
       include: {
         prescriptions: { orderBy: { date: 'desc' } },
-        sales: { orderBy: { createdAt: 'desc' }, take: 20 },
+        sales: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+          include: {
+            items: { include: { product: { select: { name: true, sku: true, category: true } } } },
+            branch: { select: { name: true } },
+          },
+        },
+        lensOrders: { orderBy: { createdAt: 'desc' }, take: 20 },
+        repairs: { orderBy: { createdAt: 'desc' }, take: 20 },
       },
     });
     if (!customer) throw notFound('Client introuvable');

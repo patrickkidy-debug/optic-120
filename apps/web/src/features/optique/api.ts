@@ -227,11 +227,50 @@ export interface Prescription {
   photoUrl?: string | null;
 }
 
+/** Vente d'un client, avec ses articles (fiche client 360°). */
+export interface CustomerSale {
+  id: string;
+  number: string;
+  type: string;
+  totalAmount: string;
+  paidAmount: string;
+  status: string;
+  createdAt: string;
+  branch: { name: string };
+  items: { id: string; quantity: number; unitPrice: string; lineTotal: string; product: { name: string; sku: string; category: string } }[];
+}
+/** Commande de verres d'un client (fiche client 360°). */
+export interface CustomerLensOrder {
+  id: string;
+  number: string;
+  category: string | null;
+  description: string;
+  odLens: string | null;
+  ogLens: string | null;
+  status: LensOrderStatus;
+  expectedAt: string | null;
+  deliveredAt: string | null;
+  cost: string | number | null;
+  createdAt: string;
+}
+/** Réparation SAV d'un client (fiche client 360°). */
+export interface CustomerRepair {
+  id: string;
+  number: string;
+  category: string | null;
+  description: string;
+  status: RepairStatus;
+  cost: string | number | null;
+  createdAt: string;
+}
+
 export async function getCustomer(id: string) {
   const { data } = await api.get(`/customers/${id}`);
   return data.customer as Customer & {
     prescriptions: Prescription[];
-    sales: { id: string; number: string; totalAmount: string; status: string; createdAt: string }[];
+    sales: CustomerSale[];
+    lensOrders: CustomerLensOrder[];
+    repairs: CustomerRepair[];
   };
 }
 
