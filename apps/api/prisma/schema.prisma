@@ -958,6 +958,11 @@ model SubscriptionInvoice {
   status         SubInvoiceStatus      @default(PENDING)
   periodStart    DateTime
   periodEnd      DateTime
+  // Nombre de mois couverts par cette facture (1 = mensuel, 6 = paiement
+  // groupé 6 mois avec remise) : source de vérité pour prolonger l'abonnement
+  // du bon nombre de mois au règlement (settleSubscriptionPayment), y compris
+  // après un délai (webhook asynchrone).
+  periodMonths   Int                   @default(1)
   dueDate        DateTime
   paidAt         DateTime?
   createdAt      DateTime              @default(now())

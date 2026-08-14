@@ -20,7 +20,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { PLAN_CATALOG } from '@oculo/shared-types';
+import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, SEMIANNUAL_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
 
@@ -331,6 +331,7 @@ function CatalogMock() {
 export function LandingPage() {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const year = new Date().getFullYear();
 
   return (
@@ -662,7 +663,7 @@ export function LandingPage() {
         {/* Tarifs */}
         <section id="tarifs" className="px-4 py-24 sm:px-8">
           <div className="mx-auto max-w-[1280px]">
-            <Reveal className="mb-14 text-center">
+            <Reveal className="mb-8 text-center">
               <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
                 {t('landing.priceTitle')}
               </h2>
@@ -670,9 +671,51 @@ export function LandingPage() {
                 {t('landing.priceSubtitle')}
               </p>
             </Reveal>
+
+            {/* Sélecteur de cycle — très visible, au-dessus des cartes. */}
+            <Reveal className="mb-12 flex justify-center">
+              <div className="inline-flex items-center gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card">
+                <button
+                  type="button"
+                  onClick={() => setCycle('MONTHLY')}
+                  className={clsx(
+                    'rounded-xl px-6 py-3 text-sm font-bold transition',
+                    cycle === 'MONTHLY' ? 'bg-brand text-white shadow-card' : 'text-content-muted hover:text-content',
+                  )}
+                >
+                  {t('landing.cycleMonthly')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCycle('SEMIANNUAL')}
+                  className={clsx(
+                    'flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold transition',
+                    cycle === 'SEMIANNUAL' ? 'bg-brand text-white shadow-card' : 'text-content-muted hover:text-content',
+                  )}
+                >
+                  {t('landing.cycleSixMonths')}
+                  <span
+                    className={clsx(
+                      'rounded-full px-2 py-0.5 text-[11px] font-extrabold',
+                      cycle === 'SEMIANNUAL' ? 'bg-white/20 text-white' : 'bg-success/15 text-success',
+                    )}
+                  >
+                    −{Math.round(SEMIANNUAL_DISCOUNT * 100)}%
+                  </span>
+                </button>
+              </div>
+            </Reveal>
+
             <div className="grid items-stretch gap-6 md:grid-cols-3">
               {PLAN_CATALOG.map((plan, i) => {
                 const highlighted = plan.code === 'STANDARD';
+                const months = BILLING_CYCLE_MONTHS[cycle];
+                const total =
+                  cycle === 'SEMIANNUAL'
+                    ? Math.round(plan.priceMonthly * months * (1 - SEMIANNUAL_DISCOUNT))
+                    : plan.priceMonthly;
+                const fullPrice = plan.priceMonthly * months;
+                const savings = fullPrice - total;
                 return (
                   <Reveal key={plan.code} delay={i * 120} className="h-full">
                     <div
@@ -696,12 +739,29 @@ export function LandingPage() {
                       >
                         {plan.name}
                       </div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-display text-4xl font-extrabold text-content">
-                          {formatPrice(plan.priceMonthly)}
-                        </span>
-                        <span className="text-content-muted">FCFA{t('landing.perMonth')}</span>
-                      </div>
+                      {cycle === 'MONTHLY' ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-display text-4xl font-extrabold text-content">
+                            {formatPrice(total)}
+                          </span>
+                          <span className="text-content-muted">FCFA{t('landing.perMonth')}</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-display text-4xl font-extrabold text-content">
+                              {formatPrice(total)}
+                            </span>
+                            <span className="text-content-muted">FCFA {t('landing.forSixMonths')}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-content-muted">
+                            ≈ {formatPrice(Math.round(total / months))} FCFA{t('landing.perMonth')}
+                          </p>
+                          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+                            {t('landing.youSave')} {formatPrice(savings)} FCFA
+                          </p>
+                        </div>
+                      )}
                       <p className="min-h-[40px] text-sm text-content-muted">
                         {t(`landing.plan${plan.code.charAt(0)}${plan.code.slice(1).toLowerCase()}Desc`)}
                       </p>
@@ -721,7 +781,7 @@ export function LandingPage() {
                         ))}
                       </ul>
                       <Link
-                        to={`/signup?plan=${plan.code}`}
+                        to={`/signup?plan=${plan.code}${cycle === 'SEMIANNUAL' ? '&cycle=SEMIANNUAL' : ''}`}
                         className={clsx(
                           'w-full rounded-xl py-4 text-center',
                           highlighted ? 'btn-primary neon-glow' : 'btn-outline',

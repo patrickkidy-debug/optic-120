@@ -1,5 +1,5 @@
 import { api } from '../../lib/api';
-import type { PaymentMethod } from '@oculo/shared-types';
+import type { PaymentMethod, BillingCycle } from '@oculo/shared-types';
 
 export interface Plan {
   id: string;
@@ -112,8 +112,13 @@ export async function getInvoices(): Promise<SubInvoice[]> {
   const { data } = await api.get<{ invoices: SubInvoice[] }>('/billing/invoices');
   return data.invoices;
 }
-export async function subscribe(planId: string, method: PaymentMethod, customerPhone?: string) {
-  const { data } = await api.post<PayResult>('/billing/subscribe', { planId, method, customerPhone });
+export async function subscribe(
+  planId: string,
+  method: PaymentMethod,
+  customerPhone?: string,
+  cycle?: BillingCycle,
+) {
+  const { data } = await api.post<PayResult>('/billing/subscribe', { planId, method, customerPhone, cycle });
   return data;
 }
 export async function payInvoice(invoiceId: string, method: PaymentMethod, customerPhone?: string) {
@@ -142,8 +147,8 @@ export async function getPayInfo(): Promise<PayInfo> {
   return data;
 }
 
-export async function subscribeManual(planId: string): Promise<ManualSubscribeResult> {
-  const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId });
+export async function subscribeManual(planId: string, cycle?: BillingCycle): Promise<ManualSubscribeResult> {
+  const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId, cycle });
   return data;
 }
 

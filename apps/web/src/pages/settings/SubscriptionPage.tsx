@@ -10,8 +10,9 @@ import {
   Loader2,
   CheckCircle2,
   Sparkles,
+  Tag,
 } from 'lucide-react';
-import type { PaymentMethod } from '@oculo/shared-types';
+import type { PaymentMethod, BillingCycle } from '@oculo/shared-types';
 import {
   getPlans,
   getSubscription,
@@ -25,7 +26,7 @@ import {
   type Plan,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
-import { planPrice } from '@oculo/shared-types';
+import { planPrice, planPriceForCycle, BILLING_CYCLE_MONTHS, SEMIANNUAL_DISCOUNT } from '@oculo/shared-types';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
 import { formatCurrency, formatDate, getActiveCurrency } from '../../lib/format';
@@ -44,6 +45,12 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
   SUSPENDED: { label: 'Suspendu', tone: 'danger' },
   CANCELLED: { label: 'Annulé', tone: 'danger' },
 };
+
+/** Cycle choisi sur la landing : URL (?cycle=) d'abord, sinon mémorisé à l'inscription. */
+function readSelectedCycle(params: URLSearchParams): BillingCycle {
+  if (params.get('cycle') === 'SEMIANNUAL') return 'SEMIANNUAL';
+  return sessionStorage.getItem('oculo-cycle') === 'SEMIANNUAL' ? 'SEMIANNUAL' : 'MONTHLY';
+}
 
 function limitLabel(v: number | null): string {
   return v == null ? 'Illimité' : String(v);
@@ -70,12 +77,73 @@ function UsageBar({ label, used, max }: { label: string; used: number; max: numb
   );
 }
 
+/** Sélecteur de cycle de facturation : mensuel, ou 6 mois payés en une fois (−10 %). */
+function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
+  return (
+    <div className="inline-flex rounded-xl border bg-surface p-1">
+      <button
+        type="button"
+        onClick={() => onChange('MONTHLY')}
+        className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+          cycle === 'MONTHLY' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
+        }`}
+      >
+        Mensuel
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('SEMIANNUAL')}
+        className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+          cycle === 'SEMIANNUAL' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
+        }`}
+      >
+        6 mois
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+            cycle === 'SEMIANNUAL' ? 'bg-white/20 text-white' : 'bg-success/15 text-success'
+          }`}
+        >
+          −{Math.round(SEMIANNUAL_DISCOUNT * 100)}%
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/** Prix affiché pour une offre + un cycle : montant total, et détail mensuel équivalent + économie si 6 mois. */
+function PlanPrice({ code, currency, cycle }: { code: string; currency: string; cycle: BillingCycle }) {
+  const total = planPriceForCycle(code, currency, cycle);
+  if (cycle === 'MONTHLY') {
+    return (
+      <p className="mt-3 font-display text-2xl font-bold text-content">
+        {formatCurrency(total)}
+        <span className="text-sm font-normal text-content-muted"> / mois</span>
+      </p>
+    );
+  }
+  const monthly = planPrice(code, currency);
+  const fullPrice = monthly * BILLING_CYCLE_MONTHS.SEMIANNUAL;
+  const savings = fullPrice - total;
+  return (
+    <div className="mt-3">
+      <p className="font-display text-2xl font-bold text-content">
+        {formatCurrency(total)}
+        <span className="text-sm font-normal text-content-muted"> pour 6 mois</span>
+      </p>
+      <p className="mt-0.5 text-xs text-content-muted">≈ {formatCurrency(Math.round(total / 6))} / mois</p>
+      <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-success">
+        <Tag className="h-3 w-3" /> Économisez {formatCurrency(savings)}
+      </p>
+    </div>
+  );
+}
+
 export function SubscriptionPage() {
   const currency = getActiveCurrency();
   const qc = useQueryClient();
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
-  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number } | null>(null);
+  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; cycle: BillingCycle } | null>(null);
 
   const { data: sub, isLoading } = useQuery({ queryKey: ['subscription'], queryFn: getSubscription });
   const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: getPlans });
@@ -136,8 +204,12 @@ export function SubscriptionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Offre présélectionnée depuis la landing (?plan=CODE).
+  // Offre présélectionnée depuis la landing (?plan=CODE&cycle=SEMIANNUAL).
   const [params, setParams] = useSearchParams();
+
+  // Cycle de facturation choisi (toggle "Nos offres" + grille de réactivation) —
+  // initialisé depuis l'URL si le visiteur a déjà choisi "6 mois" sur la landing.
+  const [cycle, setCycle] = useState<BillingCycle>(readSelectedCycle(params));
 
   // « Activer l'abonnement » (bandeau d'essai) arrive avec ?pay=1 : on ouvre
   // aussitôt le paiement de l'offre en cours, même si on est déjà sur la page.
@@ -147,10 +219,11 @@ export function SubscriptionPage() {
       kind: 'plan',
       id: sub.plan.id,
       label: sub.plan.name,
-      amount: planPrice(sub.plan.code, currency),
+      amount: planPriceForCycle(sub.plan.code, currency, cycle),
+      cycle,
     });
     setParams({}, { replace: true });
-  }, [params, sub, canManage, currency, setParams]);
+  }, [params, sub, canManage, currency, cycle, setParams]);
   const autoOpened = useRef(false);
   const [autoLaunch, setAutoLaunch] = useState(false);
   useEffect(() => {
@@ -159,34 +232,37 @@ export function SubscriptionPage() {
     const plan = plans.find((p) => p.code === code);
     if (!plan) return;
     autoOpened.current = true;
+    // Cycle porté depuis la landing (?cycle=SEMIANNUAL), sinon mensuel par défaut.
+    const initCycle: BillingCycle = readSelectedCycle(params);
+    const amount = planPriceForCycle(plan.code, currency, initCycle);
     // Plus d'essai gratuit : toute offre présélectionnée (Starter par défaut
     // après l'inscription) lance directement le paiement Moneroo.
     setAutoLaunch(true);
-    subscribe(plan.id, 'WAVE')
+    subscribe(plan.id, 'WAVE', undefined, initCycle)
       .then((res) => {
         // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
         trackPixelEvent(
           'InitiateCheckout',
-          { value: planPrice(plan.code, currency), currency, content_name: plan.name },
+          { value: amount, currency, content_name: plan.name },
           `checkout_${res.paymentId}`,
         );
         if (res.redirectUrl) {
           // Mémorise le paiement pour confirmer le Purchase au retour de Moneroo.
           sessionStorage.setItem(
             PENDING_PURCHASE_KEY,
-            JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount: planPrice(plan.code, currency) }),
+            JSON.stringify({ paymentId: res.paymentId, planName: plan.name, amount }),
           );
           window.location.href = res.redirectUrl;
         } else {
           setAutoLaunch(false);
-          setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: planPrice(plan.code, currency) });
+          setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount, cycle: initCycle });
         }
       })
       .catch(() => {
         setAutoLaunch(false);
-        setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount: planPrice(plan.code, currency) });
+        setPayFor({ kind: 'plan', id: plan.id, label: plan.name, amount, cycle: initCycle });
       });
-  }, [params, plans]);
+  }, [params, plans, currency]);
 
   if (isLoading) return <PageLoader />;
   if (autoLaunch)
@@ -256,6 +332,10 @@ export function SubscriptionPage() {
                 : 'Sélectionnez librement l’offre qui vous convient pour continuer sans interruption.'}
             </p>
 
+            <div className="mt-4">
+              <CycleToggle cycle={cycle} onChange={setCycle} />
+            </div>
+
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {plans.map((p) => {
                 const isCurrent = sub?.plan.code === p.code;
@@ -268,10 +348,7 @@ export function SubscriptionPage() {
                       <h4 className="font-display font-bold text-content">{p.name}</h4>
                       {isCurrent && <Badge tone="info">Offre actuelle</Badge>}
                     </div>
-                    <p className="mt-1 font-display text-xl font-extrabold text-gradient">
-                      {formatCurrency(planPrice(p.code, currency))}
-                      <span className="text-xs font-normal text-content-muted"> / mois</span>
-                    </p>
+                    <PlanPrice code={p.code} currency={currency} cycle={cycle} />
                     <ul className="mt-2 flex-1 space-y-1">
                       {p.features.slice(0, 4).map((f) => (
                         <li key={f} className="flex items-start gap-1.5 text-xs text-content-muted">
@@ -287,7 +364,8 @@ export function SubscriptionPage() {
                           kind: 'plan',
                           id: p.id,
                           label: p.name,
-                          amount: planPrice(p.code, currency),
+                          amount: planPriceForCycle(p.code, currency, cycle),
+                          cycle,
                         })
                       }
                     >
@@ -301,7 +379,10 @@ export function SubscriptionPage() {
         );
       })()}
 
-      <h3 className="mb-3 font-display text-lg font-bold text-content">Nos offres</h3>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-display text-lg font-bold text-content">Nos offres</h3>
+        <CycleToggle cycle={cycle} onChange={setCycle} />
+      </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {plans?.map((p) => (
           <PlanCard
@@ -309,7 +390,10 @@ export function SubscriptionPage() {
             plan={p}
             current={sub?.plan.code === p.code}
             canManage={canManage}
-            onSubscribe={() => setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: planPrice(p.code, currency) })}
+            cycle={cycle}
+            onSubscribe={() =>
+              setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: planPriceForCycle(p.code, currency, cycle), cycle })
+            }
           />
         ))}
       </div>
@@ -345,7 +429,7 @@ export function SubscriptionPage() {
                     </td>
                     <td className="table-cell text-right">
                       {inv.status !== 'PAID' && canManage && (
-                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount) })} className="h-8 px-3 text-xs">
+                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount), cycle: 'MONTHLY' })} className="h-8 px-3 text-xs">
                           Payer
                         </Button>
                       )}
@@ -378,11 +462,13 @@ function PlanCard({
   plan,
   current,
   canManage,
+  cycle,
   onSubscribe,
 }: {
   plan: Plan;
   current: boolean;
   canManage: boolean;
+  cycle: BillingCycle;
   onSubscribe: () => void;
 }) {
   const currency = getActiveCurrency();
@@ -405,10 +491,7 @@ function PlanCard({
         </p>
       )}
       <p className="mt-1 text-sm text-content-muted">{plan.description}</p>
-      <p className="mt-3 font-display text-2xl font-bold text-content">
-        {formatCurrency(planPrice(plan.code, currency))}
-        <span className="text-sm font-normal text-content-muted"> / mois</span>
-      </p>
+      <PlanPrice code={plan.code} currency={currency} cycle={cycle} />
       <ul className="mt-4 space-y-2">
         {plan.features.map((f) => (
           <li key={f} className="flex items-start gap-2 text-sm text-content">
@@ -452,7 +535,7 @@ function BillingPaymentModal({
   onClose,
   onPaid,
 }: {
-  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number };
+  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number; cycle: BillingCycle };
   onClose: () => void;
   onPaid: () => void;
 }) {
@@ -468,14 +551,14 @@ function BillingPaymentModal({
   // Règlement Mobile Money direct : crée la facture et le paiement en attente ;
   // le fondateur confirme ensuite depuis la console (onglet « À confirmer »).
   const manualMut = useMutation({
-    mutationFn: () => subscribeManual(target.id),
+    mutationFn: () => subscribeManual(target.id, target.cycle),
     onSuccess: () => setPhase('manual'),
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
   const payMut = useMutation({
     mutationFn: (method: PaymentMethod) =>
-      target.kind === 'plan' ? subscribe(target.id, method) : payInvoice(target.id, method),
+      target.kind === 'plan' ? subscribe(target.id, method, undefined, target.cycle) : payInvoice(target.id, method),
     onSuccess: (res) => {
       setPaymentId(res.paymentId);
       // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
@@ -526,6 +609,12 @@ function BillingPaymentModal({
 
   return (
     <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">
+      <div className="mb-4 flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-2.5">
+        <span className="text-sm text-content-muted">
+          Montant à régler{target.kind === 'plan' && target.cycle === 'SEMIANNUAL' ? ' (6 mois)' : target.kind === 'plan' ? ' (1 mois)' : ''}
+        </span>
+        <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount)}</span>
+      </div>
       {phase === 'choose' && (
         <>
           {/* Paiement en ligne : uniquement si une passerelle est configurée. */}

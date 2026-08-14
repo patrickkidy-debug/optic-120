@@ -1,4 +1,14 @@
-import { PaymentStatus, SubscriptionStatus, SubInvoiceStatus, MOBILE_MONEY_METHODS, PaymentMethod } from '@oculo/shared-types';
+import {
+  PaymentStatus,
+  SubscriptionStatus,
+  SubInvoiceStatus,
+  MOBILE_MONEY_METHODS,
+  PaymentMethod,
+  BillingCycle,
+  BILLING_CYCLE_MONTHS,
+  SEMIANNUAL_DISCOUNT,
+  type BillingCycle as BillingCycleType,
+} from '@oculo/shared-types';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
@@ -17,10 +27,23 @@ export interface CapiContext {
   fbc?: string | null;
 }
 
-function addOneMonth(from: Date): Date {
+function addMonths(from: Date, months: number): Date {
   const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
+  d.setMonth(d.getMonth() + months);
   return d;
+}
+
+/**
+ * Montant total dû pour un cycle de facturation, à partir du prix mensuel
+ * RÉEL de l'offre (colonne DB `SubscriptionPlan.priceMonthly`, source de
+ * vérité pour la facturation — pas la table `PLAN_PRICES` de shared-types,
+ * qui ne sert qu'à l'affichage indicatif avant qu'un tenant existe).
+ */
+function cycleAmount(monthlyPrice: number | Prisma.Decimal, cycle: BillingCycleType): number {
+  const monthly = Number(monthlyPrice);
+  const months = BILLING_CYCLE_MONTHS[cycle];
+  const total = monthly * months;
+  return cycle === BillingCycle.SEMIANNUAL ? Math.round(total * (1 - SEMIANNUAL_DISCOUNT)) : total;
 }
 
 type LimitResource = 'users' | 'branches' | 'patients' | 'sales';
@@ -172,6 +195,7 @@ export async function subscribe(
   method: PaymentMethod,
   customerPhone: string | undefined,
   capiContext?: CapiContext,
+  cycle: BillingCycleType = BillingCycle.MONTHLY,
 ) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
@@ -179,6 +203,7 @@ export async function subscribe(
   if (!plan) throw badRequest('Offre invalide');
 
   const now = new Date();
+  const months = BILLING_CYCLE_MONTHS[cycle];
   const invoice = await retryOnDuplicateNumber(async () =>
     prisma.subscriptionInvoice.create({
       data: {
@@ -186,11 +211,12 @@ export async function subscribe(
         subscriptionId: sub.id,
         planId: plan.id,
         number: await nextInvoiceNumber(tenantId),
-        amount: plan.priceMonthly,
+        amount: cycleAmount(plan.priceMonthly, cycle),
         currency: plan.currency,
         status: SubInvoiceStatus.PENDING,
         periodStart: now,
-        periodEnd: addOneMonth(now),
+        periodEnd: addMonths(now, months),
+        periodMonths: months,
         dueDate: now,
       },
     }),
@@ -214,13 +240,18 @@ export async function payInvoice(
  * en attente (sans passerelle). Le client paie sur le numéro de l'éditeur, puis
  * l'opérateur confirme depuis la console → l'abonnement s'active.
  */
-export async function subscribeManual(tenantId: string, planId: string) {
+export async function subscribeManual(
+  tenantId: string,
+  planId: string,
+  cycle: BillingCycleType = BillingCycle.MONTHLY,
+) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
   const plan = await prisma.subscriptionPlan.findFirst({ where: { id: planId, isActive: true } });
   if (!plan) throw badRequest('Offre invalide');
 
   const now = new Date();
+  const months = BILLING_CYCLE_MONTHS[cycle];
   const invoice = await retryOnDuplicateNumber(async () =>
     prisma.subscriptionInvoice.create({
       data: {
@@ -228,11 +259,12 @@ export async function subscribeManual(tenantId: string, planId: string) {
         subscriptionId: sub.id,
         planId: plan.id,
         number: await nextInvoiceNumber(tenantId),
-        amount: plan.priceMonthly,
+        amount: cycleAmount(plan.priceMonthly, cycle),
         currency: plan.currency,
         status: SubInvoiceStatus.PENDING,
         periodStart: now,
-        periodEnd: addOneMonth(now),
+        periodEnd: addMonths(now, months),
+        periodMonths: months,
         dueDate: now,
       },
     }),
@@ -414,7 +446,7 @@ export async function settleSubscriptionPayment(
             planId: payment.invoice.planId,
             status: SubscriptionStatus.ACTIVE,
             currentPeriodStart: now,
-            currentPeriodEnd: addOneMonth(base),
+            currentPeriodEnd: addMonths(base, payment.invoice.periodMonths),
             trialEndsAt: null,
             cancelledAt: null,
             autoRenew: true,
@@ -602,7 +634,7 @@ export async function setSubscriptionStatus(tenantId: string, status: Subscripti
       status,
       cancelledAt: status === SubscriptionStatus.CANCELLED ? now : null,
       ...(reactivatingExpired
-        ? { currentPeriodStart: now, currentPeriodEnd: addOneMonth(now), trialEndsAt: null }
+        ? { currentPeriodStart: now, currentPeriodEnd: addMonths(now, 1), trialEndsAt: null }
         : {}),
     },
   });

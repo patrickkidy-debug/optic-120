@@ -140,28 +140,29 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       input.method,
       input.customerPhone,
       capiContext(req),
+      input.cycle,
     );
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
       action: 'SUBSCRIPTION_SUBSCRIBE',
       entity: 'Subscription',
-      metadata: { planId: input.planId },
+      metadata: { planId: input.planId, cycle: input.cycle },
       ...requestMeta(req),
     });
     return reply.status(201).send(result);
   });
 
   app.post('/subscribe-manual', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
-    const { planId } = req.body as { planId?: string };
+    const { planId, cycle } = req.body as { planId?: string; cycle?: 'MONTHLY' | 'SEMIANNUAL' };
     if (!planId) return reply.status(400).send({ error: 'planId manquant' });
-    const result = await billing.subscribeManual(req.auth!.tenantId, planId);
+    const result = await billing.subscribeManual(req.auth!.tenantId, planId, cycle);
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
       action: 'SUBSCRIPTION_MANUAL_REQUEST',
       entity: 'SubscriptionInvoice',
-      metadata: { planId },
+      metadata: { planId, cycle },
       ...requestMeta(req),
     });
     return reply.status(201).send(result);
