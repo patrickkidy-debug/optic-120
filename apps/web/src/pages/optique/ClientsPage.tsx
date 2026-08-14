@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer, MessageCircle } from 'lucide-react';
+import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer, MessageCircle, Download } from 'lucide-react';
 
 /** Lien wa.me à partir d'un numéro (garde les chiffres uniquement). */
 function waLink(phone?: string | null): string | null {
@@ -17,8 +17,11 @@ import {
   listCustomers,
   createCustomer,
   updateCustomer,
+  getCustomer,
   type Customer,
 } from '../../features/optique/api';
+import { printClientDossier } from '../../features/optique/clientDossierDocument';
+import type { CompanyInfo } from '../../features/optique/saleDocument';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
@@ -32,12 +35,14 @@ export function ClientsPage() {
   const canUpdate = usePermission('optique.customers.update');
   const canSeeRx = usePermission('optique.prescriptions.view');
   const canQuote = usePermission('optique.quotes.create');
-  const tenantName = useAuthStore((s) => s.user?.tenantName);
+  const user = useAuthStore((s) => s.user);
+  const tenantName = user?.tenantName;
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Customer | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [dossierLoading, setDossierLoading] = useState<string | null>(null);
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', search],
@@ -50,6 +55,28 @@ export function ClientsPage() {
     pos.clear();
     pos.setCustomer(customerId);
     navigate('/optique/caisse');
+  }
+
+  // Dossier client complet (identité, ordonnances, achats, commandes verres,
+  // réparations) en PDF — un clic par ligne, sans passer par la fiche client.
+  async function downloadDossier(customerId: string) {
+    setDossierLoading(customerId);
+    try {
+      const company: CompanyInfo = {
+        name: user?.tenantName ?? 'OculoSaaS',
+        logoUrl: user?.tenantLogoUrl,
+        location: user?.tenantLocation,
+        contactPhone: user?.tenantContactPhone,
+        contactEmail: user?.tenantContactEmail,
+        ...user?.tenantInvoiceSettings,
+      };
+      const full = await getCustomer(customerId);
+      printClientDossier(full, company);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setDossierLoading(null);
+    }
   }
 
   // Génère un PDF (via impression navigateur) de TOUT le fichier clients,
@@ -195,6 +222,16 @@ export function ClientsPage() {
                       {canSeeRx && (
                         <button onClick={() => setRecordId(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <Glasses className="h-3.5 w-3.5" /> Ordonnances
+                        </button>
+                      )}
+                      {canSeeRx && (
+                        <button
+                          onClick={() => downloadDossier(c.id)}
+                          disabled={dossierLoading === c.id}
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50"
+                          title="Télécharger le dossier client (PDF)"
+                        >
+                          <Download className="h-3.5 w-3.5" /> {dossierLoading === c.id ? '…' : 'Dossier'}
                         </button>
                       )}
                       {canUpdate && (

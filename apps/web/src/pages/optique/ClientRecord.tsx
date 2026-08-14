@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Download,
 } from 'lucide-react';
 import { ageFromBirthDate, LENS_ORDER_BOARD_STATUSES, LENS_ORDER_STATUS_LABELS, type LensOrderStatus, type RepairStatus } from '@oculo/shared-types';
 import {
@@ -25,6 +26,7 @@ import {
 } from '../../features/optique/api';
 import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
 import { printPrescription, type PrescriptionPatient } from '../../features/optique/prescriptionDocument';
+import { printClientDossier } from '../../features/optique/clientDossierDocument';
 import type { CompanyInfo } from '../../features/optique/saleDocument';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
@@ -116,6 +118,9 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => printClientDossier(customer, company)}>
+                <Download className="h-4 w-4" /> Dossier PDF
+              </Button>
               {canQuote && (
                 <Button variant="outline" onClick={startQuote}>
                   <FileText className="h-4 w-4" /> Créer un devis
