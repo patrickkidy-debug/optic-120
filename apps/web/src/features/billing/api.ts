@@ -386,3 +386,27 @@ export async function platformResetPassword(id: string): Promise<{ tempPassword:
   const { data } = await api.post<{ tempPassword: string }>(`/platform/users/${id}/reset-password`);
   return data;
 }
+
+/* --- Notifications (console fondateur) --- */
+
+export interface PlatformNotification {
+  id: string;
+  type: string;
+  tenantId: string | null;
+  tenantName: string | null;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export async function getNotifications(): Promise<{ notifications: PlatformNotification[]; unreadCount: number }> {
+  const { data } = await api.get<{ notifications: PlatformNotification[]; unreadCount: number }>(
+    '/platform/notifications',
+  );
+  return data;
+}
+
+export async function markNotificationsRead(ids?: string[]): Promise<void> {
+  await api.post('/platform/notifications/read', { ids });
+}

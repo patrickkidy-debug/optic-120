@@ -42,6 +42,7 @@ import {
   CalendarPlus,
   AlertTriangle,
   Download,
+  Bell,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -63,9 +64,12 @@ import {
   setUserActive,
   forceLogoutUser,
   platformResetPassword,
+  getNotifications,
+  markNotificationsRead,
   type PlatformPlan,
   type PlatformUser,
   type PlatformSub,
+  type PlatformNotification,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
 import {
@@ -141,6 +145,77 @@ function Delta({ value }: { value: string }) {
   );
 }
 
+/** Cloche de notifications de la console fondateur (ex. nouvel établissement créé). */
+function NotificationBell() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const { data } = useQuery({
+    queryKey: ['platform-notifications'],
+    queryFn: getNotifications,
+    // Léger sondage : le fondateur voit une nouvelle inscription sans recharger.
+    refetchInterval: 30_000,
+  });
+  const readMut = useMutation({
+    mutationFn: (ids?: string[]) => markNotificationsRead(ids),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-notifications'] }),
+  });
+
+  const notifications = data?.notifications ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border bg-surface text-content-muted transition hover:text-content"
+        aria-label="Notifications"
+      >
+        <Bell className="h-4 w-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-semibold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Notifications" size="md">
+        {notifications.length === 0 ? (
+          <EmptyState icon={Bell} title="Aucune notification" />
+        ) : (
+          <div className="space-y-3">
+            {unreadCount > 0 && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => readMut.mutate(undefined)} loading={readMut.isPending}>
+                  Tout marquer comme lu
+                </Button>
+              </div>
+            )}
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+              {notifications.map((n: PlatformNotification) => (
+                <div key={n.id} className={`rounded-xl border p-3 ${n.readAt ? 'bg-surface' : 'bg-primary-soft/40'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-content">{n.title}</p>
+                    {!n.readAt && (
+                      <button
+                        onClick={() => readMut.mutate([n.id])}
+                        className="shrink-0 text-xs text-primary hover:underline"
+                      >
+                        Marquer lu
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-content-muted">{n.body}</p>
+                  <p className="mt-1 text-xs text-content-faint">{formatDateTime(n.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
+  );
+}
+
 type Tab = 'subs' | 'payments' | 'demos' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
 export function PlatformPage() {
@@ -165,9 +240,12 @@ export function PlatformPage() {
         title="Console fondateur"
         subtitle="Pilotage de toute la plateforme — établissements, utilisateurs et offres"
         actions={
-          <Button variant="outline" onClick={() => billingMut.mutate()} loading={billingMut.isPending}>
-            <RefreshCw className="h-4 w-4" /> Cycle de facturation
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button variant="outline" onClick={() => billingMut.mutate()} loading={billingMut.isPending}>
+              <RefreshCw className="h-4 w-4" /> Cycle de facturation
+            </Button>
+          </div>
         }
       />
 

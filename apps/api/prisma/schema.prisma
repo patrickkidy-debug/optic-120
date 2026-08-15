@@ -1022,6 +1022,23 @@ model PlatformOperator {
   createdAt DateTime @default(now())
 }
 
+/// Notifications de la console fondateur (cross-tenant), ex. nouvel
+/// établissement créé. tenantId en référence libre (comme DemoRequest, pas de
+/// contrainte FK) : l'historique reste lisible même si le tenant est supprimé.
+model PlatformNotification {
+  id         String    @id @default(uuid())
+  type       String
+  tenantId   String?
+  tenantName String?
+  title      String
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([readAt])
+  @@index([createdAt])
+}
+
 /* ---------------- CHATBOT WHATSAPP ---------------- */
 
 /// Prospect ayant écrit au chatbot commercial WhatsApp. Cross-tenant : ce sont

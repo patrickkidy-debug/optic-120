@@ -32,6 +32,17 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ stats });
   });
 
+  // Notifications de la console fondateur (ex. nouvel établissement).
+  app.get('/notifications', async (_req, reply) => {
+    return reply.send(await platform.listNotifications());
+  });
+
+  app.post('/notifications/read', async (req, reply) => {
+    const { ids } = (req.body ?? {}) as { ids?: string[] };
+    await platform.markNotificationsRead(ids);
+    return reply.send({ ok: true });
+  });
+
   // Liste des utilisateurs de toute la plateforme (suivi).
   app.get('/users', async (_req, reply) => {
     const users = await billing.listAllUsers();

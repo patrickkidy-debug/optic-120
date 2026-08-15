@@ -33,6 +33,7 @@ import { mergeOpticalSettings } from '../../lib/optical-settings.js';
 import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensurePendingSubscription } from '../billing/billing.service.js';
+import { notifyFounderNewTenant } from '../billing/platform.service.js';
 import { env, appOrigin } from '../../config/env.js';
 import { isOperatorEmail, isFounderEmail } from '../../lib/operators.js';
 import { badRequest, conflict, locked, unauthorized } from '../../lib/http-error.js';
@@ -231,7 +232,7 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
   // par défaut et les moyens d'encaissement proposés en caisse.
   const country = countryFromPhone(opts.whatsapp);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
         name: opts.tenantName,
@@ -285,8 +286,17 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
     // n'est débloqué qu'à la confirmation du paiement (settleSubscriptionPayment).
     await ensurePendingSubscription(tx, tenant.id, opts.plan);
 
-    return user.id;
+    return { userId: user.id, tenantId: tenant.id };
   });
+
+  // Notifie le fondateur (email + cloche console fondateur) : non bloquant,
+  // après commit de la transaction (une panne ici ne doit pas casser l'inscription).
+  notifyFounderNewTenant(
+    { id: result.tenantId, name: opts.tenantName },
+    { firstName: opts.firstName, lastName: opts.lastName, email: opts.email, whatsapp: opts.whatsapp, planCode: opts.plan },
+  ).catch((err) => logger.error({ err }, 'Notification fondateur (nouvel établissement) échouée'));
+
+  return result.userId;
 }
 
 /** Inscription classique (email + mot de passe) d'une nouvelle entreprise. */

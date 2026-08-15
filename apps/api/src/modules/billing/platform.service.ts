@@ -1,8 +1,10 @@
 import { SubscriptionStatus, SubInvoiceStatus } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { notFound, conflict, badRequest } from '../../lib/http-error.js';
-import { invalidateOperatorCache, isEnvOperator, getOperatorEmails } from '../../lib/operators.js';
+import { invalidateOperatorCache, isEnvOperator, getOperatorEmails, FOUNDER_EMAILS } from '../../lib/operators.js';
 import { hashPassword, generateTempPassword } from '../../lib/password.js';
+import { mailer } from '../../lib/mailer.js';
+import { logger } from '../../lib/logger.js';
 
 /* --------------------- Équipe (opérateurs de la console) --------------------- */
 
@@ -231,4 +233,60 @@ export async function resetTenantHistoryByEmail(email: string, confirm: boolean)
   });
 
   return { tenantId, tenantName: user.tenant.name, executed: true, counts: before };
+}
+
+/* ------------------------------ Notifications ------------------------------ */
+
+/**
+ * Notifie le fondateur (in-app + email) qu'un nouvel établissement vient
+ * d'être créé. Non bloquant : appelé après la transaction d'inscription, une
+ * panne d'email ne doit jamais faire échouer la création du compte.
+ */
+export async function notifyFounderNewTenant(tenant: { id: string; name: string }, admin: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  whatsapp: string;
+  planCode?: string;
+}): Promise<void> {
+  const title = `Nouvel établissement : ${tenant.name}`;
+  const body = `${admin.firstName} ${admin.lastName} (${admin.email}, WhatsApp ${admin.whatsapp}) vient de créer « ${tenant.name} »${admin.planCode ? ` — offre ${admin.planCode}` : ''}.`;
+
+  try {
+    await prisma.platformNotification.create({
+      data: { type: 'TENANT_SIGNUP', tenantId: tenant.id, tenantName: tenant.name, title, body },
+    });
+  } catch (err) {
+    logger.error({ err }, 'Enregistrement notification fondateur (nouvel établissement) échoué');
+  }
+
+  await Promise.all(
+    FOUNDER_EMAILS.map((to) =>
+      mailer
+        .send({
+          to,
+          subject: title,
+          html: `<p>${body}</p>`,
+          text: body,
+        })
+        .catch((err) => logger.error({ err, to }, 'Email fondateur (nouvel établissement) échoué')),
+    ),
+  );
+}
+
+/** Notifications de la console fondateur, plus récentes en premier. */
+export async function listNotifications(limit = 50) {
+  const [notifications, unreadCount] = await Promise.all([
+    prisma.platformNotification.findMany({ orderBy: { createdAt: 'desc' }, take: limit }),
+    prisma.platformNotification.count({ where: { readAt: null } }),
+  ]);
+  return { notifications, unreadCount };
+}
+
+/** Marque des notifications comme lues (ou toutes les non lues si `ids` omis). */
+export async function markNotificationsRead(ids?: string[]): Promise<void> {
+  await prisma.platformNotification.updateMany({
+    where: ids && ids.length > 0 ? { id: { in: ids } } : { readAt: null },
+    data: { readAt: new Date() },
+  });
 }
