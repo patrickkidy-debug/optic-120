@@ -196,6 +196,15 @@ export async function platformActivate(
 ) {
   await api.post(`/platform/subscriptions/${tenantId}/activate`, { months, planCode });
 }
+/** Reconduit l'essai gratuit d'un tenant précis (statut TRIALING, sans paiement). */
+export async function extendTrial(tenantId: string, minutes: number): Promise<{ tenantId: string; trialEndsAt: string }> {
+  const { data } = await api.post<{ tenantId: string; trialEndsAt: string }>(
+    `/platform/subscriptions/${tenantId}/extend-trial`,
+    { minutes },
+  );
+  return data;
+}
+
 export async function runBilling() {
   const { data } = await api.post<{ markedPastDue: number; suspended: number }>('/platform/billing/run');
   return data;

@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   Download,
   Bell,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -50,6 +51,7 @@ import {
   platformSuspend,
   platformReactivate,
   platformActivate,
+  extendTrial,
   runBilling,
   getPlatformStats,
   listPlatformUsers,
@@ -364,6 +366,7 @@ function SubscriptionsTab() {
   });
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [activating, setActivating] = useState<PlatformSub | null>(null);
+  const [extending, setExtending] = useState<PlatformSub | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['platform-subs'] });
@@ -486,6 +489,9 @@ function SubscriptionsTab() {
                   const hasAccess = s.status === 'ACTIVE' && new Date(s.currentPeriodEnd).getTime() > now;
                   return (
                     <div className="flex justify-end gap-2">
+                      <button onClick={() => setExtending(s)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-primary">
+                        <Clock className="h-3.5 w-3.5" /> Essai
+                      </button>
                       {hasAccess ? (
                         <>
                           <button onClick={() => setActivating(s)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted">
@@ -527,7 +533,86 @@ function SubscriptionsTab() {
           }}
         />
       )}
+
+      {extending && (
+        <ExtendTrialModal
+          sub={extending}
+          onClose={() => setExtending(null)}
+          onDone={() => {
+            setExtending(null);
+            invalidate();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Reconduit l'essai gratuit d'un tenant précis, à la demande — n'importe
+ * quand, sur n'importe quel établissement. Reste gratuit (statut TRIALING) :
+ * distinct de l'activation payante (n'affecte pas le MRR).
+ */
+function ExtendTrialModal({
+  sub,
+  onClose,
+  onDone,
+}: {
+  sub: PlatformSub;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [amount, setAmount] = useState('24');
+  const [unit, setUnit] = useState<'hours' | 'days'>('hours');
+  const [error, setError] = useState('');
+
+  const minutes = Math.max(1, Number(amount) || 0) * (unit === 'days' ? 24 * 60 : 60);
+
+  const mut = useMutation({
+    mutationFn: () => extendTrial(sub.tenantId, minutes),
+    onSuccess: onDone,
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={`Prolonger l'essai — ${sub.tenantName}`} size="sm">
+      <div className="space-y-3">
+        <p className="text-sm text-content-muted">
+          Reconduit l'essai gratuit (accès complet, sans paiement), à partir de l'échéance actuelle si
+          elle n'est pas encore passée, sinon de maintenant.
+        </p>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field label="Durée">
+              <input
+                type="number"
+                min={1}
+                className="input text-right"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </Field>
+          </div>
+          <select
+            className="input h-[42px] w-28"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as 'hours' | 'days')}
+          >
+            <option value="hours">heures</option>
+            <option value="days">jours</option>
+          </select>
+        </div>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button loading={mut.isPending} onClick={() => mut.mutate()}>
+            <Clock className="h-4 w-4" /> Reconduire
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -166,6 +166,26 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ subscription: sub });
   });
 
+  // Reconduit l'essai gratuit d'un tenant précis, à la demande (statut TRIALING,
+  // sans paiement — distinct de l'activation manuelle payante ci-dessus).
+  app.post('/subscriptions/:tenantId/extend-trial', async (req, reply) => {
+    const { tenantId } = req.params as { tenantId: string };
+    const { minutes } = (req.body ?? {}) as { minutes?: number };
+    if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes <= 0) {
+      throw badRequest('minutes doit être un nombre positif');
+    }
+    const result = await billing.extendTrial(tenantId, Math.round(minutes));
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_TRIAL_EXTENDED',
+      entity: 'Subscription',
+      metadata: { minutes: Math.round(minutes) },
+      ...requestMeta(req),
+    });
+    return reply.send(result);
+  });
+
   // Déclenche le cycle de facturation (past-due / suspension).
   app.post('/billing/run', async (_req, reply) => {
     const result = await billing.runBillingCycle();

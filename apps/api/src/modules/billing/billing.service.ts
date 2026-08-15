@@ -110,6 +110,26 @@ export async function ensurePendingSubscription(
   });
 }
 
+/**
+ * Reconduit (ou prolonge) l'essai gratuit d'un tenant précis, à la demande du
+ * fondateur — indépendamment du réglage global (qui ne fixe que la durée à
+ * l'inscription). Repart de l'échéance actuelle si elle n'est pas encore
+ * passée (n'écourte jamais un essai en cours), sinon de maintenant. Le
+ * statut repasse à TRIALING (gratuit) : distinct d'une activation payante,
+ * pour ne pas fausser le MRR / les statistiques de revenu.
+ */
+export async function extendTrial(tenantId: string, additionalMinutes: number): Promise<{ tenantId: string; trialEndsAt: Date }> {
+  const sub = await prisma.subscription.findUnique({ where: { tenantId } });
+  if (!sub) throw notFound('Abonnement introuvable');
+  const base = sub.currentPeriodEnd.getTime() > Date.now() ? sub.currentPeriodEnd : new Date();
+  const trialEnd = new Date(base.getTime() + additionalMinutes * 60_000);
+  await prisma.subscription.update({
+    where: { tenantId },
+    data: { status: SubscriptionStatus.TRIALING, currentPeriodEnd: trialEnd, trialEndsAt: trialEnd },
+  });
+  return { tenantId, trialEndsAt: trialEnd };
+}
+
 export async function getUsage(tenantId: string): Promise<Record<LimitResource, number>> {
   const [users, branches, patients, sales] = await Promise.all([
     prisma.user.count({ where: { tenantId } }),
