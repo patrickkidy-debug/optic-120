@@ -1039,6 +1039,15 @@ model PlatformNotification {
   @@index([createdAt])
 }
 
+/// Réglages globaux de la plateforme (ligne unique, id fixe "default"). Pour
+/// l'instant : durée de l'essai gratuit offert à l'inscription, ajustable
+/// depuis la console fondateur sans redéploiement.
+model PlatformSettings {
+  id                   String   @id @default("default")
+  trialDurationMinutes Int      @default(120)
+  updatedAt            DateTime @updatedAt
+}
+
 /* ---------------- CHATBOT WHATSAPP ---------------- */
 
 /// Prospect ayant écrit au chatbot commercial WhatsApp. Cross-tenant : ce sont

@@ -59,14 +59,31 @@ export async function listPlans(activeOnly = true) {
 
 /* --------------------- Abonnement d'un tenant --------------------- */
 
-/**
- * Crée l'abonnement à l'inscription, toujours bloqué (période déjà expirée) :
- * il n'y a plus d'essai gratuit, l'accès au dashboard reste interdit tant que
- * le paiement n'est pas confirmé (settleSubscriptionPayment).
- */
-/** Durée de l'essai gratuit offert à l'inscription (accès complet au dashboard). */
-export const TRIAL_DURATION_MS = 2 * 60 * 60 * 1000; // 2 heures
+const PLATFORM_SETTINGS_ID = 'default';
+const DEFAULT_TRIAL_MINUTES = 120; // 2 heures
 
+/** Durée actuelle de l'essai gratuit offert à l'inscription, réglable depuis la console fondateur. */
+export async function getTrialDurationMinutes(): Promise<number> {
+  const row = await prisma.platformSettings.findUnique({ where: { id: PLATFORM_SETTINGS_ID } });
+  return row?.trialDurationMinutes ?? DEFAULT_TRIAL_MINUTES;
+}
+
+/** Modifie la durée de l'essai gratuit (minutes). Ne s'applique qu'aux inscriptions suivantes. */
+export async function setTrialDurationMinutes(minutes: number): Promise<number> {
+  const clamped = Math.max(0, Math.min(minutes, 60 * 24 * 90)); // plafond de sécurité : 90 jours
+  const row = await prisma.platformSettings.upsert({
+    where: { id: PLATFORM_SETTINGS_ID },
+    update: { trialDurationMinutes: clamped },
+    create: { id: PLATFORM_SETTINGS_ID, trialDurationMinutes: clamped },
+  });
+  return row.trialDurationMinutes;
+}
+
+/**
+ * Crée l'abonnement à l'inscription : essai gratuit (accès complet à l'offre
+ * Standard) pendant la durée réglée en console fondateur, puis blocage
+ * jusqu'au paiement de l'abonnement.
+ */
 export async function ensurePendingSubscription(
   tx: Prisma.TransactionClient | PrismaClient,
   tenantId: string,
@@ -74,14 +91,13 @@ export async function ensurePendingSubscription(
 ): Promise<void> {
   const existing = await tx.subscription.findUnique({ where: { tenantId } });
   if (existing) return;
-  // Essai gratuit de 2 h sur l'offre Standard (accès complet à toutes les
-  // fonctionnalités), puis blocage jusqu'au paiement de l'abonnement.
   const plan =
     (await tx.subscriptionPlan.findFirst({ where: { code: 'STANDARD', isActive: true } })) ??
     (await tx.subscriptionPlan.findFirst({ where: { code: planCode ?? 'STARTER' } })) ??
     (await tx.subscriptionPlan.findFirst({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }));
   if (!plan) return;
-  const trialEnd = new Date(Date.now() + TRIAL_DURATION_MS);
+  const trialMinutes = await getTrialDurationMinutes();
+  const trialEnd = new Date(Date.now() + trialMinutes * 60_000);
   await tx.subscription.create({
     data: {
       tenantId,

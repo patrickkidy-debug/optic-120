@@ -410,3 +410,15 @@ export async function getNotifications(): Promise<{ notifications: PlatformNotif
 export async function markNotificationsRead(ids?: string[]): Promise<void> {
   await api.post('/platform/notifications/read', { ids });
 }
+
+/* --- Réglage : durée de l'essai gratuit (console fondateur) --- */
+
+export async function getTrialSettings(): Promise<{ minutes: number }> {
+  const { data } = await api.get<{ minutes: number }>('/platform/settings/trial');
+  return data;
+}
+
+export async function setTrialSettings(minutes: number): Promise<{ minutes: number }> {
+  const { data } = await api.patch<{ minutes: number }>('/platform/settings/trial', { minutes });
+  return data;
+}

@@ -43,6 +43,27 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  // Durée de l'essai gratuit offert aux nouveaux inscrits (réglable, effet immédiat).
+  app.get('/settings/trial', async (_req, reply) => {
+    return reply.send({ minutes: await billing.getTrialDurationMinutes() });
+  });
+
+  app.patch('/settings/trial', async (req, reply) => {
+    const { minutes } = (req.body ?? {}) as { minutes?: number };
+    if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes < 0) {
+      throw badRequest('minutes doit être un nombre positif');
+    }
+    const saved = await billing.setTrialDurationMinutes(Math.round(minutes));
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_TRIAL_DURATION_UPDATED',
+      metadata: { minutes: saved },
+      ...requestMeta(req),
+    });
+    return reply.send({ minutes: saved });
+  });
+
   // Liste des utilisateurs de toute la plateforme (suivi).
   app.get('/users', async (_req, reply) => {
     const users = await billing.listAllUsers();

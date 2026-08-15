@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Chart as ChartJS,
@@ -66,6 +66,8 @@ import {
   platformResetPassword,
   getNotifications,
   markNotificationsRead,
+  getTrialSettings,
+  setTrialSettings,
   type PlatformPlan,
   type PlatformUser,
   type PlatformSub,
@@ -1377,14 +1379,73 @@ function SupportTab() {
 
 function PlansTab() {
   const { data, isLoading } = useQuery({ queryKey: ['platform-plans'], queryFn: getPlatformPlans });
-  if (isLoading) return <PageLoader />;
-  if (!data || data.length === 0) return <EmptyState icon={Layers} title="Aucune offre" />;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {data.map((p) => (
-        <PlanEditor key={p.id} plan={p} />
-      ))}
+    <div className="space-y-4">
+      <TrialSettingsCard />
+      {isLoading ? (
+        <PageLoader />
+      ) : !data || data.length === 0 ? (
+        <EmptyState icon={Layers} title="Aucune offre" />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {data.map((p) => (
+            <PlanEditor key={p.id} plan={p} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Durée de l'essai gratuit (accès complet) offert à l'inscription — réglable, effet immédiat. */
+function TrialSettingsCard() {
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ['trial-settings'], queryFn: getTrialSettings });
+  const [hours, setHours] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (data) setHours(String(data.minutes / 60));
+  }, [data]);
+
+  const mut = useMutation({
+    mutationFn: () => setTrialSettings(Math.max(0, Math.round(Number(hours) * 60))),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trial-settings'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  return (
+    <div className="card p-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h3 className="font-display text-lg font-bold text-content">Essai gratuit</h3>
+          <p className="mt-0.5 text-xs text-content-faint">
+            Durée d'accès complet offerte dès l'inscription, avant blocage jusqu'au paiement.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="input h-9 w-24 px-2 py-1 text-right"
+            />
+            <span className="text-xs text-content-faint">heures</span>
+          </label>
+          <Button onClick={() => mut.mutate()} loading={mut.isPending} className="h-9 px-4 text-sm">
+            <Save className="h-4 w-4" /> Enregistrer
+          </Button>
+          {saved && <span className="text-sm text-success">Enregistré ✓</span>}
+        </div>
+      </div>
     </div>
   );
 }
