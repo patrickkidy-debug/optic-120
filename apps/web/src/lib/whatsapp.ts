@@ -13,6 +13,14 @@ export function waLink(phone?: string | null): string | null {
   return digits ? `https://wa.me/${digits}` : null;
 }
 
+/** Numéro WhatsApp de l'équipe pour les demandes de démonstration gratuite (landing + dashboard). */
+export const DEMO_WHATSAPP_NUMBER = '2385936598';
+
+/** Lien wa.me pré-rempli vers l'équipe, pour une demande de démonstration. */
+export function demoWhatsappLink(message: string): string {
+  return `https://wa.me/${DEMO_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
 /**
  * Ouvre WhatsApp avec un message pré-rempli pour une étape de vente.
  *

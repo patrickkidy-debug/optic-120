@@ -18,11 +18,16 @@ import {
   Gauge,
   Network,
   Smartphone,
+  MessageCircle,
+  FolderX,
+  EyeOff,
+  Hourglass,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, SEMIANNUAL_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { demoWhatsappLink } from '../lib/whatsapp';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -91,6 +96,12 @@ const ADVANTAGES = [
   { icon: Stethoscope, key: 'adv1', tone: 'primary' as const },
   { icon: Wallet, key: 'adv2', tone: 'accent' as const },
   { icon: Network, key: 'adv3', tone: 'cyan' as const },
+];
+
+const PROBLEMS = [
+  { icon: FolderX, key: 'prob1', tone: 'accent' as const },
+  { icon: EyeOff, key: 'prob2', tone: 'primary' as const },
+  { icon: Hourglass, key: 'prob3', tone: 'cyan' as const },
 ];
 
 const SHOWCASE = [
@@ -333,6 +344,7 @@ export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const year = new Date().getFullYear();
+  const demoLink = demoWhatsappLink(t('landing.demoWhatsappMessage'));
 
   return (
     <div style={LANDING_THEME} className="relative min-h-screen overflow-x-hidden bg-bg text-content">
@@ -445,13 +457,21 @@ export function LandingPage() {
                 <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
                   {t('landing.heroSubtitle')}
                 </p>
-                <div className="mt-2 flex flex-col gap-4 sm:flex-row">
+                <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                   <Link
                     to="/signup"
                     className="btn-primary neon-glow rounded-xl px-8 py-4 text-base transition hover:-translate-y-0.5"
                   >
                     {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
+                  <a
+                    href={demoLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-outline inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 text-base transition hover:-translate-y-0.5"
+                  >
+                    <MessageCircle className="h-4 w-4" /> {t('landing.requestDemo')}
+                  </a>
                   <a
                     href="#tarifs"
                     className="glass-card glass-hover rounded-xl px-8 py-4 text-center text-base font-semibold text-content"
@@ -517,6 +537,35 @@ export function LandingPage() {
                 </video>
               </div>
             </Reveal>
+          </div>
+        </section>
+
+        {/* Problèmes actuels — mise en contexte avant la solution */}
+        <section className="px-4 py-24 sm:px-8">
+          <div className="mx-auto max-w-[1280px]">
+            <Reveal className="mb-14 text-center">
+              <h2 className="mx-auto max-w-3xl font-display text-3xl font-extrabold text-content sm:text-4xl">
+                {t('landing.probTitle')}
+              </h2>
+            </Reveal>
+            <div className="grid gap-6 md:grid-cols-3">
+              {PROBLEMS.map((p, i) => (
+                <Reveal key={p.key} delay={i * 120} className="h-full">
+                  <div className="glass-card glass-hover flex h-full flex-col gap-4 rounded-3xl p-8">
+                    <div
+                      className={clsx(
+                        'grid h-14 w-14 place-items-center rounded-2xl border',
+                        TONE_SOFT[p.tone],
+                      )}
+                    >
+                      <p.icon className={clsx('h-7 w-7', TONE_TEXT[p.tone])} />
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-content">{t(`landing.${p.key}`)}</h3>
+                    <p className="text-sm text-content-muted">{t(`landing.${p.key}Text`)}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -841,12 +890,22 @@ export function LandingPage() {
             <p className="mx-auto mb-12 max-w-2xl text-lg text-content-muted">
               {t('landing.ctaSubtitle')}
             </p>
-            <Link
-              to="/signup"
-              className="btn-primary neon-glow rounded-2xl px-12 py-5 text-lg transition hover:-translate-y-0.5"
-            >
-              Utiliser le logiciel <ArrowRight className="h-5 w-5" />
-            </Link>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <Link
+                to="/signup"
+                className="btn-primary neon-glow rounded-2xl px-12 py-5 text-lg transition hover:-translate-y-0.5"
+              >
+                {t('landing.useSoftware')} <ArrowRight className="h-5 w-5" />
+              </Link>
+              <a
+                href={demoLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl px-12 py-5 text-lg transition hover:-translate-y-0.5"
+              >
+                <MessageCircle className="h-5 w-5" /> {t('landing.requestDemo')}
+              </a>
+            </div>
           </Reveal>
         </section>
       </main>

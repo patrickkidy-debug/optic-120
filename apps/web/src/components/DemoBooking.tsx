@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Sparkles, MessageCircle } from 'lucide-react';
 import { getPlanStatus } from '../features/billing/api';
 import { useAuthStore } from '../store/auth';
-
-const DEMO_WHATSAPP_NUMBER = '2385936598';
+import { demoWhatsappLink } from '../lib/whatsapp';
 
 /**
  * Bannière tableau de bord : propose une démonstration gratuite aux
@@ -18,7 +17,7 @@ export function DemoBooking() {
   if (plan && plan.status === 'ACTIVE') return null;
 
   const message = `Bonjour, je suis ${user?.firstName ?? ''} de ${user?.tenantName ?? 'mon établissement'} sur OculoSaaS. Je souhaite réserver une démonstration gratuite.`;
-  const link = `https://wa.me/${DEMO_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const link = demoWhatsappLink(message);
 
   return (
     <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-accent/5 to-transparent p-4 sm:flex-row sm:items-center sm:justify-between">
