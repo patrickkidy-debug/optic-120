@@ -26,10 +26,11 @@ export function SignupPage() {
   const plan: SignupInput['plan'] = (VALID_PLANS as string[]).includes(rawPlan ?? '')
     ? (rawPlan as SignupInput['plan'])
     : 'STARTER';
-  // Cycle de facturation choisi sur la landing (?cycle=SEMIANNUAL) : mémorisé
-  // pour que la page Abonnement le retrouve plus tard (l'inscription mène au
-  // dashboard, pas directement au paiement — voir 2h d'essai gratuit ci-dessous).
-  if (params.get('cycle') === 'SEMIANNUAL') sessionStorage.setItem('oculo-cycle', 'SEMIANNUAL');
+  // Cycle de facturation choisi sur la landing (?cycle=QUARTERLY|SEMIANNUAL) :
+  // mémorisé pour que la page Abonnement le retrouve plus tard (l'inscription
+  // mène au dashboard, pas directement au paiement — voir 2h d'essai gratuit ci-dessous).
+  const rawCycle = params.get('cycle');
+  if (rawCycle === 'QUARTERLY' || rawCycle === 'SEMIANNUAL') sessionStorage.setItem('oculo-cycle', rawCycle);
   const redirectTo = '/dashboard';
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');

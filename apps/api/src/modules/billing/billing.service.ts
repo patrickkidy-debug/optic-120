@@ -6,7 +6,7 @@ import {
   PaymentMethod,
   BillingCycle,
   BILLING_CYCLE_MONTHS,
-  SEMIANNUAL_DISCOUNT,
+  BILLING_CYCLE_DISCOUNT,
   type BillingCycle as BillingCycleType,
 } from '@oculo/shared-types';
 import type { Prisma, PrismaClient } from '@prisma/client';
@@ -43,7 +43,7 @@ function cycleAmount(monthlyPrice: number | Prisma.Decimal, cycle: BillingCycleT
   const monthly = Number(monthlyPrice);
   const months = BILLING_CYCLE_MONTHS[cycle];
   const total = monthly * months;
-  return cycle === BillingCycle.SEMIANNUAL ? Math.round(total * (1 - SEMIANNUAL_DISCOUNT)) : total;
+  return Math.round(total * (1 - BILLING_CYCLE_DISCOUNT[cycle]));
 }
 
 type LimitResource = 'users' | 'branches' | 'patients' | 'sales';

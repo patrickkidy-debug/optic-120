@@ -4,6 +4,7 @@ import {
   subscriptionPaySchema,
   demoRequestCreateSchema,
   PaymentStatus,
+  type BillingCycle,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
@@ -154,7 +155,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/subscribe-manual', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
-    const { planId, cycle } = req.body as { planId?: string; cycle?: 'MONTHLY' | 'SEMIANNUAL' };
+    const { planId, cycle } = req.body as { planId?: string; cycle?: BillingCycle };
     if (!planId) return reply.status(400).send({ error: 'planId manquant' });
     const result = await billing.subscribeManual(req.auth!.tenantId, planId, cycle);
     await recordAudit({

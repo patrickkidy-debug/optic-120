@@ -26,7 +26,7 @@ import {
   type Plan,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
-import { planPrice, planPriceForCycle, BILLING_CYCLE_MONTHS, SEMIANNUAL_DISCOUNT } from '@oculo/shared-types';
+import { planPrice, planPriceForCycle, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT } from '@oculo/shared-types';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
 import { formatCurrency, formatDate, getActiveCurrency } from '../../lib/format';
@@ -48,8 +48,10 @@ const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'dan
 
 /** Cycle choisi sur la landing : URL (?cycle=) d'abord, sinon mémorisé à l'inscription. */
 function readSelectedCycle(params: URLSearchParams): BillingCycle {
-  if (params.get('cycle') === 'SEMIANNUAL') return 'SEMIANNUAL';
-  return sessionStorage.getItem('oculo-cycle') === 'SEMIANNUAL' ? 'SEMIANNUAL' : 'MONTHLY';
+  const fromUrl = params.get('cycle');
+  if (fromUrl === 'QUARTERLY' || fromUrl === 'SEMIANNUAL') return fromUrl;
+  const stored = sessionStorage.getItem('oculo-cycle');
+  return stored === 'QUARTERLY' || stored === 'SEMIANNUAL' ? stored : 'MONTHLY';
 }
 
 function limitLabel(v: number | null): string {
@@ -77,40 +79,46 @@ function UsageBar({ label, used, max }: { label: string; used: number; max: numb
   );
 }
 
-/** Sélecteur de cycle de facturation : mensuel, ou 6 mois payés en une fois (−10 %). */
+const CYCLE_OPTIONS: { value: BillingCycle; label: string }[] = [
+  { value: 'MONTHLY', label: 'Mensuel' },
+  { value: 'QUARTERLY', label: '3 mois' },
+  { value: 'SEMIANNUAL', label: '6 mois' },
+];
+
+/** Sélecteur de cycle de facturation : mensuel, 3 mois ou 6 mois payés en une fois. */
 function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
   return (
-    <div className="inline-flex rounded-xl border bg-surface p-1">
-      <button
-        type="button"
-        onClick={() => onChange('MONTHLY')}
-        className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
-          cycle === 'MONTHLY' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
-        }`}
-      >
-        Mensuel
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange('SEMIANNUAL')}
-        className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
-          cycle === 'SEMIANNUAL' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
-        }`}
-      >
-        6 mois
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-            cycle === 'SEMIANNUAL' ? 'bg-white/20 text-white' : 'bg-success/15 text-success'
-          }`}
-        >
-          −{Math.round(SEMIANNUAL_DISCOUNT * 100)}%
-        </span>
-      </button>
+    <div className="inline-flex flex-wrap gap-1 rounded-xl border bg-surface p-1">
+      {CYCLE_OPTIONS.map((opt) => {
+        const discount = BILLING_CYCLE_DISCOUNT[opt.value];
+        const active = cycle === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+              active ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
+            }`}
+          >
+            {opt.label}
+            {discount > 0 && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  active ? 'bg-white/20 text-white' : 'bg-success/15 text-success'
+                }`}
+              >
+                −{Math.round(discount * 100)}%
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-/** Prix affiché pour une offre + un cycle : montant total, et détail mensuel équivalent + économie si 6 mois. */
+/** Prix affiché pour une offre + un cycle : montant total, et détail mensuel équivalent + économie si groupé. */
 function PlanPrice({ code, currency, cycle }: { code: string; currency: string; cycle: BillingCycle }) {
   const total = planPriceForCycle(code, currency, cycle);
   if (cycle === 'MONTHLY') {
@@ -122,15 +130,16 @@ function PlanPrice({ code, currency, cycle }: { code: string; currency: string; 
     );
   }
   const monthly = planPrice(code, currency);
-  const fullPrice = monthly * BILLING_CYCLE_MONTHS.SEMIANNUAL;
+  const months = BILLING_CYCLE_MONTHS[cycle];
+  const fullPrice = monthly * months;
   const savings = fullPrice - total;
   return (
     <div className="mt-3">
       <p className="font-display text-2xl font-bold text-content">
         {formatCurrency(total)}
-        <span className="text-sm font-normal text-content-muted"> pour 6 mois</span>
+        <span className="text-sm font-normal text-content-muted"> pour {months} mois</span>
       </p>
-      <p className="mt-0.5 text-xs text-content-muted">≈ {formatCurrency(Math.round(total / 6))} / mois</p>
+      <p className="mt-0.5 text-xs text-content-muted">≈ {formatCurrency(Math.round(total / months))} / mois</p>
       <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-success">
         <Tag className="h-3 w-3" /> Économisez {formatCurrency(savings)}
       </p>
@@ -611,7 +620,7 @@ function BillingPaymentModal({
     <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">
       <div className="mb-4 flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-2.5">
         <span className="text-sm text-content-muted">
-          Montant à régler{target.kind === 'plan' && target.cycle === 'SEMIANNUAL' ? ' (6 mois)' : target.kind === 'plan' ? ' (1 mois)' : ''}
+          Montant à régler{target.kind === 'plan' ? ` (${BILLING_CYCLE_MONTHS[target.cycle]} mois)` : ''}
         </span>
         <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount)}</span>
       </div>

@@ -24,7 +24,7 @@ import {
   Hourglass,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, SEMIANNUAL_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
+import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { demoWhatsappLink } from '../lib/whatsapp';
@@ -723,7 +723,7 @@ export function LandingPage() {
 
             {/* Sélecteur de cycle — très visible, au-dessus des cartes. */}
             <Reveal className="mb-12 flex justify-center">
-              <div className="inline-flex items-center gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card">
+              <div className="inline-flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card">
                 <button
                   type="button"
                   onClick={() => setCycle('MONTHLY')}
@@ -733,6 +733,24 @@ export function LandingPage() {
                   )}
                 >
                   {t('landing.cycleMonthly')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCycle('QUARTERLY')}
+                  className={clsx(
+                    'flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold transition',
+                    cycle === 'QUARTERLY' ? 'bg-brand text-white shadow-card' : 'text-content-muted hover:text-content',
+                  )}
+                >
+                  {t('landing.cycleThreeMonths')}
+                  <span
+                    className={clsx(
+                      'rounded-full px-2 py-0.5 text-[11px] font-extrabold',
+                      cycle === 'QUARTERLY' ? 'bg-white/20 text-white' : 'bg-success/15 text-success',
+                    )}
+                  >
+                    −{Math.round(BILLING_CYCLE_DISCOUNT.QUARTERLY * 100)}%
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -749,7 +767,7 @@ export function LandingPage() {
                       cycle === 'SEMIANNUAL' ? 'bg-white/20 text-white' : 'bg-success/15 text-success',
                     )}
                   >
-                    −{Math.round(SEMIANNUAL_DISCOUNT * 100)}%
+                    −{Math.round(BILLING_CYCLE_DISCOUNT.SEMIANNUAL * 100)}%
                   </span>
                 </button>
               </div>
@@ -759,10 +777,7 @@ export function LandingPage() {
               {PLAN_CATALOG.map((plan, i) => {
                 const highlighted = plan.code === 'STANDARD';
                 const months = BILLING_CYCLE_MONTHS[cycle];
-                const total =
-                  cycle === 'SEMIANNUAL'
-                    ? Math.round(plan.priceMonthly * months * (1 - SEMIANNUAL_DISCOUNT))
-                    : plan.priceMonthly;
+                const total = Math.round(plan.priceMonthly * months * (1 - BILLING_CYCLE_DISCOUNT[cycle]));
                 const fullPrice = plan.priceMonthly * months;
                 const savings = fullPrice - total;
                 return (
@@ -801,7 +816,9 @@ export function LandingPage() {
                             <span className="font-display text-4xl font-extrabold text-content">
                               {formatPrice(total)}
                             </span>
-                            <span className="text-content-muted">FCFA {t('landing.forSixMonths')}</span>
+                            <span className="text-content-muted">
+                              FCFA {cycle === 'QUARTERLY' ? t('landing.forThreeMonths') : t('landing.forSixMonths')}
+                            </span>
                           </div>
                           <p className="mt-1 text-sm text-content-muted">
                             ≈ {formatPrice(Math.round(total / months))} FCFA{t('landing.perMonth')}
@@ -830,7 +847,7 @@ export function LandingPage() {
                         ))}
                       </ul>
                       <Link
-                        to={`/signup?plan=${plan.code}${cycle === 'SEMIANNUAL' ? '&cycle=SEMIANNUAL' : ''}`}
+                        to={`/signup?plan=${plan.code}${cycle !== 'MONTHLY' ? `&cycle=${cycle}` : ''}`}
                         className={clsx(
                           'w-full rounded-xl py-4 text-center',
                           highlighted ? 'btn-primary neon-glow' : 'btn-outline',

@@ -302,9 +302,10 @@ export function planPrice(planCode: string, currency: string): number {
   return row[currency as SupportedCurrency] ?? fallback;
 }
 
-/** Cycle de facturation choisi par le client : mensuel, ou 6 mois payés en une fois. */
+/** Cycle de facturation choisi par le client : mensuel, 3 mois ou 6 mois payés en une fois. */
 export const BillingCycle = {
   MONTHLY: 'MONTHLY',
+  QUARTERLY: 'QUARTERLY',
   SEMIANNUAL: 'SEMIANNUAL',
 } as const;
 export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle];
@@ -312,21 +313,29 @@ export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle];
 /** Nombre de mois couverts par chaque cycle de facturation. */
 export const BILLING_CYCLE_MONTHS: Record<BillingCycle, number> = {
   MONTHLY: 1,
+  QUARTERLY: 3,
   SEMIANNUAL: 6,
 };
 
-/** Remise accordée au paiement groupé 6 mois (payé en une seule fois). */
-export const SEMIANNUAL_DISCOUNT = 0.1;
+/** Remise accordée à chaque cycle de paiement groupé (payé en une seule fois). */
+export const BILLING_CYCLE_DISCOUNT: Record<BillingCycle, number> = {
+  MONTHLY: 0,
+  QUARTERLY: 0.05,
+  SEMIANNUAL: 0.1,
+};
+
+/** @deprecated utiliser BILLING_CYCLE_DISCOUNT.SEMIANNUAL — conservé pour compatibilité. */
+export const SEMIANNUAL_DISCOUNT = BILLING_CYCLE_DISCOUNT.SEMIANNUAL;
 
 /**
  * Montant total facturé pour un cycle donné : mensuel = tarif normal ;
- * 6 mois = 6 × le tarif mensuel, moins 10 % (paiement anticipé).
+ * 3 ou 6 mois = N × le tarif mensuel, moins la remise du cycle (paiement anticipé).
  */
 export function planPriceForCycle(planCode: string, currency: string, cycle: BillingCycle): number {
   const monthly = planPrice(planCode, currency);
   const months = BILLING_CYCLE_MONTHS[cycle];
   const total = monthly * months;
-  return cycle === 'SEMIANNUAL' ? Math.round(total * (1 - SEMIANNUAL_DISCOUNT)) : total;
+  return Math.round(total * (1 - BILLING_CYCLE_DISCOUNT[cycle]));
 }
 
 /* ============================================================
@@ -1528,7 +1537,7 @@ export const subscribeSchema = z.object({
   planId: z.string().uuid(),
   method: paymentMethodEnum,
   customerPhone: z.string().max(40).optional(),
-  cycle: z.enum(['MONTHLY', 'SEMIANNUAL']).optional().default('MONTHLY'),
+  cycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL']).optional().default('MONTHLY'),
 });
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 
