@@ -74,6 +74,7 @@
     "phone": "Téléphone",
     "email": "Email",
     "date": "Date",
+    "registeredOn": "Inscrit le",
     "subtotal": "Sous-total",
     "threshold": "Seuil",
     "firstName": "Prénom",

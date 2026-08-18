@@ -25,6 +25,7 @@ import type { CompanyInfo } from '../../features/optique/saleDocument';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
+import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
 import { ClientRecord } from './ClientRecord';
 
@@ -94,6 +95,7 @@ export function ClientsPage() {
             <td>${esc(`${c.firstName} ${c.lastName}`)}</td>
             <td>${esc(c.phone || '—')}</td>
             <td>${esc(c.email || '—')}</td>
+            <td>${esc(c.createdAt ? formatDate(c.createdAt) : '—')}</td>
           </tr>`,
         )
         .join('');
@@ -111,7 +113,7 @@ export function ClientsPage() {
         <h1>${esc(tenantName ?? 'OculoSaaS')}</h1>
         <div class="muted">${esc(t('clients.listTitle'))} — ${new Date().toLocaleDateString()} · ${all.length}</div>
         <table>
-          <thead><tr><th>#</th><th>${esc(t('common.client'))}</th><th>${esc(t('common.phone'))}</th><th>${esc(t('common.email'))}</th></tr></thead>
+          <thead><tr><th>#</th><th>${esc(t('common.client'))}</th><th>${esc(t('common.phone'))}</th><th>${esc(t('common.email'))}</th><th>${esc(t('common.registeredOn'))}</th></tr></thead>
           <tbody>${body}</tbody>
         </table></body></html>`;
       const win = window.open('', '_blank', 'width=900,height=1100');
@@ -185,6 +187,7 @@ export function ClientsPage() {
                 <th className="table-cell font-semibold">{t('common.client')}</th>
                 <th className="table-cell font-semibold">{t('common.phone')}</th>
                 <th className="table-cell font-semibold">{t('common.email')}</th>
+                <th className="table-cell font-semibold">{t('common.registeredOn')}</th>
                 <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -201,6 +204,7 @@ export function ClientsPage() {
                   </td>
                   <td className="table-cell text-content-muted">{c.phone ?? '—'}</td>
                   <td className="table-cell text-content-muted">{c.email ?? '—'}</td>
+                  <td className="table-cell text-content-muted">{c.createdAt ? formatDate(c.createdAt) : '—'}</td>
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
                       {waLink(c.phone) && (

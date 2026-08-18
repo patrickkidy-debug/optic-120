@@ -74,6 +74,7 @@
     "phone": "Phone",
     "email": "Email",
     "date": "Date",
+    "registeredOn": "Registered on",
     "subtotal": "Subtotal",
     "threshold": "Threshold",
     "firstName": "First name",

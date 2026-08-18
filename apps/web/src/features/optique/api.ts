@@ -148,6 +148,7 @@ export interface Customer {
   profession?: string | null;
   notes?: string | null;
   loyaltyPoints?: number;
+  createdAt?: string;
 }
 
 /* ---------------- Opérations de stock (réception / transfert / inventaire) ---------------- */

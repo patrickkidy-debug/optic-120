@@ -74,6 +74,7 @@
     "phone": "Telefone",
     "email": "Email",
     "date": "Data",
+    "registeredOn": "Registado em",
     "subtotal": "Subtotal",
     "threshold": "Limite",
     "firstName": "Nome próprio",
