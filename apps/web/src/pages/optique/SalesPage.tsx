@@ -633,11 +633,11 @@ function SaleDetailModal({
           <div>
             <p className="font-medium text-content">
               {sale.customer ? `${sale.customer.firstName} ${sale.customer.lastName}` : 'Client de passage'}
+              {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
             </p>
             <p className="text-xs text-content-faint">
               {formatDateTime(sale.createdAt)}
               {sale.cashier ? ` · ${sale.cashier.firstName} ${sale.cashier.lastName}` : ''}
-              {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
             </p>
           </div>
           <Badge tone={statusTone(sale.status)}>{STATUS_LABEL[sale.status] ?? sale.status}</Badge>
