@@ -1267,6 +1267,7 @@ function PaymentsTab() {
           <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
             <th className="table-cell font-semibold">Établissement</th>
             <th className="table-cell font-semibold">Référence</th>
+            <th className="table-cell font-semibold">Canal</th>
             <th className="table-cell text-right font-semibold">Montant</th>
             <th className="table-cell font-semibold">Demandé le</th>
             <th className="table-cell text-right font-semibold">Action</th>
@@ -1277,6 +1278,11 @@ function PaymentsTab() {
             <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
               <td className="table-cell font-medium text-content">{p.tenantName}</td>
               <td className="table-cell font-mono text-content-muted">{p.invoiceNumber}</td>
+              <td className="table-cell">
+                <Badge tone={p.channel === 'BANK_TRANSFER' ? 'info' : 'success'}>
+                  {p.channel === 'BANK_TRANSFER' ? 'Virement bancaire' : 'Mobile Money'}
+                </Badge>
+              </td>
               <td className="table-cell text-right font-semibold text-content">{formatCurrency(p.amount)}</td>
               <td className="table-cell text-content-muted">{formatDateTime(p.createdAt)}</td>
               <td className="table-cell text-right">

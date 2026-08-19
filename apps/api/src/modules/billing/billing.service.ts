@@ -276,10 +276,13 @@ export async function payInvoice(
  * en attente (sans passerelle). Le client paie sur le numéro de l'éditeur, puis
  * l'opérateur confirme depuis la console → l'abonnement s'active.
  */
+export type ManualPaymentChannel = 'MOBILE_MONEY' | 'BANK_TRANSFER';
+
 export async function subscribeManual(
   tenantId: string,
   planId: string,
   cycle: BillingCycleType = BillingCycle.MONTHLY,
+  channel: ManualPaymentChannel = 'MOBILE_MONEY',
 ) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
@@ -315,6 +318,7 @@ export async function subscribeManual(
       status: PaymentStatus.PENDING,
       provider: 'manual',
       providerRef: `MAN-${invoice.number}`,
+      channel,
     },
   });
   return {
@@ -346,6 +350,7 @@ export async function listPendingManualPayments() {
     amount: Number(r.amount),
     currency: r.currency,
     invoiceNumber: r.invoice.number,
+    channel: r.channel,
     createdAt: r.createdAt,
   }));
 }

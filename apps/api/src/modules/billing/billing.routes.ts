@@ -100,6 +100,14 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
             network: env.PLATFORM_PAY_NETWORK || null,
           }
         : null,
+      bank: env.PLATFORM_BANK_ACCOUNT_NUMBER
+        ? {
+            bankName: env.PLATFORM_BANK_NAME || null,
+            accountName: env.PLATFORM_BANK_ACCOUNT_NAME || null,
+            accountNumber: env.PLATFORM_BANK_ACCOUNT_NUMBER,
+            swift: env.PLATFORM_BANK_SWIFT || null,
+          }
+        : null,
     });
   });
 
@@ -155,15 +163,19 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/subscribe-manual', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
-    const { planId, cycle } = req.body as { planId?: string; cycle?: BillingCycle };
+    const { planId, cycle, channel } = req.body as {
+      planId?: string;
+      cycle?: BillingCycle;
+      channel?: 'MOBILE_MONEY' | 'BANK_TRANSFER';
+    };
     if (!planId) return reply.status(400).send({ error: 'planId manquant' });
-    const result = await billing.subscribeManual(req.auth!.tenantId, planId, cycle);
+    const result = await billing.subscribeManual(req.auth!.tenantId, planId, cycle, channel);
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
       action: 'SUBSCRIPTION_MANUAL_REQUEST',
       entity: 'SubscriptionInvoice',
-      metadata: { planId, cycle },
+      metadata: { planId, cycle, channel },
       ...requestMeta(req),
     });
     return reply.status(201).send(result);

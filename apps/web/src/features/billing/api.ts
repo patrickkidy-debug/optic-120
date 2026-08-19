@@ -134,11 +134,15 @@ export interface ManualSubscribeResult {
   planName: string;
 }
 
+export type ManualPaymentChannel = 'MOBILE_MONEY' | 'BANK_TRANSFER';
+
 export interface PayInfo {
   /** Une passerelle de paiement en ligne est configurée. */
   gateway: boolean;
   /** Coordonnées Mobile Money de l'éditeur pour un règlement direct. */
   manual: { number: string; name: string | null; network: string | null } | null;
+  /** Coordonnées bancaires de l'éditeur pour un règlement par virement. */
+  bank: { bankName: string | null; accountName: string | null; accountNumber: string; swift: string | null } | null;
 }
 
 /** Moyens de règlement disponibles pour l'abonnement. */
@@ -147,8 +151,12 @@ export async function getPayInfo(): Promise<PayInfo> {
   return data;
 }
 
-export async function subscribeManual(planId: string, cycle?: BillingCycle): Promise<ManualSubscribeResult> {
-  const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId, cycle });
+export async function subscribeManual(
+  planId: string,
+  cycle?: BillingCycle,
+  channel?: ManualPaymentChannel,
+): Promise<ManualSubscribeResult> {
+  const { data } = await api.post<ManualSubscribeResult>('/billing/subscribe-manual', { planId, cycle, channel });
   return data;
 }
 
@@ -216,6 +224,7 @@ export interface PendingPayment {
   amount: number;
   currency: string;
   invoiceNumber: string;
+  channel: ManualPaymentChannel | null;
   createdAt: string;
 }
 

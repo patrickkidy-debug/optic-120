@@ -62,6 +62,14 @@ const envSchema = z.object({
   PLATFORM_PAY_NAME: z.string().optional().default(''),
   PLATFORM_PAY_NETWORK: z.string().optional().default(''),
 
+  // Encaissement MANUEL des abonnements par virement bancaire : coordonnées du
+  // compte de l'éditeur. Même principe que le Mobile Money ci-dessus (le
+  // fondateur confirme depuis la console) — proposé en plus, pas à la place.
+  PLATFORM_BANK_NAME: z.string().optional().default(''),
+  PLATFORM_BANK_ACCOUNT_NAME: z.string().optional().default(''),
+  PLATFORM_BANK_ACCOUNT_NUMBER: z.string().optional().default(''),
+  PLATFORM_BANK_SWIFT: z.string().optional().default(''),
+
   // PayTech — passerelle de paiement (Wave, Orange Money, Free Money, cartes).
   // Clés de la PLATEFORME (encaissement des abonnements). Tant que la clé API
   // est vide → mode simulation.

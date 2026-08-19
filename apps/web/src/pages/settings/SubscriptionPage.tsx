@@ -24,6 +24,7 @@ import {
   getPayInfo,
   subscribeManual,
   type Plan,
+  type ManualPaymentChannel,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { planPrice, planPriceForCycle, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT } from '@oculo/shared-types';
@@ -557,11 +558,16 @@ function BillingPaymentModal({
   // Moyens réellement disponibles (passerelle en ligne, règlement direct).
   const { data: payInfo } = useQuery({ queryKey: ['pay-info'], queryFn: getPayInfo });
 
-  // Règlement Mobile Money direct : crée la facture et le paiement en attente ;
-  // le fondateur confirme ensuite depuis la console (onglet « À confirmer »).
+  // Règlement direct (Mobile Money ou virement bancaire) : crée la facture et
+  // le paiement en attente ; le fondateur confirme ensuite depuis la console
+  // (onglet « À confirmer »).
+  const [manualChannel, setManualChannel] = useState<ManualPaymentChannel | null>(null);
   const manualMut = useMutation({
-    mutationFn: () => subscribeManual(target.id, target.cycle),
-    onSuccess: () => setPhase('manual'),
+    mutationFn: (channel: ManualPaymentChannel) => subscribeManual(target.id, target.cycle, channel),
+    onSuccess: (_, channel) => {
+      setManualChannel(channel);
+      setPhase('manual');
+    },
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
@@ -684,8 +690,9 @@ function BillingPaymentModal({
               <Button
                 className="mt-3 w-full"
                 variant={payInfo.gateway ? 'outline' : undefined}
-                loading={manualMut.isPending}
-                onClick={() => manualMut.mutate()}
+                loading={manualMut.isPending && manualMut.variables === 'MOBILE_MONEY'}
+                disabled={manualMut.isPending}
+                onClick={() => manualMut.mutate('MOBILE_MONEY')}
               >
                 J'ai payé — enregistrer ma demande
               </Button>
@@ -696,8 +703,61 @@ function BillingPaymentModal({
             </div>
           )}
 
+          {/* Virement bancaire direct sur le compte de l'éditeur : même principe
+              que le Mobile Money ci-dessus. */}
+          {target.kind === 'plan' && payInfo?.bank && (
+            <div className={payInfo.gateway || payInfo.manual ? 'mt-4 border-t pt-3' : ''}>
+              <p className="text-sm font-medium text-content">
+                {payInfo.gateway || payInfo.manual ? 'Ou payer par virement bancaire' : 'Payer par virement bancaire'}
+              </p>
+              <div className="mt-2 rounded-xl bg-surface-2 p-3 text-sm">
+                {payInfo.bank.bankName && (
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Banque</span>
+                    <span className="font-semibold text-content">{payInfo.bank.bankName}</span>
+                  </div>
+                )}
+                {payInfo.bank.accountName && (
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Titulaire</span>
+                    <span className="font-semibold text-content">{payInfo.bank.accountName}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-content-muted">Compte / IBAN</span>
+                  <span className="font-bold text-content">{payInfo.bank.accountNumber}</span>
+                </div>
+                {payInfo.bank.swift && (
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">SWIFT / BIC</span>
+                    <span className="text-content">{payInfo.bank.swift}</span>
+                  </div>
+                )}
+                <div className="mt-1 flex justify-between border-t pt-1">
+                  <span className="text-content-muted">Montant</span>
+                  <span className="font-display font-bold text-content">
+                    {formatCurrency(target.amount)}
+                  </span>
+                </div>
+              </div>
+              <Button
+                className="mt-3 w-full"
+                variant={payInfo.gateway || payInfo.manual ? 'outline' : undefined}
+                loading={manualMut.isPending && manualMut.variables === 'BANK_TRANSFER'}
+                disabled={manualMut.isPending}
+                onClick={() => manualMut.mutate('BANK_TRANSFER')}
+              >
+                J'ai payé — enregistrer ma demande
+              </Button>
+              <p className="mt-1.5 text-xs text-content-faint">
+                Effectuez le virement sur le compte ci-dessus, puis cliquez : nous confirmons votre
+                paiement et votre abonnement s'active.
+              </p>
+            </div>
+          )}
+
           {/* Rien n'est disponible : on le dit clairement au lieu d'échouer. */}
-          {payInfo && !payInfo.gateway && !payInfo.manual && (
+          {payInfo && !payInfo.gateway && !payInfo.manual && !payInfo.bank && (
             <p className="rounded-xl bg-[color:var(--warning)]/10 p-3 text-sm text-content">
               Le paiement en ligne n'est pas encore disponible. Contactez-nous depuis la page Aide
               pour activer votre abonnement.
@@ -713,8 +773,8 @@ function BillingPaymentModal({
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
           <p className="mt-3 font-display text-lg font-bold text-content">Demande enregistrée</p>
           <p className="mt-1 text-sm text-content-muted">
-            Dès que nous aurons vérifié votre versement, votre abonnement sera activé. Vous
-            n'avez rien d'autre à faire.
+            Dès que nous aurons vérifié votre {manualChannel === 'BANK_TRANSFER' ? 'virement' : 'versement'},
+            votre abonnement sera activé. Vous n'avez rien d'autre à faire.
           </p>
           <Button className="mt-5" onClick={onClose}>
             Fermer
