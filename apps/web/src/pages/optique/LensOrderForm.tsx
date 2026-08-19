@@ -168,6 +168,17 @@ export function LensOrderForm({ onClose, onCreated }: { onClose: () => void; onC
 
   const toggle = (id: string) => setTreats((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
+  // Monture associée : reprend son prix normal (celui enregistré sur la
+  // fiche produit) au lieu de laisser resaisir un montant à la main — sauf
+  // pour Verres, dont le prix vient toujours du configurateur ci-dessus.
+  function handleFrameChange(p: Product | null) {
+    setFrame(p);
+    if (p && !isVerres) {
+      setCost(String(Number(p.sellPrice)));
+      if (!description.trim()) setDescription(`${p.brand ? `${p.brand} · ` : ''}${p.name}`);
+    }
+  }
+
   const mut = useMutation({
     mutationFn: () =>
       createLensOrder({
@@ -231,7 +242,7 @@ export function LensOrderForm({ onClose, onCreated }: { onClose: () => void; onC
             </Field>
           </div>
           <Field label="Monture associée (optionnel — vignette sur la carte Kanban)">
-            <FramePicker value={frame} onChange={setFrame} />
+            <FramePicker value={frame} onChange={handleFrameChange} />
           </Field>
         </div>
 

@@ -1294,7 +1294,10 @@ export const paymentMethodEnum = z.enum([
 
 export const paymentCreateSchema = z.object({
   method: paymentMethodEnum,
-  amount: z.number().positive(),
+  // 0 accepté : un encaissement à 0 FCFA reste un encaissement voulu par le
+  // caissier (ex. solde déjà couvert par un autre moyen) — le rejeter forçait
+  // par le passé un contournement à 1 FCFA côté client.
+  amount: z.number().nonnegative(),
   customerPhone: z.string().max(40).optional(),
 });
 export type PaymentCreateInput = z.infer<typeof paymentCreateSchema>;

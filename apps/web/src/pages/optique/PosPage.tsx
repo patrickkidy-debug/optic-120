@@ -495,9 +495,9 @@ export function PaymentModal({
     setAutoNext(null);
   }
 
-  // Montant à encaisser maintenant : borné à [1, solde dû]. S'il est inférieur
+  // Montant à encaisser maintenant : borné à [0, solde dû]. S'il est inférieur
   // au solde, c'est un encaissement échelonné (acompte / tranche).
-  const payNow = Math.min(Math.max(1, Math.round(amount || 0)), sale.due);
+  const payNow = Math.min(Math.max(0, Math.round(amount || 0)), sale.due);
   const remainingAfter = sale.due - payNow;
 
   async function downloadInvoice() {
@@ -567,7 +567,7 @@ export function PaymentModal({
             <span className="text-content-muted">{t('pos.amountNow')}</span>
             <input
               type="number"
-              min={1}
+              min={0}
               max={sale.due}
               className="input mt-1 text-right font-semibold"
               value={amount}
