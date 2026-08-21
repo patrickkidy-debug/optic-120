@@ -44,6 +44,7 @@ const ForgotPasswordPage = lazy(() => named(import('./pages/auth/ForgotPasswordP
 const ResetPasswordPage = lazy(() => named(import('./pages/auth/ResetPasswordPage'), 'ResetPasswordPage'));
 const VerifyEmailPage = lazy(() => named(import('./pages/auth/VerifyEmailPage'), 'VerifyEmailPage'));
 const DashboardPage = lazy(() => named(import('./pages/DashboardPage'), 'DashboardPage'));
+const DemoCompletePage = lazy(() => named(import('./pages/demo/DemoCompletePage'), 'DemoCompletePage'));
 const ProductsPage = lazy(() => named(import('./pages/optique/ProductsPage'), 'ProductsPage'));
 const StockPage = lazy(() => named(import('./pages/optique/StockPage'), 'StockPage'));
 const ClientsPage = lazy(() => named(import('./pages/optique/ClientsPage'), 'ClientsPage'));
@@ -135,6 +136,7 @@ export const router = createBrowserRouter([
         element: pub(<AppShell />),
         children: [
           { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
+          { path: '/demo/complete', element: perm('dashboard.view', <DemoCompletePage />) },
           { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },
           { path: '/optique/stock', element: perm('optique.stock.view', <StockPage />) },
           { path: '/optique/clients', element: perm('optique.customers.view', <ClientsPage />) },

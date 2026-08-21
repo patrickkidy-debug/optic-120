@@ -564,14 +564,20 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Indicateurs clés de la plateforme (console fondateur). */
 export async function getPlatformStats() {
   const since = new Date(Date.now() - 30 * DAY_MS);
+  // Les établissements démo (visite guidée, non convertis) sont exclus des
+  // statistiques business : ils ne sont ni des clients ni du MRR réel.
+  const notDemo = { isDemo: false } as const;
   const [tenantsTotal, usersTotal, usersActive, newTenants30d, newUsers30d, subs] =
     await Promise.all([
-      prisma.tenant.count(),
-      prisma.user.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.tenant.count({ where: { createdAt: { gte: since } } }),
-      prisma.user.count({ where: { createdAt: { gte: since } } }),
-      prisma.subscription.findMany({ include: { plan: { select: { priceMonthly: true } } } }),
+      prisma.tenant.count({ where: notDemo }),
+      prisma.user.count({ where: { tenant: notDemo } }),
+      prisma.user.count({ where: { isActive: true, tenant: notDemo } }),
+      prisma.tenant.count({ where: { createdAt: { gte: since }, ...notDemo } }),
+      prisma.user.count({ where: { createdAt: { gte: since }, tenant: notDemo } }),
+      prisma.subscription.findMany({
+        where: { tenant: notDemo },
+        include: { plan: { select: { priceMonthly: true } } },
+      }),
     ]);
 
   const countBy = (st: SubscriptionStatus) => subs.filter((s) => s.status === st).length;
@@ -597,6 +603,7 @@ export async function getPlatformStats() {
 /** Liste des utilisateurs de toute la plateforme (cross-tenant, pour suivi). */
 export async function listAllUsers(limit = 200) {
   const users = await prisma.user.findMany({
+    where: { tenant: { isDemo: false } },
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
@@ -642,6 +649,7 @@ export async function listAllUsers(limit = 200) {
 
 export async function listAllSubscriptions() {
   const subs = await prisma.subscription.findMany({
+    where: { tenant: { isDemo: false } },
     include: {
       plan: true,
       tenant: { select: { id: true, name: true, slug: true, whatsappPhone: true } },

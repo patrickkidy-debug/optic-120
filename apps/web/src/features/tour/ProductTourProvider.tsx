@@ -10,11 +10,16 @@ import {
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/auth';
 import { resolveTour, getTourById } from './registry';
 import { isTourCompleted, isTourDismissed, saveProgress, getProgress, clearProgress } from './storage';
 import { mergeTheme, type TourTheme } from './theme';
+import { useSpeechNarration } from './useSpeechNarration';
+import { getDemoProgress, saveDemoProgress, trackDemoEvent } from './api';
 import type { ProductTourApi, TourDefinition, TourStep } from './types';
+
+const DEMO_TOUR_ID = 'demo-onboarding';
 
 /**
  * L'habillage visuel (voile, halo, bulle) vit dans un chunk séparé chargé
@@ -28,6 +33,7 @@ const TourOverlay = lazy(() =>
 export interface TourContextValue extends ProductTourApi {
   theme: TourTheme;
   steps: TourStep[];
+  narration: ReturnType<typeof useSpeechNarration>;
 }
 
 export const TourContext = createContext<TourContextValue | null>(null);
@@ -48,18 +54,27 @@ export function ProductTourProvider({
   autoStart = true,
   autoStartDelay = 1200,
 }: ProductTourProviderProps) {
+  const { i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
+  const narration = useSpeechNarration();
 
   const [tour, setTour] = useState<TourDefinition | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const [actionCompleted, setActionCompleted] = useState(true);
   const autoStarted = useRef(false);
 
   const theme = useMemo(() => mergeTheme(themeOverride), [themeOverride]);
 
-  /** Visite du rôle courant. Le code de rôle est stable, contrairement au libellé. */
-  const roleTour = useMemo(() => resolveTour(user?.roleCode), [user?.roleCode]);
+  /**
+   * Visite du rôle courant — ou visite démo dédiée si l'établissement est
+   * démo (l'admin démo a le rôle "admin" comme n'importe quel admin réel).
+   */
+  const roleTour = useMemo(
+    () => resolveTour(user?.roleCode, user?.tenantIsDemo),
+    [user?.roleCode, user?.tenantIsDemo],
+  );
 
   /**
    * Étapes réellement jouables : on retire celles dont la cible n'existera pas
@@ -69,8 +84,9 @@ export function ProductTourProvider({
     () => ({
       permissions: new Set(user?.permissions ?? []),
       isPlatformOperator: user?.isPlatformOperator ?? false,
+      isDemo: user?.tenantIsDemo ?? false,
     }),
-    [user?.permissions, user?.isPlatformOperator],
+    [user?.permissions, user?.isPlatformOperator, user?.tenantIsDemo],
   );
 
   const steps = useMemo(() => {
@@ -90,24 +106,41 @@ export function ProductTourProvider({
             skipped: reason === 'skipped',
             completedVersion: reason === 'finished' ? current.version : null,
           });
+          if (current.id === DEMO_TOUR_ID) {
+            trackDemoEvent(reason === 'finished' ? 'demo_completed' : 'demo_abandoned');
+            void saveDemoProgress({
+              currentStepId: null,
+              completedAt: reason === 'finished' ? new Date().toISOString() : null,
+              skipped: reason === 'skipped',
+            });
+            // La visite démo débouche toujours sur le choix d'un abonnement.
+            if (reason === 'finished') navigate('/demo/complete');
+          }
         }
         return null;
       });
+      narration.stop();
       setStepIndex(0);
     },
-    [],
+    [navigate, narration],
   );
 
   const startTour = useCallback(
-    (tourId?: string, opts?: { fromStart?: boolean }) => {
+    (tourId?: string, opts?: { fromStart?: boolean; resumeStepId?: string }) => {
       const target = tourId ? getTourById(tourId) ?? roleTour : roleTour;
-      const saved = getProgress(target.id);
-      const resume =
-        !opts?.fromStart && saved && !saved.skipped && saved.completedVersion == null
-          ? saved.lastStepIndex
-          : 0;
+      let resume = 0;
+      if (opts?.resumeStepId) {
+        // Reprise pilotée par la progression serveur (visite démo, autre appareil) :
+        // évite la course entre startTour (async React state) et un goToStep séparé.
+        const idx = target.steps.findIndex((s) => s.id === opts.resumeStepId);
+        if (idx >= 0) resume = idx;
+      } else if (!opts?.fromStart) {
+        const saved = getProgress(target.id);
+        resume = saved && !saved.skipped && saved.completedVersion == null ? saved.lastStepIndex : 0;
+      }
       setTour(target);
       setStepIndex(resume);
+      if (target.id === DEMO_TOUR_ID) trackDemoEvent('demo_started');
     },
     [roleTour],
   );
@@ -157,33 +190,76 @@ export function ProductTourProvider({
     [tour, steps, stepIndex],
   );
 
-  // Mémorise la progression pour permettre la reprise.
+  const step = tour ? steps[stepIndex] : undefined;
+
+  // Mémorise la progression pour permettre la reprise (localStorage toujours ;
+  // en plus côté serveur pour la visite démo, qui doit survivre à un changement
+  // d'appareil — voir DemoResumeBanner).
   useEffect(() => {
-    if (tour) saveProgress(tour.id, { lastStepIndex: stepIndex });
-  }, [tour, stepIndex]);
+    if (!tour) return;
+    saveProgress(tour.id, { lastStepIndex: stepIndex });
+    if (tour.id === DEMO_TOUR_ID) void saveDemoProgress({ currentStepId: step?.id ?? null });
+  }, [tour, stepIndex, step?.id]);
+
+  // Une étape peut demander une action ("essayez de rechercher…") : le bouton
+  // Suivant reste désactivé tant que la page cible n'a pas signalé l'action.
+  useEffect(() => {
+    setActionCompleted(!step?.awaitAction);
+  }, [step]);
+  useEffect(() => {
+    if (!step?.awaitAction) return;
+    const expected = step.awaitAction.event;
+    const onAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ event?: string }>).detail;
+      if (detail?.event === expected) setActionCompleted(true);
+    };
+    window.addEventListener('oculo-tour-action', onAction);
+    return () => window.removeEventListener('oculo-tour-action', onAction);
+  }, [step]);
+
+  // Narration voix (visite démo uniquement) : relit le texte de chaque étape.
+  useEffect(() => {
+    if (!tour?.narrate || !step?.content) return;
+    narration.speak(step.content, i18n.language);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tour?.narrate, step?.id, i18n.language]);
 
   // Une étape peut vivre sur un autre écran : on y navigue avant de l'afficher.
-  const step = tour ? steps[stepIndex] : undefined;
   useEffect(() => {
     if (step?.route && location.pathname !== step.route) navigate(step.route);
   }, [step?.route, location.pathname, navigate]);
 
   // Déclencheur « première connexion » / « mise à jour importante » : la version
   // du contenu ayant changé, isTourCompleted redevient faux et la visite est
-  // reproposée — sauf si l'utilisateur l'avait explicitement ignorée.
+  // reproposée — sauf si l'utilisateur l'avait explicitement ignorée. Pour un
+  // établissement démo qui a déjà de la progression enregistrée (retour d'un
+  // prospect), on NE relance PAS automatiquement : c'est DemoResumeBanner qui
+  // propose Continuer / Recommencer / Passer à l'abonnement.
   useEffect(() => {
     if (!autoStart || !user || autoStarted.current) return;
     if (isTourCompleted(roleTour.id, roleTour.version)) return;
     if (isTourDismissed(roleTour.id, roleTour.version)) return;
-    // Le drapeau est posé au déclenchement, PAS à la programmation : sinon un
-    // changement de dépendance (ou le double effet de StrictMode) annulerait le
-    // minuteur, et le garde-fou empêcherait d'en reprogrammer un — le tour ne
-    // démarrerait jamais.
-    const t = window.setTimeout(() => {
-      autoStarted.current = true;
-      startTour();
-    }, autoStartDelay);
-    return () => window.clearTimeout(t);
+    let cancelled = false;
+    async function schedule() {
+      if (user!.tenantIsDemo) {
+        const progress = await getDemoProgress().catch(() => null);
+        if (progress && (progress.currentStepId || progress.skipped)) return; // repris via la bannière
+      }
+      if (cancelled) return;
+      // Le drapeau est posé au déclenchement, PAS à la programmation : sinon un
+      // changement de dépendance (ou le double effet de StrictMode) annulerait le
+      // minuteur, et le garde-fou empêcherait d'en reprogrammer un — le tour ne
+      // démarrerait jamais.
+      window.setTimeout(() => {
+        if (cancelled) return;
+        autoStarted.current = true;
+        startTour();
+      }, autoStartDelay);
+    }
+    void schedule();
+    return () => {
+      cancelled = true;
+    };
   }, [autoStart, user, roleTour, startTour, autoStartDelay]);
 
   const value = useMemo<TourContextValue>(
@@ -197,6 +273,8 @@ export function ProductTourProvider({
       isCompleted,
       currentStep,
       isRunning: Boolean(tour),
+      actionCompleted,
+      narration,
       stepIndex,
       stepCount: steps.length,
       tour,
@@ -205,7 +283,7 @@ export function ProductTourProvider({
     }),
     [
       startTour, nextStep, previousStep, goToStep, restartTour, endTour,
-      isCompleted, currentStep, tour, stepIndex, steps, theme,
+      isCompleted, currentStep, tour, stepIndex, steps, theme, actionCompleted, narration,
     ],
   );
 

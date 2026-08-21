@@ -7,6 +7,7 @@ import { TourControls } from './TourControls';
 import type { Rect } from './useTargetRect';
 import type { TourStep } from './types';
 import type { TourTheme } from './theme';
+import type { useSpeechNarration } from './useSpeechNarration';
 
 interface TourTooltipProps {
   step: TourStep;
@@ -17,6 +18,11 @@ interface TourTooltipProps {
   onNext: () => void;
   onPrevious: () => void;
   onSkip: () => void;
+  /** Vrai tant que l'action attendue (`step.awaitAction`) n'a pas eu lieu. */
+  nextDisabled?: boolean;
+  /** Contrôles de narration voix, affichés seulement si `narrate` est vrai. */
+  narration?: ReturnType<typeof useSpeechNarration>;
+  narrate?: boolean;
 }
 
 /** Décalage d'entrée : la bulle glisse depuis la cible, pas depuis le néant. */
@@ -37,6 +43,9 @@ export const TourTooltip = memo(function TourTooltip({
   onNext,
   onPrevious,
   onSkip,
+  nextDisabled,
+  narration,
+  narrate,
 }: TourTooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 340, height: 190 });
@@ -163,6 +172,8 @@ export const TourTooltip = memo(function TourTooltip({
         onNext={onNext}
         onPrevious={onPrevious}
         onSkip={onSkip}
+        nextDisabled={nextDisabled}
+        narration={narrate ? narration : undefined}
       />
     </motion.div>
   );

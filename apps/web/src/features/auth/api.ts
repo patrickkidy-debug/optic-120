@@ -1,6 +1,7 @@
 import type {
   AuthUser,
   SignupInput,
+  SignupDemoInput,
   LoginInput,
   ProfileUpdateInput,
   GoogleSignupInput,
@@ -84,6 +85,13 @@ export async function disableTwoFactor(password: string, code: string): Promise<
 
 export async function signup(input: SignupInput): Promise<AuthUser> {
   const { data } = await api.post<AuthResponse>('/auth/signup', input);
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return data.user;
+}
+
+/** "Découvrir OculoSaaS" : crée un établissement démo pré-rempli, connecte immédiatement. */
+export async function signupDemo(input: SignupDemoInput): Promise<AuthUser> {
+  const { data } = await api.post<AuthResponse>('/demo/signup', input);
   useAuthStore.getState().setAuth(data.accessToken, data.user);
   return data.user;
 }

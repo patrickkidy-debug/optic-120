@@ -278,10 +278,19 @@ export function ProductsPage() {
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
+            data-tour="product-search"
             className="input pl-9"
             placeholder="Rechercher…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              // Signale à la visite guidée "essayez de rechercher..." (étape démo).
+              if (e.target.value.trim().length > 0) {
+                window.dispatchEvent(
+                  new CustomEvent('oculo-tour-action', { detail: { event: 'demo-search-product' } }),
+                );
+              }
+            }}
           />
         </div>
         <div className="flex flex-wrap gap-1.5">

@@ -13,6 +13,9 @@ import {
   Compass,
   Glasses,
   CalendarDays,
+  Search,
+  Sparkles,
+  Store,
 } from 'lucide-react';
 import type { TourDefinition, TourStep } from './types';
 
@@ -203,7 +206,98 @@ const USERS_STEP: TourStep = {
   enabled: (c) => c.permissions.has('rbac.users.view'),
 };
 
+/**
+ * Visite "Découvrir OculoSaaS" : établissement démo pré-rempli (module demo,
+ * backend). Narrée à voix haute (voix du navigateur) en plus des sous-titres.
+ * Une seule étape interactive (recherche produit), conforme au cahier des
+ * charges — "Passer" reste toujours disponible, jamais de blocage.
+ */
+const DEMO_TOUR: TourDefinition = {
+  id: 'demo-onboarding',
+  label: 'Découvrir OculoSaaS',
+  roles: [], // sélectionné par isDemo, pas par rôle — voir resolveTour
+  version: 1,
+  narrate: true,
+  steps: [
+    {
+      id: 'demo-welcome',
+      title: 'Bienvenue sur OculoSaaS',
+      content:
+        "Bienvenue sur OculoSaaS. Je vais vous montrer en quelques minutes comment gérer votre activité d'optique depuis une seule plateforme.",
+      icon: Sparkles,
+      placement: 'center',
+    },
+    {
+      id: 'demo-dashboard',
+      target: '[data-tour="dashboard-kpis"]',
+      route: '/dashboard',
+      title: 'Votre tableau de bord',
+      content:
+        'Voici votre tableau de bord. Vous pouvez suivre en temps réel le chiffre d\'affaires, les ventes, vos patients et l\'état de votre stock.',
+      icon: LayoutDashboard,
+      placement: 'bottom',
+    },
+    {
+      id: 'demo-stock',
+      target: '[data-tour="product-search"]',
+      route: '/optique/produits',
+      title: 'Votre stock',
+      content:
+        "Votre stock est centralisé ici. Essayez de rechercher une monture : vous verrez sa disponibilité, et les articles qui nécessitent un réapprovisionnement sont signalés.",
+      icon: Search,
+      placement: 'bottom',
+      awaitAction: { event: 'demo-search-product' },
+    },
+    {
+      id: 'demo-patient',
+      target: '[data-tour="nav:/optique/clients"]',
+      route: '/optique/clients',
+      title: 'Vos patients',
+      content:
+        "Chaque patient dispose de son propre dossier. Vous retrouvez son historique et ses informations importantes sans chercher dans plusieurs fichiers.",
+      icon: Contact,
+      placement: 'right',
+    },
+    {
+      id: 'demo-sale',
+      target: '[data-tour="nav:/optique/caisse"]',
+      route: '/optique/caisse',
+      title: 'La caisse',
+      content:
+        "En quelques clics, vous enregistrez une vente et votre stock se met à jour automatiquement.",
+      icon: ShoppingCart,
+      placement: 'right',
+    },
+    {
+      id: 'demo-reports',
+      target: '[data-tour="nav:/gestion/rapports"]',
+      route: '/gestion/rapports',
+      title: 'Vos statistiques',
+      content:
+        'Vous suivez aussi les performances de votre activité et identifiez les produits et périodes qui génèrent le plus de ventes.',
+      icon: BarChart3,
+      placement: 'right',
+    },
+    {
+      id: 'demo-multi-store',
+      title: 'Plusieurs magasins ?',
+      content:
+        'Si vous gérez plusieurs magasins, OculoSaaS centralise leur gestion depuis un seul compte : ventes, stocks et rapports se filtrent par magasin en un clic.',
+      icon: Store,
+      placement: 'center',
+    },
+    {
+      id: 'demo-finish',
+      title: 'Vous êtes prêt',
+      content: "C'est tout pour l'essentiel. Passons au choix de votre abonnement.",
+      icon: Compass,
+      placement: 'center',
+    },
+  ],
+};
+
 export const TOURS: TourDefinition[] = [
+  DEMO_TOUR,
   {
     id: 'admin',
     label: 'Visite administrateur',
@@ -273,10 +367,16 @@ export const TOURS: TourDefinition[] = [
   },
 ];
 
-/** Visite correspondant à un rôle, avec repli sur `default`. */
-export function resolveTour(roleCode?: string | null): TourDefinition {
+/**
+ * Visite correspondant à un rôle, avec repli sur `default`. Un établissement
+ * démo reçoit TOUJOURS la visite démo dédiée, quel que soit le rôle (l'admin
+ * démo a le rôle "admin" comme n'importe quel admin réel) — sinon il verrait
+ * la visite générique par rôle, qui n'est pas adaptée aux données factices.
+ */
+export function resolveTour(roleCode?: string | null, isDemo?: boolean): TourDefinition {
+  if (isDemo) return DEMO_TOUR;
   const byRole = roleCode && TOURS.find((t) => t.roles.includes(roleCode));
-  return byRole || TOURS.find((t) => t.roles.includes('*')) || TOURS[0];
+  return byRole || TOURS.find((t) => t.roles.includes('*')) || TOURS[1];
 }
 
 export function getTourById(id: string): TourDefinition | undefined {

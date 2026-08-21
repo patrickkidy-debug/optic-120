@@ -45,6 +45,7 @@ import { getDashboard, getAdminDashboard, listLensOrders } from '../features/opt
 import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { DemoBooking } from '../components/DemoBooking';
+import { DemoResumeBanner } from '../components/DemoResumeBanner';
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
 import { getInsurerUpcoming } from '../features/management/api';
 import { PerformanceChart } from '../components/dashboard/PerformanceChart';
@@ -479,10 +480,11 @@ export function DashboardPage() {
       </div>
 
       {/* Proposition de démonstration gratuite (essai / sans abonnement actif). */}
+      <DemoResumeBanner />
       <DemoBooking />
 
       {/* KPI principaux */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div data-tour="dashboard-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <KpiCard icon={Banknote} label={t('dashboard.todayRevenueFull')} value={formatCurrency(data.todayRevenue)} tone="primary" />
         <KpiCard
           icon={TrendingUp}

@@ -50,9 +50,15 @@ model Tenant {
   // Réglages métier optique : validité des ordonnances, seuils de relance,
   // garantie par défaut, valeur du point de fidélité. null = valeurs par défaut.
   opticalSettings Json?
+  // Établissement fictif créé par "Découvrir OculoSaaS" (visite guidée pour
+  // prospects) : produits/patients/ventes factices, exclu des statistiques
+  // plateforme (MRR, nouveaux établissements). Repasse à false et perd toutes
+  // ses données factices (purgeDemoData) au moment d'un paiement réel.
+  isDemo        Boolean      @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
+  demoProgress  DemoProgress?
   branches      Branch[]
   users         User[]
   roles         Role[]
@@ -77,6 +83,19 @@ model Tenant {
   repairs       Repair[]
   subscription  Subscription?
   subInvoices   SubscriptionInvoice[]
+}
+
+/// Progression de la visite guidée démo (tenant isDemo). Persistée côté
+/// serveur (pas seulement localStorage) pour survivre à un changement
+/// d'appareil/navigateur : "vous étiez à l'étape 3, continuer ?".
+model DemoProgress {
+  id            String    @id @default(uuid())
+  tenantId      String    @unique
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  currentStepId String?
+  completedAt   DateTime?
+  skipped       Boolean   @default(false)
+  updatedAt     DateTime  @updatedAt
 }
 
 model Branch {

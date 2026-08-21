@@ -31,11 +31,19 @@ export interface TourStep {
    * absent de l'offre… Évite de pointer un élément qui n'existe pas.
    */
   enabled?: (ctx: TourGuardContext) => boolean;
+  /**
+   * "Essayez maintenant..." : le bouton Suivant reste désactivé (mais Passer
+   * reste disponible) tant que la page cible n'a pas signalé l'action, via
+   * `window.dispatchEvent(new CustomEvent('oculo-tour-action', { detail: { event } }))`.
+   */
+  awaitAction?: { event: string };
 }
 
 export interface TourGuardContext {
   permissions: ReadonlySet<string>;
   isPlatformOperator: boolean;
+  /** Établissement démo (visite "Découvrir OculoSaaS") — pilote le tour démo dédié. */
+  isDemo: boolean;
 }
 
 export interface TourDefinition {
@@ -49,6 +57,8 @@ export interface TourDefinition {
    */
   version: number;
   steps: TourStep[];
+  /** Narre chaque étape à voix haute (voix du navigateur) en plus des sous-titres. */
+  narrate?: boolean;
 }
 
 /** État persisté (localStorage), par visite. */
@@ -61,7 +71,7 @@ export interface TourProgress {
 
 /** API publique exposée par `useProductTour()`. */
 export interface ProductTourApi {
-  startTour: (tourId?: string, opts?: { fromStart?: boolean }) => void;
+  startTour: (tourId?: string, opts?: { fromStart?: boolean; resumeStepId?: string }) => void;
   nextStep: () => void;
   previousStep: () => void;
   goToStep: (stepId: string) => void;
@@ -74,4 +84,6 @@ export interface ProductTourApi {
   stepIndex: number;
   stepCount: number;
   tour: TourDefinition | null;
+  /** Vrai si l'étape courante n'a pas de `awaitAction`, ou si l'action attendue a eu lieu. */
+  actionCompleted: boolean;
 }

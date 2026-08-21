@@ -15,6 +15,7 @@ import { isProd, env } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
 import { resolvePlatformProvider } from './platform-provider.js';
+import { purgeDemoData } from '../demo/demo.service.js';
 
 /** Contexte Meta CAPI à partir de la requête : IP/UA + cookies posés par le Pixel navigateur. */
 function capiContext(req: FastifyRequest): CapiContext {
@@ -143,6 +144,9 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/subscribe', { preHandler: requirePermission('billing.manage') }, async (req, reply) => {
     const input = subscribeSchema.parse(req.body);
+    // Le tenant démo devient le tenant réel du prospect au premier paiement :
+    // purge les données factices AVANT de créer la facture (no-op si pas démo).
+    await purgeDemoData(req.auth!.tenantId);
     const result = await billing.subscribe(
       req.auth!.tenantId,
       input.planId,
@@ -169,6 +173,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       channel?: 'MOBILE_MONEY' | 'BANK_TRANSFER';
     };
     if (!planId) return reply.status(400).send({ error: 'planId manquant' });
+    await purgeDemoData(req.auth!.tenantId);
     const result = await billing.subscribeManual(req.auth!.tenantId, planId, cycle, channel);
     await recordAudit({
       tenantId: req.auth!.tenantId,

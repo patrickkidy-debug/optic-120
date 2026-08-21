@@ -1,6 +1,7 @@
 import type {
   AuthUser,
   SignupInput,
+  SignupDemoInput,
   LoginInput,
   ProfileUpdateInput,
   GoogleSignupInput,
@@ -10,6 +11,7 @@ import type {
   WhatsappTemplates,
 } from '@oculo/shared-types';
 import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY } from '@oculo/shared-types';
+import type { Prisma } from '@prisma/client';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
@@ -93,6 +95,7 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     // fidélité, garantie proposée par défaut).
     tenantOpticalSettings: mergeOpticalSettings(user.tenant.opticalSettings),
     emailVerified: user.emailVerifiedAt != null,
+    tenantIsDemo: user.tenant.isDemo,
   };
 }
 
@@ -210,14 +213,33 @@ interface NewTenantAdmin {
   emailVerifiedNow?: boolean;
 }
 
+export interface TenantSkeletonOpts {
+  tenantName: string;
+  branchName: string;
+  whatsapp: string;
+  /** Établissement démo (visite guidée) : produits/patients/ventes factices ajoutés séparément. */
+  isDemo?: boolean;
+}
+
+export interface TenantSkeleton {
+  tenantId: string;
+  branchId: string;
+  adminRoleId: string;
+}
+
 /**
- * Crée le tenant, sa succursale par défaut, clone les 12 rôles système
- * (templates tenantId=null) avec leurs permissions, et crée l'administrateur.
- * Partagé par l'inscription classique et l'inscription via Google.
+ * Crée le tenant, sa succursale par défaut, et clone les 12 rôles système
+ * (templates tenantId=null) avec leurs permissions. Partagé par l'inscription
+ * classique, l'inscription via Google, et la création d'un tenant démo
+ * (module demo) — n'importe quel appelant doit ensuite créer l'utilisateur
+ * admin lui-même (le mot de passe/email diffère selon le flux).
  */
-async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
+export async function createTenantSkeleton(
+  tx: Prisma.TransactionClient,
+  opts: TenantSkeletonOpts,
+): Promise<TenantSkeleton> {
   const slug = await uniqueSlug(opts.tenantName);
-  const templates = await prisma.role.findMany({
+  const templates = await tx.role.findMany({
     where: { tenantId: null },
     include: { permissions: true },
   });
@@ -232,61 +254,72 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
   // par défaut et les moyens d'encaissement proposés en caisse.
   const country = countryFromPhone(opts.whatsapp);
 
-  const result = await prisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({
+  const tenant = await tx.tenant.create({
+    data: {
+      name: opts.tenantName,
+      slug,
+      whatsappPhone: opts.whatsapp,
+      countryCode: country?.code ?? null,
+      currency: country?.currency ?? 'XOF',
+      vatRate: country ? DEFAULT_VAT_BY_COUNTRY[country.code] ?? null : null,
+      isDemo: opts.isDemo ?? false,
+    },
+  });
+  const branch = await tx.branch.create({
+    data: { tenantId: tenant.id, name: opts.branchName, city: '' },
+  });
+
+  let adminRoleId: string | null = null;
+  for (const tpl of templates) {
+    const role = await tx.role.create({
       data: {
-        name: opts.tenantName,
-        slug,
-        whatsappPhone: opts.whatsapp,
-        countryCode: country?.code ?? null,
-        currency: country?.currency ?? 'XOF',
-        vatRate: country ? DEFAULT_VAT_BY_COUNTRY[country.code] ?? null : null,
+        tenantId: tenant.id,
+        code: tpl.code,
+        name: tpl.name,
+        isSystem: true,
+        allBranches: tpl.allBranches,
       },
     });
-    const branch = await tx.branch.create({
-      data: { tenantId: tenant.id, name: opts.branchName, city: '' },
-    });
-
-    let adminRoleId: string | null = null;
-    for (const tpl of templates) {
-      const role = await tx.role.create({
-        data: {
-          tenantId: tenant.id,
-          code: tpl.code,
-          name: tpl.name,
-          isSystem: true,
-          allBranches: tpl.allBranches,
-        },
+    if (tpl.permissions.length > 0) {
+      await tx.rolePermission.createMany({
+        data: tpl.permissions.map((p) => ({ roleId: role.id, permissionId: p.permissionId })),
       });
-      if (tpl.permissions.length > 0) {
-        await tx.rolePermission.createMany({
-          data: tpl.permissions.map((p) => ({ roleId: role.id, permissionId: p.permissionId })),
-        });
-      }
-      if (tpl.code === 'admin') adminRoleId = role.id;
     }
-    if (!adminRoleId) throw badRequest("Rôle administrateur introuvable dans les templates");
+    if (tpl.code === 'admin') adminRoleId = role.id;
+  }
+  if (!adminRoleId) throw badRequest("Rôle administrateur introuvable dans les templates");
+
+  return { tenantId: tenant.id, branchId: branch.id, adminRoleId };
+}
+
+async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
+  const result = await prisma.$transaction(async (tx) => {
+    const skeleton = await createTenantSkeleton(tx, {
+      tenantName: opts.tenantName,
+      branchName: opts.branchName,
+      whatsapp: opts.whatsapp,
+    });
 
     const user = await tx.user.create({
       data: {
-        tenantId: tenant.id,
+        tenantId: skeleton.tenantId,
         email: opts.email,
         username: opts.username ?? null,
         passwordHash: opts.passwordHash,
         firstName: opts.firstName,
         lastName: opts.lastName,
         phone: opts.whatsapp,
-        roleId: adminRoleId,
-        branches: { create: { branchId: branch.id } },
+        roleId: skeleton.adminRoleId,
+        branches: { create: { branchId: skeleton.branchId } },
         emailVerifiedAt: opts.emailVerifiedNow ? new Date() : undefined,
       },
     });
 
     // Plus d'essai gratuit : l'abonnement est créé bloqué, l'accès au dashboard
     // n'est débloqué qu'à la confirmation du paiement (settleSubscriptionPayment).
-    await ensurePendingSubscription(tx, tenant.id, opts.plan);
+    await ensurePendingSubscription(tx, skeleton.tenantId, opts.plan);
 
-    return { userId: user.id, tenantId: tenant.id };
+    return { userId: user.id, tenantId: skeleton.tenantId };
   });
 
   // Notifie le fondateur (email + cloche console fondateur) : non bloquant,
@@ -344,6 +377,53 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
   } catch (err) {
     logger.error({ err }, 'Envoi email de confirmation échoué');
   }
+
+  const session = await issueSession(user, meta);
+  return { ...session, user: buildAuthUser(user) };
+}
+
+/**
+ * Inscription "Découvrir OculoSaaS" : crée un établissement démo pré-rempli
+ * (module demo) au lieu d'un tenant vide, avec une session identique à une
+ * inscription classique — le prospect peut se reconnecter plus tard pour
+ * reprendre ou convertir son compte en abonnement réel.
+ */
+export async function signupDemoTenant(input: SignupDemoInput, meta: RequestMeta): Promise<SessionResult> {
+  if (isFounderEmail(input.adminEmail)) {
+    const exists = await prisma.user.findFirst({
+      where: { email: { equals: input.adminEmail, mode: 'insensitive' } },
+    });
+    if (exists) throw conflict('Cet email est réservé.');
+  }
+  const passwordHash = await hashPassword(input.adminPassword);
+  const { createDemoTenant } = await import('../demo/demo.service.js');
+  const userId = await createDemoTenant({
+    tenantName: input.tenantName,
+    branchName: input.branchName,
+    email: input.adminEmail,
+    username: input.adminUsername,
+    passwordHash,
+    firstName: input.adminFirstName,
+    lastName: input.adminLastName,
+    whatsapp: input.whatsapp,
+  });
+
+  const user = await loadUser({ id: userId });
+  if (!user) throw badRequest('Échec de création du compte démo');
+
+  await recordAudit({
+    tenantId: user.tenantId,
+    userId: user.id,
+    action: 'DEMO_TENANT_CREATED',
+    entity: 'Tenant',
+    entityId: user.tenantId,
+    ...meta,
+  });
+
+  notifyFounderNewTenant(
+    { id: user.tenantId, name: user.tenant.name },
+    { firstName: input.adminFirstName, lastName: input.adminLastName, email: input.adminEmail, whatsapp: input.whatsapp },
+  ).catch((err) => logger.error({ err }, 'Notification fondateur (démo démarrée) échouée'));
 
   const session = await issueSession(user, meta);
   return { ...session, user: buildAuthUser(user) };

@@ -720,6 +720,43 @@ export const signupSchema = z.object({
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
+/**
+ * Inscription "Découvrir OculoSaaS" : même formulaire que l'inscription
+ * classique, mais sans offre à choisir (abonnement démo actif d'office) et
+ * sans obligation de nommer l'établissement (repli sur "Optique Vision Plus").
+ */
+export const signupDemoSchema = signupSchema.omit({ plan: true, tenantName: true }).extend({
+  tenantName: z.string().min(2).max(120).optional(),
+});
+export type SignupDemoInput = z.infer<typeof signupDemoSchema>;
+
+/** Étapes du funnel démo suivies via l'AuditLog (recordAudit), pas de table dédiée. */
+export const DEMO_EVENTS = [
+  'demo_started',
+  'demo_step_completed',
+  'demo_abandoned',
+  'demo_completed',
+  'pricing_viewed',
+  'plan_selected',
+  'checkout_started',
+  'subscription_created',
+  'custom_demo_requested',
+] as const;
+export type DemoEventName = (typeof DEMO_EVENTS)[number];
+
+export const demoEventSchema = z.object({
+  event: z.enum(DEMO_EVENTS),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type DemoEventInput = z.infer<typeof demoEventSchema>;
+
+export const demoProgressUpdateSchema = z.object({
+  currentStepId: z.string().max(80).nullable().optional(),
+  completedAt: z.string().datetime().nullable().optional(),
+  skipped: z.boolean().optional(),
+});
+export type DemoProgressUpdateInput = z.infer<typeof demoProgressUpdateSchema>;
+
 /* --- Connexion avec Google --- */
 
 export const googleLoginSchema = z.object({
@@ -1866,6 +1903,8 @@ export interface AuthUser {
   isPlatformOperator: boolean;
   /** Vrai une fois l'adresse email confirmée. */
   emailVerified: boolean;
+  /** Établissement démo (visite guidée "Découvrir OculoSaaS") : données factices. */
+  tenantIsDemo: boolean;
 }
 
 export const verifyEmailSchema = z.object({ token: z.string().min(10) });
