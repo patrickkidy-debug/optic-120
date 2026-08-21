@@ -15,6 +15,8 @@ interface TourControlsProps {
   nextDisabled?: boolean;
   /** Présent uniquement pour une visite narrée : affiche mute/relire. */
   narration?: ReturnType<typeof useSpeechNarration>;
+  /** Texte de l'étape courante — "Réécouter" doit fonctionner même si rien n'a encore été lu (1ère étape, ouverture automatique sans geste). */
+  content?: string;
 }
 
 export const TourControls = memo(function TourControls({
@@ -26,15 +28,16 @@ export const TourControls = memo(function TourControls({
   onSkip,
   nextDisabled,
   narration,
+  content,
 }: TourControlsProps) {
   const { i18n } = useTranslation();
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={onSkip}
-          className="rounded-lg px-2 py-1 text-xs font-medium text-content-faint transition hover:text-content"
+          className="min-h-9 rounded-lg px-2.5 py-1 text-xs font-medium text-content-faint transition hover:text-content"
         >
           {theme.labels.skip}
         </button>
@@ -42,21 +45,21 @@ export const TourControls = memo(function TourControls({
           <>
             <button
               type="button"
-              onClick={() => narration.replay(i18n.language)}
+              onClick={() => narration.speak(content ?? '', i18n.language)}
               title="Réécouter"
               aria-label="Réécouter"
-              className="rounded-lg p-1.5 text-content-faint transition hover:bg-surface-2 hover:text-content"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-content-faint transition hover:bg-surface-2 hover:text-content"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={narration.toggleMute}
               title={narration.muted ? 'Activer le son' : 'Couper le son'}
               aria-label={narration.muted ? 'Activer le son' : 'Couper le son'}
-              className="rounded-lg p-1.5 text-content-faint transition hover:bg-surface-2 hover:text-content"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-content-faint transition hover:bg-surface-2 hover:text-content"
             >
-              {narration.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              {narration.muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </button>
           </>
         )}

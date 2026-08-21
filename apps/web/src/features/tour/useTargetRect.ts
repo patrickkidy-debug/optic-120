@@ -14,6 +14,23 @@ function toRect(el: Element): Rect {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 }
 
+/**
+ * Certaines ancres existent deux fois dans le DOM (ex. la barre latérale :
+ * une copie desktop masquée par `hidden lg:block`, une copie dans le tiroir
+ * mobile) — pattern responsive courant de ce projet. `querySelector` seul
+ * renverrait toujours la PREMIÈRE occurrence, qui peut être celle masquée
+ * (`display:none` → rect nul), cassant le halo sur mobile. On prend donc la
+ * première occurrence RÉELLEMENT rendue (`getClientRects().length > 0` est
+ * faux pour `display:none`, vrai sinon — y compris hors écran).
+ */
+function queryVisible(selector: string): Element | null {
+  const all = document.querySelectorAll(selector);
+  for (const el of all) {
+    if (el.getClientRects().length > 0) return el;
+  }
+  return all[0] ?? null;
+}
+
 function isFullyVisible(r: DOMRect): boolean {
   return (
     r.top >= OFFSCREEN_MARGIN &&
@@ -71,7 +88,7 @@ export function useTargetRect(selector: string | undefined, deps: unknown[] = []
 
   const measure = useCallback(() => {
     if (!selector) return;
-    const el = document.querySelector(selector);
+    const el = queryVisible(selector);
     if (!el) return;
     cancelAnimationFrame(raf.current!);
     raf.current = requestAnimationFrame(() => setRect(toRect(el)));
@@ -93,7 +110,7 @@ export function useTargetRect(selector: string | undefined, deps: unknown[] = []
     // l'étape) : on la sonde brièvement avant d'abandonner.
     let tries = 0;
     const findAndCenter = async () => {
-      const el = document.querySelector(selector);
+      const el = queryVisible(selector);
       if (!el) {
         if (tries++ < 25 && !cancelled) {
           window.setTimeout(findAndCenter, 80);
@@ -127,7 +144,7 @@ export function useTargetRect(selector: string | undefined, deps: unknown[] = []
   // Garde le halo collé à la cible quand la page bouge.
   useEffect(() => {
     if (!selector) return;
-    const el = document.querySelector(selector);
+    const el = queryVisible(selector);
     window.addEventListener('scroll', measure, true);
     window.addEventListener('resize', measure);
     const ro = el ? new ResizeObserver(measure) : null;

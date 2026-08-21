@@ -18,7 +18,6 @@ export function useSpeechNarration() {
   });
   const [speaking, setSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const lastTextRef = useRef<string>('');
 
   useEffect(() => {
     return () => {
@@ -32,11 +31,17 @@ export function useSpeechNarration() {
     setSpeaking(false);
   }, [supported]);
 
+  /**
+   * Doit être appelé de façon SYNCHRONE depuis un vrai geste utilisateur (clic,
+   * touche) — voir ProductTourProvider.narrateStep. C'est aussi ce que le
+   * bouton "Réécouter" appelle directement (avec le texte de l'étape
+   * courante) : ça fonctionne donc même si aucune lecture n'a encore eu lieu,
+   * ex. la toute première étape ouverte automatiquement sans clic préalable.
+   */
   const speak = useCallback(
     (text: string, lang: string) => {
       if (!supported) return;
       window.speechSynthesis.cancel();
-      lastTextRef.current = text;
       if (muted || !text) return;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
@@ -48,13 +53,6 @@ export function useSpeechNarration() {
       window.speechSynthesis.speak(utterance);
     },
     [supported, muted],
-  );
-
-  const replay = useCallback(
-    (lang: string) => {
-      if (lastTextRef.current) speak(lastTextRef.current, lang);
-    },
-    [speak],
   );
 
   const toggleMute = useCallback(() => {
@@ -70,5 +68,5 @@ export function useSpeechNarration() {
     });
   }, [supported]);
 
-  return { supported, muted, speaking, speak, stop, replay, toggleMute };
+  return { supported, muted, speaking, speak, stop, toggleMute };
 }

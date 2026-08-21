@@ -207,6 +207,25 @@ const USERS_STEP: TourStep = {
 };
 
 /**
+ * Étape « faites-le vous-même » : recherche d'un produit. `interactive: true`
+ * est INDISPENSABLE ici — sans lui, le halo bloque les clics/le clavier sur la
+ * cible et il devient impossible de taper dans le champ mis en évidence.
+ */
+const PRODUCT_SEARCH_STEP: TourStep = {
+  id: 'product-search',
+  target: '[data-tour="product-search"]',
+  route: '/optique/produits',
+  title: 'Votre catalogue',
+  content:
+    "Essayez de rechercher un article : vous verrez sa disponibilité, et ceux qui nécessitent un réapprovisionnement sont signalés.",
+  icon: Search,
+  placement: 'bottom',
+  interactive: true,
+  awaitAction: { event: 'demo-search-product' },
+  enabled: (c) => c.permissions.has('optique.products.view'),
+};
+
+/**
  * Visite "Découvrir OculoSaaS" : établissement démo pré-rempli (module demo,
  * backend). Narrée à voix haute (voix du navigateur) en plus des sous-titres.
  * Une seule étape interactive (recherche produit), conforme au cahier des
@@ -246,6 +265,7 @@ const DEMO_TOUR: TourDefinition = {
         "Votre stock est centralisé ici. Essayez de rechercher une monture : vous verrez sa disponibilité, et les articles qui nécessitent un réapprovisionnement sont signalés.",
       icon: Search,
       placement: 'bottom',
+      interactive: true,
       awaitAction: { event: 'demo-search-product' },
     },
     {
@@ -302,11 +322,16 @@ export const TOURS: TourDefinition[] = [
     id: 'admin',
     label: 'Visite administrateur',
     roles: ['super_admin', 'admin', 'gestionnaire'],
-    version: 1,
+    // v2 : narration voix + étape interactive — reproposée même aux comptes
+    // qui avaient déjà terminé la v1 (silencieuse), sauf s'ils l'avaient
+    // explicitement ignorée (isTourDismissed).
+    version: 2,
+    narrate: true,
     steps: [
       ...SHELL_STEPS,
       DASHBOARD_STEP,
       ...OPTIQUE_STEPS,
+      PRODUCT_SEARCH_STEP,
       ...CLINIC_STEPS,
       ...MANAGEMENT_STEPS,
       USERS_STEP,
@@ -318,21 +343,24 @@ export const TOURS: TourDefinition[] = [
     id: 'opticien',
     label: 'Visite opticien',
     roles: ['opticien', 'responsable_stocks'],
-    version: 1,
-    steps: [...SHELL_STEPS, DASHBOARD_STEP, ...OPTIQUE_STEPS, SETTINGS_STEP, FINISH_STEP],
+    version: 2,
+    narrate: true,
+    steps: [...SHELL_STEPS, DASHBOARD_STEP, ...OPTIQUE_STEPS, PRODUCT_SEARCH_STEP, SETTINGS_STEP, FINISH_STEP],
   },
   {
     id: 'ophtalmologue',
     label: 'Visite ophtalmologue',
     roles: ['ophtalmologue', 'orthoptiste'],
-    version: 1,
+    version: 2,
+    narrate: true,
     steps: [...SHELL_STEPS, DASHBOARD_STEP, ...CLINIC_STEPS, SETTINGS_STEP, FINISH_STEP],
   },
   {
     id: 'secretaire',
     label: 'Visite secrétariat',
     roles: ['secretaire', 'receptionniste'],
-    version: 1,
+    version: 2,
+    narrate: true,
     steps: [
       ...SHELL_STEPS,
       DASHBOARD_STEP,
@@ -346,13 +374,15 @@ export const TOURS: TourDefinition[] = [
     id: 'commercial',
     label: 'Visite commerciale',
     roles: ['commercial', 'caissier'],
-    version: 1,
+    version: 2,
+    narrate: true,
     steps: [
       ...SHELL_STEPS,
       DASHBOARD_STEP,
       OPTIQUE_STEPS[0], // caisse
       OPTIQUE_STEPS[1], // ventes
       OPTIQUE_STEPS[3], // clients
+      PRODUCT_SEARCH_STEP,
       SETTINGS_STEP,
       FINISH_STEP,
     ],
@@ -362,7 +392,8 @@ export const TOURS: TourDefinition[] = [
     id: 'default',
     label: 'Visite guidée',
     roles: ['*'],
-    version: 1,
+    version: 2,
+    narrate: true,
     steps: [...SHELL_STEPS, DASHBOARD_STEP, ...MANAGEMENT_STEPS, SETTINGS_STEP, FINISH_STEP],
   },
 ];

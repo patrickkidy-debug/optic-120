@@ -3,9 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { signupSchema, signupDemoSchema, type SignupInput } from '@oculo/shared-types';
-import { Compass } from 'lucide-react';
-import { signup, signupDemo } from '../../features/auth/api';
+import { signupSchema, type SignupInput } from '@oculo/shared-types';
+import { signup } from '../../features/auth/api';
 import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
@@ -39,11 +38,9 @@ export function SignupPage() {
   const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const [serverError, setServerError] = useState('');
-  const [demoSubmitting, setDemoSubmitting] = useState(false);
   const {
     register,
     handleSubmit,
-    getValues,
     setValue,
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<SignupInput>({
@@ -59,32 +56,10 @@ export function SignupPage() {
       trackPixelEvent('CompleteRegistration', { content_name: plan, status: true }, `registration_${user.id}`);
       // Accès immédiat au dashboard : 2 h d'essai gratuit sans interruption, puis
       // blocage + écran de paiement (offre Standard mise en avant) à l'expiration.
+      // La visite guidée narrée démarre automatiquement (ProductTourProvider).
       navigate(redirectTo);
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Création impossible'));
-    }
-  }
-
-  // "Découvrir OculoSaaS" : mêmes champs, mais le nom d'établissement est
-  // facultatif (repli serveur sur "Optique Vision Plus") et aucune offre à
-  // choisir — on valide donc contre le schéma démo (plus permissif), pas
-  // contre le resolver du formulaire classique.
-  async function onSubmitDemo() {
-    setServerError('');
-    const parsed = signupDemoSchema.safeParse(getValues());
-    if (!parsed.success) {
-      setServerError(parsed.error.issues[0]?.message ?? 'Complétez le formulaire pour découvrir OculoSaaS');
-      return;
-    }
-    setDemoSubmitting(true);
-    try {
-      const user = await signupDemo(parsed.data);
-      trackPixelEvent('CompleteRegistration', { content_name: 'demo', status: true }, `registration_demo_${user.id}`);
-      navigate('/dashboard?tour=demo');
-    } catch (e) {
-      setServerError(apiErrorMessage(e, 'Création impossible'));
-    } finally {
-      setDemoSubmitting(false);
     }
   }
 
@@ -159,11 +134,7 @@ export function SignupPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.tenantName')}>
           <input className="input" placeholder={t('auth.placeholderOrg')} {...register('tenantName')} />
-          {errors.tenantName ? (
-            <p className="mt-1 text-xs text-danger">{errors.tenantName.message}</p>
-          ) : (
-            <p className="mt-1 text-xs text-content-faint">{t('auth.tenantNameHintDemo')}</p>
-          )}
+          {errors.tenantName && <p className="mt-1 text-xs text-danger">{errors.tenantName.message}</p>}
         </Field>
         <Field label={t('auth.branchName')}>
           <input className="input" {...register('branchName')} />
@@ -210,18 +181,8 @@ export function SignupPage() {
           </div>
         )}
 
-        <Button type="submit" loading={isSubmitting} disabled={demoSubmitting} className="w-full">
+        <Button type="submit" loading={isSubmitting} className="w-full">
           {t('auth.signup')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          loading={demoSubmitting}
-          disabled={isSubmitting}
-          onClick={() => void onSubmitDemo()}
-          className="w-full"
-        >
-          <Compass className="h-4 w-4" /> {t('auth.discoverDemo')}
         </Button>
       </form>
 

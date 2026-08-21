@@ -125,6 +125,19 @@ export function ProductTourProvider({
     [navigate, narration],
   );
 
+  /**
+   * Narre une étape d'une visite donnée (pas forcément la visite en cours dans
+   * le state — utile depuis startTour/restartTour où `tour` n'est pas encore
+   * mis à jour au moment de l'appel). Sans effet si appelé hors d'un geste
+   * utilisateur réel (voir narration.speak).
+   */
+  const speakStepOf = useCallback(
+    (tourDef: TourDefinition, target: TourStep | undefined) => {
+      if (tourDef.narrate && target?.content) narration.speak(target.content, i18n.language);
+    },
+    [narration, i18n.language],
+  );
+
   const startTour = useCallback(
     (tourId?: string, opts?: { fromStart?: boolean; resumeStepId?: string }) => {
       const target = tourId ? getTourById(tourId) ?? roleTour : roleTour;
@@ -140,9 +153,14 @@ export function ProductTourProvider({
       }
       setTour(target);
       setStepIndex(resume);
+      // Narre immédiatement SI cet appel vient d'un vrai clic (reprise manuelle,
+      // bouton "relancer la visite") ; silencieux et sans risque si c'est le
+      // minuteur d'auto-démarrage (pas de geste — le navigateur bloquera de
+      // toute façon, l'utilisateur peut toujours taper "Réécouter").
+      speakStepOf(target, target.steps[resume]);
       if (target.id === DEMO_TOUR_ID) trackDemoEvent('demo_started');
     },
-    [roleTour],
+    [roleTour, speakStepOf],
   );
 
   const restartTour = useCallback(
@@ -151,30 +169,54 @@ export function ProductTourProvider({
       clearProgress(target.id);
       setTour(target);
       setStepIndex(0);
+      speakStepOf(target, target.steps[0]);
     },
-    [roleTour],
+    [roleTour, speakStepOf],
+  );
+
+  /**
+   * Narre l'étape ciblée — appelé UNIQUEMENT de façon synchrone depuis un vrai
+   * geste utilisateur (clic Suivant/Précédent, touche clavier). Safari iOS (et
+   * la plupart des navigateurs mobiles) bloque silencieusement `speechSynthesis`
+   * hors d'un geste réel : un déclenchement passif (useEffect après l'ouverture
+   * automatique de la visite) ne fonctionne quasiment jamais sur téléphone.
+   */
+  const narrateStep = useCallback(
+    (target: TourStep | undefined) => {
+      if (tour) speakStepOf(tour, target);
+    },
+    [tour, speakStepOf],
   );
 
   const nextStep = useCallback(() => {
     setStepIndex((i) => {
-      if (i >= steps.length - 1) {
+      const next = i + 1;
+      if (next >= steps.length) {
         endTour('finished');
         return 0;
       }
-      return i + 1;
+      narrateStep(steps[next]);
+      return next;
     });
-  }, [steps.length, endTour]);
+  }, [steps, endTour, narrateStep]);
 
   const previousStep = useCallback(() => {
-    setStepIndex((i) => Math.max(0, i - 1));
-  }, []);
+    setStepIndex((i) => {
+      const prev = Math.max(0, i - 1);
+      narrateStep(steps[prev]);
+      return prev;
+    });
+  }, [steps, narrateStep]);
 
   const goToStep = useCallback(
     (stepId: string) => {
       const idx = steps.findIndex((s) => s.id === stepId);
-      if (idx >= 0) setStepIndex(idx);
+      if (idx >= 0) {
+        narrateStep(steps[idx]);
+        setStepIndex(idx);
+      }
     },
-    [steps],
+    [steps, narrateStep],
   );
 
   const isCompleted = useCallback(
@@ -216,13 +258,6 @@ export function ProductTourProvider({
     window.addEventListener('oculo-tour-action', onAction);
     return () => window.removeEventListener('oculo-tour-action', onAction);
   }, [step]);
-
-  // Narration voix (visite démo uniquement) : relit le texte de chaque étape.
-  useEffect(() => {
-    if (!tour?.narrate || !step?.content) return;
-    narration.speak(step.content, i18n.language);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tour?.narrate, step?.id, i18n.language]);
 
   // Une étape peut vivre sur un autre écran : on y navigue avant de l'afficher.
   useEffect(() => {

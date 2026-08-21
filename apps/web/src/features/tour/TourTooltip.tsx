@@ -174,6 +174,7 @@ export const TourTooltip = memo(function TourTooltip({
         onSkip={onSkip}
         nextDisabled={nextDisabled}
         narration={narrate ? narration : undefined}
+        content={step.content}
       />
     </motion.div>
   );
