@@ -12,6 +12,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/auth';
+import { useUIStore } from '../../store/ui';
 import { resolveTour, getTourById } from './registry';
 import { isTourCompleted, isTourDismissed, saveProgress, getProgress, clearProgress } from './storage';
 import { mergeTheme, type TourTheme } from './theme';
@@ -56,6 +57,7 @@ export function ProductTourProvider({
 }: ProductTourProviderProps) {
   const { i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const setSidebar = useUIStore((s) => s.setSidebar);
   const navigate = useNavigate();
   const location = useLocation();
   const narration = useSpeechNarration();
@@ -124,8 +126,9 @@ export function ProductTourProvider({
       });
       narration.stop();
       setStepIndex(0);
+      setSidebar(false);
     },
-    [navigate, narration],
+    [navigate, narration, setSidebar],
   );
 
   /**
@@ -266,6 +269,19 @@ export function ProductTourProvider({
   useEffect(() => {
     if (step?.route && location.pathname !== step.route) navigate(step.route);
   }, [step?.route, location.pathname, navigate]);
+
+  // Sur mobile, la barre latérale est un tiroir fermé par défaut (masqué hors
+  // écran par transform, pas par display:none — voir queryVisible dans
+  // useTargetRect.ts). Une étape qui cible un lien de nav (`nav:<route>`) ou
+  // la barre elle-même n'a donc RIEN à montrer tant qu'on ne l'ouvre pas
+  // nous-mêmes : c'est ce qui rendait ces étapes invisibles ("reste caché") sur
+  // téléphone. On l'ouvre pour ces étapes précisément, et on la referme sinon
+  // pour ne pas cacher le contenu de page des étapes suivantes.
+  useEffect(() => {
+    if (!tour) return;
+    const isSidebarStep = step?.target === '[data-tour="sidebar"]' || step?.target?.includes('data-tour="nav:');
+    setSidebar(Boolean(isSidebarStep));
+  }, [tour, step, setSidebar]);
 
   // Déclencheur « première connexion » / « mise à jour importante » : la version
   // du contenu ayant changé, isTourCompleted redevient faux et la visite est
