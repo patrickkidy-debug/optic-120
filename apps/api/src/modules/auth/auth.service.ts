@@ -35,6 +35,7 @@ import { mergeOpticalSettings } from '../../lib/optical-settings.js';
 import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensurePendingSubscription } from '../billing/billing.service.js';
+import { seedSampleBusinessData } from '../demo/sample-data.js';
 import { notifyFounderNewTenant } from '../billing/platform.service.js';
 import { env, appOrigin } from '../../config/env.js';
 import { isOperatorEmail, isFounderEmail } from '../../lib/operators.js';
@@ -293,34 +294,49 @@ export async function createTenantSkeleton(
 }
 
 async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
-  const result = await prisma.$transaction(async (tx) => {
-    const skeleton = await createTenantSkeleton(tx, {
-      tenantName: opts.tenantName,
-      branchName: opts.branchName,
-      whatsapp: opts.whatsapp,
-    });
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const skeleton = await createTenantSkeleton(tx, {
+        tenantName: opts.tenantName,
+        branchName: opts.branchName,
+        whatsapp: opts.whatsapp,
+      });
 
-    const user = await tx.user.create({
-      data: {
-        tenantId: skeleton.tenantId,
-        email: opts.email,
-        username: opts.username ?? null,
-        passwordHash: opts.passwordHash,
-        firstName: opts.firstName,
-        lastName: opts.lastName,
-        phone: opts.whatsapp,
-        roleId: skeleton.adminRoleId,
-        branches: { create: { branchId: skeleton.branchId } },
-        emailVerifiedAt: opts.emailVerifiedNow ? new Date() : undefined,
-      },
-    });
+      const user = await tx.user.create({
+        data: {
+          tenantId: skeleton.tenantId,
+          email: opts.email,
+          username: opts.username ?? null,
+          passwordHash: opts.passwordHash,
+          firstName: opts.firstName,
+          lastName: opts.lastName,
+          phone: opts.whatsapp,
+          roleId: skeleton.adminRoleId,
+          branches: { create: { branchId: skeleton.branchId } },
+          emailVerifiedAt: opts.emailVerifiedNow ? new Date() : undefined,
+        },
+      });
 
-    // Plus d'essai gratuit : l'abonnement est créé bloqué, l'accès au dashboard
-    // n'est débloqué qu'à la confirmation du paiement (settleSubscriptionPayment).
-    await ensurePendingSubscription(tx, skeleton.tenantId, opts.plan);
+      // Essai gratuit à l'inscription (accès complet), puis blocage jusqu'au
+      // paiement — voir ensurePendingSubscription.
+      await ensurePendingSubscription(tx, skeleton.tenantId, opts.plan);
 
-    return { userId: user.id, tenantId: skeleton.tenantId };
-  });
+      // Pré-remplit le tableau de bord (produits, ventes, clients...) pour que
+      // le prospect comprenne le logiciel pendant la visite guidée automatique,
+      // au lieu d'atterrir sur un compte vide. Les identifiants créés sont
+      // mémorisés dans DemoProgress.seedManifest : la visite guidée déclenche
+      // leur suppression précise (purgeSampleData) une fois terminée/passée,
+      // sans jamais toucher aux vraies données que l'utilisateur aurait déjà
+      // saisies entre-temps.
+      const manifest = await seedSampleBusinessData(tx, skeleton.tenantId, skeleton.branchId, user.id);
+      await tx.demoProgress.create({
+        data: { tenantId: skeleton.tenantId, seedManifest: manifest as unknown as Prisma.InputJsonValue },
+      });
+
+      return { userId: user.id, tenantId: skeleton.tenantId };
+    },
+    { timeout: 25000, maxWait: 10000 },
+  );
 
   // Notifie le fondateur (email + cloche console fondateur) : non bloquant,
   // après commit de la transaction (une panne ici ne doit pas casser l'inscription).

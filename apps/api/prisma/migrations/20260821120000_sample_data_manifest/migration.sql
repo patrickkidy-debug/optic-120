@@ -1,0 +1,1 @@
+ALTER TABLE "DemoProgress" ADD COLUMN IF NOT EXISTS "seedManifest" JSONB;

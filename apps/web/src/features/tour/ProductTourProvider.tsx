@@ -104,18 +104,21 @@ export function ProductTourProvider({
           saveProgress(current.id, {
             lastStepIndex: 0,
             skipped: reason === 'skipped',
+            skippedVersion: reason === 'skipped' ? current.version : undefined,
             completedVersion: reason === 'finished' ? current.version : null,
           });
-          if (current.id === DEMO_TOUR_ID) {
-            trackDemoEvent(reason === 'finished' ? 'demo_completed' : 'demo_abandoned');
-            void saveDemoProgress({
-              currentStepId: null,
-              completedAt: reason === 'finished' ? new Date().toISOString() : null,
-              skipped: reason === 'skipped',
-            });
-            // La visite démo débouche toujours sur le choix d'un abonnement.
-            if (reason === 'finished') navigate('/demo/complete');
-          }
+          // Progression serveur pour TOUTE visite (pas seulement l'ancien tenant
+          // démo) : permet la reprise cross-appareil et déclenche côté serveur
+          // l'effacement des données d'exemple pré-remplies à l'inscription.
+          trackDemoEvent(reason === 'finished' ? 'demo_completed' : 'demo_abandoned');
+          void saveDemoProgress({
+            currentStepId: null,
+            completedAt: reason === 'finished' ? new Date().toISOString() : null,
+            skipped: reason === 'skipped',
+          });
+          // Une visite terminée débouche toujours sur le choix d'un abonnement.
+          // Un "Passer" repasse juste à zéro en silence — l'utilisateur explore.
+          if (reason === 'finished') navigate('/onboarding/complete');
         }
         return null;
       });
@@ -240,7 +243,7 @@ export function ProductTourProvider({
   useEffect(() => {
     if (!tour) return;
     saveProgress(tour.id, { lastStepIndex: stepIndex });
-    if (tour.id === DEMO_TOUR_ID) void saveDemoProgress({ currentStepId: step?.id ?? null });
+    void saveDemoProgress({ currentStepId: step?.id ?? null });
   }, [tour, stepIndex, step?.id]);
 
   // Une étape peut demander une action ("essayez de rechercher…") : le bouton
@@ -266,20 +269,18 @@ export function ProductTourProvider({
 
   // Déclencheur « première connexion » / « mise à jour importante » : la version
   // du contenu ayant changé, isTourCompleted redevient faux et la visite est
-  // reproposée — sauf si l'utilisateur l'avait explicitement ignorée. Pour un
-  // établissement démo qui a déjà de la progression enregistrée (retour d'un
-  // prospect), on NE relance PAS automatiquement : c'est DemoResumeBanner qui
-  // propose Continuer / Recommencer / Passer à l'abonnement.
+  // reproposée — sauf si l'utilisateur l'avait explicitement ignorée. Si une
+  // progression serveur existe déjà (visite laissée en cours, sur cet appareil
+  // ou un autre), on NE relance PAS automatiquement : c'est DemoResumeBanner
+  // qui propose Continuer / Recommencer / Passer à l'abonnement.
   useEffect(() => {
     if (!autoStart || !user || autoStarted.current) return;
     if (isTourCompleted(roleTour.id, roleTour.version)) return;
     if (isTourDismissed(roleTour.id, roleTour.version)) return;
     let cancelled = false;
     async function schedule() {
-      if (user!.tenantIsDemo) {
-        const progress = await getDemoProgress().catch(() => null);
-        if (progress && (progress.currentStepId || progress.skipped)) return; // repris via la bannière
-      }
+      const progress = await getDemoProgress().catch(() => null);
+      if (progress && (progress.currentStepId || progress.skipped)) return; // repris via la bannière
       if (cancelled) return;
       // Le drapeau est posé au déclenchement, PAS à la programmation : sinon un
       // changement de dépendance (ou le double effet de StrictMode) annulerait le

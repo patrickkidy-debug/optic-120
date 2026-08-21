@@ -66,6 +66,8 @@ export interface TourProgress {
   completedVersion: number | null;
   lastStepIndex: number;
   skipped: boolean;
+  /** Version du contenu au moment du "Passer" — un skip sur une version antérieure ne doit pas bloquer une version plus récente. */
+  skippedVersion?: number | null;
   updatedAt: string;
 }
 

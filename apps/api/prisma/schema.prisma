@@ -95,6 +95,10 @@ model DemoProgress {
   currentStepId String?
   completedAt   DateTime?
   skipped       Boolean   @default(false)
+  /// Identifiants des données d'exemple pré-remplies à l'inscription sur un
+  /// compte réel (voir seedSampleBusinessData/purgeSampleData) ; null une fois
+  /// purgées ou sur un tenant jamais semé (ex. l'ancien flux démo isDemo).
+  seedManifest  Json?
   updatedAt     DateTime  @updatedAt
 }
 

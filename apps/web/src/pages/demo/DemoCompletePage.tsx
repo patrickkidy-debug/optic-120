@@ -70,7 +70,7 @@ export function DemoCompletePage() {
           </a>
         </div>
         <p className="mt-3 text-center text-xs text-content-faint">
-          Les données de démonstration seront remplacées par votre établissement réel au moment du paiement.
+          Les données d'exemple utilisées pendant la visite viennent d'être effacées : votre tableau de bord est prêt à recevoir vos vraies données.
         </p>
       </div>
     </div>

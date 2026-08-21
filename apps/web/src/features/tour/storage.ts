@@ -53,8 +53,14 @@ export function isTourCompleted(tourId: string, version: number): boolean {
   return p?.completedVersion != null && p.completedVersion >= version;
 }
 
-/** Vrai si l'utilisateur a explicitement ignoré cette version : ne pas relancer seul. */
+/**
+ * Vrai si l'utilisateur a explicitement ignoré CETTE version (ou une plus
+ * récente) : ne pas relancer seul. Un "Passer" enregistré sur une version
+ * antérieure (ou avant que ce champ n'existe) ne bloque pas une version plus
+ * récente — sinon un skip fait pendant un test sur une ancienne visite casse
+ * le redémarrage automatique de toutes les versions futures.
+ */
 export function isTourDismissed(tourId: string, version: number): boolean {
   const p = getProgress(tourId);
-  return Boolean(p?.skipped) && (p?.completedVersion ?? -1) < version;
+  return Boolean(p?.skipped) && p?.skippedVersion != null && p.skippedVersion >= version;
 }

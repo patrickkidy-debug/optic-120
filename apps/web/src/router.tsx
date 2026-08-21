@@ -136,7 +136,7 @@ export const router = createBrowserRouter([
         element: pub(<AppShell />),
         children: [
           { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
-          { path: '/demo/complete', element: perm('dashboard.view', <DemoCompletePage />) },
+          { path: '/onboarding/complete', element: perm('dashboard.view', <DemoCompletePage />) },
           { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },
           { path: '/optique/stock', element: perm('optique.stock.view', <StockPage />) },
           { path: '/optique/clients', element: perm('optique.customers.view', <ClientsPage />) },

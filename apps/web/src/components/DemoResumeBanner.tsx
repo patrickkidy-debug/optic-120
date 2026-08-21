@@ -7,10 +7,11 @@ import { getDemoProgress, type DemoProgress } from '../features/tour/api';
 import { Button } from './ui';
 
 /**
- * Établissement démo revenant après avoir quitté la visite guidée en cours de
- * route : "Vous étiez arrivé à l'étape X. Continuer / Recommencer / Passer à
- * l'abonnement ?" — la visite ne redémarre jamais automatiquement dans ce cas
- * (voir ProductTourProvider), c'est ce bandeau qui pilote la reprise.
+ * Utilisateur revenant après avoir quitté la visite guidée en cours de route
+ * (nouvelle inscription ou ancien tenant démo) : "Vous étiez arrivé à l'étape
+ * X. Continuer / Recommencer / Passer à l'abonnement ?" — la visite ne
+ * redémarre jamais automatiquement dans ce cas (voir ProductTourProvider),
+ * c'est ce bandeau qui pilote la reprise.
  */
 export function DemoResumeBanner() {
   const user = useAuthStore((s) => s.user);
@@ -20,7 +21,7 @@ export function DemoResumeBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!user?.tenantIsDemo) return;
+    if (!user) return;
     let cancelled = false;
     getDemoProgress()
       .then((p) => {
@@ -30,9 +31,9 @@ export function DemoResumeBanner() {
     return () => {
       cancelled = true;
     };
-  }, [user?.tenantIsDemo]);
+  }, [user]);
 
-  if (!user?.tenantIsDemo || dismissed || tour) return null;
+  if (!user || dismissed || tour) return null;
   if (!progress || !progress.currentStepId || progress.completedAt) return null;
 
   return (
@@ -53,7 +54,7 @@ export function DemoResumeBanner() {
           variant="outline"
           onClick={() => {
             setDismissed(true);
-            restartTour('demo-onboarding');
+            restartTour();
           }}
         >
           Recommencer
@@ -62,7 +63,7 @@ export function DemoResumeBanner() {
           variant="outline"
           onClick={() => {
             setDismissed(true);
-            navigate('/demo/complete');
+            navigate('/onboarding/complete');
           }}
         >
           Passer à l'abonnement
@@ -70,7 +71,7 @@ export function DemoResumeBanner() {
         <Button
           onClick={() => {
             setDismissed(true);
-            startTour('demo-onboarding', { resumeStepId: progress?.currentStepId ?? undefined });
+            startTour(undefined, { resumeStepId: progress?.currentStepId ?? undefined });
           }}
         >
           Continuer

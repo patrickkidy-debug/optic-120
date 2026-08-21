@@ -42,18 +42,25 @@ export async function demoRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Routes suivantes : exigent une session (progression/tracking du tenant courant).
+  // `seedManifest` est un détail d'implémentation interne (identifiants des
+  // données d'exemple à purger) — jamais utile côté client, jamais renvoyé.
   app.get('/progress', { preHandler: requireAuth }, async (req, reply) => {
-    const progress = await demoService.getDemoProgress(req.auth!.tenantId);
-    return reply.send({ progress });
+    const { seedManifest: _seedManifest, ...progress } = (await demoService.getDemoProgress(req.auth!.tenantId)) ?? {};
+    return reply.send({ progress: Object.keys(progress).length ? progress : null });
   });
 
   app.put('/progress', { preHandler: requireAuth }, async (req, reply) => {
     const input = demoProgressUpdateSchema.parse(req.body);
-    const progress = await demoService.saveDemoProgress(req.auth!.tenantId, {
+    const { seedManifest: _seedManifest, ...progress } = await demoService.saveDemoProgress(req.auth!.tenantId, {
       currentStepId: input.currentStepId,
       completedAt: input.completedAt === undefined ? undefined : input.completedAt ? new Date(input.completedAt) : null,
       skipped: input.skipped,
     });
+    // Visite terminée ou passée : efface les données d'exemple pré-remplies à
+    // l'inscription (no-op idempotent si le compte n'en a jamais eu, ou déjà purgé).
+    if (input.completedAt || input.skipped) {
+      await demoService.purgeSampleData(req.auth!.tenantId);
+    }
     return reply.send({ progress });
   });
 
