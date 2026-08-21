@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Crown,
-  Check,
-  Banknote,
-  Smartphone,
-  CreditCard,
-  Loader2,
-  CheckCircle2,
-  Sparkles,
-  Tag,
-} from 'lucide-react';
+import { Crown, Check, Loader2, CheckCircle2, Sparkles, Tag } from 'lucide-react';
 import type { PaymentMethod, BillingCycle } from '@oculo/shared-types';
 import {
   getPlans,
@@ -531,15 +521,6 @@ function PlanCard({
   );
 }
 
-const METHODS: { value: PaymentMethod; label: string; icon: typeof Banknote }[] = [
-  { value: 'WAVE', label: 'Wave', icon: Smartphone },
-  { value: 'ORANGE_MONEY', label: 'Orange Money', icon: Smartphone },
-  { value: 'MTN_MOMO', label: 'MTN MoMo', icon: Smartphone },
-  { value: 'MOOV_MONEY', label: 'Moov Money', icon: Smartphone },
-  { value: 'FREE_MONEY', label: 'Free Money', icon: Smartphone },
-  { value: 'CARD', label: 'Carte bancaire', icon: CreditCard },
-];
-
 function BillingPaymentModal({
   target,
   onClose,
@@ -640,25 +621,22 @@ function BillingPaymentModal({
       </div>
       {phase === 'choose' && (
         <>
-          {/* Paiement en ligne : uniquement si une passerelle est configurée. */}
+          {/* Paiement en ligne : uniquement si une passerelle est configurée.
+              Moneroo héberge lui-même le choix du moyen (Wave, Orange Money,
+              carte…) sur sa page de checkout — un choix ici en plus était pure
+              friction, sans le moindre effet sur le paiement réel. */}
           {payInfo?.gateway !== false && (
             <>
-              <p className="mb-2 text-sm text-content-muted">Choisissez votre moyen de paiement</p>
-              <div className="grid grid-cols-2 gap-2">
-                {METHODS.map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => payMut.mutate(m.value)}
-                    disabled={payMut.isPending || manualMut.isPending}
-                    className="card flex flex-col items-center gap-1.5 p-3 transition hover:border-primary"
-                  >
-                    <m.icon className="h-5 w-5 text-primary" />
-                    <span className="text-xs font-medium text-content">{m.label}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4 border-t pt-3">
-                <p className="mb-2 text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
+              <Button
+                className="w-full"
+                loading={payMut.isPending}
+                disabled={payMut.isPending || manualMut.isPending}
+                onClick={() => payMut.mutate('WAVE')}
+              >
+                S'abonner maintenant
+              </Button>
+              <div className="mt-3 border-t pt-3">
+                <p className="mb-2 text-center text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
                 <PaymentMethodLogos />
               </div>
             </>
