@@ -60,7 +60,12 @@ export function AuthLayout({
 
       <div className="flex items-center justify-center bg-bg p-6">
         <div className="w-full max-w-md animate-fade-in">
-          <div className="mb-8 lg:hidden">
+          {/* Sur mobile (et l'app Android, simple webview du même site), le
+              panneau visuel de gauche est masqué (hidden lg:flex) faute de
+              place : l'illustration réapparaît ici, en compact, pour garder
+              la page visuelle sans manger l'espace réservé au formulaire. */}
+          <div className="mb-6 flex flex-col items-center gap-4 text-center lg:hidden">
+            {illustration && <div className="w-36 sm:w-44">{illustration}</div>}
             <Logo />
           </div>
           <h2 className="font-display text-2xl font-bold text-content">{title}</h2>
