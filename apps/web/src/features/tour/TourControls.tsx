@@ -10,7 +10,6 @@ interface TourControlsProps {
   theme: TourTheme;
   onNext: () => void;
   onPrevious: () => void;
-  onSkip: () => void;
   /** Vrai tant que l'action attendue par l'étape n'a pas eu lieu. */
   nextDisabled?: boolean;
   /** Présent uniquement pour une visite narrée : affiche mute/relire. */
@@ -25,7 +24,6 @@ export const TourControls = memo(function TourControls({
   theme,
   onNext,
   onPrevious,
-  onSkip,
   nextDisabled,
   narration,
   content,
@@ -34,13 +32,6 @@ export const TourControls = memo(function TourControls({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={onSkip}
-          className="min-h-9 rounded-lg px-2.5 py-1 text-xs font-medium text-content-faint transition hover:text-content"
-        >
-          {theme.labels.skip}
-        </button>
         {narration?.supported && (
           <>
             <button

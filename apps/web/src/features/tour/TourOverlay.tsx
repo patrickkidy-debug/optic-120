@@ -13,7 +13,7 @@ import { useProductTour } from './useProductTour';
  * visite démarre (import dynamique dans le provider) : coût nul au premier rendu.
  */
 export function TourOverlay() {
-  const { steps, stepIndex, stepCount, nextStep, previousStep, endTour, theme, actionCompleted, narration, tour } =
+  const { steps, stepIndex, stepCount, nextStep, previousStep, theme, actionCompleted, narration, tour } =
     useProductTour();
 
   const step = steps[stepIndex];
@@ -25,14 +25,12 @@ export function TourOverlay() {
     if (missing) nextStep();
   }, [missing, nextStep]);
 
-  // Échap quitte, Entrée continue, flèches naviguent — sauf « Suivant » tant
-  // qu'une action est attendue (« Passer » reste accessible via la souris).
+  // Entrée continue, flèches naviguent. Visite obligatoire jusqu'à la fin :
+  // pas d'Échap pour quitter (voir aussi TourControls/TourTooltip, qui n'ont
+  // plus de bouton "Passer"/fermer).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        endTour('skipped');
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+      if (e.key === 'Enter' || e.key === 'ArrowRight') {
         // Entrée sur un bouton est déjà géré par le navigateur : ne pas doubler.
         if (e.key === 'Enter' && (e.target as HTMLElement)?.tagName === 'BUTTON') return;
         if (!actionCompleted) return;
@@ -45,7 +43,7 @@ export function TourOverlay() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [nextStep, previousStep, endTour, actionCompleted]);
+  }, [nextStep, previousStep, actionCompleted]);
 
   // Fige le défilement de la page pendant la visite : c'est nous qui pilotons
   // le scroll (auto-centrage). Restauré à la sortie.
@@ -84,7 +82,6 @@ export function TourOverlay() {
             theme={theme}
             onNext={nextStep}
             onPrevious={previousStep}
-            onSkip={() => endTour('skipped')}
             nextDisabled={!actionCompleted}
             narration={narration}
             narrate={Boolean(tour?.narrate)}

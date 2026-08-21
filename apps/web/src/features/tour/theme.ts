@@ -20,10 +20,8 @@ export interface TourTheme {
   labels: {
     next: string;
     previous: string;
-    skip: string;
     finish: string;
     stepOf: (current: number, total: number) => string;
-    close: string;
   };
 }
 
@@ -39,10 +37,8 @@ export const DEFAULT_TOUR_THEME: TourTheme = {
   labels: {
     next: 'Suivant',
     previous: 'Précédent',
-    skip: 'Ignorer',
     finish: 'Terminer',
     stepOf: (c, t) => `Étape ${c} / ${t}`,
-    close: 'Quitter la visite',
   },
 };
 

@@ -325,7 +325,7 @@ export const TOURS: TourDefinition[] = [
     // v2 : narration voix + étape interactive — reproposée même aux comptes
     // qui avaient déjà terminé la v1 (silencieuse), sauf s'ils l'avaient
     // explicitement ignorée (isTourDismissed).
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [
       ...SHELL_STEPS,
@@ -343,7 +343,7 @@ export const TOURS: TourDefinition[] = [
     id: 'opticien',
     label: 'Visite opticien',
     roles: ['opticien', 'responsable_stocks'],
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [...SHELL_STEPS, DASHBOARD_STEP, ...OPTIQUE_STEPS, PRODUCT_SEARCH_STEP, SETTINGS_STEP, FINISH_STEP],
   },
@@ -351,7 +351,7 @@ export const TOURS: TourDefinition[] = [
     id: 'ophtalmologue',
     label: 'Visite ophtalmologue',
     roles: ['ophtalmologue', 'orthoptiste'],
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [...SHELL_STEPS, DASHBOARD_STEP, ...CLINIC_STEPS, SETTINGS_STEP, FINISH_STEP],
   },
@@ -359,7 +359,7 @@ export const TOURS: TourDefinition[] = [
     id: 'secretaire',
     label: 'Visite secrétariat',
     roles: ['secretaire', 'receptionniste'],
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [
       ...SHELL_STEPS,
@@ -374,7 +374,7 @@ export const TOURS: TourDefinition[] = [
     id: 'commercial',
     label: 'Visite commerciale',
     roles: ['commercial', 'caissier'],
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [
       ...SHELL_STEPS,
@@ -392,7 +392,7 @@ export const TOURS: TourDefinition[] = [
     id: 'default',
     label: 'Visite guidée',
     roles: ['*'],
-    version: 2,
+    version: 3,
     narrate: true,
     steps: [...SHELL_STEPS, DASHBOARD_STEP, ...MANAGEMENT_STEPS, SETTINGS_STEP, FINISH_STEP],
   },

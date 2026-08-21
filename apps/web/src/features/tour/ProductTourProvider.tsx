@@ -18,6 +18,7 @@ import { isTourCompleted, isTourDismissed, saveProgress, getProgress, clearProgr
 import { mergeTheme, type TourTheme } from './theme';
 import { useSpeechNarration } from './useSpeechNarration';
 import { getDemoProgress, saveDemoProgress, trackDemoEvent } from './api';
+import { named } from '../../lib/lazyChunk';
 import type { ProductTourApi, TourDefinition, TourStep } from './types';
 
 const DEMO_TOUR_ID = 'demo-onboarding';
@@ -25,11 +26,12 @@ const DEMO_TOUR_ID = 'demo-onboarding';
 /**
  * L'habillage visuel (voile, halo, bulle) vit dans un chunk séparé chargé
  * seulement quand une visite démarre : Framer Motion ne pèse donc rien sur le
- * premier rendu de l'application.
+ * premier rendu de l'application. `named` protège contre un chunk devenu
+ * obsolète après déploiement (voir lib/lazyChunk.ts) — sans ça, un onglet
+ * resté ouvert pendant un déploiement faisait échouer cet import en silence :
+ * la visite ne s'affichait plus jamais, sans la moindre erreur visible.
  */
-const TourOverlay = lazy(() =>
-  import('./TourOverlay').then((m) => ({ default: m.TourOverlay })),
-);
+const TourOverlay = lazy(() => named(import('./TourOverlay'), 'TourOverlay'));
 
 export interface TourContextValue extends ProductTourApi {
   theme: TourTheme;
@@ -285,10 +287,11 @@ export function ProductTourProvider({
 
   // Déclencheur « première connexion » / « mise à jour importante » : la version
   // du contenu ayant changé, isTourCompleted redevient faux et la visite est
-  // reproposée — sauf si l'utilisateur l'avait explicitement ignorée. Si une
-  // progression serveur existe déjà (visite laissée en cours, sur cet appareil
-  // ou un autre), on NE relance PAS automatiquement : c'est DemoResumeBanner
-  // qui propose Continuer / Recommencer / Passer à l'abonnement.
+  // reproposée. La visite est OBLIGATOIRE jusqu'à la fin (aucune façon de
+  // l'ignorer une fois lancée — voir TourControls/TourTooltip/TourOverlay) :
+  // si elle a été interrompue (rechargement de page, autre appareil...), on la
+  // reprend automatiquement à l'étape où elle en était, plutôt que de laisser
+  // l'utilisateur choisir via une bannière — d'où la suppression de DemoResumeBanner.
   useEffect(() => {
     if (!autoStart || !user || autoStarted.current) return;
     if (isTourCompleted(roleTour.id, roleTour.version)) return;
@@ -296,7 +299,9 @@ export function ProductTourProvider({
     let cancelled = false;
     async function schedule() {
       const progress = await getDemoProgress().catch(() => null);
-      if (progress && (progress.currentStepId || progress.skipped)) return; // repris via la bannière
+      // Terminée depuis un autre appareil : la trace locale ne le sait pas
+      // encore (isTourCompleted ci-dessus ne regarde que ce navigateur-ci).
+      if (progress?.completedAt) return;
       if (cancelled) return;
       // Le drapeau est posé au déclenchement, PAS à la programmation : sinon un
       // changement de dépendance (ou le double effet de StrictMode) annulerait le
@@ -305,7 +310,7 @@ export function ProductTourProvider({
       window.setTimeout(() => {
         if (cancelled) return;
         autoStarted.current = true;
-        startTour();
+        startTour(undefined, progress?.currentStepId ? { resumeStepId: progress.currentStepId } : undefined);
       }, autoStartDelay);
     }
     void schedule();

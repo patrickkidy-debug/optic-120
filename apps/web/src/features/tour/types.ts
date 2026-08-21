@@ -32,9 +32,11 @@ export interface TourStep {
    */
   enabled?: (ctx: TourGuardContext) => boolean;
   /**
-   * "Essayez maintenant..." : le bouton Suivant reste désactivé (mais Passer
-   * reste disponible) tant que la page cible n'a pas signalé l'action, via
+   * "Essayez maintenant..." : le bouton Suivant reste désactivé tant que la
+   * page cible n'a pas signalé l'action, via
    * `window.dispatchEvent(new CustomEvent('oculo-tour-action', { detail: { event } }))`.
+   * Choisir une action à très faible friction (ex. taper un caractère) : la
+   * visite est obligatoire jusqu'à la fin, aucun "Passer" pour s'en sortir.
    */
   awaitAction?: { event: string };
 }

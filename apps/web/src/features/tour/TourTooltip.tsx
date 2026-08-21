@@ -1,6 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
 import { usePlacement } from './usePlacement';
 import { TourProgress } from './TourProgress';
 import { TourControls } from './TourControls';
@@ -17,7 +16,6 @@ interface TourTooltipProps {
   theme: TourTheme;
   onNext: () => void;
   onPrevious: () => void;
-  onSkip: () => void;
   /** Vrai tant que l'action attendue (`step.awaitAction`) n'a pas eu lieu. */
   nextDisabled?: boolean;
   /** Contrôles de narration voix, affichés seulement si `narrate` est vrai. */
@@ -42,7 +40,6 @@ export const TourTooltip = memo(function TourTooltip({
   theme,
   onNext,
   onPrevious,
-  onSkip,
   nextDisabled,
   narration,
   narrate,
@@ -144,14 +141,6 @@ export const TourTooltip = memo(function TourTooltip({
             {step.title}
           </h3>
         </div>
-        <button
-          type="button"
-          onClick={onSkip}
-          aria-label={theme.labels.close}
-          className="-mr-1 -mt-1 rounded-lg p-1 text-content-faint transition hover:bg-surface-2 hover:text-content"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       <p
@@ -171,7 +160,6 @@ export const TourTooltip = memo(function TourTooltip({
         theme={theme}
         onNext={onNext}
         onPrevious={onPrevious}
-        onSkip={onSkip}
         nextDisabled={nextDisabled}
         narration={narrate ? narration : undefined}
         content={step.content}

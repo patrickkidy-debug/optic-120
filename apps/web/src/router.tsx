@@ -4,34 +4,14 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
 import { PageLoader } from './components/ui';
 import { useAuthStore } from './store/auth';
+import { named } from './lib/lazyChunk';
 
 /**
  * Pages chargées à la demande (code-splitting) : seul le code de la page
  * visitée est téléchargé, ce qui allège fortement le bundle initial (les
  * dépendances lourdes comme chart.js ne se chargent que sur le dashboard).
+ * `named` protège contre les chunks obsolètes après déploiement — voir lib/lazyChunk.ts.
  */
-/**
- * Après un nouveau déploiement, l'ancien index.html chargé en mémoire référence
- * d'anciens chunks (hash) qui n'existent plus → « Failed to fetch dynamically
- * imported module ». On recharge alors la page UNE fois pour récupérer le
- * nouvel index et les nouveaux chunks (garde anti-boucle de 10 s).
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function onChunkError(err: unknown): Promise<any> {
-  const k = 'oculo-chunk-reload';
-  const last = Number(sessionStorage.getItem(k) || 0);
-  if (Date.now() - last > 10000) {
-    sessionStorage.setItem(k, String(Date.now()));
-    window.location.reload();
-    // Promesse jamais résolue : suspend le rendu le temps du rechargement.
-    return new Promise(() => {});
-  }
-  throw err;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const named = (p: Promise<any>, key: string) =>
-  p.then((m) => ({ default: m[key] })).catch(onChunkError);
 
 // La coquille applicative (barre latérale, top-bar, bannières, chat support +
 // leurs icônes) n'est chargée que pour les routes protégées : les pages
