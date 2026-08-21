@@ -12,6 +12,7 @@ import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
+import { OpticalShopIllustration } from '../../components/illustrations/OpticalShopIllustration';
 
 const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
 
@@ -125,7 +126,11 @@ export function SignupPage() {
   }
 
   return (
-    <AuthLayout title={t('auth.signUpTitle')} subtitle={t('auth.signUpSubtitle')}>
+    <AuthLayout
+      title={t('auth.signUpTitle')}
+      subtitle={t('auth.signUpSubtitle')}
+      illustration={<OpticalShopIllustration />}
+    >
       <GoogleSignInButton text="signup_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
       {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
       <div className="my-5 flex items-center gap-3 text-xs text-content-faint">

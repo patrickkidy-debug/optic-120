@@ -13,10 +13,13 @@ export function AuthLayout({
   title,
   subtitle,
   children,
+  illustration,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
+  /** Visuel optionnel affiché au-dessus du titre du panneau — pensé pour l'inscription. */
+  illustration?: ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -32,6 +35,7 @@ export function AuthLayout({
         />
         <Logo />
         <div className="relative">
+          {illustration && <div className="mb-6 w-56">{illustration}</div>}
           <h1 className="font-display text-4xl font-extrabold leading-tight text-content">
             {t('auth.panelTitleA')} <span className="text-gradient">{t('auth.panelTitleAccent')}</span>
             <br />
