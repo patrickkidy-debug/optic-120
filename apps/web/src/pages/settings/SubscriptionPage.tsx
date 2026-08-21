@@ -583,11 +583,19 @@ function BillingPaymentModal({
         `checkout_${res.paymentId}`,
       );
       setIsSimulation(res.simulation);
-      // PayTech : redirection vers le checkout hébergé, puis on attend la
-      // confirmation par IPN (polling du statut en arrière-plan).
+      // Redirection vers le checkout hébergé (Moneroo/PayTech). `window.open`
+      // depuis ce callback (après un aller-retour réseau, donc hors du geste de
+      // clic d'origine) est bloqué silencieusement par la plupart des
+      // navigateurs mobiles — aucune erreur, littéralement rien ne se passe à
+      // l'écran. On redirige donc l'onglet courant, comme le fait déjà le
+      // lancement automatique depuis l'inscription (?plan=) plus haut, et on
+      // mémorise le paiement pour reprendre sa confirmation au retour.
       if (res.redirectUrl) {
-        window.open(res.redirectUrl, '_blank', 'noopener');
-        setPhase('pending');
+        sessionStorage.setItem(
+          PENDING_PURCHASE_KEY,
+          JSON.stringify({ paymentId: res.paymentId, planName: target.label, amount: target.amount }),
+        );
+        window.location.href = res.redirectUrl;
         return;
       }
       setPhase(res.status === 'SUCCESS' ? 'done' : 'pending');
