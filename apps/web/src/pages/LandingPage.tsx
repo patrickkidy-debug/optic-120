@@ -18,7 +18,6 @@ import {
   Gauge,
   Network,
   Smartphone,
-  MessageCircle,
   FolderX,
   EyeOff,
   Hourglass,
@@ -27,7 +26,6 @@ import clsx from 'clsx';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
-import { demoWhatsappLink } from '../lib/whatsapp';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -291,7 +289,7 @@ function CatalogMock() {
               <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">En stock</span>
               <span className="ml-auto text-content-faint">5 monture(s)</span>
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {CATALOG_ITEMS.map((it, i) => (
                 <div key={it.ref} className="overflow-hidden rounded-xl border border-line bg-surface">
                   <div className="relative h-14 overflow-hidden bg-surface-2/60">
@@ -344,7 +342,6 @@ export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const year = new Date().getFullYear();
-  const demoLink = demoWhatsappLink(t('landing.demoWhatsappMessage'));
 
   return (
     <div style={LANDING_THEME} className="relative min-h-screen overflow-x-hidden bg-bg text-content">
@@ -457,35 +454,25 @@ export function LandingPage() {
                 <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
                   {t('landing.heroSubtitle')}
                 </p>
-                <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+                {/* Un seul CTA principal : chaque bouton en plus dilue la
+                    conversion. L'app auto-guide désormais le prospect de A à Z
+                    après l'inscription — plus besoin de proposer une démo ou
+                    les tarifs en concurrence dès le premier écran. */}
+                <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
                   <Link
                     to="/signup"
-                    className="btn-primary neon-glow rounded-xl px-8 py-4 text-base transition hover:-translate-y-0.5"
+                    className="btn-primary neon-glow rounded-full px-8 py-4 text-base transition hover:-translate-y-0.5"
                   >
                     {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
                   <a
-                    href={demoLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-outline inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 text-base transition hover:-translate-y-0.5"
+                    href="/downloads/OculoSaaS.apk"
+                    download
+                    className="inline-flex w-fit items-center gap-2 px-2 py-3 text-sm font-semibold text-content-muted transition hover:text-primary"
                   >
-                    <MessageCircle className="h-4 w-4" /> {t('landing.requestDemo')}
-                  </a>
-                  <a
-                    href="#tarifs"
-                    className="glass-card glass-hover rounded-xl px-8 py-4 text-center text-base font-semibold text-content"
-                  >
-                    {t('landing.seePricing')}
+                    <Smartphone className="h-4 w-4" /> {t('landing.downloadAndroid')}
                   </a>
                 </div>
-                <a
-                  href="/downloads/OculoSaaS.apk"
-                  download
-                  className="glass-card glass-hover inline-flex w-fit items-center gap-2.5 rounded-xl px-6 py-3 text-sm font-semibold text-content"
-                >
-                  <Smartphone className="h-4 w-4 text-primary" /> {t('landing.downloadAndroid')}
-                </a>
                 <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
                   <span className="inline-flex items-center gap-1.5">
                     <Check className="h-4 w-4 text-cyan" /> {t('landing.check1')}
@@ -907,21 +894,13 @@ export function LandingPage() {
             <p className="mx-auto mb-12 max-w-2xl text-lg text-content-muted">
               {t('landing.ctaSubtitle')}
             </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <div className="flex justify-center">
               <Link
                 to="/signup"
-                className="btn-primary neon-glow rounded-2xl px-12 py-5 text-lg transition hover:-translate-y-0.5"
+                className="btn-primary neon-glow rounded-full px-12 py-5 text-lg transition hover:-translate-y-0.5"
               >
                 {t('landing.useSoftware')} <ArrowRight className="h-5 w-5" />
               </Link>
-              <a
-                href={demoLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline inline-flex items-center justify-center gap-2 rounded-2xl px-12 py-5 text-lg transition hover:-translate-y-0.5"
-              >
-                <MessageCircle className="h-5 w-5" /> {t('landing.requestDemo')}
-              </a>
             </div>
           </Reveal>
         </section>
