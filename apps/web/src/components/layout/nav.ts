@@ -19,6 +19,7 @@ import {
   CreditCard,
   ScrollText,
   Crown,
+  PlayCircle,
   Server,
   LifeBuoy,
   Glasses,
@@ -54,6 +55,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
       { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
+      { to: '/demo/videos', labelKey: 'nav.demoVideos', icon: PlayCircle, permission: 'dashboard.view' },
     ],
   },
   {

@@ -44,7 +44,6 @@ import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard, listLensOrders } from '../features/optique/api';
 import { StatCard, EmptyState, Badge } from '../components/ui';
 import { ForecastPanel } from '../components/ForecastPanel';
-import { DemoBooking } from '../components/DemoBooking';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
 import { getInsurerUpcoming } from '../features/management/api';
@@ -479,11 +478,10 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Démonstration vidéo : disparaît une fois les 4 vidéos vues. */}
+      {/* Démonstration vidéo : disparaît une fois les 4 vidéos vues. La demande
+          de démonstration personnalisée WhatsApp vit désormais DANS cette page
+          vidéo, au moment où le prospect en a réellement besoin. */}
       <WatchDemoCard />
-
-      {/* Proposition de démonstration gratuite (essai / sans abonnement actif). */}
-      <DemoBooking />
 
       {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
