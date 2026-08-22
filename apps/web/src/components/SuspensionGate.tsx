@@ -5,6 +5,7 @@ import { usePermission } from '../store/auth';
 import { logout } from '../features/auth/api';
 import { PageLoader } from './ui';
 import { named } from '../lib/lazyChunk';
+import { WatchDemoCard } from '../features/demo/WatchDemoCard';
 
 const SubscriptionPage = lazy(() => named(import('../pages/settings/SubscriptionPage'), 'SubscriptionPage'));
 
@@ -37,6 +38,13 @@ export function SuspensionGate() {
                 : "L'accès est en pause tant que l'abonnement n'est pas activé. Contactez l'administrateur de votre établissement."}
             </p>
           </div>
+        </div>
+
+        {/* Moment décisif : le prospect hésite à payer. Lui couper l'accès à
+            la démonstration serait contre-productif — c'est justement là
+            qu'elle doit rester à portée de clic. */}
+        <div className="mb-6">
+          <WatchDemoCard compact />
         </div>
 
         {canManage && (

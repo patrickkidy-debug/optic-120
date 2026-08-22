@@ -62,7 +62,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const PAYMENT_LABEL: Record<string, string> = {
   INSURANCE: 'Assurance',
-  CASH: 'Espèces', CARD: 'Carte', WAVE: 'Wave', ORANGE_MONEY: 'Orange Money',
+  CASH: 'Espèces', CARD: 'Carte', CHEQUE: 'Chèque', WAVE: 'Wave', ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', FREE_MONEY: 'Free Money',
   MPESA: 'M-Pesa', EMOLA: 'e-Mola', MKESH: 'mKesh', MULTICAIXA: 'Multicaixa',
   UNITEL_MONEY: 'Unitel Money', VINTI4: 'Vinti4',

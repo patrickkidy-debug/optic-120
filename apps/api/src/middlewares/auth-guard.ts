@@ -10,7 +10,14 @@ import { isOperatorEmail as isOperator } from '../lib/operators.js';
 /** Routes accessibles même quand l'abonnement est suspendu (paiement, auth, opérateur). */
 function isBillingExempt(url: string): boolean {
   const path = url.split('?')[0];
-  return path.startsWith('/billing') || path.startsWith('/auth') || path.startsWith('/platform');
+  return (
+    path.startsWith('/billing') ||
+    path.startsWith('/auth') ||
+    path.startsWith('/platform') ||
+    // La démonstration reste accessible quand l'abonnement n'est pas payé :
+    // c'est elle qui doit convaincre le prospect de régler.
+    path.startsWith('/demo')
+  );
 }
 
 /**

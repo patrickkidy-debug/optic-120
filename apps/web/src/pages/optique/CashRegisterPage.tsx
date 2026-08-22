@@ -18,6 +18,7 @@ import { PageHeader, PageLoader, Button, Field, Badge } from '../../components/u
 const METHOD_LABELS: Record<string, string> = {
   CASH: 'Espèces',
   CARD: 'Carte',
+  CHEQUE: 'Chèque',
   WAVE: 'Wave',
   ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo',

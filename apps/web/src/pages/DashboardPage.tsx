@@ -165,6 +165,7 @@ const METHOD_LABELS: Record<string, string> = {
   MOOV_MONEY: 'Moov',
   FREE_MONEY: 'Free',
   CARD: 'Carte',
+  CHEQUE: 'Chèque',
 };
 const METHOD_COLORS = ['#3b82f6', '#22d3ee', '#f97316', '#20c997', '#a855f7', '#f59e0b', '#ef4444'];
 

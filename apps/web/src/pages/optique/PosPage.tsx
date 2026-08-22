@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Loader2,
   QrCode,
+  FileText,
 } from 'lucide-react';
 import type { PaymentMethod } from '@oculo/shared-types';
 import {
@@ -52,6 +53,7 @@ import { Button, Modal, PageLoader, Badge } from '../../components/ui';
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   CASH: 'Espèces',
   CARD: 'Carte',
+  CHEQUE: 'Chèque',
   WAVE: 'Wave',
   ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo',
@@ -74,6 +76,9 @@ function methodsFor(countryCode?: string | null) {
   return [
     { value: 'CASH' as PaymentMethod, label: METHOD_LABELS.CASH, icon: Banknote, mobile: false },
     { value: 'CARD' as PaymentMethod, label: METHOD_LABELS.CARD, icon: CreditCard, mobile: false },
+    // Chèque : moyen habituel des assurances (tiers payant), à saisir comme
+    // n'importe quel encaissement constaté au comptoir.
+    { value: 'CHEQUE' as PaymentMethod, label: METHOD_LABELS.CHEQUE, icon: FileText, mobile: false },
     ...mobile.map((m) => ({ value: m, label: METHOD_LABELS[m], icon: Smartphone, mobile: true })),
   ];
 }
@@ -587,11 +592,12 @@ export function PaymentModal({
               <button
                 key={m.value}
                 onClick={() => {
+                  // Encaissement DIRECT quel que soit le moyen : le caissier
+                  // constate le paiement au comptoir. Afficher le QR n'est
+                  // jamais imposé — c'est une aide optionnelle (bouton
+                  // ci-dessous) pour les boutiques qui l'ont configuré.
                   setMethod(m.value);
-                  // Mobile Money : on affiche le QR / numéro de la boutique, puis
-                  // le caissier confirme la réception. Espèces / carte : direct.
-                  if (m.mobile) setPhase('collect');
-                  else payMut.mutate(m.value);
+                  payMut.mutate(m.value);
                 }}
                 disabled={payMut.isPending}
                 className="card flex flex-col items-center gap-1.5 p-3 transition hover:border-primary"
@@ -601,6 +607,16 @@ export function PaymentModal({
               </button>
             ))}
           </div>
+          {/* Aide facultative : montrer au client où envoyer l'argent. */}
+          {(collect?.qr || collect?.number) && (
+            <button
+              onClick={() => setPhase('collect')}
+              disabled={payMut.isPending}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-2.5 text-xs font-medium text-content-muted transition hover:border-primary hover:text-primary"
+            >
+              <QrCode className="h-4 w-4" /> Afficher mes coordonnées de paiement
+            </button>
+          )}
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         </>
       )}
@@ -608,7 +624,7 @@ export function PaymentModal({
       {phase === 'collect' && (
         <div className="text-center">
           <p className="mb-3 text-sm text-content-muted">
-            Le client paie via <b>{METHODS.find((m) => m.value === method)?.label}</b>
+            Montrez ces coordonnées au client, puis choisissez le moyen de paiement.
           </p>
           {collect?.qr ? (
             <img src={collect.qr} alt="QR de paiement" className="mx-auto h-44 w-44 rounded-xl border bg-white object-contain p-2" />
@@ -631,12 +647,9 @@ export function PaymentModal({
             )}
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-          <div className="mt-4 flex gap-2">
-            <Button variant="ghost" className="flex-1" onClick={() => { setPhase('choose'); setMethod(null); }}>
-              Retour
-            </Button>
-            <Button className="flex-1" loading={payMut.isPending} onClick={() => method && payMut.mutate(method)}>
-              Paiement reçu
+          <div className="mt-4">
+            <Button variant="outline" className="w-full" onClick={() => { setPhase('choose'); setMethod(null); }}>
+              Retour au choix du paiement
             </Button>
           </div>
         </div>

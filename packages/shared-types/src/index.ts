@@ -82,6 +82,8 @@ export const PaymentMethod = {
   MOOV_MONEY: 'MOOV_MONEY',
   FREE_MONEY: 'FREE_MONEY',
   CARD: 'CARD',
+  /** Chèque — principalement utilisé par les assurances (tiers payant). */
+  CHEQUE: 'CHEQUE',
   // Marchés lusophones (encaissement manuel au comptoir, comme les autres).
   MPESA: 'MPESA', // Mozambique (Vodacom)
   EMOLA: 'EMOLA', // Mozambique (Movitel)

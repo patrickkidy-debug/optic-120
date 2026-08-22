@@ -717,6 +717,8 @@ enum PaymentMethod {
   MOOV_MONEY
   FREE_MONEY
   CARD
+  /// Cheque : surtout utilise par les assurances (tiers payant).
+  CHEQUE
   // Marchés lusophones (encaissement manuel au comptoir)
   MPESA
   EMOLA
