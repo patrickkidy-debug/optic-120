@@ -1,4 +1,4 @@
-import { SaleStatus, SaleType, StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
+import { PaymentStatus, SaleStatus, SaleType, StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 
 function startOfToday(): Date {
@@ -15,6 +15,32 @@ function startOfMonth(): Date {
 
 const PAID_LIKE = [SaleStatus.PAID, SaleStatus.PARTIALLY_PAID, SaleStatus.CONFIRMED];
 
+/**
+ * COMPTABILITÉ DE CAISSE : le chiffre d'affaires est rattaché au jour où
+ * l'argent est RÉELLEMENT encaissé, pas au jour de la vente. Un client qui
+ * règle son reliquat deux semaines plus tard fait monter le CA du jour de ce
+ * second encaissement — et les journées déjà closes ne changent plus jamais
+ * rétroactivement.
+ *
+ * La source de vérité est donc la table Payment (un Payment SUCCESS par
+ * encaissement, horodaté), et NON Sale.paidAmount (qui est un cumul rattaché
+ * à la date de la vente). La part prise en charge par une assurance fait
+ * exception : elle est injectée dans Sale.paidAmount à la vente sans créer de
+ * Payment, elle reste donc rattachée à la date de la vente.
+ */
+function paymentWhere(tenantId: string, branchId: string | undefined, from: Date, to?: Date) {
+  return {
+    tenantId,
+    status: PaymentStatus.SUCCESS,
+    createdAt: to ? { gte: from, lt: to } : { gte: from },
+    sale: {
+      type: SaleType.SALE,
+      status: { in: PAID_LIKE },
+      ...(branchId ? { branchId } : {}),
+    },
+  };
+}
+
 export async function getDashboard(tenantId: string, branchId?: string) {
   const branchFilter = branchId ? { branchId } : {};
   const saleBase = { tenantId, type: SaleType.SALE, ...branchFilter };
@@ -22,6 +48,8 @@ export async function getDashboard(tenantId: string, branchId?: string) {
   const [
     todayAgg,
     monthAgg,
+    todayPaidAgg,
+    monthPaidAgg,
     todayCount,
     customersCount,
     lowStockItems,
@@ -35,13 +63,23 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     activeCustomersRaw,
     activeCustomersPrevRaw,
   ] = await Promise.all([
+    // Part assurance : acquise a la vente (aucun Payment n'est cree pour elle).
     prisma.sale.aggregate({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } },
-      _sum: { paidAmount: true, totalAmount: true, insuranceAmount: true },
+      _sum: { insuranceAmount: true },
     }),
     prisma.sale.aggregate({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfMonth() } },
-      _sum: { paidAmount: true, totalAmount: true, insuranceAmount: true },
+      _sum: { insuranceAmount: true },
+    }),
+    // Encaisse reel du jour / du mois, date au jour ou l'argent est rentre.
+    prisma.payment.aggregate({
+      where: paymentWhere(tenantId, branchId, startOfToday()),
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: paymentWhere(tenantId, branchId, startOfMonth()),
+      _sum: { amount: true },
     }),
     prisma.sale.count({ where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: startOfToday() } } }),
     prisma.customer.count({ where: { tenantId } }),
@@ -55,13 +93,9 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       take: 8,
       include: { customer: true, branch: true },
     }),
-    prisma.sale.findMany({
-      where: {
-        ...saleBase,
-        status: { in: PAID_LIKE },
-        createdAt: { gte: new Date(Date.now() - 6 * 24 * 3600 * 1000) },
-      },
-      select: { createdAt: true, paidAmount: true },
+    prisma.payment.findMany({
+      where: paymentWhere(tenantId, branchId, new Date(Date.now() - 6 * 24 * 3600 * 1000)),
+      select: { createdAt: true, amount: true },
     }),
     prisma.payment.groupBy({
       by: ['method'],
@@ -83,16 +117,14 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       take: 5,
     }),
     // CA de la semaine précédente (pour la tendance 7 jours).
-    prisma.sale.aggregate({
-      where: {
-        ...saleBase,
-        status: { in: PAID_LIKE },
-        createdAt: {
-          gte: new Date(Date.now() - 13 * 24 * 3600 * 1000),
-          lt: new Date(Date.now() - 6 * 24 * 3600 * 1000),
-        },
-      },
-      _sum: { paidAmount: true },
+    prisma.payment.aggregate({
+      where: paymentWhere(
+        tenantId,
+        branchId,
+        new Date(Date.now() - 13 * 24 * 3600 * 1000),
+        new Date(Date.now() - 6 * 24 * 3600 * 1000),
+      ),
+      _sum: { amount: true },
     }),
     // Clients actifs : au moins un achat sur les 30 derniers jours (et les 30
     // précédents, pour calculer une évolution).
@@ -131,11 +163,11 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     days.push({ date: d.toISOString().slice(0, 10), revenue: 0, sales: 0 });
   }
   const indexByDate = new Map(days.map((d, idx) => [d.date, idx]));
-  for (const s of weekSales) {
-    const key = s.createdAt.toISOString().slice(0, 10);
+  for (const p of weekSales) {
+    const key = p.createdAt.toISOString().slice(0, 10);
     const idx = indexByDate.get(key);
     if (idx !== undefined) {
-      days[idx].revenue += Number(s.paidAmount);
+      days[idx].revenue += Number(p.amount);
       days[idx].sales += 1;
     }
   }
@@ -144,8 +176,11 @@ export async function getDashboard(tenantId: string, branchId?: string) {
   const activeCustomersPrev = activeCustomersPrevRaw.length;
 
   const weekRevenue = days.reduce((sum, d) => sum + d.revenue, 0);
-  const prevWeekRevenue = Number(prevWeekAgg._sum.paidAmount ?? 0);
-  const monthRevenueValue = Number(monthAgg._sum.paidAmount ?? 0);
+  const prevWeekRevenue = Number(prevWeekAgg._sum.amount ?? 0);
+  // CA = encaisse reel (date au jour du paiement) + part assurance (acquise a la vente).
+  const todayCollectedValue = Number(todayPaidAgg._sum.amount ?? 0);
+  const monthCollectedValue = Number(monthPaidAgg._sum.amount ?? 0);
+  const monthRevenueValue = monthCollectedValue + Number(monthAgg._sum.insuranceAmount ?? 0);
   const avgBasket = monthCount > 0 ? Math.round(monthRevenueValue / monthCount) : 0;
 
   const topProductNames = topProductGroups.length
@@ -160,18 +195,18 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     quantity: Number(g._sum.quantity ?? 0),
   }));
 
-  // Répartition du CA : part prise en charge par les assurances vs encaissé
-  // auprès des clients (paidAmount inclut la part assurance, on la soustrait).
+  // Répartition du CA : part prise en charge par les assurances (rattachée à
+  // la date de la vente) vs encaissé auprès des clients (daté au paiement).
   const todayInsurance = Number(todayAgg._sum.insuranceAmount ?? 0);
   const monthInsurance = Number(monthAgg._sum.insuranceAmount ?? 0);
 
   return {
-    todayRevenue: Number(todayAgg._sum.paidAmount ?? 0),
-    monthRevenue: Number(monthAgg._sum.paidAmount ?? 0),
+    todayRevenue: todayCollectedValue + todayInsurance,
+    monthRevenue: monthRevenueValue,
     todayInsurance,
     monthInsurance,
-    todayCollected: Math.max(0, Number(todayAgg._sum.paidAmount ?? 0) - todayInsurance),
-    monthCollected: Math.max(0, Number(monthAgg._sum.paidAmount ?? 0) - monthInsurance),
+    todayCollected: todayCollectedValue,
+    monthCollected: monthCollectedValue,
     todaySalesCount: todayCount,
     customersCount,
     // Verres (fabriqués sur commande) exclus des alertes de stock bas.
@@ -262,10 +297,16 @@ export async function getSeries(tenantId: string, branchId: string | undefined, 
   const granularity = granularityForRange(range);
   const since = rangeStart(range);
 
-  const [sales, items] = await Promise.all([
+  const [payments, sales, items] = await Promise.all([
+    // Encaissements reels, dates au jour ou l'argent est rentre.
+    prisma.payment.findMany({
+      where: paymentWhere(tenantId, branchId, since),
+      select: { createdAt: true, amount: true },
+    }),
+    // Part assurance : rattachee a la date de la vente.
     prisma.sale.findMany({
       where: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: since } },
-      select: { createdAt: true, paidAmount: true, insuranceAmount: true },
+      select: { createdAt: true, insuranceAmount: true },
     }),
     prisma.saleItem.findMany({
       where: { sale: { ...saleBase, status: { in: PAID_LIKE }, createdAt: { gte: since } } },
@@ -283,14 +324,18 @@ export async function getSeries(tenantId: string, branchId: string | undefined, 
     keys.map((k) => [k, { date: k, revenue: 0, sales: 0, collected: 0, margin: 0 }]),
   );
 
-  for (const s of sales) {
-    const row = byKey.get(bucketKey(s.createdAt, granularity));
+  for (const p of payments) {
+    const row = byKey.get(bucketKey(p.createdAt, granularity));
     if (!row) continue;
-    const paid = Number(s.paidAmount);
-    const insurance = Number(s.insuranceAmount ?? 0);
-    row.revenue += paid;
+    const amount = Number(p.amount);
+    row.revenue += amount;
+    row.collected += amount;
     row.sales += 1;
-    row.collected += Math.max(0, paid - insurance);
+  }
+  for (const sale of sales) {
+    const row = byKey.get(bucketKey(sale.createdAt, granularity));
+    if (!row) continue;
+    row.revenue += Number(sale.insuranceAmount ?? 0);
   }
   for (const it of items) {
     const row = byKey.get(bucketKey(it.sale.createdAt, granularity));
@@ -334,18 +379,22 @@ export async function getActivity(tenantId: string, branchId?: string) {
       orderBy: { createdAt: 'desc' },
       take: 30,
     }),
-    prisma.lensOrder.findMany({
-      where: { tenantId, createdAt: { gte: start } },
-      select: { id: true, number: true, description: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-    }),
-    prisma.consultation.findMany({
-      where: { tenantId, createdAt: { gte: start } },
-      select: { id: true, createdAt: true, patient: { select: { firstName: true, lastName: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-    }),
+    branchId
+      ? Promise.resolve([])
+      : prisma.lensOrder.findMany({
+          where: { tenantId, createdAt: { gte: start } },
+          select: { id: true, number: true, description: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        }),
+    branchId
+      ? Promise.resolve([])
+      : prisma.consultation.findMany({
+          where: { tenantId, createdAt: { gte: start } },
+          select: { id: true, createdAt: true, patient: { select: { firstName: true, lastName: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        }),
     prisma.stockMovement.findMany({
       where: {
         tenantId,
@@ -443,10 +492,21 @@ export async function getAdminDashboard(
     ...saleScope,
   };
 
-  const [perBranch, perCashier, revenueAgg, expenseAgg, usersTotal, usersActive] = await Promise.all([
-    prisma.sale.groupBy({ by: ['branchId'], where: saleWhere, _sum: { paidAmount: true }, _count: { _all: true } }),
-    prisma.sale.groupBy({ by: ['cashierId'], where: saleWhere, _sum: { paidAmount: true }, _count: { _all: true } }),
-    prisma.sale.aggregate({ where: saleWhere, _sum: { paidAmount: true } }),
+  // CA en base ENCAISSEMENT : on part des paiements du mois (dates au jour ou
+  // l'argent est rentre) et on les rattache au magasin / vendeur de leur vente.
+  const paymentScopeWhere = {
+    tenantId,
+    status: PaymentStatus.SUCCESS,
+    createdAt: { gte: monthStart },
+    sale: { type: SaleType.SALE, status: { in: PAID_LIKE }, ...saleScope },
+  };
+  const [monthPayments, perBranch, perCashier, expenseAgg, usersTotal, usersActive] = await Promise.all([
+    prisma.payment.findMany({
+      where: paymentScopeWhere,
+      select: { amount: true, sale: { select: { branchId: true, cashierId: true } } },
+    }),
+    prisma.sale.groupBy({ by: ['branchId'], where: saleWhere, _count: { _all: true } }),
+    prisma.sale.groupBy({ by: ['cashierId'], where: saleWhere, _count: { _all: true } }),
     prisma.expense.aggregate({
       where: {
         tenantId,
@@ -459,15 +519,31 @@ export async function getAdminDashboard(
     prisma.user.count({ where: { tenantId, isActive: true } }),
   ]);
 
+  // Encaisse du mois regroupe par magasin / vendeur de la vente d'origine.
+  const collectedByBranch = new Map<string, number>();
+  const collectedByCashier = new Map<string, number>();
+  for (const p of monthPayments) {
+    const amount = Number(p.amount);
+    collectedByBranch.set(p.sale.branchId, (collectedByBranch.get(p.sale.branchId) ?? 0) + amount);
+    collectedByCashier.set(p.sale.cashierId, (collectedByCashier.get(p.sale.cashierId) ?? 0) + amount);
+  }
+
   const branchBreakdown = branches
     .map((b) => {
       const g = perBranch.find((x) => x.branchId === b.id);
-      return { name: b.name, revenue: Number(g?._sum.paidAmount ?? 0), salesCount: g?._count._all ?? 0 };
+      return {
+        name: b.name,
+        revenue: collectedByBranch.get(b.id) ?? 0,
+        salesCount: g?._count._all ?? 0,
+      };
     })
     .sort((a, b) => b.revenue - a.revenue);
 
   const top = [...perCashier]
-    .sort((a, b) => Number(b._sum.paidAmount ?? 0) - Number(a._sum.paidAmount ?? 0))
+    .sort(
+      (a, b) =>
+        (collectedByCashier.get(b.cashierId) ?? 0) - (collectedByCashier.get(a.cashierId) ?? 0),
+    )
     .slice(0, 5);
   const sellers = await prisma.user.findMany({
     where: { id: { in: top.map((t) => t.cashierId) } },
@@ -477,12 +553,12 @@ export async function getAdminDashboard(
     const u = sellers.find((s) => s.id === t.cashierId);
     return {
       name: u ? `${u.firstName} ${u.lastName}` : '—',
-      revenue: Number(t._sum.paidAmount ?? 0),
+      revenue: collectedByCashier.get(t.cashierId) ?? 0,
       salesCount: t._count._all,
     };
   });
 
-  const monthRevenue = Number(revenueAgg._sum.paidAmount ?? 0);
+  const monthRevenue = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
   const monthExpenses = Number(expenseAgg._sum.amount ?? 0);
 
   return {
