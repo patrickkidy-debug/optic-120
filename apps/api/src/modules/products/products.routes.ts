@@ -15,17 +15,7 @@ import {
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, requireAnyPermission } from '../../middlewares/rbac-guard.js';
 import { notFound, conflict, badRequest } from '../../lib/http-error.js';
-
-/** Préfixe de référence auto-générée par catégorie (quand aucune n'est saisie). */
-const SKU_PREFIX: Record<string, string> = {
-  MONTURE: 'MON',
-  VERRE: 'VER',
-  LENTILLE: 'LEN',
-  ACCESSOIRE: 'ACC',
-  ENTRETIEN: 'ENT',
-  SERVICE: 'SVC',
-  AUTRE: 'DIV',
-};
+import { generateSku } from './products-import.service.js';
 
 export async function productsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -107,16 +97,7 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     // aussitôt dans Stock et soit ajustable partout.
     const product = await req.db!.$transaction(async (tx) => {
       // Référence auto-générée si non saisie (verres, accessoires…).
-      let sku = provided ?? '';
-      if (!sku) {
-        const prefix = SKU_PREFIX[input.category] ?? 'PRD';
-        for (let i = 0; i < 6 && !sku; i++) {
-          const candidate = `${prefix}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-          const clash = await tx.product.findFirst({ where: { tenantId, sku: candidate }, select: { id: true } });
-          if (!clash) sku = candidate;
-        }
-        if (!sku) sku = `${prefix}-${Date.now().toString(36).toUpperCase()}`;
-      }
+      const sku = provided || (await generateSku(tx, input.category));
       const created = await tx.product.create({
         data: {
           tenantId,

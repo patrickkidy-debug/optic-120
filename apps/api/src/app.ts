@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import { corsOrigins } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { prisma } from './lib/prisma.js';
@@ -12,6 +13,7 @@ import { rbacRoutes } from './modules/rbac/rbac.routes.js';
 import { usersRoutes } from './modules/users/users.routes.js';
 import { branchesRoutes } from './modules/branches/branches.routes.js';
 import { productsRoutes } from './modules/products/products.routes.js';
+import { productsImportRoutes } from './modules/products/products-import.routes.js';
 import { stockRoutes } from './modules/stock/stock.routes.js';
 import { inventoryRoutes } from './modules/inventory/inventory.routes.js';
 import { customersRoutes } from './modules/customers/customers.routes.js';
@@ -62,6 +64,8 @@ export async function buildApp() {
   await app.register(cors, { origin: corsOrigins, credentials: true });
   await app.register(cookie);
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  // Import Excel/CSV de produits : fichier tableur, distinct de bodyLimit (JSON).
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
   app.get('/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
 
@@ -94,6 +98,7 @@ export async function buildApp() {
   await app.register(usersRoutes, { prefix: '/users' });
   await app.register(branchesRoutes, { prefix: '/branches' });
   await app.register(productsRoutes, { prefix: '/products' });
+  await app.register(productsImportRoutes, { prefix: '/products/import' });
   await app.register(stockRoutes, { prefix: '/stock' });
   await app.register(inventoryRoutes, { prefix: '/inventory-counts' });
   await app.register(customersRoutes, { prefix: '/customers' });

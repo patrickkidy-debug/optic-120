@@ -17,6 +17,7 @@
     "@capacitor/core": "^8.4.1",
     "@hookform/resolvers": "^3.9.1",
     "@oculo/shared-types": "*",
+    "@supabase/supabase-js": "^2.112.2",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-table": "^8.20.6",
     "axios": "^1.7.9",
@@ -33,6 +34,7 @@
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.2.0",
     "react-router-dom": "^6.28.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "zustand": "^5.0.2"
   },

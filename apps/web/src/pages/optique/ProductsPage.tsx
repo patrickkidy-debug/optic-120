@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal, History } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, SlidersHorizontal, History, FileUp, FileSpreadsheet, FileText } from 'lucide-react';
 import {
   productCreateSchema,
   type ProductCreateInput,
@@ -26,6 +26,8 @@ import {
   type StockRow,
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
+import { ProductImportModal } from '../../features/optique/import/ProductImportModal';
+import { exportProductsExcel, exportProductsPdf } from '../../features/optique/import/exportProducts';
 import { PhotoUploader } from '../../features/optique/PhotoUploader';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
@@ -81,6 +83,7 @@ export function ProductsPage() {
   const [frameForm, setFrameForm] = useState<{ product: Product | null } | null>(null);
   const [lensForm, setLensForm] = useState<{ product: Product | null } | null>(null);
   const [frameDetail, setFrameDetail] = useState<Product | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
@@ -158,6 +161,21 @@ export function ProductsPage() {
       low: false,
     };
 
+  function buildExportRows() {
+    return filteredProducts.map((p) => {
+      const s = stockByProduct.get(p.id);
+      return {
+        sku: p.sku,
+        name: p.name,
+        category: catLabel(p.category),
+        brand: p.brand,
+        buyPrice: Number(p.buyPrice),
+        sellPrice: Number(p.sellPrice),
+        stock: s && !s.unlimited ? s.quantity : null,
+      };
+    });
+  }
+
   function openCreate() {
     setEditing(null);
     setModalOpen(true);
@@ -217,26 +235,43 @@ export function ProductsPage() {
         title="Catalogue produits"
         subtitle="Montures, verres, lentilles et accessoires"
         actions={
-          canCreate && (
-            <Button
-              onClick={() => {
-                // Le bouton suit la famille affichée : on ne saisit pas une
-                // monture avec le formulaire générique.
-                if (category === 'MONTURE') setFrameForm({ product: null });
-                else if (category === 'VERRE') setLensForm({ product: null });
-                else openCreate();
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              {category === 'MONTURE'
-                ? 'Ajouter une monture'
-                : category === 'VERRE'
-                  ? 'Ajouter un verre'
-                  : 'Nouveau produit'}
+          <div className="flex flex-wrap items-center gap-2">
+            {(canCreate || canUpdate) && (
+              <Button variant="outline" onClick={() => setShowImport(true)}>
+                <FileUp className="h-4 w-4" /> Importer
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => exportProductsExcel(buildExportRows(), 'catalogue-produits.xlsx')}>
+              <FileSpreadsheet className="h-4 w-4" /> Excel
             </Button>
-          )
+            <Button variant="outline" onClick={() => exportProductsPdf(buildExportRows(), 'Catalogue produits')}>
+              <FileText className="h-4 w-4" /> PDF
+            </Button>
+            {canCreate && (
+              <Button
+                onClick={() => {
+                  // Le bouton suit la famille affichée : on ne saisit pas une
+                  // monture avec le formulaire générique.
+                  if (category === 'MONTURE') setFrameForm({ product: null });
+                  else if (category === 'VERRE') setLensForm({ product: null });
+                  else openCreate();
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                {category === 'MONTURE'
+                  ? 'Ajouter une monture'
+                  : category === 'VERRE'
+                    ? 'Ajouter un verre'
+                    : 'Nouveau produit'}
+              </Button>
+            )}
+          </div>
         }
       />
+
+      {showImport && branchId && (
+        <ProductImportModal branchId={branchId} onClose={() => setShowImport(false)} />
+      )}
 
       {/* Visual Category Dashboard Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">

@@ -11,6 +11,7 @@ import {
   PackagePlus,
   ArrowLeftRight,
   ClipboardCheck,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   getStock,
@@ -26,6 +27,7 @@ import { invalidateProductViews } from '../../lib/invalidate';
 import { ReceiveStockModal, TransferStockModal } from './StockOperations';
 import { InventoryCountModal } from '../../features/optique/inventory/InventoryCountModal';
 import { InventoryHistoryModal } from '../../features/optique/inventory/InventoryHistoryModal';
+import { exportProductsExcel, exportProductsPdf } from '../../features/optique/import/exportProducts';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
@@ -135,6 +137,24 @@ export function StockPage() {
         subtitle={t('stock.subtitle')}
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportProductsExcel(
+                  rows.map((r) => ({
+                    sku: r.sku,
+                    name: r.name,
+                    category: catLabel(r.category),
+                    brand: r.brand,
+                    sellPrice: r.sellPrice,
+                    stock: r.unlimited ? null : r.quantity,
+                  })),
+                  'stock.xlsx',
+                )
+              }
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Excel
+            </Button>
             {canAdjust && (
               <Button variant="outline" onClick={() => setOperation('receive')}>
                 <PackagePlus className="h-4 w-4" /> Réception
