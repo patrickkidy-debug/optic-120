@@ -10,7 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* ---------------- TENANCY ---------------- */
+/**
+ * ---------------- TENANCY ----------------
+ */
 
 enum TenantStatus {
   ACTIVE
@@ -19,70 +21,71 @@ enum TenantStatus {
 }
 
 model Tenant {
-  id            String       @id @default(uuid())
-  name          String
-  slug          String       @unique
-  logoUrl       String?
+  id                String       @id @default(uuid())
+  name              String
+  slug              String       @unique
+  logoUrl           String?
   // Situation géographique de l'établissement (adresse ou lien de carte).
-  location      String?
+  location          String?
   // Contact de l'entreprise (affichable sur les documents).
-  contactPhone  String?
-  contactEmail  String?
+  contactPhone      String?
+  contactEmail      String?
   // Personnalisation des documents (factures/devis) : couleur d'accent, mentions
   // légales, note de bas de page, validité des devis. null = valeurs par défaut.
-  invoiceSettings Json?
+  invoiceSettings   Json?
   // Numéro WhatsApp du responsable de l'établissement, collecté à l'inscription
   // (obligatoire côté formulaire) pour permettre au fondateur de le contacter.
-  whatsappPhone String?
-  status        TenantStatus @default(ACTIVE)
-  currency      String       @default("XOF")
-  countryCode   String? // ISO-2, déduit de l'indicatif WhatsApp à l'inscription
+  whatsappPhone     String?
+  status            TenantStatus @default(ACTIVE)
+  currency          String       @default("XOF")
+  countryCode       String? // ISO-2, déduit de l'indicatif WhatsApp à l'inscription
   // Taux de TVA en pourcentage (0 = exonéré). null = défaut 18 %.
-  vatRate       Float?
+  vatRate           Float?
   // Tarifs verres/traitements propres à l'établissement (configurateur). null = barème par défaut.
-  lensPricing   Json?
+  lensPricing       Json?
   // Investissement initial, pour la projection d'amortissement (page Finance).
   initialInvestment Float?
   // Modèles de messages WhatsApp par étape de vente.
   whatsappTemplates Json?
   // Config CinetPay (apiKey chiffrée au repos). null = mode simulation par défaut.
-  paymentConfig Json?
+  paymentConfig     Json?
   // Réglages métier optique : validité des ordonnances, seuils de relance,
   // garantie par défaut, valeur du point de fidélité. null = valeurs par défaut.
-  opticalSettings Json?
+  opticalSettings   Json?
   // Établissement fictif créé par "Découvrir OculoSaaS" (visite guidée pour
   // prospects) : produits/patients/ventes factices, exclu des statistiques
   // plateforme (MRR, nouveaux établissements). Repasse à false et perd toutes
   // ses données factices (purgeDemoData) au moment d'un paiement réel.
-  isDemo        Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  isDemo            Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  demoProgress  DemoProgress?
-  branches      Branch[]
-  users         User[]
-  roles         Role[]
-  products      Product[]
-  stockItems    StockItem[]
-  stockMovements StockMovement[]
-  customers     Customer[]
-  prescriptions OpticalPrescription[]
-  sales         Sale[]
-  payments      Payment[]
-  cashRegisters CashRegister[]
-  auditLogs     AuditLog[]
-  patients      Patient[]
-  consultations Consultation[]
-  appointments  Appointment[]
-  surgeries     Surgery[]
-  employees     Employee[]
-  expenses      Expense[]
-  suppliers     Supplier[]
-  insurers      Insurer[]
-  lensOrders    LensOrder[]
-  repairs       Repair[]
-  subscription  Subscription?
-  subInvoices   SubscriptionInvoice[]
+  demoProgress    DemoProgress?
+  branches        Branch[]
+  users           User[]
+  roles           Role[]
+  products        Product[]
+  stockItems      StockItem[]
+  stockMovements  StockMovement[]
+  customers       Customer[]
+  prescriptions   OpticalPrescription[]
+  sales           Sale[]
+  payments        Payment[]
+  cashRegisters   CashRegister[]
+  auditLogs       AuditLog[]
+  patients        Patient[]
+  consultations   Consultation[]
+  appointments    Appointment[]
+  surgeries       Surgery[]
+  employees       Employee[]
+  expenses        Expense[]
+  suppliers       Supplier[]
+  insurers        Insurer[]
+  lensOrders      LensOrder[]
+  repairs         Repair[]
+  subscription    Subscription?
+  subInvoices     SubscriptionInvoice[]
+  inventoryCounts InventoryCount[]
 }
 
 /// Progression de la visite guidée démo (tenant isDemo). Persistée côté
@@ -113,49 +116,55 @@ model Branch {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  stockItems    StockItem[]
-  sales         Sale[]
-  cashRegisters CashRegister[]
-  users         UserBranch[]
+  stockItems      StockItem[]
+  sales           Sale[]
+  cashRegisters   CashRegister[]
+  users           UserBranch[]
+  inventoryCounts InventoryCount[]
 
   @@index([tenantId])
 }
 
-/* ---------------- IDENTITY & RBAC ---------------- */
+/**
+ * ---------------- IDENTITY & RBAC ----------------
+ */
 
 model User {
-  id               String    @id @default(uuid())
-  tenantId         String
-  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email            String
-  username         String?
-  passwordHash     String
-  firstName        String
-  lastName         String
-  phone            String?
-  photoUrl         String?
-  isActive         Boolean   @default(true)
-  lastLoginAt      DateTime?
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime?
-  resetTokenHash      String?
-  resetTokenExpiresAt DateTime?
+  id                   String    @id @default(uuid())
+  tenantId             String
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email                String
+  username             String?
+  passwordHash         String
+  firstName            String
+  lastName             String
+  phone                String?
+  photoUrl             String?
+  isActive             Boolean   @default(true)
+  lastLoginAt          DateTime?
+  failedLoginCount     Int       @default(0)
+  lockedUntil          DateTime?
+  resetTokenHash       String?
+  resetTokenExpiresAt  DateTime?
   emailVerifiedAt      DateTime?
   verifyTokenHash      String?
   verifyTokenExpiresAt DateTime?
-  googleId         String?   @unique // identifiant Google (sub) si connecté via "Se connecter avec Google"
-  twoFactorEnabled Boolean   @default(false)
-  twoFactorSecret  String? // secret TOTP chiffré (AES-256-GCM)
-  preferences      Json? // { theme: 'light'|'dark'|'auto', locale: 'fr'|'en'|'pt', ... }
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  googleId             String?   @unique // identifiant Google (sub) si connecté via "Se connecter avec Google"
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String? // secret TOTP chiffré (AES-256-GCM)
+  preferences          Json? // { theme: 'light'|'dark'|'auto', locale: 'fr'|'en'|'pt', ... }
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  roleId        String
-  role          Role           @relation(fields: [roleId], references: [id])
-  branches      UserBranch[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
-  sales         Sale[]
+  roleId                   String
+  role                     Role                 @relation(fields: [roleId], references: [id])
+  branches                 UserBranch[]
+  refreshTokens            RefreshToken[]
+  auditLogs                AuditLog[]
+  sales                    Sale[]
+  startedInventoryCounts   InventoryCount[]     @relation("InventoryCountStartedBy")
+  completedInventoryCounts InventoryCount[]     @relation("InventoryCountCompletedBy")
+  countedInventoryLines    InventoryCountLine[] @relation("InventoryCountLineCountedBy")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -173,18 +182,18 @@ model UserBranch {
 }
 
 model Role {
-  id        String   @id @default(uuid())
-  tenantId  String? // null = rôle système/template global
-  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code      String // identifiant stable (ex: "admin", "caissier")
-  name      String // libellé affiché
-  isSystem  Boolean  @default(false)
-  isCustom  Boolean  @default(false)
-  allBranches Boolean @default(false)
+  id                    String   @id @default(uuid())
+  tenantId              String? // null = rôle système/template global
+  tenant                Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code                  String // identifiant stable (ex: "admin", "caissier")
+  name                  String // libellé affiché
+  isSystem              Boolean  @default(false)
+  isCustom              Boolean  @default(false)
+  allBranches           Boolean  @default(false)
   // true dès qu'un admin modifie les permissions du rôle : le resync des rôles
   // système (seed au déploiement) NE DOIT PAS écraser un rôle personnalisé.
-  permissionsCustomized Boolean @default(false)
-  createdAt DateTime @default(now())
+  permissionsCustomized Boolean  @default(false)
+  createdAt             DateTime @default(now())
 
   users       User[]
   permissions RolePermission[]
@@ -231,7 +240,9 @@ model RefreshToken {
   @@index([family])
 }
 
-/* ---------------- CATALOG / STOCK ---------------- */
+/**
+ * ---------------- CATALOG / STOCK ----------------
+ */
 
 enum ProductCategory {
   MONTURE
@@ -266,9 +277,10 @@ model Product {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  stockItems StockItem[]
-  saleItems  SaleItem[]
-  lensOrders LensOrder[]
+  stockItems          StockItem[]
+  saleItems           SaleItem[]
+  lensOrders          LensOrder[]
+  inventoryCountLines InventoryCountLine[]
 
   @@unique([tenantId, sku])
   @@index([tenantId])
@@ -285,6 +297,8 @@ model StockItem {
   branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   quantity  Int      @default(0)
   minAlert  Int      @default(0)
+  /// Emplacement physique libre (« Vitrine A », « Réserve »…) — jamais obligatoire.
+  location  String?
   updatedAt DateTime @updatedAt
 
   movements StockMovement[]
@@ -325,7 +339,84 @@ model StockMovement {
   @@index([supplierId])
 }
 
-/* ---------------- CUSTOMERS / SALES ---------------- */
+enum InventoryCountStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
+enum InventoryAdjustmentReason {
+  PHYSICAL_INVENTORY
+  BREAKAGE
+  LOSS
+  THEFT
+  ENTRY_ERROR
+  GIFT
+  INVENTORY_ERROR
+  OTHER
+}
+
+/// Session d'inventaire physique : compter -> valider -> régulariser les écarts choisis.
+model InventoryCount {
+  id            String               @id @default(uuid())
+  tenantId      String
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId      String
+  branch        Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  status        InventoryCountStatus @default(DRAFT)
+  /// Filtre utilisé à la création (catégorie/marque/emplacement) — informatif seulement.
+  scopeCategory String?
+  scopeBrand    String?
+  scopeLocation String?
+  note          String?
+  startedById   String?
+  startedBy     User?                @relation("InventoryCountStartedBy", fields: [startedById], references: [id])
+  /// Posé quand le comptage est terminé (verrouille la saisie), avant la régularisation.
+  validatedAt   DateTime?
+  completedById String?
+  completedBy   User?                @relation("InventoryCountCompletedBy", fields: [completedById], references: [id])
+  completedAt   DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  lines InventoryCountLine[]
+
+  @@index([tenantId, branchId, status])
+}
+
+/// Une ligne = un produit dans une session d'inventaire (quantité théorique figée à la création).
+model InventoryCountLine {
+  id               String                     @id @default(uuid())
+  tenantId         String
+  inventoryCountId String
+  inventoryCount   InventoryCount             @relation(fields: [inventoryCountId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Figée à la création de la session — jamais modifiée pendant le comptage.
+  theoreticalQty   Int
+  countedQty       Int?
+  countedById      String?
+  countedBy        User?                      @relation("InventoryCountLineCountedBy", fields: [countedById], references: [id])
+  countedAt        DateTime?
+  locationSnapshot String?
+  /// Dénormalisés (recalculés à chaque saisie) pour que le résumé et les
+  /// filtres par statut restent des agrégats SQL rapides à grande échelle,
+  /// sans jamais charger toutes les lignes en mémoire.
+  deltaQty         Int?
+  deltaValue       Decimal?                   @db.Decimal(14, 2)
+  regularized      Boolean                    @default(false)
+  movementId       String?
+  reason           InventoryAdjustmentReason?
+  reasonNote       String?
+  updatedAt        DateTime                   @updatedAt
+
+  @@unique([inventoryCountId, productId])
+  @@index([tenantId, inventoryCountId])
+}
+
+/**
+ * ---------------- CUSTOMERS / SALES ----------------
+ */
 
 model Customer {
   id            String    @id @default(uuid())
@@ -354,12 +445,12 @@ model Customer {
 }
 
 model OpticalPrescription {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customerId        String
-  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  date              DateTime @default(now())
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  date              DateTime  @default(now())
   prescriberName    String?
   odSphere          String?
   odCylinder        String?
@@ -385,9 +476,9 @@ model OpticalPrescription {
   /// Photo / scan d'ordonnance papier (data URL redimensionnée)
   photoUrl          String?
   createdById       String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
-  sales             Sale[]
+  sales Sale[]
 
   @@index([tenantId, customerId])
   @@index([tenantId])
@@ -434,48 +525,48 @@ enum SaleStatus {
 }
 
 model Sale {
-  id              String     @id @default(uuid())
-  tenantId        String
-  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branchId        String
-  branch          Branch     @relation(fields: [branchId], references: [id])
-  customerId      String?
-  customer        Customer?  @relation(fields: [customerId], references: [id])
-  cashierId       String
-  cashier         User       @relation(fields: [cashierId], references: [id])
-  number          String
-  type            SaleType   @default(SALE)
-  status          SaleStatus @default(DRAFT)
-  subtotal        Decimal    @db.Decimal(12, 2)
-  discountAmount  Decimal    @default(0) @db.Decimal(12, 2)
-  taxAmount       Decimal    @default(0) @db.Decimal(12, 2)
-  insuranceAmount Decimal    @default(0) @db.Decimal(12, 2)
+  id                String               @id @default(uuid())
+  tenantId          String
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId          String
+  branch            Branch               @relation(fields: [branchId], references: [id])
+  customerId        String?
+  customer          Customer?            @relation(fields: [customerId], references: [id])
+  cashierId         String
+  cashier           User                 @relation(fields: [cashierId], references: [id])
+  number            String
+  type              SaleType             @default(SALE)
+  status            SaleStatus           @default(DRAFT)
+  subtotal          Decimal              @db.Decimal(12, 2)
+  discountAmount    Decimal              @default(0) @db.Decimal(12, 2)
+  taxAmount         Decimal              @default(0) @db.Decimal(12, 2)
+  insuranceAmount   Decimal              @default(0) @db.Decimal(12, 2)
   // Assureur qui prend en charge insuranceAmount (suivi des paiements trimestriels).
-  insurerId       String?
-  insurer         Insurer?   @relation(fields: [insurerId], references: [id])
+  insurerId         String?
+  insurer           Insurer?             @relation(fields: [insurerId], references: [id])
   // Date à laquelle le remboursement de l'assureur a été effectivement reçu
   // (marqué manuellement) : distingue le "recouvré" du simplement "attendu"
   // dans le widget Assurances du tableau de bord.
-  insurerPaidAt   DateTime?
-  totalAmount     Decimal    @db.Decimal(12, 2)
-  paidAmount      Decimal    @default(0) @db.Decimal(12, 2)
-  currency        String     @default("XOF")
+  insurerPaidAt     DateTime?
+  totalAmount       Decimal              @db.Decimal(12, 2)
+  paidAmount        Decimal              @default(0) @db.Decimal(12, 2)
+  currency          String               @default("XOF")
   // Garantie accordée sur l'équipement vendu (monture/verres) : durée en mois
   // et date d'échéance figée à la vente, pour trancher un litige en SAV.
-  warrantyMonths  Int?
-  warrantyEndsAt  DateTime?
+  warrantyMonths    Int?
+  warrantyEndsAt    DateTime?
   // Remise accordée en points de fidélité (montant déjà inclus dans discountAmount).
-  loyaltyPointsUsed Int      @default(0)
+  loyaltyPointsUsed Int                  @default(0)
   // Ordonnance jointe au devis / à la vente (facultatif) : reprise sur le
   // document imprimé pour que le client ait tout sur une seule page.
-  prescriptionId  String?
-  prescription    OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
+  prescriptionId    String?
+  prescription      OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
   // Retour/avoir : référence la vente d'origine remboursée.
-  originalSaleId  String?
-  originalSale    Sale?      @relation("SaleReturns", fields: [originalSaleId], references: [id])
-  returns         Sale[]     @relation("SaleReturns")
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  originalSaleId    String?
+  originalSale      Sale?                @relation("SaleReturns", fields: [originalSaleId], references: [id])
+  returns           Sale[]               @relation("SaleReturns")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   items    SaleItem[]
   payments Payment[]
@@ -501,33 +592,35 @@ model SaleItem {
   @@index([saleId])
 }
 
-/** Commande de verres/montures auprès d'un laboratoire ou fournisseur. */
+/**
+ * Commande de verres/montures auprès d'un laboratoire ou fournisseur.
+ */
 model LensOrder {
-  id           String          @id @default(uuid())
-  tenantId     String
-  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  number       String
-  customerId   String?
-  customer     Customer?       @relation(fields: [customerId], references: [id])
-  category     String? // VERRES | LENTILLES | ACCESSOIRE | MONTURE | AUTRE
-  supplierName String? // laboratoire / fournisseur
-  description  String // ex. « Verres progressifs 1.6 anti-reflet »
+  id             String          @id @default(uuid())
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number         String
+  customerId     String?
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  category       String? // VERRES | LENTILLES | ACCESSOIRE | MONTURE | AUTRE
+  supplierName   String? // laboratoire / fournisseur
+  description    String // ex. « Verres progressifs 1.6 anti-reflet »
   // Détail par œil (catégorie VERRES) : affiché tel quel sur la carte Kanban.
-  odLens       String?
-  ogLens       String?
+  odLens         String?
+  ogLens         String?
   // Monture associée (facultative) : sert de vignette sur la carte Kanban.
   frameProductId String?
-  frameProduct   Product? @relation(fields: [frameProductId], references: [id], onDelete: SetNull)
-  status       LensOrderStatus @default(TO_ORDER)
-  expectedAt   DateTime?
-  deliveredAt  DateTime? // date de remise au client (calcul du délai de livraison)
+  frameProduct   Product?        @relation(fields: [frameProductId], references: [id], onDelete: SetNull)
+  status         LensOrderStatus @default(TO_ORDER)
+  expectedAt     DateTime?
+  deliveredAt    DateTime? // date de remise au client (calcul du délai de livraison)
   // Dernier rappel WhatsApp envoyé au client depuis la fiche commande.
-  notifiedAt   DateTime?
-  cost         Decimal?        @db.Decimal(12, 2)
-  notes        String?
-  createdById  String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  notifiedAt     DateTime?
+  cost           Decimal?        @db.Decimal(12, 2)
+  notes          String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -535,7 +628,9 @@ model LensOrder {
   @@index([frameProductId])
 }
 
-/** Réparation / SAV d'une monture ou d'un équipement. */
+/**
+ * Réparation / SAV d'une monture ou d'un équipement.
+ */
 model Repair {
   id          String       @id @default(uuid())
   tenantId    String
@@ -557,7 +652,9 @@ model Repair {
   @@index([tenantId, customerId])
 }
 
-/* ---------------- PAYMENTS (CinetPay-ready) ---------------- */
+/**
+ * ---------------- PAYMENTS (CinetPay-ready) ----------------
+ */
 
 enum PaymentMethod {
   CASH
@@ -618,7 +715,9 @@ model Transaction {
   @@index([paymentId])
 }
 
-/* ---------------- CASH REGISTER ---------------- */
+/**
+ * ---------------- CASH REGISTER ----------------
+ */
 
 enum CashRegisterStatus {
   OPEN
@@ -643,7 +742,9 @@ model CashRegister {
   @@index([tenantId, branchId, status])
 }
 
-/* ---------------- AUDIT ---------------- */
+/**
+ * ---------------- AUDIT ----------------
+ */
 
 model AuditLog {
   id        String   @id @default(uuid())
@@ -663,7 +764,9 @@ model AuditLog {
   @@index([tenantId, userId])
 }
 
-/* ---------------- CLINIQUE (Phase 2) ---------------- */
+/**
+ * ---------------- CLINIQUE (Phase 2) ----------------
+ */
 
 enum Gender {
   MALE
@@ -803,7 +906,9 @@ model Surgery {
   @@index([tenantId])
 }
 
-/* ---------------- GESTION (Phase 2) ---------------- */
+/**
+ * ---------------- GESTION (Phase 2) ----------------
+ */
 
 enum EmployeeStatus {
   ACTIVE
@@ -910,7 +1015,9 @@ model Insurer {
   @@index([tenantId])
 }
 
-/* ---------------- ABONNEMENTS SaaS ---------------- */
+/**
+ * ---------------- ABONNEMENTS SaaS ----------------
+ */
 
 enum SubscriptionStatus {
   TRIALING
@@ -969,26 +1076,26 @@ model Subscription {
 }
 
 model SubscriptionInvoice {
-  id             String                @id @default(uuid())
+  id             String           @id @default(uuid())
   tenantId       String
-  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   subscriptionId String
-  subscription   Subscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription   Subscription     @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   planId         String
   number         String
-  amount         Decimal               @db.Decimal(12, 2)
-  currency       String                @default("XOF")
-  status         SubInvoiceStatus      @default(PENDING)
+  amount         Decimal          @db.Decimal(12, 2)
+  currency       String           @default("XOF")
+  status         SubInvoiceStatus @default(PENDING)
   periodStart    DateTime
   periodEnd      DateTime
   // Nombre de mois couverts par cette facture (1 = mensuel, 6 = paiement
   // groupé 6 mois avec remise) : source de vérité pour prolonger l'abonnement
   // du bon nombre de mois au règlement (settleSubscriptionPayment), y compris
   // après un délai (webhook asynchrone).
-  periodMonths   Int                   @default(1)
+  periodMonths   Int              @default(1)
   dueDate        DateTime
   paidAt         DateTime?
-  createdAt      DateTime              @default(now())
+  createdAt      DateTime         @default(now())
 
   payments SubscriptionPayment[]
 
@@ -1075,24 +1182,26 @@ model PlatformSettings {
   updatedAt            DateTime @updatedAt
 }
 
-/* ---------------- CHATBOT WHATSAPP ---------------- */
+/**
+ * ---------------- CHATBOT WHATSAPP ----------------
+ */
 
 /// Prospect ayant écrit au chatbot commercial WhatsApp. Cross-tenant : ce sont
 /// des leads du fondateur, non rattachés à un établissement. Alimenté par le
 /// webhook WhatsApp Cloud API (module whatsapp) via le client Prisma système.
 model WhatsappContact {
-  id            String            @id @default(uuid())
+  id            String   @id @default(uuid())
   /// Numéro au format wa_id (ex. "2250596609036", sans « + »).
-  phone         String            @unique
+  phone         String   @unique
   /// Nom du profil WhatsApp du prospect (fourni par Meta).
   profileName   String?
   /// true = le fondateur a repris la main → le bot n'auto-répond plus à ce contact.
-  botPaused     Boolean           @default(false)
-  lastMessageAt DateTime          @default(now())
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  botPaused     Boolean  @default(false)
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  messages      WhatsappMessage[]
+  messages WhatsappMessage[]
 
   @@index([lastMessageAt])
 }

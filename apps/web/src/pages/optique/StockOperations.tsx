@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, PackagePlus, ArrowLeftRight, ClipboardCheck } from 'lucide-react';
+import { Search, Trash2, PackagePlus, ArrowLeftRight } from 'lucide-react';
 import {
   getStock,
   receiveStock,
   transferStock,
-  applyStockCount,
   listBranches,
   type StockRow,
 } from '../../features/optique/api';
@@ -335,158 +334,6 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
           </>
         )}
       </div>
-    </Modal>
-  );
-}
-
-/* ------------------------------- Inventaire ------------------------------- */
-
-/**
- * Inventaire physique : on saisit les quantités comptées, l'écart avec le stock
- * théorique est affiché, et la régularisation applique tout d'un coup.
- */
-export function StockCountModal({ branchId, onClose }: { branchId: string; onClose: () => void }) {
-  const qc = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [counted, setCounted] = useState<Record<string, string>>({});
-  const [note, setNote] = useState('');
-  const [error, setError] = useState('');
-
-  const { data: rows, isLoading } = useQuery({
-    queryKey: ['stock', branchId],
-    queryFn: () => getStock(branchId, false),
-  });
-
-  // Les verres en stock illimité ne se comptent pas.
-  const countable = (rows ?? []).filter((r) => !r.unlimited);
-  const visible = countable.filter((r) => {
-    const q = search.trim().toLowerCase();
-    return !q || r.name.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q);
-  });
-
-  // Seules les lignes saisies ET différentes du théorique sont régularisées.
-  const changes = countable
-    .filter((r) => counted[r.productId] !== undefined && counted[r.productId] !== '')
-    .map((r) => ({ row: r, value: Number(counted[r.productId]) }))
-    .filter((c) => Number.isFinite(c.value) && c.value !== c.row.quantity);
-
-  const mut = useMutation({
-    mutationFn: () =>
-      applyStockCount({
-        branchId,
-        note: note.trim() || undefined,
-        items: changes.map((c) => ({ productId: c.row.productId, countedQuantity: c.value })),
-      }),
-    onSuccess: (r) => {
-      invalidateProductViews(qc);
-      alert(`Inventaire appliqué : ${r.adjusted} ligne(s) régularisée(s) (écart net ${r.net > 0 ? '+' : ''}${r.net}).`);
-      onClose();
-    },
-    onError: (e) => setError(apiErrorMessage(e)),
-  });
-
-  return (
-    <Modal open onClose={onClose} title="Inventaire physique" size="lg">
-      {isLoading ? (
-        <PageLoader />
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-content-muted">
-            Saisissez la quantité réellement comptée. Seules les lignes avec un écart seront
-            régularisées ; les autres restent inchangées.
-          </p>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-            <input
-              className="input pl-9"
-              placeholder="Filtrer les articles…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="max-h-72 overflow-y-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface">
-                <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Article</th>
-                  <th className="table-cell text-center font-semibold">Théorique</th>
-                  <th className="table-cell text-center font-semibold">Compté</th>
-                  <th className="table-cell text-center font-semibold">Écart</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((r) => {
-                  const raw = counted[r.productId];
-                  const n = raw === undefined || raw === '' ? null : Number(raw);
-                  const diff = n === null ? null : n - r.quantity;
-                  return (
-                    <tr key={r.productId} className="border-b last:border-0">
-                      <td className="table-cell">
-                        <div className="text-content">{r.name}</div>
-                        <div className="font-mono text-[11px] text-content-faint">{r.sku}</div>
-                      </td>
-                      <td className="table-cell text-center text-content-muted">{r.quantity}</td>
-                      <td className="table-cell text-center">
-                        <input
-                          type="number"
-                          min={0}
-                          value={raw ?? ''}
-                          onChange={(e) =>
-                            setCounted((prev) => ({ ...prev, [r.productId]: e.target.value }))
-                          }
-                          className="input h-8 w-20 px-2 text-center"
-                          placeholder="—"
-                        />
-                      </td>
-                      <td className="table-cell text-center">
-                        {diff === null || diff === 0 ? (
-                          <span className="text-content-faint">—</span>
-                        ) : (
-                          <span className={diff > 0 ? 'font-semibold text-success' : 'font-semibold text-danger'}>
-                            {diff > 0 ? '+' : ''}
-                            {diff}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <Field label="Note (optionnel)">
-            <input
-              className="input"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Inventaire trimestriel, contrôle après casse…"
-            />
-          </Field>
-
-          {error && <p className="text-sm text-danger">{error}</p>}
-          <div className="flex items-center justify-between gap-2 border-t pt-3">
-            <span className="text-sm text-content-muted">
-              {changes.length === 0
-                ? 'Aucun écart saisi'
-                : `${changes.length} ligne(s) à régulariser`}
-            </span>
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={onClose}>
-                Annuler
-              </Button>
-              <Button
-                disabled={changes.length === 0}
-                loading={mut.isPending}
-                onClick={() => mut.mutate()}
-              >
-                <ClipboardCheck className="h-4 w-4" /> Régulariser
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </Modal>
   );
 }

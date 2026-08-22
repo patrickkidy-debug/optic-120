@@ -13,6 +13,7 @@ import { usersRoutes } from './modules/users/users.routes.js';
 import { branchesRoutes } from './modules/branches/branches.routes.js';
 import { productsRoutes } from './modules/products/products.routes.js';
 import { stockRoutes } from './modules/stock/stock.routes.js';
+import { inventoryRoutes } from './modules/inventory/inventory.routes.js';
 import { customersRoutes } from './modules/customers/customers.routes.js';
 import { salesRoutes } from './modules/sales/sales.routes.js';
 import { optiqueRoutes } from './modules/optique/optique.routes.js';
@@ -94,6 +95,7 @@ export async function buildApp() {
   await app.register(branchesRoutes, { prefix: '/branches' });
   await app.register(productsRoutes, { prefix: '/products' });
   await app.register(stockRoutes, { prefix: '/stock' });
+  await app.register(inventoryRoutes, { prefix: '/inventory-counts' });
   await app.register(customersRoutes, { prefix: '/customers' });
   await app.register(salesRoutes, { prefix: '/sales' });
   await app.register(optiqueRoutes, { prefix: '/optique' });

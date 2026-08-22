@@ -26,6 +26,38 @@ export const StockMovementType = {
 } as const;
 export type StockMovementType = (typeof StockMovementType)[keyof typeof StockMovementType];
 
+export const InventoryCountStatus = {
+  DRAFT: 'DRAFT',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type InventoryCountStatus = (typeof InventoryCountStatus)[keyof typeof InventoryCountStatus];
+
+export const InventoryAdjustmentReason = {
+  PHYSICAL_INVENTORY: 'PHYSICAL_INVENTORY',
+  BREAKAGE: 'BREAKAGE',
+  LOSS: 'LOSS',
+  THEFT: 'THEFT',
+  ENTRY_ERROR: 'ENTRY_ERROR',
+  GIFT: 'GIFT',
+  INVENTORY_ERROR: 'INVENTORY_ERROR',
+  OTHER: 'OTHER',
+} as const;
+export type InventoryAdjustmentReason =
+  (typeof InventoryAdjustmentReason)[keyof typeof InventoryAdjustmentReason];
+
+/** Libellés FR affichés dans le sélecteur de motif de régularisation. */
+export const INVENTORY_REASON_LABELS: Record<InventoryAdjustmentReason, string> = {
+  PHYSICAL_INVENTORY: 'Inventaire physique',
+  BREAKAGE: 'Casse',
+  LOSS: 'Perte',
+  THEFT: 'Vol',
+  ENTRY_ERROR: 'Erreur de saisie',
+  GIFT: 'Produit offert',
+  INVENTORY_ERROR: "Erreur d'inventaire",
+  OTHER: 'Autre',
+};
+
 export const SaleType = {
   QUOTE: 'QUOTE',
   SALE: 'SALE',
@@ -388,6 +420,13 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'optique.stock', action: 'adjust', label: 'Ajuster le stock' },
   { module: 'optique.stock', action: 'transfer', label: 'Transférer du stock' },
 
+  { module: 'optique.inventory', action: 'view', label: 'Voir les inventaires' },
+  { module: 'optique.inventory', action: 'create', label: 'Créer un inventaire' },
+  { module: 'optique.inventory', action: 'count', label: 'Compter les articles' },
+  { module: 'optique.inventory', action: 'validate', label: 'Valider un inventaire' },
+  { module: 'optique.inventory', action: 'regularize', label: 'Régulariser le stock (inventaire)' },
+  { module: 'optique.inventory', action: 'history', label: "Consulter l'historique des inventaires" },
+
   { module: 'optique.sales', action: 'view', label: 'Voir les ventes' },
   { module: 'optique.sales', action: 'create', label: 'Créer des ventes' },
   { module: 'optique.sales', action: 'update', label: 'Modifier des ventes' },
@@ -490,6 +529,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard.view',
     'optique.products.view', 'optique.products.create', 'optique.products.update',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
+    'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
     'optique.sales.view', 'optique.sales.create', 'optique.sales.update', 'optique.sales.cancel', 'optique.sales.refund',
     'optique.quotes.view', 'optique.quotes.create', 'optique.quotes.convert',
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
@@ -510,6 +550,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard.view',
     'optique.products.view',
     'optique.stock.view', 'optique.stock.adjust',
+    'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
     'optique.sales.view', 'optique.sales.create', 'optique.sales.update', 'optique.sales.cancel', 'optique.sales.refund',
     'optique.quotes.view', 'optique.quotes.create', 'optique.quotes.convert',
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
@@ -552,6 +593,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   caissier: [
     'dashboard.view',
     'optique.products.view',
+    'optique.inventory.view', 'optique.inventory.count',
     'optique.sales.view', 'optique.sales.create', 'optique.sales.cancel', 'optique.sales.refund',
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
     'optique.customers.view',
@@ -561,12 +603,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard.view',
     'optique.products.view', 'optique.products.create', 'optique.products.update', 'optique.products.delete',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
+    'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
     'suppliers.view', 'suppliers.create', 'suppliers.update',
   ],
 
   comptable: [
     'dashboard.view',
     'optique.sales.view',
+    'optique.inventory.view', 'optique.inventory.history',
     'settings.payments.view',
     'audit.logs.view',
     'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
@@ -1186,6 +1230,49 @@ export const stockCountSchema = z.object({
     .min(1, 'Au moins un article'),
 });
 export type StockCountInput = z.infer<typeof stockCountSchema>;
+
+/* --- Inventaire physique (sessions) --- */
+
+export const createInventoryCountSchema = z.object({
+  branchId: z.string().uuid(),
+  scopeCategory: z.nativeEnum(ProductCategory).optional(),
+  scopeBrand: z.string().optional(),
+  scopeLocation: z.string().optional(),
+  note: z.string().max(200).optional().or(z.literal('')),
+});
+export type CreateInventoryCountInput = z.infer<typeof createInventoryCountSchema>;
+
+export const updateInventoryCountLineSchema = z.object({
+  countedQty: z.number().int().min(0),
+});
+export type UpdateInventoryCountLineInput = z.infer<typeof updateInventoryCountLineSchema>;
+
+export const scanInventoryCountSchema = z.object({
+  code: z.string().min(1).max(80),
+});
+export type ScanInventoryCountInput = z.infer<typeof scanInventoryCountSchema>;
+
+export const regularizeInventoryCountSchema = z.object({
+  // Vide = "terminer sans rien régulariser" (l'utilisateur peut délibérément
+  // laisser des écarts constatés sans ajuster le stock).
+  lines: z.array(
+    z.object({
+      lineId: z.string().uuid(),
+      reason: z.enum([
+        'PHYSICAL_INVENTORY',
+        'BREAKAGE',
+        'LOSS',
+        'THEFT',
+        'ENTRY_ERROR',
+        'GIFT',
+        'INVENTORY_ERROR',
+        'OTHER',
+      ]),
+      note: z.string().max(200).optional().or(z.literal('')),
+    }),
+  ),
+});
+export type RegularizeInventoryCountInput = z.infer<typeof regularizeInventoryCountSchema>;
 
 /* --- Commandes de verres (laboratoire) & SAV / réparations --- */
 

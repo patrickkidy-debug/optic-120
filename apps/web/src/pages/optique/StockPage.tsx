@@ -23,7 +23,9 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
-import { ReceiveStockModal, TransferStockModal, StockCountModal } from './StockOperations';
+import { ReceiveStockModal, TransferStockModal } from './StockOperations';
+import { InventoryCountModal } from '../../features/optique/inventory/InventoryCountModal';
+import { InventoryHistoryModal } from '../../features/optique/inventory/InventoryHistoryModal';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
@@ -43,8 +45,14 @@ export function StockPage() {
   const canAdjust = usePermission('optique.stock.adjust');
   const canDelete = usePermission('optique.products.delete');
   const canTransfer = usePermission('optique.stock.transfer');
+  // Une caissière peut rejoindre un inventaire déjà démarré (compter) sans
+  // avoir le droit d'en créer un — le bouton reste visible pour l'un ou l'autre.
+  const canOpenInventory = usePermission('optique.inventory.create') || usePermission('optique.inventory.count');
+  const canViewInventoryHistory = usePermission('optique.inventory.history');
   // Opération de stock ouverte : réception, transfert ou inventaire.
-  const [operation, setOperation] = useState<'receive' | 'transfer' | 'count' | null>(null);
+  const [operation, setOperation] = useState<'receive' | 'transfer' | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
+  const [showInventoryHistory, setShowInventoryHistory] = useState(false);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
@@ -137,8 +145,13 @@ export function StockPage() {
                 <ArrowLeftRight className="h-4 w-4" /> Transfert
               </Button>
             )}
-            {canAdjust && (
-              <Button onClick={() => setOperation('count')}>
+            {canViewInventoryHistory && (
+              <Button variant="outline" onClick={() => setShowInventoryHistory(true)}>
+                <History className="h-4 w-4" /> Historique
+              </Button>
+            )}
+            {canOpenInventory && (
+              <Button onClick={() => setShowInventory(true)}>
                 <ClipboardCheck className="h-4 w-4" /> Inventaire
               </Button>
             )}
@@ -334,8 +347,11 @@ export function StockPage() {
       {operation === 'transfer' && branchId && (
         <TransferStockModal branchId={branchId} onClose={() => setOperation(null)} />
       )}
-      {operation === 'count' && branchId && (
-        <StockCountModal branchId={branchId} onClose={() => setOperation(null)} />
+      {showInventory && branchId && (
+        <InventoryCountModal branchId={branchId} onClose={() => setShowInventory(false)} />
+      )}
+      {showInventoryHistory && branchId && (
+        <InventoryHistoryModal branchId={branchId} onClose={() => setShowInventoryHistory(false)} />
       )}
     </div>
   );
