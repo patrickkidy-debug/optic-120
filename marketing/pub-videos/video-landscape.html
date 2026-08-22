@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--brand:linear-gradient(120deg,#7c3aed 0%,#ec4899 52%,#f97316 100%);--brand-soft:linear-gradient(120deg,rgba(124,58,237,.20),rgba(236,72,153,.16),rgba(249,115,22,.20));
+--violet:#8b5cf6;--pink:#ec4899;--orange:#f97316;--cyan:#22d3ee;--bg:#080c16;--surface:#111a2e;--surface2:#16203a;--line:rgba(148,163,184,.14);--text:#e8edf7;--muted:#94a3b8;--faint:#5b6b85;--sv:rgba(139,92,246,.16);--so:rgba(249,115,22,.16);--sp:rgba(236,72,153,.16);--sc:rgba(34,211,238,.16);--success:#20c997;--danger:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#05070d;font-family:'Inter',system-ui,sans-serif;color:var(--text)}
+.scene{position:relative;width:1920px;height:1080px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:80px 110px;background:radial-gradient(1100px 800px at 84% -10%,rgba(124,58,237,.24),transparent 60%),radial-gradient(1100px 900px at -8% 112%,rgba(249,115,22,.16),transparent 60%),var(--bg)}
+.grid{position:absolute;inset:0;z-index:0;opacity:.5;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:66px 66px;mask-image:radial-gradient(circle at 50% 45%,#000,transparent 80%)}
+.scene>*{position:relative;z-index:1}
+.logo{display:flex;align-items:center;gap:16px}
+.logo .ic{width:62px;height:62px;border-radius:17px;background:var(--brand);display:grid;place-items:center;box-shadow:0 14px 32px -10px rgba(124,58,237,.6)}
+.logo .ic svg{width:35px;height:35px}.logo .nm{font-family:'Sora';font-weight:800;font-size:34px;letter-spacing:-.02em}.logo .nm b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brandrow{position:absolute;top:56px;left:110px;z-index:2}
+/* type scenes */
+.big{font-family:'Sora';font-weight:800;letter-spacing:-.03em;line-height:1.02}
+.tA{font-size:118px}.tB{font-size:96px}
+.g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:40px;color:var(--muted);margin-top:34px;font-weight:500}
+.dot{width:26px;height:26px;border-radius:50%;background:var(--brand);box-shadow:0 0 50px 8px rgba(236,72,153,.6);display:inline-block;vertical-align:middle;margin:0 4px}
+/* glass window */
+.win{width:100%;max-width:1540px;margin:0 auto;border-radius:32px;background:rgba(17,26,46,.72);border:1px solid rgba(148,163,184,.18);box-shadow:0 80px 160px -50px #000,0 0 0 1px rgba(255,255,255,.04) inset,0 0 120px -30px rgba(124,58,237,.4);overflow:hidden;backdrop-filter:blur(8px)}
+.wbar{height:62px;background:rgba(22,32,58,.8);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:12px}
+.wbar .d{width:15px;height:15px;border-radius:50%}.wbar .u{margin-left:16px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;height:38px;flex:1;max-width:640px;display:flex;align-items:center;padding:0 18px;color:var(--faint);font-size:21px;gap:10px}.wbar .u svg{width:20px;height:20px;flex:none}
+.wbody{padding:34px 38px;display:flex;flex-direction:column;gap:24px}
+.htitle{font-family:'Sora';font-weight:800;font-size:38px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.kpi{background:rgba(22,32,58,.7);border:1px solid var(--line);border-radius:20px;padding:22px 24px}
+.kpi .ico{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;float:right}.kpi .ico svg{width:26px;height:26px}
+.kpi .lbl{font-size:21px;color:var(--muted);font-weight:600}.kpi .val{font-family:'Sora';font-weight:800;font-size:40px;margin-top:6px;white-space:nowrap}.kpi .chg{font-size:19px;font-weight:700;margin-top:8px}.up{color:var(--success)}.dn{color:var(--danger)}
+.iv{background:var(--sv);color:var(--violet)}.io{background:var(--so);color:var(--orange)}.ip{background:var(--sp);color:var(--pink)}.icy{background:var(--sc);color:var(--cyan)}
+.ia{background:linear-gradient(160deg,rgba(139,92,246,.12),rgba(17,26,46,.3));border:1px solid rgba(139,92,246,.3);border-radius:22px;padding:24px 26px;display:flex;gap:26px}
+.ia .left{flex:1;display:flex;flex-direction:column;gap:14px}
+.ia-h{display:flex;align-items:center;gap:15px}.ia-h .sp{width:52px;height:52px;border-radius:14px;background:var(--brand);display:grid;place-items:center}.ia-h .sp svg{width:28px;height:28px}
+.ia-h .t{font-family:'Sora';font-weight:800;font-size:27px}.ia-h .t small{display:block;font-weight:500;font-size:19px;color:var(--muted)}
+.ia-h .live{margin-left:auto;font-size:19px;font-weight:700;color:#c9b4ff;background:var(--sv);padding:8px 16px;border-radius:999px;display:flex;align-items:center;gap:9px}.ia-h .live b{width:10px;height:10px;border-radius:50%;background:var(--violet)}
+.stat{background:rgba(0,0,0,.24);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.stat .k{font-size:22px;color:var(--muted);font-weight:600}.stat .v{font-family:'Sora';font-weight:800;font-size:30px}
+.chartbox{width:620px;background:rgba(0,0,0,.24);border:1px solid var(--line);border-radius:16px;padding:18px 16px 8px;display:flex;flex-direction:column}
+.lg{display:flex;gap:24px;font-size:19px;color:var(--muted);font-weight:600;margin-bottom:4px;padding-left:6px}.lg span{display:inline-flex;align-items:center;gap:8px}.lg i{width:20px;height:5px;border-radius:3px}
+.chartbox svg{flex:1;width:100%;min-height:150px}
+/* payment */
+.mm{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px}
+.m{height:150px;border-radius:22px;border:2px solid var(--line);background:rgba(22,32,58,.7);display:flex;align-items:center;justify-content:center;gap:18px;font-family:'Sora';font-weight:800;font-size:34px}
+.m .b{width:66px;height:66px;border-radius:16px;display:grid;place-items:center;color:#fff;font-size:26px}.wave .b{background:#12a7e0}.om .b{background:#ff7900}.mtn .b{background:#ffcc00;color:#111}
+.wave{border-color:rgba(18,167,224,.5)}.om{border-color:rgba(255,121,0,.5)}.mtn{border-color:rgba(255,204,0,.5)}
+.paid{background:rgba(32,201,151,.14);border:1px solid rgba(32,201,151,.4);border-radius:22px;padding:26px;display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Sora';font-weight:800;font-size:40px;color:var(--success)}.paid svg{width:46px;height:46px;flex:none}
+.total{display:flex;justify-content:space-between;align-items:baseline;font-size:28px;color:var(--muted)}.total b{font-family:'Sora';font-size:56px;font-weight:800;color:var(--text)}
+/* end */
+.center{display:flex;flex-direction:column;align-items:center;text-align:center}
+.endlogo{width:180px;height:180px;border-radius:46px;background:var(--brand);display:grid;place-items:center;box-shadow:0 40px 90px -20px rgba(124,58,237,.9);margin-bottom:44px}.endlogo svg{width:106px;height:106px}
+.endname{font-family:'Sora';font-weight:800;font-size:130px;letter-spacing:-.03em}.endname b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.endtag{font-size:48px;color:var(--text);margin-top:30px;font-weight:600}.endurl{margin-top:34px;font-size:34px;font-weight:700;color:var(--muted)}
+.gradbg{background:radial-gradient(1400px 900px at 50% 50%,rgba(124,58,237,.5),transparent 60%),radial-gradient(1200px 800px at 20% 80%,rgba(249,115,22,.35),transparent 60%),radial-gradient(1200px 800px at 80% 20%,rgba(236,72,153,.4),transparent 60%),#0a0713}
+</style></head>
+<body><div id="stage"></div>
+<script>
+var EYE='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+var SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>';
+var I={money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/></svg>',trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/></svg>',alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4 2.5 20h19L12 4ZM12 10v4M12 17.4v.2"/></svg>',lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',check:'<svg viewBox="0 0 24 24" fill="none" stroke="#20c997" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>'};
+function brand(){return '<div class="brandrow"><div class="logo"><span class="ic">'+EYE+'</span><span class="nm">Oculo<b>SaaS</b></span></div></div>';}
+function sc(id,cls,inner){return '<section class="scene '+(cls||'')+'" id="'+id+'"><div class="grid"></div>'+inner+'</section>';}
+var H='';
+// T1 intro (brand gradient)
+H+=sc('t_intro','gradbg','<div class="center" style="width:100%"><div class="big" style="font-size:150px;color:#fff">OculoSaaS</div><div class="sub" style="color:rgba(255,255,255,.85);font-size:44px;margin-top:20px">La plateforme des cabinets d\'optique &amp; cliniques.</div></div>');
+// DASH real UI
+H+=sc('dash','',brand()+'<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">'+I.lock+' app.oculosaas.com/dashboard</span></div><div class="wbody">'+
+'<div class="kpis">'+
+'<div class="kpi"><span class="ico iv">'+I.money+'</span><div class="lbl">CA du jour</div><div class="val">485 000 F</div><div class="chg up">▲ +12,4%</div></div>'+
+'<div class="kpi"><span class="ico io">'+I.trend+'</span><div class="lbl">CA mensuel</div><div class="val">3,72 M F</div><div class="chg up">▲ +18%</div></div>'+
+'<div class="kpi"><span class="ico ip">'+I.cart+'</span><div class="lbl">Ventes du jour</div><div class="val">27</div><div class="chg up">▲ +5</div></div>'+
+'<div class="kpi"><span class="ico icy">'+I.alert+'</span><div class="lbl">Stocks faibles</div><div class="val">3</div><div class="chg dn">à réappro.</div></div></div>'+
+'<div class="ia"><div class="left"><div class="ia-h"><span class="sp">'+SPARK+'</span><div class="t">IA prédictive — Prévisions<small>Tendance + saisonnalité · 90 jours</small></div><span class="live"><b></b>En direct</span></div>'+
+'<div class="stat"><span class="k">CA projeté ce mois</span><span class="v">4 250 000 F</span></div>'+
+'<div class="stat"><span class="k">Tendance (14 j)</span><span class="v" style="color:var(--success)">+18%</span></div>'+
+'<div class="stat"><span class="k">Rupture anticipée</span><span class="v" style="color:#ffb27a;font-size:24px">Verres · 6 j</span></div></div>'+
+'<div class="chartbox"><div class="lg"><span><i style="background:#8b5cf6"></i>Réalisé</span><span><i style="background:#f97316"></i>Prévision IA</span></div><svg id="ch1" viewBox="0 0 620 260" preserveAspectRatio="none"></svg></div></div></div></div>');
+// T2 type dark
+H+=sc('t_mid','','<div class="center" style="width:100%"><div class="big tA">Tout votre cabinet.<br><span class="g">Une seule plateforme.</span></div><div class="sub">Patients · Ordonnances · Stocks · Caisse · Clinique</div></div>');
+// CAISSE real UI
+H+=sc('caisse','',brand()+'<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">'+I.lock+' app.oculosaas.com/caisse</span></div><div class="wbody">'+
+'<div class="total"><span>Net à payer</span><b>166 100 F</b></div>'+
+'<div class="mm"><div class="m wave"><span class="b">〜</span>Wave</div><div class="m om"><span class="b">OM</span>Orange</div><div class="m mtn"><span class="b">MTN</span>MoMo</div></div>'+
+'<div class="paid">'+I.check+' Paiement reçu · en 8 secondes</div></div></div>');
+// T3 type
+H+=sc('t_pay','gradbg','<div class="center" style="width:100%"><div class="big tB" style="color:#fff">Wave <span style="opacity:.5">·</span> Orange <span style="opacity:.5">·</span> MTN</div><div class="sub" style="color:rgba(255,255,255,.9);font-size:52px;margin-top:24px;font-weight:700">Encaissé en 8 secondes.</div></div>');
+// LOGO end
+H+=sc('logo','','<div class="center" style="width:100%"><span class="endlogo">'+EYE+'</span><div class="endname">Oculo<b>SaaS</b></div><div class="endtag">Une vision claire de votre activité.</div><div class="endurl">oculosaas.com</div></div>');
+document.getElementById('stage').innerHTML=H;
+(function(){var hist=[95,110,120,105,140,180,90,100,118,128,112,150,190,98,108,126,138,120,162,205,110,120,140,150,132,178,222,120,132,152];var fc=[160,170,180,152,198,246,134,152,178,188,160,208,258,142];var all=hist.concat(fc),W=620,H=260,pl=6,pr=6,pt=12,pb=14;var mn=Math.min.apply(null,all)*0.72,mx=Math.max.apply(null,all)*1.06;var X=function(i){return pl+i*(W-pl-pr)/(all.length-1);},Y=function(v){return H-pb-(v-mn)/(mx-mn)*(H-pt-pb);};var P=function(a,o){return a.map(function(v,i){return (i?'L':'M')+X(o+i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');};var svg=document.getElementById('ch1');if(!svg)return;var jx=X(hist.length-1).toFixed(1),jy=Y(hist[hist.length-1]).toFixed(1);var hp=P(hist,0),fp='M'+jx+' '+jy+' '+fc.map(function(v,i){return 'L'+X(hist.length+i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');var area=hp+'L'+jx+' '+(H-pb)+' L'+X(0).toFixed(1)+' '+(H-pb)+' Z';svg.innerHTML='<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(139,92,246,.35)"/><stop offset="1" stop-color="rgba(139,92,246,0)"/></linearGradient></defs><path d="'+area+'" fill="url(#ag)"/><line x1="'+jx+'" y1="'+pt+'" x2="'+jx+'" y2="'+(H-pb)+'" stroke="rgba(139,92,246,.4)" stroke-dasharray="5 6"/><path d="'+hp+'" fill="none" stroke="#8b5cf6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="'+fp+'" fill="none" stroke="#f97316" stroke-width="3.4" stroke-dasharray="2 8" stroke-linecap="round"/><circle cx="'+jx+'" cy="'+jy+'" r="6" fill="#8b5cf6"/>';})();
+window.__READY=true;
+</script></body></html>

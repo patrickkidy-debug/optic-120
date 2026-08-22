@@ -149,6 +149,11 @@ export async function receiveStock(
  * Transfert de stock entre deux magasins : sortie de la source et entrée dans
  * la destination, tracées des deux côtés. Rejeté si la source est insuffisante.
  */
+/**
+ * Demande de transfert de stock entre deux magasins : le stock est déduit de la
+ * source immédiatement (en transit) et un transfert PENDING est créé. La
+ * destination doit confirmer la réception pour créditer son stock.
+ */
 export async function transferStock(
   tenantId: string,
   userId: string,
@@ -167,7 +172,8 @@ export async function transferStock(
     if (!from) throw notFound('Magasin source introuvable');
     if (!to) throw notFound('Magasin destination introuvable');
 
-    let moved = 0;
+    const number = `TRF-${Date.now().toString(36).toUpperCase()}`;
+
     for (const line of input.items) {
       const product = await tx.product.findFirst({ where: { id: line.productId, tenantId } });
       if (!product) throw badRequest(`Produit introuvable : ${line.productId}`);
@@ -189,30 +195,158 @@ export async function transferStock(
           stockItemId: source.id,
           type: StockMovementType.TRANSFER,
           quantity: -line.quantity,
-          reason: `Transfert vers ${to.name}${input.reason ? ` — ${input.reason}` : ''}`,
+          reason: `Transfert vers ${to.name} (${number})${input.reason ? ` — ${input.reason}` : ''}`,
           createdById: userId,
         },
       });
+    }
 
-      const target = await ensureStockItem(tx, tenantId, line.productId, input.toBranchId);
+    const transfer = await tx.stockTransfer.create({
+      data: {
+        tenantId,
+        number,
+        fromBranchId: input.fromBranchId,
+        toBranchId: input.toBranchId,
+        reason: input.reason,
+        createdById: userId,
+        status: 'PENDING',
+        items: {
+          create: input.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+          })),
+        },
+      },
+      include: {
+        fromBranch: true,
+        toBranch: true,
+        items: { include: { product: true } },
+      },
+    });
+
+    return transfer;
+  });
+}
+
+/**
+ * Confirmation de réception d'un transfert par le magasin destinataire.
+ * Les articles sont crédités au stock de la destination et le statut passe à CONFIRMED.
+ */
+export async function confirmTransfer(tenantId: string, userId: string, transferId: string) {
+  return prisma.$transaction(async (tx) => {
+    const transfer = await tx.stockTransfer.findFirst({
+      where: { id: transferId, tenantId },
+      include: { fromBranch: true, toBranch: true, items: { include: { product: true } } },
+    });
+    if (!transfer) throw notFound('Transfert introuvable');
+    if (transfer.status !== 'PENDING') throw badRequest('Ce transfert n\'est plus en attente');
+
+    for (const item of transfer.items) {
+      const target = await ensureStockItem(tx, tenantId, item.productId, transfer.toBranchId);
       await tx.stockItem.update({
         where: { id: target.id },
-        data: { quantity: target.quantity + line.quantity },
+        data: { quantity: target.quantity + item.quantity },
       });
       await tx.stockMovement.create({
         data: {
           tenantId,
           stockItemId: target.id,
           type: StockMovementType.TRANSFER,
-          quantity: line.quantity,
-          reason: `Transfert depuis ${from.name}${input.reason ? ` — ${input.reason}` : ''}`,
+          quantity: item.quantity,
+          reason: `Réception transfert depuis ${transfer.fromBranch.name} (${transfer.number})`,
           createdById: userId,
         },
       });
-      moved += line.quantity;
     }
 
-    return { lines: input.items.length, moved };
+    return tx.stockTransfer.update({
+      where: { id: transferId },
+      data: {
+        status: 'CONFIRMED',
+        confirmedById: userId,
+        confirmedAt: new Date(),
+      },
+      include: {
+        fromBranch: true,
+        toBranch: true,
+        items: { include: { product: true } },
+      },
+    });
+  });
+}
+
+/**
+ * Annulation d'un transfert en attente : restitue les articles au magasin source.
+ */
+export async function cancelTransfer(tenantId: string, userId: string, transferId: string) {
+  return prisma.$transaction(async (tx) => {
+    const transfer = await tx.stockTransfer.findFirst({
+      where: { id: transferId, tenantId },
+      include: { fromBranch: true, toBranch: true, items: { include: { product: true } } },
+    });
+    if (!transfer) throw notFound('Transfert introuvable');
+    if (transfer.status !== 'PENDING') throw badRequest('Seul un transfert en attente peut être annulé');
+
+    for (const item of transfer.items) {
+      const source = await ensureStockItem(tx, tenantId, item.productId, transfer.fromBranchId);
+      await tx.stockItem.update({
+        where: { id: source.id },
+        data: { quantity: source.quantity + item.quantity },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          stockItemId: source.id,
+          type: StockMovementType.TRANSFER,
+          quantity: item.quantity,
+          reason: `Annulation du transfert vers ${transfer.toBranch.name} (${transfer.number})`,
+          createdById: userId,
+        },
+      });
+    }
+
+    return tx.stockTransfer.update({
+      where: { id: transferId },
+      data: { status: 'CANCELLED' },
+      include: {
+        fromBranch: true,
+        toBranch: true,
+        items: { include: { product: true } },
+      },
+    });
+  });
+}
+
+/**
+ * Liste les transferts de stock d'un établissement (filtrables par magasin et direction).
+ */
+export async function listTransfers(
+  tenantId: string,
+  options: { branchId?: string; direction?: 'incoming' | 'outgoing' | 'all'; status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED' } = {},
+) {
+  const where: Record<string, unknown> = { tenantId };
+  if (options.status) where.status = options.status;
+
+  if (options.branchId) {
+    if (options.direction === 'incoming') {
+      where.toBranchId = options.branchId;
+    } else if (options.direction === 'outgoing') {
+      where.fromBranchId = options.branchId;
+    } else {
+      where.OR = [{ fromBranchId: options.branchId }, { toBranchId: options.branchId }];
+    }
+  }
+
+  return prisma.stockTransfer.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      fromBranch: true,
+      toBranch: true,
+      createdBy: { select: { firstName: true, lastName: true } },
+      confirmedBy: { select: { firstName: true, lastName: true } },
+      items: { include: { product: true } },
+    },
   });
 }
 

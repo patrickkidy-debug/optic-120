@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ImagePlus, Trash2, Star, ZoomIn, X, Loader2 } from 'lucide-react';
 import { MAX_PRODUCT_PHOTOS } from '@oculo/shared-types';
-import { fileToResizedDataUrl } from '../../lib/image';
+import { fileToResizedDataUrl, uploadImageToSupabase } from '../../lib/image';
 import { Modal } from '../../components/ui';
 
 /**
@@ -37,7 +37,10 @@ export function PhotoUploader({
 
   const remaining = MAX_PRODUCT_PHOTOS - photos.length;
 
-  /** Traite les fichiers déposés/choisis : la 1re devient principale si vide. */
+  /**
+   * Traite les fichiers déposés/choisis : la 1re devient principale si vide.
+   * Télécharge vers Supabase Storage (bucket "OCL 4") ou bascule en Data URL si non configuré.
+   */
   async function ingest(files: FileList | File[]) {
     const list = Array.from(files);
     if (list.length === 0) return;
@@ -57,9 +60,9 @@ export function PhotoUploader({
         // signale nommément et on poursuit le lot.
         try {
           if (!main) {
-            main = await fileToResizedDataUrl(file, MAIN_SIZE, MAIN_MAX_BYTES);
+            main = await uploadImageToSupabase(file, 'montures', MAIN_SIZE, MAIN_MAX_BYTES);
           } else {
-            extra.push(await fileToResizedDataUrl(file, EXTRA_SIZE, EXTRA_MAX_BYTES));
+            extra.push(await uploadImageToSupabase(file, 'montures', EXTRA_SIZE, EXTRA_MAX_BYTES));
           }
         } catch (e) {
           problems.push(`« ${file.name} » : ${e instanceof Error ? e.message : 'image invalide'}`);

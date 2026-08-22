@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --brand:linear-gradient(120deg,#7c3aed 0%,#ec4899 52%,#f97316 100%);
+  --brand-soft:linear-gradient(120deg,rgba(124,58,237,.20),rgba(236,72,153,.16),rgba(249,115,22,.20));
+  --violet:#8b5cf6;--pink:#ec4899;--orange:#f97316;--cyan:#22d3ee;
+  --bg:#080c16;--surface:#111a2e;--surface2:#16203a;--surface3:#1d2949;
+  --line:rgba(148,163,184,.14);--line2:rgba(148,163,184,.09);
+  --text:#e8edf7;--muted:#94a3b8;--faint:#5b6b85;
+  --sv:rgba(139,92,246,.16);--so:rgba(249,115,22,.16);--sp:rgba(236,72,153,.16);--sc:rgba(34,211,238,.16);
+  --success:#20c997;--danger:#ef4444;--warning:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05070d;font-family:'Inter',system-ui,sans-serif;color:var(--text)}
+.scene{position:relative;width:1080px;height:1920px;overflow:hidden;padding:72px 64px 76px;display:flex;flex-direction:column;background:
+  radial-gradient(900px 720px at 88% -6%,rgba(124,58,237,.22),transparent 60%),
+  radial-gradient(900px 820px at -12% 110%,rgba(249,115,22,.15),transparent 60%),var(--bg)}
+.grid{position:absolute;inset:0;z-index:0;opacity:.5;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(circle at 50% 42%,#000,transparent 80%)}
+.scene>*{position:relative;z-index:1}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:34px}
+.logo{display:flex;align-items:center;gap:15px}
+.logo .ic{width:60px;height:60px;border-radius:17px;background:var(--brand);display:grid;place-items:center;box-shadow:0 14px 32px -10px rgba(124,58,237,.6)}
+.logo .ic svg{width:34px;height:34px}
+.logo .nm{font-family:'Sora';font-weight:800;font-size:32px;letter-spacing:-.02em}
+.logo .nm b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.step{display:inline-flex;align-items:center;gap:11px;padding:12px 22px;border-radius:999px;background:var(--sv);color:#c9b4ff;font-weight:700;font-size:22px;border:1px solid rgba(139,92,246,.3)}
+.step .n{font-family:'Sora';font-weight:800;background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-family:'Sora';font-weight:800;font-size:54px;line-height:1.06;letter-spacing:-.02em;margin-bottom:30px}
+.g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.win{flex:1;min-height:0;border-radius:30px;background:var(--surface);border:1px solid var(--line);box-shadow:0 60px 130px -50px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.03) inset;overflow:hidden;display:flex;flex-direction:column}
+.wbar{height:58px;flex:none;background:var(--surface2);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:11px}
+.wbar .d{width:14px;height:14px;border-radius:50%}
+.wbar .u{margin-left:16px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:9px;height:36px;flex:1;max-width:560px;display:flex;align-items:center;padding:0 16px;color:var(--faint);font-size:20px;gap:10px}
+.wbar .u svg{width:19px;height:19px;flex:none}
+.wbody{flex:1;min-height:0;padding:30px;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ph .h{font-family:'Sora';font-weight:800;font-size:34px}
+.ph .s{font-size:21px;color:var(--muted);margin-top:5px}
+.btnp{background:var(--brand);color:#fff;font-family:'Sora';font-weight:800;font-size:22px;padding:16px 28px;border-radius:14px;display:inline-flex;gap:11px;align-items:center;box-shadow:0 14px 30px -12px rgba(124,58,237,.7);white-space:nowrap}
+.btnp svg{width:24px;height:24px;flex:none}
+
+/* KPI + IA */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.kpi{background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:22px 24px}
+.kpi .ico{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;float:right}
+.kpi .ico svg{width:26px;height:26px}
+.kpi .lbl{font-size:21px;color:var(--muted);font-weight:600}
+.kpi .val{font-family:'Sora';font-weight:800;font-size:42px;margin-top:6px;letter-spacing:-.02em;white-space:nowrap}
+.kpi .chg{font-size:20px;font-weight:700;margin-top:8px}.up{color:var(--success)}.dn{color:var(--danger)}
+.iv{background:var(--sv);color:var(--violet)}.io{background:var(--so);color:var(--orange)}.ip{background:var(--sp);color:var(--pink)}.icy{background:var(--sc);color:var(--cyan)}
+.ia{background:linear-gradient(160deg,rgba(139,92,246,.10),rgba(17,26,46,.4));border:1px solid rgba(139,92,246,.28);border-radius:24px;padding:26px;flex:1;min-height:0;display:flex;flex-direction:column}
+.ia-h{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.ia-h .sp{width:54px;height:54px;border-radius:15px;background:var(--brand);display:grid;place-items:center}.ia-h .sp svg{width:29px;height:29px}
+.ia-h .t{font-family:'Sora';font-weight:800;font-size:28px}.ia-h .t small{display:block;font-weight:500;font-size:19px;color:var(--muted);margin-top:2px}
+.ia-h .live{margin-left:auto;font-size:19px;font-weight:700;color:#c9b4ff;background:var(--sv);padding:9px 17px;border-radius:999px;display:flex;align-items:center;gap:9px}
+.ia-h .live b{width:10px;height:10px;border-radius:50%;background:var(--violet);display:block}
+.ia-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.st{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.st .k{font-size:18px;color:var(--muted);font-weight:600}.st .v{font-family:'Sora';font-weight:800;font-size:30px;margin-top:5px;white-space:nowrap}.st .v small{font-size:19px;color:var(--muted)}
+.chartbox{flex:1;min-height:0;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:18px;padding:20px 18px 12px;display:flex;flex-direction:column}
+.lg{display:flex;gap:26px;font-size:20px;color:var(--muted);font-weight:600;margin-bottom:6px;padding-left:6px}
+.lg span{display:inline-flex;align-items:center;gap:9px}.lg i{width:22px;height:5px;border-radius:3px}
+.chartbox svg{flex:1;width:100%;min-height:0}
+
+/* form */
+.field{margin-bottom:22px}
+.field label{display:block;font-size:22px;color:var(--muted);font-weight:600;margin-bottom:11px}
+.inp{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:20px 22px;font-size:26px;color:var(--text);display:flex;align-items:center;gap:12px}
+.inp.dots{letter-spacing:8px}
+.formcard{max-width:760px;margin:auto;width:100%}
+.formcard .fh{text-align:center;margin-bottom:34px}
+.formcard .fh .t{font-family:'Sora';font-weight:800;font-size:40px}
+.formcard .fh .s{color:var(--muted);font-size:22px;margin-top:8px}
+
+/* table */
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:19px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);font-weight:700;padding:16px 18px;border-bottom:1px solid var(--line)}
+tbody td{padding:19px 18px;border-bottom:1px solid var(--line2);font-size:24px}
+tbody tr:last-child td{border-bottom:0}.r{text-align:right}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:999px;font-size:19px;font-weight:700}
+.tag::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.t-ok{background:rgba(32,201,151,.16);color:var(--success)}.t-w{background:var(--so);color:#ffb27a}.t-d{background:rgba(239,68,68,.16);color:#ff8a8a}.t-i{background:var(--sv);color:#c9b4ff}
+.money{font-family:'Sora';font-weight:700}
+.av{width:52px;height:52px;border-radius:14px;background:var(--brand-soft);color:#c9b4ff;display:inline-grid;place-items:center;font-weight:800;font-size:22px;border:1px solid rgba(139,92,246,.2);vertical-align:middle;margin-right:14px}
+
+/* prescription */
+.rx{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rxc{background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:24px}
+.rxc .eye{font-family:'Sora';font-weight:800;font-size:26px;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.rxc .eye span{font-size:19px;color:#fff;background:var(--violet);border-radius:9px;padding:5px 13px}
+.rxrow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rxf{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.rxf small{font-size:17px;color:var(--faint);font-weight:600;text-transform:uppercase}
+.rxf b{display:block;font-family:'Sora';font-size:30px;margin-top:3px}
+
+/* record */
+.recgrid{display:flex;flex-direction:column;gap:16px}
+.recrow{display:flex;align-items:center;gap:18px;background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.recrow .ic{width:50px;height:50px;border-radius:13px;background:var(--brand-soft);display:grid;place-items:center;flex:none}
+.recrow .ic svg{width:26px;height:26px;stroke:#c9b4ff}
+.recrow .tx b{font-size:24px}.recrow .tx small{display:block;color:var(--muted);font-size:19px;margin-top:3px}
+.recrow .dt{margin-left:auto;color:var(--faint);font-size:20px;white-space:nowrap}
+
+/* cart / billing */
+.cart{background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:26px;display:flex;flex-direction:column;flex:1;min-height:0}
+.ci{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid var(--line2);font-size:24px}
+.ci small{color:var(--faint);font-size:19px}
+.ctot{margin-top:auto;padding-top:20px;border-top:2px solid var(--line)}
+.ctot .row{display:flex;justify-content:space-between;font-size:23px;color:var(--muted);margin-bottom:12px}
+.ctot .grand{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px}
+.ctot .grand b{font-family:'Sora';font-size:52px;font-weight:800}
+
+/* mobile money */
+.mm{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:auto 0}
+.m{height:150px;border-radius:22px;border:2px solid var(--line);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:'Sora';font-weight:800;font-size:30px}
+.m .b{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;color:#fff;font-size:24px}
+.wave .b{background:#12a7e0}.om .b{background:#ff7900}.mtn .b{background:#ffcc00;color:#111}
+.wave{border-color:rgba(18,167,224,.5)}.om{border-color:rgba(255,121,0,.5)}.mtn{border-color:rgba(255,204,0,.5)}
+.paid{margin-top:30px;background:rgba(32,201,151,.14);border:1px solid rgba(32,201,151,.4);border-radius:20px;padding:28px;text-align:center}
+.paid .big{font-family:'Sora';font-weight:800;font-size:44px;color:var(--success);display:flex;align-items:center;justify-content:center;gap:14px}
+.paid .big svg{width:48px;height:48px;flex:none}
+.branchsel>svg{width:30px;height:30px;flex:none;margin-left:auto}
+.paid .sub{color:var(--muted);font-size:23px;margin-top:8px}
+
+/* branch */
+.branchsel{background:var(--surface2);border:1px solid rgba(139,92,246,.4);border-radius:18px;padding:20px 24px;display:flex;align-items:center;gap:16px;font-size:26px;font-weight:700;max-width:640px}
+.branchsel .ic{width:44px;height:44px;border-radius:12px;background:var(--brand);display:grid;place-items:center}.branchsel .ic svg{width:24px;height:24px}
+.dropdown{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;max-width:640px;box-shadow:0 40px 80px -30px #000}
+.opt{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-radius:12px;font-size:24px}
+.opt.on{background:var(--sv);color:#c9b4ff}
+.opt .cof{font-family:'Sora';font-weight:700;color:var(--muted);font-size:22px}
+.consol{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* stats */
+.report{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;flex:1;min-height:0}
+.bars{display:flex;align-items:flex-end;gap:18px;height:100%;padding:22px;border:1px solid var(--line);border-radius:20px;background:var(--surface2)}
+.bars .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:12px;height:100%}
+.bars .bar{width:100%;border-radius:12px 12px 0 0;background:var(--brand)}
+.bars .col small{font-size:19px;color:var(--faint);font-weight:600}
+.donut{border:1px solid var(--line);border-radius:20px;background:var(--surface2);padding:24px;display:flex;flex-direction:column;gap:16px}
+.donut .t{font-family:'Sora';font-weight:700;font-size:24px}
+.lgn{display:flex;align-items:center;gap:12px;font-size:22px;color:var(--muted);font-weight:600}.lgn i{width:16px;height:16px;border-radius:5px}
+
+/* logo end */
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.endlogo{width:170px;height:170px;border-radius:44px;background:var(--brand);display:grid;place-items:center;box-shadow:0 34px 80px -20px rgba(124,58,237,.85);margin-bottom:44px}
+.endlogo svg{width:100px;height:100px}
+.endname{font-family:'Sora';font-weight:800;font-size:104px;letter-spacing:-.03em}.endname b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.endtag{font-size:40px;color:var(--text);margin-top:34px;max-width:860px;line-height:1.35;font-weight:600}
+.endurl{margin-top:40px;font-size:32px;font-weight:700;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+var EYE='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+var SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>';
+var I={
+ money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/></svg>',
+ trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',
+ cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/></svg>',
+ alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4M12 17.4v.2"/></svg>',
+ lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+ user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+ file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-5Z"/></svg>',
+ eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+ steth:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 3v5a4 4 0 0 0 8 0V3M6 3H4M14 3h2M10 15v1a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="12" r="2"/></svg>',
+ store:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 9h16l-1-4H5L4 9ZM5 9v10h14V9M9 19v-5h6v5"/></svg>',
+ cv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>',
+ arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+ check:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>'
+};
+function sc(id,step,inner){return '<section class="scene" id="'+id+'"><div class="grid"></div>'+
+ '<div class="top"><div class="logo"><span class="ic">'+EYE+'</span><span class="nm">Oculo<b>SaaS</b></span></div>'+
+ (step?'<span class="step"><span class="n">'+step[0]+'</span> · '+step[1]+'</span>':'')+'</div>'+inner+'</section>';}
+function win(route,body){return '<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">'+I.lock+' app.oculosaas.com/'+route+'</span></div><div class="wbody">'+body+'</div></div>';}
+function kpi(l,v,ch,up,ic,c){return '<div class="kpi"><span class="ico '+c+'">'+I[ic]+'</span><div class="lbl">'+l+'</div><div class="val">'+v+'</div>'+(ch?'<div class="chg '+(up?'up':'dn')+'">'+ch+'</div>':'')+'</div>';}
+
+var H='';
+// 01 LOGIN
+H+=sc('login',['01','Ouverture de session'],
+ '<h1>Connectez-vous en <span class="g">toute sécurité</span>.</h1>'+
+ win('login','<div class="formcard"><div class="fh"><div class="t">Bienvenue</div><div class="s">Accédez à votre espace OculoSaaS</div></div>'+
+ '<div class="field"><label>Email</label><div class="inp">'+I.user+' awa@clinique-vision.sn</div></div>'+
+ '<div class="field"><label>Mot de passe</label><div class="inp dots">'+I.lock+' ••••••••••</div></div>'+
+ '<button class="btnp" style="width:100%;justify-content:center;font-size:26px;padding:22px">'+I.arrow+' Se connecter</button></div>'));
+// 02 DASHBOARD
+H+=sc('dashboard',['02','Tableau de bord'],
+ '<h1>Tout votre cabinet, <span class="g">en un coup d\'œil</span>.</h1>'+
+ win('dashboard','<div class="kpis">'+kpi('CA du jour','485 000 F','▲ +12,4%',1,'money','iv')+kpi('CA mensuel','3,72 M F','▲ +18%',1,'trend','io')+kpi('Ventes du jour','27','▲ +5',1,'cart','ip')+kpi('Stocks faibles','3','à réappro.',0,'alert','icy')+'</div>'+
+ '<div class="ia"><div class="ia-h"><span class="sp">'+SPARK+'</span><div class="t">IA prédictive — Prévisions<small>Tendance + saisonnalité · 90 jours</small></div><span class="live"><b></b>En direct</span></div>'+
+ '<div class="ia-stats"><div class="st"><div class="k">CA projeté ce mois</div><div class="v">4 250 000 <small>F</small></div></div><div class="st"><div class="k">Tendance</div><div class="v" style="color:var(--success)">+18%</div></div><div class="st"><div class="k">Meilleur jour</div><div class="v">Samedi</div></div></div>'+
+ '<div class="chartbox"><div class="lg"><span><i style="background:#8b5cf6"></i>Réalisé</span><span><i style="background:#f97316"></i>Prévision IA</span></div><svg id="ch1" viewBox="0 0 980 300" preserveAspectRatio="none"></svg></div></div>'));
+// 03 PATIENT
+H+=sc('patient',['03','Création d\'un patient'],
+ '<h1>Créez un patient en <span class="g">quelques secondes</span>.</h1>'+
+ win('clinique/patients','<div class="ph"><div><div class="h">Nouveau patient</div><div class="s">Dossier créé instantanément</div></div><span class="btnp">'+I.check+' Enregistrer</span></div>'+
+ '<div class="field"><label>Nom complet</label><div class="inp">'+I.user+' Awa Ndiaye</div></div>'+
+ '<div class="field"><label>Téléphone</label><div class="inp">📱 +221 77 812 45 09</div></div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div class="field"><label>Date de naissance</label><div class="inp">12 / 03 / 1984</div></div><div class="field"><label>Sexe</label><div class="inp">Féminin</div></div></div>'+
+ '<div class="field"><label>Adresse</label><div class="inp">Dakar · Plateau</div></div>'));
+// 04 DOSSIER MEDICAL
+H+=sc('record',['04','Dossier médical'],
+ '<h1>Un <span class="g">dossier médical</span> complet.</h1>'+
+ win('clinique/patients/awa-ndiaye','<div class="ph"><div style="display:flex;align-items:center"><span class="av">AN</span><div><div class="h" style="font-size:30px">Awa Ndiaye</div><div class="s">40 ans · Dakar · Plateau</div></div></div><span class="tag t-ok">Suivi actif</span></div>'+
+ '<div class="recgrid">'+
+ '<div class="recrow"><span class="ic">'+I.steth+'</span><span class="tx"><b>Consultation — Baisse d\'acuité</b><small>Dr. Diagne · Myopie évolutive</small></span><span class="dt">12 juin 2026</span></div>'+
+ '<div class="recrow"><span class="ic">'+I.eye+'</span><span class="tx"><b>Ordonnance optique</b><small>Progressifs 1.6 · anti-reflet</small></span><span class="dt">12 juin 2026</span></div>'+
+ '<div class="recrow"><span class="ic">'+I.file+'</span><span class="tx"><b>Examen fond d\'œil</b><small>Résultat normal</small></span><span class="dt">03 mars 2026</span></div>'+
+ '<div class="recrow"><span class="ic">'+I.steth+'</span><span class="tx"><b>Contrôle annuel de la vue</b><small>Dr. Ba</small></span><span class="dt">15 janv. 2026</span></div>'+
+ '</div>'));
+// 05 ORDONNANCE
+H+=sc('rx',['05','Ordonnance'],
+ '<h1>Des <span class="g">ordonnances précises</span>.</h1>'+
+ win('optique/ordonnances','<div class="ph"><div><div class="h">Ordonnance — Awa Ndiaye</div><div class="s">Prescrite par Dr. Diagne · 12 juin 2026</div></div><span class="btnp">🖨 Imprimer</span></div>'+
+ '<div class="rx">'+
+ '<div class="rxc"><div class="eye">'+I.eye+' Œil droit <span>OD</span></div><div class="rxrow"><div class="rxf"><small>Sphère</small><b>−2,25</b></div><div class="rxf"><small>Cylindre</small><b>−0,75</b></div><div class="rxf"><small>Axe</small><b>90°</b></div><div class="rxf"><small>Addition</small><b>+2,00</b></div></div></div>'+
+ '<div class="rxc"><div class="eye">'+I.eye+' Œil gauche <span>OG</span></div><div class="rxrow"><div class="rxf"><small>Sphère</small><b>−2,00</b></div><div class="rxf"><small>Cylindre</small><b>−0,50</b></div><div class="rxf"><small>Axe</small><b>85°</b></div><div class="rxf"><small>Addition</small><b>+2,00</b></div></div></div>'+
+ '</div>'+
+ '<div class="recrow" style="margin-top:4px"><span class="ic">'+I.eye+'</span><span class="tx"><b>Verres progressifs · indice 1.6</b><small>Anti-reflet premium + anti-lumière bleue</small></span></div>'));
+// 06 STOCK
+H+=sc('stock',['06','Gestion du stock'],
+ '<h1>Votre stock, <span class="g">en temps réel</span>.</h1>'+
+ win('optique/stock','<div class="ph"><div><div class="h">Stock — Boutique Plateau</div><div class="s">642 références · 3 en alerte</div></div><span class="btnp">+ Entrée</span></div>'+
+ '<table><thead><tr><th>Article</th><th class="r">Qté</th><th class="r">Seuil</th><th class="r">État</th></tr></thead><tbody>'+
+ '<tr><td><b>Verres progressifs 1.6</b></td><td class="r">4</td><td class="r">10</td><td class="r"><span class="tag t-d">Critique</span></td></tr>'+
+ '<tr><td><b>Monture Ray-Ban RB-2140</b></td><td class="r">7</td><td class="r">8</td><td class="r"><span class="tag t-w">Bas</span></td></tr>'+
+ '<tr><td><b>Lentilles Acuvue Oasys</b></td><td class="r">6</td><td class="r">12</td><td class="r"><span class="tag t-w">Bas</span></td></tr>'+
+ '<tr><td><b>Solution 360ml</b></td><td class="r">48</td><td class="r">20</td><td class="r"><span class="tag t-ok">OK</span></td></tr>'+
+ '<tr><td><b>Monture Titane Flex</b></td><td class="r">32</td><td class="r">15</td><td class="r"><span class="tag t-ok">OK</span></td></tr>'+
+ '</tbody></table>'));
+// 07 FACTURATION
+H+=sc('billing',['07','Facturation'],
+ '<h1>Facturez <span class="g">sans effort</span>.</h1>'+
+ win('optique/caisse','<div class="ph"><div><div class="h">Facture — Awa Ndiaye</div><div class="s">Boutique Plateau · 12 juin 2026</div></div></div>'+
+ '<div class="cart"><div class="ci"><span>Monture Ray-Ban<br><small>1 × 45 000 F</small></span><span class="money">45 000</span></div>'+
+ '<div class="ci"><span>Verres progressifs 1.6 AR<br><small>1 × 85 000 F</small></span><span class="money">85 000</span></div>'+
+ '<div class="ci"><span>Traitement anti-reflet<br><small>1 × 15 000 F</small></span><span class="money">15 000</span></div>'+
+ '<div class="ctot"><div class="row"><span>Sous-total</span><span>145 000 F</span></div><div class="row"><span>TVA (18%)</span><span>26 100 F</span></div><div class="row"><span>Remise fidélité</span><span style="color:var(--success)">−5 000 F</span></div>'+
+ '<div class="grand"><span style="color:var(--muted);font-weight:600">Net à payer</span><b>166 100 <span style="font-size:26px;color:var(--muted)">F</span></b></div></div></div>'));
+// 08 PAIEMENT MOBILE
+H+=sc('payment',['08','Paiement mobile'],
+ '<h1><span class="g">Wave, Orange, MTN</span> — instantané.</h1>'+
+ win('optique/caisse/paiement','<div class="ph"><div><div class="h">Encaisser 166 100 F</div><div class="s">Choisissez le mode de paiement</div></div></div>'+
+ '<div class="mm"><div class="m wave"><span class="b">〜</span>Wave</div><div class="m om"><span class="b">OM</span>Orange</div><div class="m mtn"><span class="b">MTN</span>MoMo</div></div>'+
+ '<div class="paid"><div class="big">'+I.check.replace('#fff','#20c997')+' Paiement reçu · 166 100 F</div><div class="sub">Facture envoyée au client · en 8 secondes</div></div>'));
+// 09 MULTI
+H+=sc('multi',['09','Multi-établissements'],
+ '<h1>Plusieurs magasins, <span class="g">un seul compte</span>.</h1>'+
+ win('dashboard','<div class="branchsel"><span class="ic">'+I.store+'</span> Boutique Plateau '+I.cv.replace('currentColor','#c9b4ff')+'</div>'+
+ '<div class="dropdown"><div class="opt on">🏬 Boutique Plateau<span class="cof">485 000 F</span></div><div class="opt">🏬 Boutique Almadies<span class="cof">312 000 F</span></div><div class="opt">🏥 Clinique Baobab · Thiès<span class="cof">228 000 F</span></div></div>'+
+ '<div class="consol">'+kpi('CA consolidé (jour)','1,02 M F','▲ 3 établissements',1,'money','iv')+kpi('Réseau','3 sites','temps réel',1,'store','ip')+'</div>'));
+// 10 STATS
+H+=sc('stats',['10','Statistiques & rapports'],
+ '<h1>Décidez avec des <span class="g">chiffres clairs</span>.</h1>'+
+ win('rapports','<div class="ph"><div><div class="h">Rapports</div><div class="s">CA, marges & top ventes</div></div></div>'+
+ '<div class="report"><div class="bars"><div class="col"><div class="bar" style="height:46%"></div><small>Jan</small></div><div class="col"><div class="bar" style="height:54%"></div><small>Fév</small></div><div class="col"><div class="bar" style="height:50%"></div><small>Mar</small></div><div class="col"><div class="bar" style="height:66%"></div><small>Avr</small></div><div class="col"><div class="bar" style="height:80%"></div><small>Mai</small></div><div class="col"><div class="bar" style="height:98%"></div><small>Juin</small></div></div>'+
+ '<div class="donut"><div class="t">Répartition</div><div class="lgn"><i style="background:#8b5cf6"></i>Montures 42%</div><div class="lgn"><i style="background:#ec4899"></i>Verres 34%</div><div class="lgn"><i style="background:#f97316"></i>Lentilles 14%</div><div class="lgn"><i style="background:#22d3ee"></i>Accessoires 10%</div><div style="margin-top:auto;color:var(--muted);font-size:20px">Export PDF & Excel</div></div></div>'));
+// 11 LOGO
+H+=sc('logo',null,'<div class="center"><span class="endlogo">'+EYE+'</span><div class="endname">Oculo<b>SaaS</b></div><div class="endtag">Une vision claire de votre activité.</div><div class="endurl">oculosaas.com</div></div>');
+
+document.getElementById('stage').innerHTML=H;
+
+// charts
+function drawForecast(id){
+ var hist=[95,110,120,105,140,180,90,100,118,128,112,150,190,98,108,126,138,120,162,205,110,120,140,150,132,178,222,120,132,152];
+ var fc=[160,170,180,152,198,246,134,152,178,188,160,208,258,142];
+ var all=hist.concat(fc),W=980,H=300,pl=8,pr=8,pt=14,pb=16;
+ var mn=Math.min.apply(null,all)*0.72,mx=Math.max.apply(null,all)*1.06;
+ var X=function(i){return pl+i*(W-pl-pr)/(all.length-1);},Y=function(v){return H-pb-(v-mn)/(mx-mn)*(H-pt-pb);};
+ var P=function(a,o){return a.map(function(v,i){return (i?'L':'M')+X(o+i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');};
+ var svg=document.getElementById(id);if(!svg)return;
+ var jx=X(hist.length-1).toFixed(1),jy=Y(hist[hist.length-1]).toFixed(1);
+ var hp=P(hist,0),fp='M'+jx+' '+jy+' '+fc.map(function(v,i){return 'L'+X(hist.length+i).toFixed(1)+' '+Y(v).toFixed(1);}).join(' ');
+ var area=hp+'L'+jx+' '+(H-pb)+' L'+X(0).toFixed(1)+' '+(H-pb)+' Z';
+ svg.innerHTML='<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(139,92,246,.35)"/><stop offset="1" stop-color="rgba(139,92,246,0)"/></linearGradient></defs><path d="'+area+'" fill="url(#ag)"/><line x1="'+jx+'" y1="'+pt+'" x2="'+jx+'" y2="'+(H-pb)+'" stroke="rgba(139,92,246,.4)" stroke-dasharray="5 6"/><path d="'+hp+'" fill="none" stroke="#8b5cf6" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="'+fp+'" fill="none" stroke="#f97316" stroke-width="3.6" stroke-dasharray="2 8" stroke-linecap="round"/><circle cx="'+jx+'" cy="'+jy+'" r="6" fill="#8b5cf6"/>';
+}
+drawForecast('ch1');
+window.__READY=true;
+</script>
+</body>
+</html>

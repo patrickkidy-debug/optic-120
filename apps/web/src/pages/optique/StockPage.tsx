@@ -18,13 +18,14 @@ import {
   adjustStock,
   getStockMovements,
   deleteProduct,
+  listStockTransfers,
   type StockRow,
 } from '../../features/optique/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
-import { ReceiveStockModal, TransferStockModal } from './StockOperations';
+import { ReceiveStockModal, TransferStockModal, PendingTransfersModal } from './StockOperations';
 import { InventoryCountModal } from '../../features/optique/inventory/InventoryCountModal';
 import { InventoryHistoryModal } from '../../features/optique/inventory/InventoryHistoryModal';
 import { exportProductsExcel, exportProductsPdf } from '../../features/optique/import/exportProducts';
@@ -53,6 +54,7 @@ export function StockPage() {
   const canViewInventoryHistory = usePermission('optique.inventory.history');
   // Opération de stock ouverte : réception, transfert ou inventaire.
   const [operation, setOperation] = useState<'receive' | 'transfer' | null>(null);
+  const [showPendingTransfers, setShowPendingTransfers] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
   const [showInventoryHistory, setShowInventoryHistory] = useState(false);
   const [search, setSearch] = useState('');
@@ -60,6 +62,12 @@ export function StockPage() {
   const [lowOnly, setLowOnly] = useState(false);
   const [editing, setEditing] = useState<StockRow | null>(null);
   const [historyRow, setViewingHistory] = useState<StockRow | null>(null);
+
+  const { data: pendingTransfers } = useQuery({
+    queryKey: ['stockTransfers', branchId],
+    queryFn: () => listStockTransfers({ branchId: branchId!, direction: 'incoming', status: 'PENDING' }),
+    enabled: Boolean(branchId),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['stock', branchId, lowOnly],
@@ -178,6 +186,28 @@ export function StockPage() {
           </div>
         }
       />
+
+      {/* Alert banner when there are pending stock transfer requests */}
+      {pendingTransfers && pendingTransfers.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4 shadow-card">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-warning text-white">
+              <ArrowLeftRight className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="font-semibold text-content">
+                {pendingTransfers.length} transfert(s) de stock en attente de réception
+              </p>
+              <p className="text-xs text-content-muted">
+                Un autre magasin vous a envoyé du stock. Confirmez la réception pour ajouter les articles à votre inventaire.
+              </p>
+            </div>
+          </div>
+          <Button variant="accent" className="h-8 px-3 text-xs" onClick={() => setShowPendingTransfers(true)}>
+            Voir et confirmer
+          </Button>
+        </div>
+      )}
 
       {/* Visual Category Dashboard Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
@@ -361,6 +391,9 @@ export function StockPage() {
       )}
 
       {/* Opérations de stock : réception fournisseur, transfert, inventaire. */}
+      {showPendingTransfers && branchId && (
+        <PendingTransfersModal branchId={branchId} onClose={() => setShowPendingTransfers(false)} />
+      )}
       {operation === 'receive' && branchId && (
         <ReceiveStockModal branchId={branchId} onClose={() => setOperation(null)} />
       )}

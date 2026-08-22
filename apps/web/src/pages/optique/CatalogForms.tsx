@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Glasses, Sparkles } from 'lucide-react';
 import {
   ProductCategory,
+  FRAME_TYPES,
   FRAME_GENDERS,
   FRAME_SHAPES,
   FRAME_MATERIALS,
@@ -154,6 +155,7 @@ export function FrameFormModal({
   const [base, setBase] = useState<BaseState>(() => baseFrom(product, stockRow));
   const [a, setA] = useState<FrameAttributes>({
     model: existing.model ?? '',
+    frameType: existing.frameType ?? '',
     gender: existing.gender ?? '',
     shape: existing.shape ?? '',
     color: existing.color ?? '',
@@ -244,7 +246,15 @@ export function FrameFormModal({
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field label="Type de monture">
+              <select className="input" value={a.frameType ?? ''} onChange={(e) => setAttr({ frameType: e.target.value })}>
+                <option value="">—</option>
+                {FRAME_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Genre">
               <select className="input" value={a.gender ?? ''} onChange={(e) => setAttr({ gender: e.target.value })}>
                 <option value="">—</option>

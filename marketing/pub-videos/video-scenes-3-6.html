@@ -1,0 +1,92 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--brand:linear-gradient(120deg,#7c3aed 0%,#ec4899 52%,#f97316 100%);--violet:#8b5cf6;--pink:#ec4899;--orange:#f97316;--bg:#080c16;--surface:#111a2e;--surface2:#16203a;--line:rgba(148,163,184,.14);--text:#e8edf7;--muted:#94a3b8;--faint:#5b6b85;--sv:rgba(139,92,246,.16);--success:#20c997;--danger:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#05070d;font-family:'Inter',system-ui,sans-serif;color:var(--text)}
+.scene{position:relative;width:1080px;height:1920px;overflow:hidden;padding:72px 60px;display:flex;flex-direction:column;background:radial-gradient(900px 720px at 86% -8%,rgba(124,58,237,.22),transparent 60%),radial-gradient(900px 820px at -10% 112%,rgba(249,115,22,.15),transparent 60%),var(--bg)}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:30px}
+.lg{width:58px;height:58px;border-radius:16px;background:var(--brand);display:grid;place-items:center;box-shadow:0 12px 30px -10px rgba(124,58,237,.6)}.lg svg{width:33px;height:33px}
+.nm{font-family:'Sora';font-weight:800;font-size:32px}.nm b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-family:'Sora';font-weight:800;font-size:52px;line-height:1.05;letter-spacing:-.02em;margin-bottom:26px}
+.g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.win{flex:1;min-height:0;border-radius:28px;background:var(--surface);border:1px solid var(--line);box-shadow:0 60px 130px -50px #000;overflow:hidden;display:flex;flex-direction:column}
+.wbar{height:56px;background:var(--surface2);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:11px}.wbar .d{width:14px;height:14px;border-radius:50%}.wbar .u{margin-left:16px;color:var(--faint);font-size:22px}
+.wbody{flex:1;min-height:0;padding:32px;display:flex;flex-direction:column;gap:22px}
+.htitle{font-family:'Sora';font-weight:800;font-size:34px}
+/* excel */
+.xl{flex:1;background:#f6f8f6;color:#0b3d0b;display:flex;flex-direction:column}
+.xlbar{background:#217346;color:#fff;padding:20px 26px;font-weight:700;font-size:30px;display:flex;align-items:center;gap:14px}
+.xlbar .doc{opacity:.85;font-weight:500;font-size:26px}
+.xlgrid{flex:1;padding:0;display:grid;grid-template-columns:70px repeat(4,1fr);grid-auto-rows:88px;font-size:30px}
+.xlgrid .h{background:#e8efe8;border:1px solid #cdd8cd;display:flex;align-items:center;justify-content:center;font-weight:700;color:#3a4a3a}
+.xlgrid .c{border:1px solid #dbe4db;display:flex;align-items:center;padding:0 18px;background:#fff}
+.xlgrid .err{background:#ffe3e3;color:#c1121f;font-weight:800}
+.xlgrid .rn{background:#e8efe8;justify-content:center;font-weight:700;color:#3a4a3a}
+.xlgrid .frm{color:#7a5b00;font-family:ui-monospace,monospace;font-size:24px}
+/* delete warn */
+.rec{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:26px;display:flex;align-items:center;gap:20px}
+.rec .av{width:66px;height:66px;border-radius:16px;background:linear-gradient(120deg,rgba(124,58,237,.3),rgba(249,115,22,.3));display:grid;place-items:center;font-weight:800;font-size:26px;color:#c9b4ff}
+.rec .nm2{font-family:'Sora';font-weight:800;font-size:30px}.rec .sb{color:var(--muted);font-size:22px}
+.delrow{margin-top:auto;display:flex;justify-content:flex-end;position:relative}
+.delbtn{background:rgba(239,68,68,.18);border:2px solid var(--danger);color:#ff8a8a;font-family:'Sora';font-weight:800;font-size:30px;padding:22px 40px;border-radius:16px;display:flex;align-items:center;gap:14px;box-shadow:0 0 50px -6px rgba(239,68,68,.6)}
+.cursor{position:absolute;right:40px;bottom:-30px;width:70px;height:70px}
+.warn{margin-top:26px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:14px;padding:20px 24px;color:#ff8a8a;font-size:26px;font-weight:600;display:flex;align-items:center;gap:14px}.warn svg{width:30px;height:30px;flex:none}
+/* error red */
+.errscene{align-items:center;justify-content:center;text-align:center;background:radial-gradient(900px 900px at 50% 45%,rgba(239,68,68,.35),transparent 60%),#0a0308}
+.errbig{font-family:'Sora';font-weight:800;font-size:80px;color:#ff6b6b;text-shadow:0 0 60px rgba(239,68,68,.7)}
+.errsub{font-size:38px;color:#ffb3b3;margin-top:24px}
+.errico{width:150px;height:150px;margin:0 auto 30px}
+/* roles + journal */
+.card{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:24px 26px}
+.card .ct{font-family:'Sora';font-weight:700;font-size:26px;margin-bottom:16px}
+.rr{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid rgba(148,163,184,.08);font-size:25px}.rr:last-child{border:0}
+.pill{font-size:20px;font-weight:700;color:#c9b4ff;background:var(--sv);border-radius:999px;padding:6px 14px}
+.log{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(148,163,184,.08);font-size:22px}.log:last-child{border:0}
+.log .t{color:var(--faint);width:150px;flex:none}.log .a{font-weight:600}
+.tag{font-size:18px;font-weight:700;border-radius:999px;padding:5px 12px}.t-ok{background:rgba(32,201,151,.16);color:var(--success)}.t-d{background:rgba(239,68,68,.16);color:#ff8a8a}
+.restored{margin-top:auto;background:rgba(32,201,151,.14);border:1px solid rgba(32,201,151,.4);border-radius:16px;padding:24px;text-align:center;font-family:'Sora';font-weight:800;font-size:34px;color:var(--success);display:flex;align-items:center;justify-content:center;gap:14px}.restored svg{width:40px;height:40px;flex:none}
+</style></head><body><div id="stage"></div>
+<script>
+var EYE='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+var TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>';
+var CURSOR='<svg viewBox="0 0 24 24" fill="#fff" stroke="#0a0713" stroke-width="1.4"><path d="M5 3l14 8-6 1.5L11 20 5 3Z"/></svg>';
+var WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4 2.5 20h19L12 4ZM12 10v4M12 17.4v.2"/></svg>';
+var CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#20c997" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>';
+function hdr(){return '<div class="top"><span class="lg">'+EYE+'</span><span class="nm">Oculo<b>SaaS</b></span></div>';}
+var H='';
+// EXCEL CHAOS
+H+='<section class="scene" id="excel"><h1 style="color:#fff">Encore sur <span style="color:#93e3a1">Excel</span> en 2026 ?</h1>'+
+'<div class="win"><div class="xl"><div class="xlbar">📊 <span>Ventes_cabinet_2026_FINAL_v7.xlsx</span></div>'+
+'<div class="xlgrid">'+
+'<div class="h"></div><div class="h">A</div><div class="h">B</div><div class="h">C</div><div class="h">D</div>'+
+'<div class="rn">1</div><div class="c">Monture</div><div class="c">45000</div><div class="c">Wave</div><div class="c err">#REF!</div>'+
+'<div class="rn">2</div><div class="c">Verres</div><div class="c">85000</div><div class="c">?</div><div class="c err">#VALEUR!</div>'+
+'<div class="rn">3</div><div class="c">Lentilles</div><div class="c err">#N/A</div><div class="c">Espèces</div><div class="c">18000</div>'+
+'<div class="rn">4</div><div class="c frm">=SOMME(B1:B99</div><div class="c err">#NOM?</div><div class="c">…</div><div class="c"></div>'+
+'<div class="rn">5</div><div class="c" style="font-weight:800">TOTAL</div><div class="c err" style="font-size:34px">#ERREUR</div><div class="c"></div><div class="c"></div>'+
+'</div></div></div></section>';
+// DELETE WARNING
+H+='<section class="scene" id="delwarn">'+hdr()+'<h1>Un dossier patient. <span class="g">Un clic de trop.</span></h1>'+
+'<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">app.oculosaas.com/clinique/patients</span></div><div class="wbody">'+
+'<div class="rec"><span class="av">AN</span><div><div class="nm2">Awa Ndiaye</div><div class="sb">Dossier · 3 ans d\'historique · 14 consultations</div></div></div>'+
+'<div class="warn">'+WARN+' Action irréversible : suppression définitive du dossier</div>'+
+'<div class="delrow"><span class="delbtn">'+TRASH+' Supprimer</span><span class="cursor">'+CURSOR+'</span></div>'+
+'</div></div></section>';
+// ERROR RED
+H+='<section class="scene errscene" id="errred"><div class="errico">'+WARN.replace('currentColor','#ff6b6b')+'</div><div class="errbig">Dossier introuvable</div><div class="errsub">3 ans d\'historique… perdus ?</div></section>';
+// ROLES + JOURNAL
+H+='<section class="scene" id="rolesjournal">'+hdr()+'<h1>Impossible <span class="g">chez OculoSaaS</span>.</h1>'+
+'<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">app.oculosaas.com/parametres</span></div><div class="wbody">'+
+'<div class="card"><div class="ct">Rôles &amp; permissions</div>'+
+'<div class="rr"><span>Administrateur</span><span class="pill">24 / 24 accès</span></div>'+
+'<div class="rr"><span>Opticien</span><span class="pill">12 / 24 accès</span></div>'+
+'<div class="rr"><span>Caissier</span><span class="pill">5 / 24 accès</span></div></div>'+
+'<div class="card"><div class="ct">Journal d\'audit</div>'+
+'<div class="log"><span class="t">12 juin · 14:32</span><span class="a">Coumba D. — suppression</span><span class="tag t-d" style="margin-left:auto">Bloquée</span></div>'+
+'<div class="log"><span class="t">12 juin · 14:33</span><span class="a">Awa Diop — restauration</span><span class="tag t-ok" style="margin-left:auto">Réussie</span></div>'+
+'<div class="log"><span class="t">12 juin · 02:00</span><span class="a">Système — sauvegarde auto</span><span class="tag t-ok" style="margin-left:auto">OK</span></div></div>'+
+'<div class="restored">'+CHECK+' Dossier restauré — intact</div>'+
+'</div></div></section>';
+document.getElementById('stage').innerHTML=H;window.__READY=true;
+</script></body></html>

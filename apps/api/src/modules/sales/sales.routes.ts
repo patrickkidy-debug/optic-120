@@ -56,35 +56,55 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ items, total, page, pageSize });
   });
 
-  // Créances : ventes non soldées (solde restant dû), pour le suivi des
-  // encaissements échelonnés. Route statique déclarée avant `/:id`.
+  // Créances : ventes non soldées (solde restant dû ou part assurance non encore encaissée).
   app.get('/receivables', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
     const q = req.query as { branchId?: string };
     const where: Record<string, unknown> = {
       type: SaleType.SALE,
-      status: { in: ['CONFIRMED', 'PARTIALLY_PAID'] },
+      status: { in: ['CONFIRMED', 'PARTIALLY_PAID', 'PAID'] },
     };
     if (q.branchId) where.branchId = q.branchId;
     const sales = await req.db!.sale.findMany({
       where,
       orderBy: { createdAt: 'asc' },
-      include: { customer: true, branch: true },
+      include: { customer: true, branch: true, insurer: true },
     });
     const items = sales
-      .map((s) => ({
-        id: s.id,
-        number: s.number,
-        customer: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : null,
-        customerPhone: s.customer?.phone ?? null,
-        branch: s.branch.name,
-        total: Number(s.totalAmount),
-        paid: Number(s.paidAmount),
-        balance: Number(s.totalAmount) - Number(s.paidAmount),
-        createdAt: s.createdAt,
-      }))
-      .filter((s) => s.balance > 0);
+      .map((s) => {
+        const total = Number(s.totalAmount);
+        const paid = Number(s.paidAmount);
+        const balance = Math.max(0, total - paid);
+        const insuranceAmount = Number(s.insuranceAmount);
+        const isInsuranceUnpaid = insuranceAmount > 0 && !s.insurerPaidAt;
+        return {
+          id: s.id,
+          number: s.number,
+          customer: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : null,
+          customerPhone: s.customer?.phone ?? null,
+          branch: s.branch.name,
+          total,
+          paid,
+          balance,
+          insuranceAmount,
+          insurerName: s.insurer?.name ?? null,
+          insurerId: s.insurerId,
+          insurerPaidAt: s.insurerPaidAt,
+          isInsuranceUnpaid,
+          createdAt: s.createdAt,
+        };
+      })
+      .filter((s) => s.balance > 0 || s.isInsuranceUnpaid);
     const totalOutstanding = items.reduce((sum, s) => sum + s.balance, 0);
-    return reply.send({ totalOutstanding, count: items.length, items });
+    const totalInsuranceOutstanding = items.reduce(
+      (sum, s) => sum + (s.isInsuranceUnpaid ? s.insuranceAmount : 0),
+      0,
+    );
+    return reply.send({
+      totalOutstanding,
+      totalInsuranceOutstanding,
+      count: items.length,
+      items,
+    });
   });
 
   // Rapport de ventes sur une période (résumé + lignes) pour l'export CSV.

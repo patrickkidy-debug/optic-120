@@ -79,19 +79,62 @@ export async function stockRoutes(app: FastifyInstance): Promise<void> {
     const input = stockTransferSchema.parse(req.body);
     assertBranchAccess(req, input.fromBranchId);
     assertBranchAccess(req, input.toBranchId);
-    const result = await stockService.transferStock(req.auth!.tenantId, req.auth!.userId, {
+    const transfer = await stockService.transferStock(req.auth!.tenantId, req.auth!.userId, {
       ...input,
       reason: input.reason || undefined,
     });
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
-      action: 'STOCK_TRANSFERRED',
-      entity: 'StockMovement',
-      metadata: { from: input.fromBranchId, to: input.toBranchId, ...result },
+      action: 'STOCK_TRANSFER_INITIATED',
+      entity: 'StockTransfer',
+      entityId: transfer.id,
+      metadata: { from: input.fromBranchId, to: input.toBranchId, number: transfer.number },
       ...requestMeta(req),
     });
-    return reply.send(result);
+    return reply.send({ transfer });
+  });
+
+  // Liste des demandes de transfert de stock (entrantes, sortantes ou toutes).
+  app.get('/transfers', { preHandler: requirePermission('optique.stock.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string; direction?: 'incoming' | 'outgoing' | 'all'; status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED' };
+    if (q.branchId) assertBranchAccess(req, q.branchId);
+    const transfers = await stockService.listTransfers(req.auth!.tenantId, q);
+    return reply.send({ transfers });
+  });
+
+  // Confirmation de réception d'un transfert par le magasin destinataire.
+  app.post('/transfers/:id/confirm', { preHandler: requirePermission('optique.stock.transfer') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const transfer = await stockService.confirmTransfer(req.auth!.tenantId, req.auth!.userId, id);
+    assertBranchAccess(req, transfer.toBranchId);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'STOCK_TRANSFER_CONFIRMED',
+      entity: 'StockTransfer',
+      entityId: id,
+      metadata: { number: transfer.number },
+      ...requestMeta(req),
+    });
+    return reply.send({ transfer });
+  });
+
+  // Annulation d'un transfert en attente par la source.
+  app.post('/transfers/:id/cancel', { preHandler: requirePermission('optique.stock.transfer') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const transfer = await stockService.cancelTransfer(req.auth!.tenantId, req.auth!.userId, id);
+    assertBranchAccess(req, transfer.fromBranchId);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'STOCK_TRANSFER_CANCELLED',
+      entity: 'StockTransfer',
+      entityId: id,
+      metadata: { number: transfer.number },
+      ...requestMeta(req),
+    });
+    return reply.send({ transfer });
   });
 
   // Inventaire physique : régularise le stock sur les quantités comptées.

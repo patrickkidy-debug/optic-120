@@ -90,10 +90,13 @@ import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal } from 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
-/** Construit un lien wa.me à partir d'un numéro saisi librement (garde le + international). */
-function waLink(phone: string): string {
+/** Construit un lien wa.me avec un message pré-rempli pour réserver une démonstration gratuite. */
+function waLink(phone: string, name?: string, tenantName?: string): string {
   const digits = phone.replace(/[^\d]/g, '');
-  return `https://wa.me/${digits}`;
+  const greeting = name ? `Bonjour ${name}` : 'Bonjour';
+  const establishment = tenantName ? ` pour ${tenantName}` : '';
+  const text = `${greeting}, merci pour votre inscription${establishment} sur OculoSaaS ! Je suis le fondateur d'OculoSaaS. Je vous contacte pour vous réserver une démonstration gratuite afin de vous aider à bien configurer votre espace. Quand seriez-vous disponible pour un court échange ?`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
@@ -455,7 +458,7 @@ function SubscriptionsTab() {
               <td className="table-cell">
                 {s.whatsapp ? (
                   <a
-                    href={waLink(s.whatsapp)}
+                    href={waLink(s.whatsapp, undefined, s.tenantName)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366]/12 px-2 py-1 text-xs font-medium text-[#128C7E] hover:bg-[#25D366]/20"
@@ -829,7 +832,7 @@ function UsersTab() {
                 <td className="table-cell">
                   {u.phone ? (
                     <a
-                      href={waLink(u.phone)}
+                      href={waLink(u.phone, u.name, u.tenantName)}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Ouvrir la discussion WhatsApp"

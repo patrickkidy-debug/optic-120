@@ -113,7 +113,7 @@ function FrameCard({
         <p className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</p>
 
         <div className="mt-2 flex flex-wrap gap-1">
-          {[a.gender, a.shape, a.size].filter(Boolean).map((t) => (
+          {[a.frameType, a.gender, a.shape, a.size].filter(Boolean).map((t) => (
             <span key={t} className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
               {t}
             </span>

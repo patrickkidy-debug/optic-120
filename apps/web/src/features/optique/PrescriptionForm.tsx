@@ -7,7 +7,7 @@ import { lensBaseOptions, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { createPrescription, updatePrescription, type Prescription } from './api';
 import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { fileToResizedDataUrl } from '../../lib/image';
+import { fileToResizedDataUrl, uploadImageToSupabase } from '../../lib/image';
 import { Button, Field, Modal } from '../../components/ui';
 
 /**
@@ -78,9 +78,9 @@ export function PrescriptionForm({
     setUploadBusy(true);
     setError('');
     try {
-      // 1024px max dimension, max 600KB output
-      const resized = await fileToResizedDataUrl(file, 1024, 600 * 1024);
-      setPhotoUrl(resized);
+      // 1024px max dimension, max 600KB output, upload vers Supabase Storage (bucket OCL 4)
+      const url = await uploadImageToSupabase(file, 'ordonnances', 1024, 600 * 1024);
+      setPhotoUrl(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur lors du traitement de la photo');
     } finally {

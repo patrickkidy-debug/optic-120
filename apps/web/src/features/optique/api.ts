@@ -426,13 +426,61 @@ export interface Receivable {
   total: number;
   paid: number;
   balance: number;
+  insuranceAmount?: number;
+  insurerName?: string | null;
+  insurerId?: string | null;
+  insurerPaidAt?: string | null;
+  isInsuranceUnpaid?: boolean;
   createdAt: string;
 }
 
 export interface ReceivablesData {
   totalOutstanding: number;
+  totalInsuranceOutstanding?: number;
   count: number;
   items: Receivable[];
+}
+
+export interface StockTransferItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  product: { id: string; name: string; sku: string; brand?: string | null };
+}
+
+export interface StockTransferRecord {
+  id: string;
+  number: string;
+  fromBranchId: string;
+  fromBranch: { id: string; name: string };
+  toBranchId: string;
+  toBranch: { id: string; name: string };
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  reason?: string | null;
+  createdAt: string;
+  confirmedAt?: string | null;
+  createdBy?: { firstName: string; lastName: string } | null;
+  confirmedBy?: { firstName: string; lastName: string } | null;
+  items: StockTransferItem[];
+}
+
+export async function listStockTransfers(params?: {
+  branchId?: string;
+  direction?: 'incoming' | 'outgoing' | 'all';
+  status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+}): Promise<StockTransferRecord[]> {
+  const { data } = await api.get<{ transfers: StockTransferRecord[] }>('/stock/transfers', { params });
+  return data.transfers;
+}
+
+export async function confirmStockTransfer(id: string): Promise<StockTransferRecord> {
+  const { data } = await api.post<{ transfer: StockTransferRecord }>(`/stock/transfers/${id}/confirm`);
+  return data.transfer;
+}
+
+export async function cancelStockTransfer(id: string): Promise<StockTransferRecord> {
+  const { data } = await api.post<{ transfer: StockTransferRecord }>(`/stock/transfers/${id}/cancel`);
+  return data.transfer;
 }
 
 export async function listReceivables(branchId?: string): Promise<ReceivablesData> {

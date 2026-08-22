@@ -247,16 +247,16 @@ export const PLAN_CATALOG: PlanDef[] = [
   {
     code: 'STARTER',
     name: 'Starter',
-    description: "Toutes les fonctionnalités essentielles pour démarrer, jusqu'à 2 magasins.",
+    description: "Toutes les fonctionnalités essentielles pour démarrer, jusqu'à 2 magasins et 15 utilisateurs.",
     priceMonthly: 7500,
     trialDays: 0,
-    maxUsers: null,
+    maxUsers: 15,
     maxBranches: 2,
     maxPatients: null,
     maxSales: null,
     features: [
       "Jusqu'à 2 magasins",
-      'Utilisateurs illimités',
+      "Jusqu'à 15 utilisateurs",
       'Assurances',
       'Encaissement & paiements',
       'Rôles & permissions',
@@ -269,16 +269,16 @@ export const PLAN_CATALOG: PlanDef[] = [
   {
     code: 'STANDARD',
     name: 'Standard',
-    description: "Gestion complète d'une optique ou clinique, jusqu'à 10 magasins.",
+    description: "Gestion complète d'une optique ou clinique, jusqu'à 5 magasins et 70 utilisateurs.",
     priceMonthly: 12000,
     trialDays: 0,
-    maxUsers: null,
-    maxBranches: 10,
+    maxUsers: 70,
+    maxBranches: 5,
     maxPatients: null,
     maxSales: null,
     features: [
-      "Jusqu'à 10 magasins",
-      'Utilisateurs illimités',
+      "Jusqu'à 5 magasins",
+      "Jusqu'à 70 utilisateurs",
       'Tout Starter, en plus grand',
       'Gestion des stocks, patients et ventes',
       'Tableau de bord complet',
@@ -290,7 +290,7 @@ export const PLAN_CATALOG: PlanDef[] = [
     code: 'GROWTH',
     name: 'Growth',
     description: 'Toutes les fonctionnalités, multi-agences et utilisateurs illimités.',
-    priceMonthly: 23000,
+    priceMonthly: 30000,
     trialDays: 0,
     maxUsers: null,
     maxBranches: null,
@@ -323,7 +323,7 @@ export const DEFAULT_PLAN_CODE = 'STARTER';
 export const PLAN_PRICES: Record<string, Partial<Record<SupportedCurrency, number>>> = {
   STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800 },
   STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250 },
-  GROWTH: { XOF: 23000, XAF: 23000, CVE: 3900, AOA: 38000, MZN: 2400 },
+  GROWTH: { XOF: 30000, XAF: 30000, CVE: 5100, AOA: 50000, MZN: 3100 },
 };
 
 /** Prix mensuel d'une offre dans la devise de l'établissement. */
@@ -960,9 +960,12 @@ export const FRAME_COLORS = [
   { name: 'Blanc', hex: '#f8fafc' },
 ] as const;
 
+export const FRAME_TYPES = ['Cerclée', 'Percée', 'Nylor'] as const;
+
 /** Attributs propres à une monture (stockés dans `attributes`). */
 export const frameAttributesSchema = z.object({
   model: z.string().max(80).optional().or(z.literal('')),
+  frameType: z.string().max(30).optional().or(z.literal('')),
   gender: z.string().max(20).optional().or(z.literal('')),
   shape: z.string().max(30).optional().or(z.literal('')),
   color: z.string().max(30).optional().or(z.literal('')),

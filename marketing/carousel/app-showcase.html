@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OculoSaaS — Démo défilante (toutes les fonctionnalités)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --brand:linear-gradient(120deg,#7c3aed 0%,#ec4899 52%,#f97316 100%);
+  --brand-soft:linear-gradient(120deg,rgba(124,58,237,.14),rgba(236,72,153,.12),rgba(249,115,22,.14));
+  --violet:#7c3aed;--pink:#ec4899;--orange:#f97316;--cyan:#0a97b5;
+  --ink:#0f1730;--muted:#5b6b85;--faint:#94a1b6;
+  --canvas:#f4f6fb;--card:#ffffff;--panel:#f7f9fc;
+  --line:rgba(15,23,42,.09);--line2:rgba(15,23,42,.05);
+  --sv:rgba(124,58,237,.10);--so:rgba(249,115,22,.12);--sp:rgba(236,72,153,.10);--sc:rgba(10,151,181,.12);
+  --success:#0ea371;--ss:rgba(14,163,113,.12);--warning:#e0850b;--sw:rgba(224,133,11,.14);--danger:#e5484d;--sd:rgba(229,72,77,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:#0b1220;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:0;background:none}
+
+/* Carrousel */
+.viewer{position:fixed;inset:0;overflow:hidden}
+.track{display:flex;height:100%;width:100%;transition:transform .5s cubic-bezier(.7,0,.2,1);will-change:transform}
+.slide{flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:26px 26px 64px}
+.progress{position:fixed;top:0;left:0;height:4px;background:var(--brand);z-index:50;transition:width .4s ease}
+.arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:40;width:52px;height:52px;border-radius:50%;
+  background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(0,0,0,.35);display:grid;place-items:center;color:#0f1730;transition:transform .15s,opacity .2s}
+.arrow:hover{transform:translateY(-50%) scale(1.07)}
+.arrow.l{left:20px}.arrow.r{right:20px}
+.arrow svg{width:24px;height:24px}
+.arrow[disabled]{opacity:.3;pointer-events:none}
+.hud{position:fixed;left:0;right:0;bottom:16px;z-index:40;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+.hud .label{pointer-events:none;background:rgba(15,20,35,.72);color:#fff;font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;backdrop-filter:blur(6px)}
+.hud .label b{color:#c9b4ff;font-weight:700}
+.dots{pointer-events:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:80vw}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.32);cursor:pointer;transition:.2s}
+.dots i.on{background:#fff;width:24px;border-radius:5px}
+.counter{position:fixed;top:16px;right:20px;z-index:40;color:#fff;font-weight:700;font-size:14px;background:rgba(15,20,35,.6);padding:6px 13px;border-radius:999px;backdrop-filter:blur(6px)}
+.hint{position:fixed;top:16px;left:20px;z-index:40;color:rgba(255,255,255,.7);font-size:12.5px;font-weight:500;background:rgba(15,20,35,.5);padding:6px 13px;border-radius:999px}
+
+/* App window */
+.win{width:min(1440px,100%);height:100%;max-height:860px;background:var(--card);border-radius:20px;overflow:hidden;
+  box-shadow:0 40px 100px -40px rgba(0,0,0,.6);display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.5)}
+.wbar{height:44px;flex:none;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:8px}
+.wbar .d{width:11px;height:11px;border-radius:50%}
+.wbar .u{margin-left:14px;background:#fff;border:1px solid var(--line);border-radius:7px;height:26px;flex:1;max-width:460px;display:flex;align-items:center;gap:7px;padding:0 12px;color:var(--faint);font-size:13px}
+.wbar .u svg{width:13px;height:13px}
+.app{flex:1;min-height:0;display:flex}
+
+/* Sidebar */
+.side{width:236px;flex:none;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:11px;padding:16px 16px 12px}
+.brand .lg{width:38px;height:38px;border-radius:11px;background:var(--brand);display:grid;place-items:center;box-shadow:0 8px 18px -6px rgba(124,58,237,.5)}
+.brand .lg svg{width:21px;height:21px}
+.brand .nm{font-family:'Sora';font-weight:800;font-size:19px;letter-spacing:-.02em}
+.brand .nm b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav{flex:1;overflow-y:auto;padding:4px 10px 16px}
+.nav::-webkit-scrollbar{width:6px}.nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.grp{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.09em;padding:14px 10px 5px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;color:var(--muted);font-size:13.5px;font-weight:600;position:relative;margin-bottom:1px}
+.item svg{width:17px;height:17px;flex:none;stroke:currentColor}
+.item .bdg{margin-left:auto;background:var(--sd);color:var(--danger);font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 7px}
+.item.on{background:var(--sv);color:var(--violet)}
+.item.on::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:3px;border-radius:2px;background:var(--brand)}
+
+/* Topbar + main */
+.col{flex:1;min-height:0;display:flex;flex-direction:column}
+.top{height:56px;flex:none;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.branch{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-weight:600;font-size:13.5px}
+.branch svg{width:16px;height:16px;stroke:var(--violet)}
+.branch .cv{color:var(--faint);width:14px;height:14px}
+.tr{display:flex;align-items:center;gap:14px}
+.tr .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--muted);border:1px solid var(--line)}
+.tr .ic svg{width:16px;height:16px}
+.tr .lang{font-weight:700;font-size:13px;color:var(--muted)}
+.tr .user{display:flex;align-items:center;gap:9px}
+.tr .user .av{width:34px;height:34px;border-radius:9px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+.tr .user .nm{font-weight:700;font-size:13.5px;line-height:1.15}
+.tr .user .nm small{display:block;color:var(--faint);font-weight:500;font-size:11.5px}
+.main{flex:1;min-height:0;overflow-y:auto;padding:22px 26px 30px;background:var(--canvas)}
+.main::-webkit-scrollbar{width:8px}.main::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+
+/* Content blocks */
+.phead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.phead h1{font-family:'Sora';font-weight:800;font-size:24px;letter-spacing:-.02em}
+.phead p{color:var(--faint);font-size:14px;margin-top:3px}
+.btnp{background:var(--brand);color:#fff;font-weight:700;font-size:13.5px;padding:10px 17px;border-radius:10px;display:inline-flex;gap:7px;align-items:center;box-shadow:0 10px 22px -12px rgba(124,58,237,.6);white-space:nowrap}
+.btnp svg{width:16px;height:16px;stroke:#fff}
+.btno{background:#fff;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13px;padding:9px 14px;border-radius:10px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:12px;color:var(--violet);text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px}
+.eyebrow .bar{width:26px;height:3px;border-radius:2px;background:var(--brand)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.kpi .ki{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;float:right}
+.kpi .ki svg{width:18px;height:18px}
+.klbl{font-size:12.5px;color:var(--faint);font-weight:600}
+.kval{font-family:'Sora';font-weight:800;font-size:22px;margin-top:4px;letter-spacing:-.02em;white-space:nowrap}
+.kchg{font-size:12px;font-weight:700;margin-top:5px}
+.up{color:var(--success)}.dn{color:var(--danger)}
+.iv{background:var(--sv);color:var(--violet)}.io{background:var(--so);color:var(--orange)}.ip{background:var(--sp);color:var(--pink)}.ic2{background:var(--sc);color:var(--cyan)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px}
+.tbl{overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+tbody td{padding:13px 16px;border-bottom:1px solid var(--line2);font-size:14px}
+tbody tr:last-child td{border-bottom:0}
+.r{text-align:right}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.t-ok{background:var(--ss);color:var(--success)}.t-w{background:var(--sw);color:var(--warning)}.t-d{background:var(--sd);color:var(--danger)}
+.t-i{background:var(--sv);color:var(--violet)}.t-c{background:var(--sc);color:var(--cyan)}
+.tag svg{width:13px;height:13px;flex:none;vertical-align:-2px}
+.av2{width:34px;height:34px;border-radius:9px;background:var(--brand-soft);color:var(--violet);display:inline-grid;place-items:center;font-weight:800;font-size:13px;border:1px solid rgba(124,58,237,.14);vertical-align:middle;margin-right:10px}
+.whowrap{display:inline-block;vertical-align:middle}
+.nm2{font-weight:700}.sub2{display:block;color:var(--faint);font-weight:500;font-size:12px}
+.money{font-family:'Sora';font-weight:700}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--muted)}
+.actbtn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:8px;border:1px solid var(--line);white-space:nowrap}
+.actbtn svg{width:14px;height:14px}
+.wa{color:#128C7E;background:rgba(37,211,102,.10);border-color:rgba(37,211,102,.3)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.pad{padding:18px}
+.h3{font-family:'Sora';font-weight:700;font-size:16px;margin-bottom:12px}
+
+/* IA panel */
+.ia{background:linear-gradient(160deg,#fbf9ff,#fff 42%);border:1px solid rgba(124,58,237,.16);border-radius:16px;padding:18px}
+.ia-h{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.ia-h .sp{width:34px;height:34px;border-radius:9px;background:var(--brand);display:grid;place-items:center;box-shadow:0 8px 18px -8px rgba(124,58,237,.6)}
+.ia-h .sp svg{width:18px;height:18px}
+.ia-h .t{font-family:'Sora';font-weight:800;font-size:17px}.ia-h .t small{display:block;font-family:'Inter';font-weight:500;font-size:12.5px;color:var(--faint)}
+.ia-h .live{margin-left:auto;font-size:12px;font-weight:700;color:var(--violet);background:var(--sv);padding:6px 12px;border-radius:999px;display:flex;align-items:center;gap:6px}
+.ia-h .live b{width:7px;height:7px;border-radius:50%;background:var(--violet)}
+.ia-grid{display:grid;grid-template-columns:1fr 1.5fr;gap:16px}
+.ia-cards{display:flex;flex-direction:column;gap:10px}
+.ia-c{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:#fff}
+.ia-c .k{font-size:12.5px;color:var(--faint);font-weight:600;display:flex;align-items:center;gap:6px}
+.ia-c .k svg{width:15px;height:15px;flex:none}
+.ia-c .v{font-family:'Sora';font-weight:800;font-size:22px;margin-top:3px;letter-spacing:-.02em}
+.ia-c .v small{font-size:13px;color:var(--muted);font-weight:600}
+.ia-risk{background:var(--sw);border-color:rgba(224,133,11,.25)}.ia-risk .v{font-size:15px;color:var(--warning)}
+.chartbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 12px 8px;display:flex;flex-direction:column}
+.lg{display:flex;gap:16px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px;padding-left:4px}
+.lg span{display:inline-flex;align-items:center;gap:6px}.lg i{width:14px;height:4px;border-radius:2px}
+.chartbox svg{width:100%;height:180px}
+
+/* Caisse */
+.pos{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;align-content:start}
+.prod{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+.prod .ph{height:52px;border-radius:9px;background:var(--brand-soft);margin-bottom:9px;display:grid;place-items:center}
+.prod .ph svg{width:26px;height:26px;stroke:var(--violet);opacity:.85}
+.prod b{font-size:13.5px;display:block}.prod .pr{font-family:'Sora';font-weight:700;color:var(--violet);margin-top:3px;font-size:13.5px}
+.cart{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column}
+.ci{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:13.5px}
+.ci small{color:var(--faint)}
+.ctot{margin-top:auto;padding-top:12px;border-top:2px solid var(--line)}
+.ctot .row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.ctot .grand{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+.ctot .grand b{font-family:'Sora';font-size:25px;font-weight:800}
+.mm{display:flex;gap:7px;margin-top:12px}
+.mm .m{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+.wave{color:#12a7e0;border-color:rgba(18,167,224,.4)!important}.om{color:#ff7900;border-color:rgba(255,121,0,.4)!important}.free{color:#e2001a;border-color:rgba(226,0,26,.35)!important}
+
+/* barcode */
+.labels{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lbl{border:1px solid var(--line);border-radius:12px;background:#fff;padding:16px;text-align:center}
+.lbl .nm{font-weight:700;font-size:14px;margin-bottom:10px}
+.barcode{height:56px;margin:0 auto 10px;background:repeating-linear-gradient(90deg,#0f1730 0 2px,#fff 2px 3px,#0f1730 3px 6px,#fff 6px 8px,#0f1730 8px 9px,#fff 9px 13px)}
+.lbl .sku{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--faint);letter-spacing:1px}
+.lbl .pr{font-family:'Sora';font-weight:800;font-size:17px;margin-top:6px}
+
+/* bars / progress */
+.pbar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
+.pbar span{display:block;height:100%;background:var(--brand);border-radius:999px}
+.usage{display:grid;grid-template-columns:1fr 1fr;gap:14px 30px}
+.usage .u{}.usage .u .row{display:flex;justify-content:space-between;font-size:13px;font-weight:600}.usage .u .row .g{color:var(--faint);font-weight:500}
+
+/* plans */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.plan{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff;position:relative}
+.plan.pop{border-color:var(--violet);box-shadow:0 0 0 3px var(--sv)}
+.plan .pop-b{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px}
+.plan h4{font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.plan .price{font-family:'Sora';font-weight:800;font-size:26px;margin:8px 0 4px}.plan .price small{font-size:13px;color:var(--muted);font-weight:600}
+.plan ul{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.plan li{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
+.plan li svg{width:15px;height:15px;stroke:var(--success);flex:none;margin-top:1px}
+
+/* agenda */
+.appt{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff;margin-bottom:10px}
+.appt .time{font-family:'Sora';font-weight:800;font-size:15px;color:var(--violet);width:60px;flex:none}
+.appt .b{width:3px;align-self:stretch;border-radius:2px;background:var(--brand)}
+.appt .who b{font-size:14px}.appt .who small{display:block;color:var(--faint);font-size:12px}
+.appt .tg{margin-left:auto}
+
+/* chat */
+.chat{max-width:440px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff}
+.chat .ch{background:var(--brand);color:#fff;padding:14px 16px;font-weight:700}
+.chat .ch small{display:block;font-weight:500;opacity:.9;font-size:12.5px}
+.chat .cb{padding:16px;display:flex;flex-direction:column;gap:10px;min-height:180px;background:var(--panel)}
+.bub{max-width:80%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.4}
+.bub.in{background:#fff;border:1px solid var(--line);align-self:flex-start}
+.bub.me{background:var(--sv);color:var(--ink);align-self:flex-end}
+.chat .cf{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.chat .cf input{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13.5px;background:var(--panel)}
+.chat .cf button{width:40px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center}
+.chat .cf button svg{width:16px;height:16px;stroke:#fff}
+
+/* Cover / CTA */
+.cover,.cta{width:min(1200px,100%);height:100%;max-height:860px;background:var(--card);border-radius:20px;position:relative;overflow:hidden;padding:64px;display:flex;flex-direction:column;box-shadow:0 40px 100px -40px rgba(0,0,0,.6)}
+.cover::before,.cta::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;filter:blur(70px);background:radial-gradient(circle,rgba(124,58,237,.20),transparent 70%);top:-160px;right:-120px}
+.cover::after,.cta::after{content:"";position:absolute;width:520px;height:520px;border-radius:50%;filter:blur(70px);background:radial-gradient(circle,rgba(249,115,22,.16),transparent 70%);bottom:-180px;left:-140px}
+.cover>*,.cta>*{position:relative;z-index:1}
+.cover .top,.cta .top{border:0;height:auto;padding:0;justify-content:space-between;margin-bottom:auto}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;background:var(--sv);color:var(--violet);font-weight:700;font-size:14px;border:1px solid rgba(124,58,237,.16)}
+.chip svg{width:16px;height:16px}
+.cover .mid{margin:auto 0}
+.cover h1{font-family:'Sora';font-weight:800;font-size:58px;line-height:1.04;letter-spacing:-.025em}
+.g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cover p{font-size:22px;color:var(--muted);margin-top:18px;max-width:760px;line-height:1.45}
+.cover .pills{display:flex;flex-wrap:wrap;gap:11px;margin-top:30px}
+.cover .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:11px 18px;font-weight:600;font-size:16px;color:var(--muted);display:flex;align-items:center;gap:9px}
+.cover .pill svg{width:17px;height:17px;stroke:var(--violet)}
+.cover .foot,.cta .foot{margin-top:auto;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;color:var(--faint);font-weight:600;font-size:16px}
+.site{display:flex;align-items:center;gap:9px;color:var(--muted)}.site svg{width:18px;height:18px;stroke:var(--muted)}
+.cta{text-align:center;align-items:center;justify-content:center}
+.cta .top{width:100%}
+.cta .cbody{margin:auto;display:flex;flex-direction:column;align-items:center}
+.cta h1{font-family:'Sora';font-weight:800;font-size:52px;line-height:1.06;letter-spacing:-.02em}
+.cta p{font-size:21px;color:var(--muted);margin-top:16px;max-width:760px}
+.cta .go{margin-top:34px;display:inline-flex;align-items:center;gap:12px;background:var(--brand);color:#fff;font-family:'Sora';font-weight:800;font-size:24px;padding:20px 38px;border-radius:16px;box-shadow:0 22px 50px -22px rgba(124,58,237,.7)}
+.cta .go svg{width:26px;height:26px;stroke:#fff}
+.cta .u2{margin-top:20px;font-size:19px;font-weight:700;color:var(--muted)}
+.cta .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:38px;max-width:900px}
+.feat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:left}
+.feat .fi{width:38px;height:38px;border-radius:10px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:10px}
+.feat .fi svg{width:20px;height:20px;stroke:var(--violet)}
+.feat b{font-family:'Sora';font-size:16px;display:block;margin-bottom:3px}.feat p{font-size:13px;color:var(--muted);margin:0}
+.note{display:inline-flex;gap:8px;align-items:center;font-size:12.5px;color:var(--warning);background:var(--sw);border-radius:8px;padding:7px 12px;font-weight:600;margin-bottom:14px}
+.note svg{width:15px;height:15px}
+</style>
+</head>
+<body>
+<div class="progress" id="prog"></div>
+<div class="counter" id="counter">1 / 1</div>
+<div class="hint">← → · glisser · cliquer les points</div>
+<div class="viewer">
+  <div class="track" id="track"></div>
+</div>
+<button class="arrow l" id="prev" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg></button>
+<button class="arrow r" id="next" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></button>
+<div class="hud">
+  <div class="label" id="label"></div>
+  <div class="dots" id="dots"></div>
+</div>
+
+<script>
+/* ---------- Icônes ---------- */
+const I = {
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  crown:'<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5L3 8Z"/>',
+  package:'<path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  boxes:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
+  contact:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.4"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0M15 9h4M15 13h4"/>',
+  cart:'<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/>',
+  receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+  file:'<path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-5Z"/><path d="M8 13h8M8 17h6"/>',
+  glasses:'<circle cx="6" cy="14" r="3.2"/><circle cx="18" cy="14" r="3.2"/><path d="M9.2 13.6c.8-.9 4.8-.9 5.6 0M2.8 12 4.5 8.5h3M21.2 12 19.5 8.5h-3"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L4 16.8 7.2 20l5.3-5.3a4 4 0 0 0 5.2-5.4l-2.5 2.5-2.3-2.3 2.5-2.5Z"/>',
+  bell:'<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0"/>',
+  barcode:'<path d="M3 5v14M6 5v14M9 5v10M12 5v14M15 5v10M18 5v14M21 5v14" stroke-width="1.6"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5.2a3.2 3.2 0 0 1 0 6M18 20a6.5 6.5 0 0 0-2-4.7"/>',
+  steth:'<path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M6 3H4M14 3h2M10 15v1a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="12" r="2"/>',
+  calendar:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/>',
+  scissors:'<circle cx="6" cy="7" r="2.4"/><circle cx="6" cy="17" r="2.4"/><path d="M8 8.5 20 18M8 15.5 20 6M12 12l2 1.5"/>',
+  userCog:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 10-4.5"/><circle cx="18" cy="17" r="2.6"/><path d="M18 13v1.5M18 19.5V21M14.5 17H16M20 17h1.5"/>',
+  wallet:'<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M17 14.5h.5"/>',
+  truck:'<path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>',
+  shield:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/><path d="M9 12l2 2 4-4"/>',
+  shieldHalf:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/><path d="M12 3v19"/>',
+  store:'<path d="M4 9h16l-1-4H5L4 9Z"/><path d="M5 9v10h14V9M9 19v-5h6v5"/>',
+  card:'<rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M2 10h20M6 15h3"/>',
+  scroll:'<path d="M6 3h11a2 2 0 0 1 2 2v13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z"/><path d="M9 8h7M9 12h7M9 16h4"/>',
+  server:'<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.5M7 16.5h.5"/>',
+  life:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M5 5l4.5 4.5M14.5 14.5 19 19M19 5l-4.5 4.5M9.5 14.5 5 19"/>',
+  spark:'<path d="M12 3l1.7 5 5 1.7-5 1.7L12 17l-1.7-5.6-5-1.7 5-1.7L12 3Z"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  print:'<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/>',
+  phone:'<path d="M4 5a2 2 0 0 1 2-2h2l1.5 5-2 1a11 11 0 0 0 5 5l1-2 5 1.5V19a2 2 0 0 1-2 2A16 16 0 0 1 4 5Z"/>',
+  chat:'<path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H6a2 2 0 0 1-2-2Z"/>',
+  send:'<path d="M4 12 20 4l-6 16-3-7-7-1Z"/>',
+  money:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/>',
+  trend:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
+  cv:'<path d="M6 9l6 6 6-6"/>',
+  moon:'<path d="M20 14a8 8 0 1 1-9.5-9.8A6.5 6.5 0 0 0 20 14Z"/>',
+  bag:'<path d="M6 8V6a4 4 0 0 1 8 0v2M4 8h12l1 12H3L4 8Z" transform="translate(2 0)"/>',
+  alert:'<path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4M12 17.4v.2"/>',
+};
+const svg=(n,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[n]||''}</svg>`;
+
+/* ---------- Barre latérale (vraie nav) ---------- */
+const NAV=[
+ ['Principal',[['dashboard','Tableau de bord','grid'],['abonnement','Abonnement','crown']]],
+ ['Optique',[['produits','Produits','package'],['stock','Stock','boxes',3],['clients','Clients','contact'],['caisse','Caisse / Vente','cart'],['ventes','Ventes','receipt'],['devis','Devis','file'],['commandes','Commandes de verres','glasses'],['sav','SAV & réparations','wrench'],['renouv','Renouvellements','bell'],['etiquettes','Étiquettes','barcode']]],
+ ['Clinique',[['patients','Patients','users'],['consultations','Consultations','steth'],['rdv','Rendez-vous','calendar'],['chirurgies','Chirurgies','scissors']]],
+ ['Gestion',[['personnel','Personnel','userCog'],['finance','Finance','wallet'],['fournisseurs','Fournisseurs','truck'],['assurances','Assurances','shield']]],
+ ['Paramètres',[['roles','Rôles & accès','shieldHalf'],['magasins','Magasins & paiements','store'],['journal','Journal','scroll'],['aide','Aide & support','life']]],
+];
+function sidebar(active){
+  let h=`<div class="brand"><span class="lg">${svg('eye','stroke="#fff"')}</span><span class="nm">Oculo<b>SaaS</b></span></div><div class="nav" data-active="${active}">`;
+  for(const[g,items]of NAV){
+    h+=`<div class="grp">${g}</div>`;
+    for(const it of items){
+      const[id,label,icon,badge]=it;
+      h+=`<div class="item ${id===active?'on':''}">${svg(icon)}<span>${label}</span>${badge?`<span class="bdg">${badge}</span>`:''}</div>`;
+    }
+  }
+  return h+'</div>';
+}
+function frame(active,route,body){
+  return `<div class="win"><div class="wbar"><span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span><span class="u">${svg('lock')} app.oculosaas.com/${route}</span></div>
+  <div class="app">${sidebar(active)}
+    <div class="col">
+      <div class="top">
+        <div class="branch">${svg('store')} Boutique Dakar ${svg('cv','class="cv"')}</div>
+        <div class="tr"><span class="ic">${svg('moon')}</span><span class="lang">FR</span><div class="user"><span class="av">AD</span><span class="nm">Awa Diop<small>Administrateur</small></span></div></div>
+      </div>
+      <div class="main">${body}</div>
+    </div>
+  </div></div>`;
+}
+
+/* ---------- Helpers contenu ---------- */
+const HEAD=(t,s,a)=>`<div class="phead"><div><h1>${t}</h1>${s?`<p>${s}</p>`:''}</div>${a?`<button class="btnp">${svg('plus')} ${a}</button>`:''}</div>`;
+const KPI=items=>`<div class="kpis">${items.map(k=>`<div class="kpi"><span class="ki ${k.c}">${svg(k.i)}</span><div class="klbl">${k.l}</div><div class="kval">${k.v}</div>${k.d?`<div class="kchg ${k.up?'up':'dn'}">${k.d}</div>`:''}</div>`).join('')}</div>`;
+const T=(cols,rows)=>`<div class="card tbl"><table><thead><tr>${cols.map(c=>`<th class="${c.a||''}">${c.t}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${cols[i].a||''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const who=(ini,nm,sb)=>`<span class="av2">${ini}</span><span class="whowrap"><span class="nm2">${nm}</span>${sb?`<span class="sub2">${sb}</span>`:''}</span>`;
+
+/* ---------- Slides ---------- */
+const SLIDES=[];
+const app=(nav,route,group,title,body)=>SLIDES.push({group,title,html:frame(nav,route,body)});
+
+/* Cover */
+SLIDES.push({group:'Présentation',title:'OculoSaaS',html:`<div class="cover">
+ <div class="top"><div class="chip">${svg('eye')} OculoSaaS · Afrique de l'Ouest</div><div class="chip">${svg('spark')} Démo interactive</div></div>
+ <div class="mid">
+   <div class="chip" style="margin-bottom:22px">${svg('spark')} Logiciel de gestion optique &amp; clinique</div>
+   <h1>Toutes vos fonctionnalités, <span class="g">un seul logiciel.</span></h1>
+   <p>Optique, clinique, caisse Mobile Money, stocks, patients, rapports et <b>IA prédictive</b>. Faites défiler pour découvrir chaque module.</p>
+   <div class="pills"><span class="pill">${svg('check')} 24 modules intégrés</span><span class="pill">${svg('check')} Mode multi-magasins</span><span class="pill">${svg('check')} Paiement Mobile Money</span></div>
+ </div>
+ <div class="foot"><span class="site">${svg('globe')} oculosaas.com</span><span>Faites glisser →</span></div>
+</div>`});
+
+/* 1. Dashboard + IA */
+app('dashboard','dashboard','Principal','Tableau de bord', HEAD('Bonjour, Awa 👋','Vue d\'ensemble de votre activité')+
+KPI([{l:'CA du jour',v:'485 000',d:'+12,4% FCFA',up:1,i:'money',c:'iv'},{l:'CA mensuel',v:'3,72 M',d:'+18%',up:1,i:'trend',c:'io'},{l:'Ventes du jour',v:'27',d:'+5 vs hier',up:1,i:'cart',c:'ip'},{l:'Stocks faibles',v:'3',d:'à réappro.',i:'alert',c:'ic2'}])+
+`<div class="ia"><div class="ia-h"><span class="sp">${svg('spark','stroke="#fff"')}</span><div class="t">IA prédictive — Prévisions économiques<small>Régression de tendance + saisonnalité · 90 jours analysés</small></div><span class="live"><b></b>En direct</span></div>
+<div class="ia-grid"><div class="ia-cards">
+  <div class="ia-c"><div class="k">${svg('trend')} CA projeté ce mois</div><div class="v">4 250 000 <small>FCFA</small></div></div>
+  <div class="ia-c"><div class="k">Tendance (14 j)</div><div class="v" style="color:var(--success)">+18%</div></div>
+  <div class="ia-c"><div class="k">Meilleur jour</div><div class="v">Samedi <small>~222 000 F</small></div></div>
+  <div class="ia-c ia-risk"><div class="k">${svg('alert')} Rupture anticipée</div><div class="v">Verres progressifs · 6 j</div></div>
+</div>
+<div class="chartbox"><div class="lg"><span><i style="background:#7c3aed"></i>Réalisé (30 j)</span><span><i style="background:#f97316"></i>Prévision IA (14 j)</span></div><svg id="fchart" viewBox="0 0 900 260" preserveAspectRatio="none"></svg></div>
+</div></div>`);
+
+/* 2. Abonnement */
+app('abonnement','abonnement','Principal','Abonnement', HEAD('Abonnement','Votre offre, votre consommation et vos factures')+
+`<div class="grid2" style="margin-bottom:16px">
+ <div class="card pad"><div class="h3">Offre en cours</div><div style="font-family:Sora;font-weight:800;font-size:24px">Standard <span class="tag t-i" style="font-size:12px">Actif</span></div><div style="font-family:Sora;font-weight:800;font-size:20px;margin-top:6px;background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent">12 000 FCFA <span style="font-size:13px;color:var(--muted)">/ mois</span></div><div class="pbar" style="margin-top:14px"><span style="width:64%"></span></div><div style="font-size:12.5px;color:var(--faint);margin-top:6px">Prochaine échéance : 31 juillet 2026</div></div>
+ <div class="card pad"><div class="h3">Consommation</div><div class="usage">
+   <div class="u"><div class="row"><span>Utilisateurs</span><span class="g">6 / illimité</span></div><div class="pbar"><span style="width:30%"></span></div></div>
+   <div class="u"><div class="row"><span>Magasins</span><span class="g">2 / 10</span></div><div class="pbar"><span style="width:20%"></span></div></div>
+   <div class="u"><div class="row"><span>Patients</span><span class="g">1 248 / illimité</span></div><div class="pbar"><span style="width:55%"></span></div></div>
+   <div class="u"><div class="row"><span>Ventes / mois</span><span class="g">312 / illimité</span></div><div class="pbar"><span style="width:44%"></span></div></div>
+ </div></div>
+</div>
+<div class="h3">Nos offres</div>
+<div class="plans">
+ <div class="plan"><h4>Starter</h4><div class="price">7 500 <small>FCFA/mois</small></div><ul><li>${svg('check')} Jusqu'à 2 magasins</li><li>${svg('check')} Utilisateurs illimités</li><li>${svg('check')} Caisse, stocks & rapports</li><li>${svg('check')} Rôles & permissions</li></ul></div>
+ <div class="plan pop"><span class="pop-b">LE PLUS POPULAIRE</span><h4 style="color:var(--violet)">Standard</h4><div class="price">12 000 <small>FCFA/mois</small></div><ul><li>${svg('check')} Jusqu'à 10 magasins</li><li>${svg('check')} Tout Starter, en plus grand</li><li>${svg('check')} Clinique & patients</li><li>${svg('check')} Support prioritaire</li></ul></div>
+ <div class="plan"><h4>Growth</h4><div class="price">23 000 <small>FCFA/mois</small></div><ul><li>${svg('check')} Magasins illimités</li><li>${svg('check')} Multi-agences</li><li>${svg('check')} RH & finance avancées</li><li>${svg('check')} Support premium</li></ul></div>
+</div>`);
+
+/* 3. Produits */
+app('produits','optique/produits','Optique','Produits', HEAD('Produits','Catalogue montures, verres, lentilles & accessoires','Nouveau produit')+
+KPI([{l:'Références',v:'642',i:'package',c:'iv'},{l:'Valeur du stock',v:'8,4 M',d:'FCFA',i:'money',c:'io'},{l:'Marques',v:'38',i:'store',c:'ip'},{l:'En alerte',v:'3',d:'à réappro.',i:'alert',c:'ic2'}])+
+T([{t:'Produit'},{t:'Marque'},{t:'SKU'},{t:'Prix',a:'r'},{t:'Stock',a:'r'}],[
+ [who('','Monture Ray-Ban Wayfarer'),'Ray-Ban','<span class="mono">MON-RB2140</span>','<span class="money r">45 000 F</span>','12'],
+ [who('','Verre progressif 1.6 AR'),'Essilor','<span class="mono">VER-PROG16</span>','<span class="money r">40 000 F</span>','8'],
+ [who('','Lentilles mensuelles x3'),'Acuvue','<span class="mono">LEN-ACUV30</span>','<span class="money r">18 000 F</span>','24'],
+ [who('','Monture Titane Flex'),'Charmant','<span class="mono">MON-TIT-FX</span>','<span class="money r">62 000 F</span>','5'],
+ [who('','Verre anti-lumière bleue'),'Hoya','<span class="mono">VER-BLU-16</span>','<span class="money r">38 000 F</span>','15'],
+ [who('','Étui rigide premium'),'—','<span class="mono">AC-ETUI-P</span>','<span class="money r">3 500 F</span>','60'],
+]));
+
+/* 4. Stock */
+app('stock','optique/stock','Optique','Stock', HEAD('Stock — Magasin Plateau','642 références · alertes automatiques de réappro.','Entrée de stock')+
+T([{t:'Article'},{t:'Référence'},{t:'Quantité',a:'r'},{t:'Seuil',a:'r'},{t:'État',a:'r'}],[
+ ['<b>Verres progressifs 1.6</b>','<span class="mono">VP-160-AR</span>','4','10','<span class="r"><span class="tag t-d">Critique</span></span>'],
+ ['<b>Monture Ray-Ban RB-2140</b>','<span class="mono">MT-RB2140</span>','7','8','<span class="r"><span class="tag t-w">Bas</span></span>'],
+ ['<b>Lentilles Acuvue Oasys</b>','<span class="mono">LN-ACO-30</span>','6','12','<span class="r"><span class="tag t-w">Bas</span></span>'],
+ ['<b>Solution multifonction 360ml</b>','<span class="mono">SL-MF-360</span>','48','20','<span class="r"><span class="tag t-ok">OK</span></span>'],
+ ['<b>Monture enfant Flex</b>','<span class="mono">MT-KID-FX</span>','32','15','<span class="r"><span class="tag t-ok">OK</span></span>'],
+ ['<b>Verres unifocaux 1.5</b>','<span class="mono">VU-150-STD</span>','86','30','<span class="r"><span class="tag t-ok">OK</span></span>'],
+]));
+
+/* 5. Clients */
+app('clients','optique/clients','Optique','Clients', HEAD('Clients','Fichier clients, ordonnances optiques & points de fidélité','Nouveau client')+
+T([{t:'Client'},{t:'Téléphone'},{t:'Dernière visite'},{t:'Fidélité'},{t:'Total dépensé',a:'r'}],[
+ [who('AD','Aminata Diallo','Dakar · Plateau'),'+221 77 812 45 09','12 juin 2026','<span class="tag t-i">1 240 pts</span>','<span class="money r">1 245 000 F</span>'],
+ [who('OS','Ousmane Sow','Thiès'),'+221 78 204 11 78','10 juin 2026','<span class="tag t-ok">Or</span>','<span class="money r">862 000 F</span>'],
+ [who('FN','Fatou Ndiaye','Dakar · Almadies'),'+221 76 559 30 22','8 juin 2026','<span class="tag t-i">640 pts</span>','<span class="money r">598 500 F</span>'],
+ [who('MB','Moussa Ba','Rufisque'),'+221 77 390 88 14','5 juin 2026','<span class="tag t-c">Argent</span>','<span class="money r">431 000 F</span>'],
+ [who('KF','Khady Faye','Dakar · Médina'),'+221 78 771 62 40','3 juin 2026','<span class="tag t-i">310 pts</span>','<span class="money r">276 000 F</span>'],
+]));
+
+/* 6. Caisse */
+app('caisse','optique/caisse','Optique','Caisse / Vente', HEAD('Nouvelle vente','Client : Aminata Diallo · encaissement Mobile Money')+
+`<div class="pos"><div class="pgrid">
+ <div class="prod"><div class="ph">${svg('glasses',' ')}</div><b>Monture Ray-Ban</b><div class="pr">45 000 F</div></div>
+ <div class="prod"><div class="ph">${svg('glasses',' ')}</div><b>Verres progressifs</b><div class="pr">85 000 F</div></div>
+ <div class="prod"><div class="ph">${svg('eye',' ')}</div><b>Lentilles Acuvue</b><div class="pr">28 000 F</div></div>
+ <div class="prod"><div class="ph">${svg('glasses',' ')}</div><b>Monture Titane</b><div class="pr">62 000 F</div></div>
+ <div class="prod"><div class="ph">${svg('eye',' ')}</div><b>Solution 360ml</b><div class="pr">6 500 F</div></div>
+ <div class="prod"><div class="ph">${svg('glasses',' ')}</div><b>Anti-lumière</b><div class="pr">38 000 F</div></div>
+</div>
+<div class="cart"><div class="ci"><span>Monture Ray-Ban<br><small>1 × 45 000 F</small></span><span class="money">45 000</span></div>
+ <div class="ci"><span>Verres progressifs<br><small>1 × 85 000 F</small></span><span class="money">85 000</span></div>
+ <div class="ci"><span>Traitement anti-reflet<br><small>1 × 15 000 F</small></span><span class="money">15 000</span></div>
+ <div class="ctot"><div class="row"><span>Sous-total</span><span>145 000 F</span></div><div class="row"><span>TVA (18%)</span><span>26 100 F</span></div><div class="row"><span>Remise fidélité</span><span style="color:var(--success)">−5 000 F</span></div>
+ <div class="grand"><span style="color:var(--muted);font-weight:600">Net à payer</span><b>166 100 <span style="font-size:15px;color:var(--muted)">F</span></b></div>
+ <div class="mm"><div class="m wave">Wave</div><div class="m om">Orange</div><div class="m free">Free</div><div class="m" style="color:var(--muted)">Espèces</div></div></div>
+</div></div>`);
+
+/* 7. Ventes */
+app('ventes','optique/ventes','Optique','Ventes', HEAD('Ventes','Historique des ventes et encaissements')+
+KPI([{l:'CA du mois',v:'3,72 M',d:'+18% FCFA',up:1,i:'money',c:'iv'},{l:'Ventes du mois',v:'312',i:'receipt',c:'io'},{l:'Panier moyen',v:'68 500',d:'+6%',up:1,i:'trend',c:'ip'},{l:'Mobile Money',v:'71%',i:'phone',c:'ic2'}])+
+T([{t:'N° vente'},{t:'Client'},{t:'Date'},{t:'Articles'},{t:'Paiement'},{t:'Montant',a:'r'}],[
+ ['<span class="mono">V-2026-0312</span>','Aminata Diallo','12 juin','3','<span class="tag t-c">Wave</span>','<span class="money r">140 000 F</span>'],
+ ['<span class="mono">V-2026-0311</span>','Ousmane Sow','12 juin','1','<span class="tag t-w">Orange</span>','<span class="money r">45 000 F</span>'],
+ ['<span class="mono">V-2026-0310</span>','Client comptant','11 juin','2','<span class="tag t-i">Espèces</span>','<span class="money r">73 000 F</span>'],
+ ['<span class="mono">V-2026-0309</span>','Fatou Ndiaye','11 juin','4','<span class="tag t-c">Wave</span>','<span class="money r">198 500 F</span>'],
+ ['<span class="mono">V-2026-0308</span>','Moussa Ba','10 juin','1','<span class="tag t-d">Free</span>','<span class="money r">28 000 F</span>'],
+]));
+
+/* 8. Devis */
+app('devis','optique/devis','Optique','Devis', HEAD('Devis','Proposez des devis et convertissez-les en vente en 1 clic','Nouveau devis')+
+T([{t:'N° devis'},{t:'Client'},{t:'Date'},{t:'Montant',a:'r'},{t:'Statut',a:'r'}],[
+ ['<span class="mono">DV-2026-0042</span>','Aminata Diallo','12 juin','<span class="money r">140 000 F</span>','<span class="r"><span class="tag t-ok">Accepté</span></span>'],
+ ['<span class="mono">DV-2026-0041</span>','Ibrahima Gueye','11 juin','<span class="money r">92 000 F</span>','<span class="r"><span class="tag t-i">Envoyé</span></span>'],
+ ['<span class="mono">DV-2026-0040</span>','Khady Faye','9 juin','<span class="money r">210 000 F</span>','<span class="r"><span class="tag t-i">Envoyé</span></span>'],
+ ['<span class="mono">DV-2026-0039</span>','Cheikh Mbaye','6 juin','<span class="money r">64 000 F</span>','<span class="r"><span class="tag t-w">Expiré</span></span>'],
+]));
+
+/* 9. Commandes de verres */
+app('commandes','optique/commandes-verres','Optique','Commandes de verres', HEAD('Commandes de verres','Suivi des commandes au laboratoire / fournisseur','Nouvelle commande')+
+`<div class="note">${svg('spark')} Configurateur intégré : type, indice d'amincissement, traitements → prix calculé automatiquement.</div>`+
+T([{t:'N°'},{t:'Client'},{t:'Verres'},{t:'Fournisseur'},{t:'Échéance'},{t:'Statut',a:'r'}],[
+ ['<span class="mono">LO-2026-0042</span>','Aminata Diallo','Progressifs 1.6 AR','Essilor','07/07/2026','<span class="r"><span class="tag t-ok">Prête</span></span>'],
+ ['<span class="mono">LO-2026-0041</span>','Ousmane Sow','Unifocaux anti-lumière','Zeiss','09/07/2026','<span class="r"><span class="tag t-i">En atelier</span></span>'],
+ ['<span class="mono">LO-2026-0040</span>','Fatou Ndiaye','Progressifs teintés','Essilor','12/07/2026','<span class="r"><span class="tag t-w">Commandée</span></span>'],
+ ['<span class="mono">LO-2026-0039</span>','Moussa Ba','Photochromiques 1.67','Hoya','—','<span class="r"><span class="tag t-i">En atelier</span></span>'],
+]));
+
+/* 10. SAV */
+app('sav','optique/reparations','Optique','SAV & réparations', HEAD('SAV & réparations','Suivi des réparations de montures et équipements','Nouvelle réparation')+
+T([{t:'N°'},{t:'Client'},{t:'Description'},{t:'Reçu le'},{t:'Statut',a:'r'}],[
+ ['<span class="mono">REP-2026-0021</span>','Khady Faye','Changement de branche','11 juin','<span class="r"><span class="tag t-ok">Terminée</span></span>'],
+ ['<span class="mono">REP-2026-0020</span>','Ibrahima Gueye','Remontage de verres','12 juin','<span class="r"><span class="tag t-i">En cours</span></span>'],
+ ['<span class="mono">REP-2026-0019</span>','Modou Diop','Soudure de monture','12 juin','<span class="r"><span class="tag t-w">À diagnostiquer</span></span>'],
+ ['<span class="mono">REP-2026-0018</span>','Bineta Fall','Remplacement plaquettes','13 juin','<span class="r"><span class="tag t-ok">Terminée</span></span>'],
+]));
+
+/* 11. Renouvellements */
+app('renouv','optique/renouvellements','Optique','Renouvellements', HEAD('Rappels de renouvellement','Clients à recontacter : ordonnance à renouveler ou nouvel achat à proposer')+
+T([{t:'Client'},{t:'Motif'},{t:'Contact'},{t:'Actions',a:'r'}],[
+ [who('FN','Fatou Ndiaye'),'<span style="color:var(--warning);font-weight:600">Ordonnance à renouveler</span>','+221 77 123 45 67','<span class="r"><span class="actbtn">${call}Appeler</span> <span class="actbtn wa">${wa}WhatsApp</span></span>'.replace('${call}',svg('phone')).replace('${wa}',svg('chat'))],
+ [who('OS','Ousmane Sow'),'<span style="color:var(--muted)">Lunettes > 2 ans</span>','+221 78 204 11 78','<span class="r"><span class="actbtn">'+svg('phone')+'Appeler</span> <span class="actbtn wa">'+svg('chat')+'WhatsApp</span></span>'],
+ [who('AD','Aminata Diallo'),'<span style="color:var(--muted)">Contrôle annuel</span>','+221 77 812 45 09','<span class="r"><span class="actbtn">'+svg('phone')+'Appeler</span> <span class="actbtn wa">'+svg('chat')+'WhatsApp</span></span>'],
+]));
+
+/* 12. Étiquettes */
+app('etiquettes','optique/etiquettes','Optique','Étiquettes', HEAD('Étiquettes & codes-barres','Générez et imprimez des étiquettes code-barres pour vos produits','Imprimer')+
+`<div class="labels">
+ <div class="lbl"><div class="nm">Lentilles mensuelles x3</div><div class="barcode"></div><div class="sku">LEN-ACUV30</div><div class="pr">18 000 FCFA</div></div>
+ <div class="lbl"><div class="nm">Monture Ray-Ban Wayfarer</div><div class="barcode"></div><div class="sku">MON-RB2140</div><div class="pr">45 000 FCFA</div></div>
+ <div class="lbl"><div class="nm">Verre progressif 1.6 AR</div><div class="barcode"></div><div class="sku">VER-PROG16</div><div class="pr">40 000 FCFA</div></div>
+</div>`);
+
+/* 13. Patients */
+app('patients','clinique/patients','Clinique','Patients', HEAD('Patients','Dossiers patients de la clinique ophtalmologique','Nouveau patient')+
+T([{t:'Patient'},{t:'Âge'},{t:'Dernier acte'},{t:'Médecin'},{t:'Statut',a:'r'}],[
+ [who('AD','Aminata Diallo'),'42 ans','Contrôle de la vue','Dr. Diagne','<span class="r"><span class="tag t-ok">Suivi</span></span>'],
+ [who('OS','Ousmane Sow'),'57 ans','Suivi glaucome','Dr. Diagne','<span class="r"><span class="tag t-w">Traitement</span></span>'],
+ [who('FN','Fatou Ndiaye'),'34 ans','1ère consultation','Dr. Ba','<span class="r"><span class="tag t-i">Nouveau</span></span>'],
+ [who('IG','Ibrahima Gueye'),'68 ans','Post-op cataracte','Dr. Diagne','<span class="r"><span class="tag t-c">Post-op</span></span>'],
+]));
+
+/* 14. Consultations */
+app('consultations','clinique/consultations','Clinique','Consultations', HEAD('Consultations','Historique des consultations et diagnostics','Nouvelle consultation')+
+T([{t:'Date'},{t:'Patient'},{t:'Motif'},{t:'Diagnostic'},{t:'Médecin'}],[
+ ['12 juin','Aminata Diallo','Baisse d\'acuité','Myopie évolutive','Dr. Diagne'],
+ ['12 juin','Ousmane Sow','Suivi tension oculaire','Glaucome stabilisé','Dr. Diagne'],
+ ['11 juin','Fatou Ndiaye','Fatigue visuelle','Astigmatisme léger','Dr. Ba'],
+ ['10 juin','Ibrahima Gueye','Contrôle post-op','Récupération normale','Dr. Diagne'],
+ ['9 juin','Khady Faye','Rougeur oculaire','Conjonctivite','Dr. Ba'],
+]));
+
+/* 15. Rendez-vous */
+app('rdv','clinique/rendez-vous','Clinique','Rendez-vous', HEAD('Agenda — Jeudi 12 juin 2026','Dr. Diagne · 9 rendez-vous','Nouveau RDV')+
+['08:30|Aminata Diallo|Contrôle annuel de la vue|t-ok|Confirmé','09:15|Ousmane Sow|Suivi glaucome · tension oculaire|t-ok|Confirmé','10:00|Fatou Ndiaye|Première consultation|t-i|En attente','11:00|Moussa Ba|Renouvellement d\'ordonnance|t-ok|Confirmé','11:45|Khady Faye|Examen fond d\'œil|t-w|Nouveau','14:00|Awa Camara|Adaptation lentilles|t-ok|Confirmé','15:30|Ibrahima Gueye|Post-opératoire cataracte|t-ok|Confirmé']
+.map(a=>{const[t,n,m,tone,s]=a.split('|');return `<div class="appt"><span class="time">${t}</span><span class="b"></span><span class="who"><b>${n}</b><small>${m}</small></span><span class="tg tag ${tone}">${s}</span></div>`}).join(''));
+
+/* 16. Chirurgies */
+app('chirurgies','clinique/chirurgies','Clinique','Chirurgies', HEAD('Chirurgies','Planification et suivi des interventions','Planifier')+
+T([{t:'Patient'},{t:'Intervention'},{t:'Date'},{t:'Chirurgien'},{t:'Statut',a:'r'}],[
+ [who('IG','Ibrahima Gueye'),'Cataracte — œil droit','14 juin 2026','Dr. Diagne','<span class="r"><span class="tag t-i">Planifiée</span></span>'],
+ [who('OS','Ousmane Sow'),'Trabéculectomie','18 juin 2026','Dr. Diagne','<span class="r"><span class="tag t-i">Planifiée</span></span>'],
+ [who('AC','Awa Camara'),'Cataracte — œil gauche','5 juin 2026','Dr. Ba','<span class="r"><span class="tag t-ok">Réalisée</span></span>'],
+ [who('MD','Modou Diop'),'Décollement de rétine','2 juin 2026','Dr. Diagne','<span class="r"><span class="tag t-ok">Réalisée</span></span>'],
+]));
+
+/* 17. Personnel */
+app('personnel','gestion/personnel','Gestion','Personnel', HEAD('Personnel','Équipe, postes et paie','Ajouter un employé')+
+KPI([{l:'Effectif',v:'14',i:'users',c:'iv'},{l:'Masse salariale',v:'2,1 M',d:'FCFA/mois',i:'money',c:'io'},{l:'Présents',v:'12',i:'userCog',c:'ip'},{l:'En congé',v:'2',i:'calendar',c:'ic2'}])+
+T([{t:'Employé'},{t:'Poste'},{t:'Magasin'},{t:'Statut',a:'r'}],[
+ [who('MS','Mariama Sy'),'Opticienne','Plateau','<span class="r"><span class="tag t-ok">Actif</span></span>'],
+ [who('AB','Alioune Ba'),'Vendeur','Plateau','<span class="r"><span class="tag t-ok">Actif</span></span>'],
+ [who('CD','Coumba Diouf'),'Assistante clinique','Almadies','<span class="r"><span class="tag t-w">En congé</span></span>'],
+ [who('PT','Pape Thiam'),'Responsable magasin','Almadies','<span class="r"><span class="tag t-ok">Actif</span></span>'],
+]));
+
+/* 18. Finance */
+app('finance','gestion/finance','Gestion','Finance', HEAD('Finance','Dépenses, recettes et rapprochements','Nouvelle dépense')+
+KPI([{l:'Recettes (mois)',v:'3,72 M',d:'+18%',up:1,i:'money',c:'iv'},{l:'Dépenses (mois)',v:'1,68 M',d:'−4%',up:1,i:'wallet',c:'io'},{l:'Marge nette',v:'2,04 M',d:'55%',up:1,i:'trend',c:'ip'},{l:'Trésorerie',v:'4,9 M',i:'money',c:'ic2'}])+
+T([{t:'Date'},{t:'Catégorie'},{t:'Libellé'},{t:'Montant',a:'r'}],[
+ ['12 juin','<span class="tag t-i">Achat stock</span>','Commande verres Essilor','<span class="money r">420 000 F</span>'],
+ ['10 juin','<span class="tag t-w">Loyer</span>','Loyer magasin Plateau','<span class="money r">350 000 F</span>'],
+ ['8 juin','<span class="tag t-c">Salaires</span>','Acompte personnel','<span class="money r">600 000 F</span>'],
+ ['5 juin','<span class="tag t-i">Marketing</span>','Publicité Facebook','<span class="money r">85 000 F</span>'],
+]));
+
+/* 19. Fournisseurs */
+app('fournisseurs','gestion/fournisseurs','Gestion','Fournisseurs', HEAD('Fournisseurs','Laboratoires, verriers et grossistes','Nouveau fournisseur')+
+T([{t:'Fournisseur'},{t:'Catégorie'},{t:'Contact'},{t:'Encours',a:'r'}],[
+ [who('ES','Essilor'),'Verres','+221 33 889 20 00','<span class="money r">640 000 F</span>'],
+ [who('ZE','Zeiss'),'Verres','+221 33 823 14 55','<span class="money r">210 000 F</span>'],
+ [who('LU','LuxOptic Dakar'),'Montures','+221 77 445 90 12','<span class="money r">0 F</span>'],
+ [who('AC','Acuvue Distrib.'),'Lentilles','+221 76 330 08 44','<span class="money r">95 000 F</span>'],
+]));
+
+/* 20. Assurances */
+app('assurances','gestion/assurances','Gestion','Assurances', HEAD('Assurances & mutuelles','Prises en charge et remboursements','Ajouter un assureur')+
+T([{t:'Assureur / mutuelle'},{t:'Prise en charge'},{t:'Patients couverts'},{t:'Encours',a:'r'}],[
+ [who('IP','IPM Sénégal'),'80%','214','<span class="money r">1 250 000 F</span>'],
+ [who('AS','Askia Assurance'),'70%','88','<span class="money r">480 000 F</span>'],
+ [who('SO','Sonam Vie'),'60%','52','<span class="money r">175 000 F</span>'],
+ [who('MU','Mutuelle Santé'),'50%','130','<span class="money r">92 000 F</span>'],
+]));
+
+/* 21. Rôles & accès */
+app('roles','parametres/roles','Paramètres','Rôles & accès', HEAD('Rôles, permissions & utilisateurs','Contrôlez précisément qui voit et fait quoi')+
+`<div class="grid2"><div class="card pad"><div class="h3">Rôles</div>`+
+['Administrateur|Accès total|12/12','Opticien|Caisse, stocks, clients|7/12','Ophtalmologue|Clinique & patients|6/12','Caissier|Caisse & ventes|3/12','Comptable|Finance & rapports|4/12']
+.map(r=>{const[n,d,p]=r.split('|');return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line2)"><div><b>${n}</b><div class="sub2">${d}</div></div><span class="tag t-i">${p} perms</span></div>`}).join('')+
+`</div><div class="card pad"><div class="h3">Utilisateurs</div>`+
+[['MS','Mariama Sy','Opticien','t-ok','Actif'],['AB','Alioune Ba','Caissier','t-ok','Actif'],['DD','Dr. Diagne','Ophtalmologue','t-ok','Actif'],['CD','Coumba Diouf','Caissier','t-w','Suspendu']]
+.map(u=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line2)"><div>${who(u[0],u[1],u[2])}</div><span class="tag ${u[3]}">${u[4]}</span></div>`).join('')+
+`</div></div>`);
+
+/* 22. Magasins & paiements */
+app('magasins','parametres/paiements','Paramètres','Magasins & paiements', HEAD('Magasins & paiements','Réseau multi-succursales et configuration Mobile Money')+
+`<div class="grid2"><div class="card pad"><div class="h3">Magasins</div>`+
+[['Boutique Plateau','Dakar · Optique','t-ok','Ouvert'],['Boutique Almadies','Dakar · Optique + Clinique','t-ok','Ouvert'],['Boutique Thiès','Thiès · Optique','t-w','Bientôt']]
+.map(m=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line2)"><div><b>${m[0]}</b><div class="sub2">${m[1]}</div></div><span class="tag ${m[2]}">${m[3]}</span></div>`).join('')+
+`</div><div class="card pad"><div class="h3">Mobile Money</div>`+
+[['Wave','wave','Connecté','t-ok'],['Orange Money','om','Connecté','t-ok'],['Free Money','free','Connecté','t-ok'],['MTN MoMo','','À configurer','t-w']]
+.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line2)"><div style="display:flex;align-items:center;gap:10px"><span class="m ${p[1]}" style="width:60px;height:34px;border:1px solid var(--line);border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:12px">${p[0].split(' ')[0]}</span><b>${p[0]}</b></div><span class="tag ${p[3]}">${p[2]}</span></div>`).join('')+
+`</div></div>`);
+
+/* 23. Journal */
+app('journal','parametres/journal','Paramètres','Journal', HEAD('Journal d\'audit','Traçabilité complète des actions sur votre espace')+
+T([{t:'Date / heure'},{t:'Utilisateur'},{t:'Action'},{t:'Entité'}],[
+ ['12 juin · 14:32','Mariama Sy','<span class="tag t-ok">Vente créée</span>','V-2026-0312'],
+ ['12 juin · 14:10','Awa Diop','<span class="tag t-i">Produit modifié</span>','MON-RB2140'],
+ ['12 juin · 11:48','Alioune Ba','<span class="tag t-w">Remise appliquée</span>','V-2026-0310'],
+ ['11 juin · 18:02','Awa Diop','<span class="tag t-d">Utilisateur suspendu</span>','Coumba Diouf'],
+ ['11 juin · 09:15','Dr. Diagne','<span class="tag t-i">Consultation ajoutée</span>','Fatou Ndiaye'],
+]));
+
+/* 24. Console fondateur */
+app('','plateforme','Opérateur','Console fondateur', HEAD('Console fondateur','Pilotage de toute la plateforme — MRR, établissements & offres')+
+`<div class="note">${svg('lock')} Espace réservé à l'éditeur du SaaS (vous). Non visible par vos clients.</div>`+
+KPI([{l:'Établissements',v:'128',i:'store',c:'iv'},{l:'Revenu mensuel (MRR)',v:'1,54 M',d:'+9%',up:1,i:'money',c:'io'},{l:'Abonnements actifs',v:'112',i:'crown',c:'ip'},{l:'Utilisateurs',v:'640',i:'users',c:'ic2'}])+
+T([{t:'Établissement'},{t:'WhatsApp'},{t:'Offre'},{t:'Statut'},{t:'Échéance',a:'r'}],[
+ [who('OV','Optique Vision Plus','Dakar'),'<span class="actbtn wa">'+svg('chat')+'+221 77 812…</span>','Standard','<span class="tag t-ok">Actif</span>','<span class="r">31/07/2026</span>'],
+ [who('CL','Clinique Baobab','Thiès'),'<span class="actbtn wa">'+svg('chat')+'+221 78 204…</span>','Growth','<span class="tag t-ok">Actif</span>','<span class="r">05/08/2026</span>'],
+ [who('OP','Optic 2000 Rufisque','Rufisque'),'<span class="actbtn wa">'+svg('chat')+'+221 76 559…</span>','Starter','<span class="tag t-w">En retard</span>','<span class="r">02/07/2026</span>'],
+]));
+
+/* 25. Support intégré */
+app('aide','aide','Paramètres','Aide & support', HEAD('Aide & support','Un support intégré, directement dans votre espace')+
+`<div class="grid2"><div>
+ <div class="eyebrow"><span class="bar"></span>Support réactif</div>
+ <div style="font-family:Sora;font-weight:800;font-size:26px;letter-spacing:-.02em;line-height:1.15">Une question ? <span class="g">On vous répond vite.</span></div>
+ <p style="color:var(--muted);font-size:15px;margin-top:12px;line-height:1.5">Chat d'assistance disponible sur toutes les pages clés. Vos messages arrivent à notre équipe qui vous recontacte par email — sans quitter votre travail.</p>
+ <div class="cover-body" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+   <div class="ci" style="border:0;gap:10px"><span class="tag t-ok">${svg('check')} Réponse par email</span></div>
+   <div class="ci" style="border:0;gap:10px"><span class="tag t-i">${svg('check')} Historique des tickets</span></div>
+ </div>
+</div>
+<div class="chat"><div class="ch">Assistance OculoSaaS<small>On vous répond rapidement 👋</small></div>
+ <div class="cb"><div class="bub in">Bonjour Awa 👋 Une question ou un souci ? Écrivez-nous ici, notre équipe vous répond par email au plus vite.</div>
+ <div class="bub me">Comment activer le paiement Wave sur ma 2ᵉ boutique ?</div>
+ <div class="bub in">Rendez-vous dans Paramètres → Magasins &amp; paiements, puis « Connecter Wave » sur la boutique concernée 👍</div></div>
+ <div class="cf"><input placeholder="Votre message…"/><button>${svg('send','stroke="#fff"')}</button></div>
+</div></div>`);
+
+/* CTA */
+SLIDES.push({group:'Passez au premium',title:'Rejoignez OculoSaaS',html:`<div class="cta">
+ <div class="top"><div class="chip">${svg('eye')} OculoSaaS</div><div class="chip">${svg('shield')} Afrique de l'Ouest</div></div>
+ <div class="cbody">
+   <div class="eyebrow"><span class="bar"></span>Passez au premium</div>
+   <h1>Digitalisez votre <span class="g">optique &amp; clinique</span> dès aujourd'hui.</h1>
+   <p>24 modules, une IA prédictive et le paiement Mobile Money — dans un seul logiciel pensé pour l'Afrique de l'Ouest.</p>
+   <div class="go">${svg('arrow','stroke="#fff"')} Utiliser le logiciel</div>
+   <div class="u2">${svg('globe')} oculosaas.com</div>
+   <div class="feats">
+     <div class="feat"><div class="fi">${svg('spark')}</div><b>IA prédictive</b><p>Anticipez CA &amp; ruptures de stock</p></div>
+     <div class="feat"><div class="fi">${svg('phone')}</div><b>Mobile Money</b><p>Wave, Orange, Free, MTN, Moov</p></div>
+     <div class="feat"><div class="fi">${svg('shield')}</div><b>Multi-magasins</b><p>Données isolées &amp; chiffrées</p></div>
+   </div>
+ </div>
+ <div class="foot"><span class="site">${svg('globe')} oculosaas.com</span><span>Activation immédiate</span></div>
+</div>`});
+
+/* ---------- Rendu carrousel ---------- */
+const track=document.getElementById('track');
+SLIDES.forEach(s=>{const d=document.createElement('div');d.className='slide';d.innerHTML=s.html;track.appendChild(d);});
+const dots=document.getElementById('dots');
+SLIDES.forEach((s,i)=>{const b=document.createElement('i');if(i===0)b.className='on';b.onclick=()=>go(i);dots.appendChild(b);});
+const N=SLIDES.length;let cur=0;
+const prevB=document.getElementById('prev'),nextB=document.getElementById('next');
+const counter=document.getElementById('counter'),label=document.getElementById('label'),prog=document.getElementById('prog');
+function go(i){
+  cur=Math.max(0,Math.min(N-1,i));
+  track.style.transform=`translateX(-${cur*100}%)`;
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===cur));
+  counter.textContent=`${cur+1} / ${N}`;
+  label.innerHTML=`<b>${SLIDES[cur].group}</b> · ${SLIDES[cur].title}`;
+  prog.style.width=`${((cur+1)/N)*100}%`;
+  prevB.disabled=cur===0;nextB.disabled=cur===N-1;
+  // scroll active nav into view
+  const nav=track.children[cur].querySelector('.nav .item.on');
+  if(nav)nav.scrollIntoView({block:'center'});
+}
+prevB.onclick=()=>go(cur-1);nextB.onclick=()=>go(cur+1);
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1);if(e.key==='Home')go(0);if(e.key==='End')go(N-1);});
+// swipe / drag
+let sx=0,sy=0,drag=false;
+const vp=document.querySelector('.viewer');
+vp.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=true;},{passive:true});
+vp.addEventListener('touchend',e=>{if(!drag)return;drag=false;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy))go(cur+(dx<0?1:-1));});
+let wlock=0;
+vp.addEventListener('wheel',e=>{if(Math.abs(e.deltaX)>Math.abs(e.deltaY)&&Math.abs(e.deltaX)>30){const t=Date.now();if(t-wlock>500){wlock=t;go(cur+(e.deltaX>0?1:-1));}}},{passive:true});
+
+/* ---------- Graphe IA ---------- */
+(function(){
+ const hist=[95,110,120,105,140,180,90,100,118,128,112,150,190,98,108,126,138,120,162,205,110,120,140,150,132,178,222,120,132,152];
+ const fc=[160,170,180,152,198,246,134,152,178,188,160,208,258,142];
+ const all=hist.concat(fc),W=900,H=260,pl=8,pr=8,pt=14,pb=18;
+ const mn=Math.min(...all)*0.75,mx=Math.max(...all)*1.06;
+ const X=i=>pl+i*(W-pl-pr)/(all.length-1),Y=v=>H-pb-(v-mn)/(mx-mn)*(H-pt-pb);
+ const P=(a,o)=>a.map((v,i)=>(i?'L':'M')+X(o+i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+ const svgEl=document.getElementById('fchart');if(!svgEl)return;
+ const jx=X(hist.length-1).toFixed(1),jy=Y(hist[hist.length-1]).toFixed(1);
+ const hp=P(hist,0), fp='M'+jx+' '+jy+' '+fc.map((v,i)=>'L'+X(hist.length+i).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
+ const area=hp+'L'+jx+' '+(H-pb)+' L'+X(0).toFixed(1)+' '+(H-pb)+' Z';
+ let grid='';for(let g=0;g<=3;g++){const gy=(pt+g*(H-pt-pb)/3).toFixed(1);grid+=`<line x1="${pl}" y1="${gy}" x2="${W-pr}" y2="${gy}" stroke="rgba(15,23,42,.06)"/>`;}
+ svgEl.innerHTML=`<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(124,58,237,.22)"/><stop offset="1" stop-color="rgba(124,58,237,0)"/></linearGradient></defs>${grid}<line x1="${jx}" y1="${pt}" x2="${jx}" y2="${H-pb}" stroke="rgba(124,58,237,.30)" stroke-dasharray="4 5"/><path d="${area}" fill="url(#ag)"/><path d="${hp}" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="${fp}" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="${jx}" cy="${jy}" r="4.5" fill="#7c3aed"/>`;
+})();
+go(0);
+</script>
+</body>
+</html>

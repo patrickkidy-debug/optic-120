@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OculoSaaS — Carrousel marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --violet:#7c3aed; --pink:#ec4899; --orange:#f97316;
+    --ink:#0f1730; --muted:#5b6b85; --faint:#95a1b6;
+    --bg:#eef2f7; --card:#ffffff; --panel:#f7f9fc;
+    --line:rgba(15,23,42,.08); --line-2:rgba(15,23,42,.05);
+    --soft-violet:rgba(124,58,237,.10); --soft-pink:rgba(236,72,153,.10); --soft-orange:rgba(249,115,22,.12);
+    --success:#0ea371; --success-soft:rgba(14,163,113,.12);
+    --warning:#e0850b; --warning-soft:rgba(224,133,11,.14);
+    --danger:#e5484d; --danger-soft:rgba(229,72,77,.12);
+    --cyan:#0a97b5;
+    --brand:linear-gradient(120deg,#7c3aed 0%,#ec4899 52%,#f97316 100%);
+    --brand-soft:linear-gradient(120deg,rgba(124,58,237,.14),rgba(236,72,153,.12),rgba(249,115,22,.14));
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:'Inter',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;padding:40px}
+  .deck{display:flex;flex-direction:column;gap:48px;align-items:center}
+
+  .slide{
+    position:relative;width:1200px;height:1500px;background:var(--card);
+    border-radius:0;overflow:hidden;isolation:isolate;
+    padding:72px 72px 64px;display:flex;flex-direction:column;
+  }
+  /* Décors de fond (blobs de marque très doux) */
+  .slide::before,.slide::after{content:"";position:absolute;z-index:0;border-radius:50%;filter:blur(60px);opacity:.55}
+  .slide::before{width:520px;height:520px;background:radial-gradient(circle,rgba(124,58,237,.20),transparent 70%);top:-160px;right:-120px}
+  .slide::after{width:560px;height:560px;background:radial-gradient(circle,rgba(249,115,22,.16),transparent 70%);bottom:-200px;left:-160px}
+  .slide>*{position:relative;z-index:1}
+  .grid-bg{position:absolute;inset:0;z-index:0;
+    background-image:linear-gradient(var(--line-2) 1px,transparent 1px),linear-gradient(90deg,var(--line-2) 1px,transparent 1px);
+    background-size:48px 48px;mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 60%)}
+
+  /* Chrome commun (haut/bas de slide) */
+  .chrome-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:34px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand .logo{width:52px;height:52px;border-radius:15px;background:var(--brand);display:grid;place-items:center;box-shadow:0 10px 26px rgba(124,58,237,.30)}
+  .brand .logo svg{width:28px;height:28px}
+  .brand .name{font-family:'Sora';font-weight:800;font-size:26px;letter-spacing:-.02em}
+  .brand .name b{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .chip{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:999px;background:var(--soft-violet);
+    color:var(--violet);font-weight:700;font-size:19px;border:1px solid rgba(124,58,237,.16)}
+  .chip svg{width:19px;height:19px}
+
+  .chrome-bottom{margin-top:auto;padding-top:28px;display:flex;align-items:center;justify-content:space-between;
+    border-top:1px solid var(--line);color:var(--faint);font-size:20px;font-weight:600}
+  .chrome-bottom .site{display:flex;align-items:center;gap:10px;color:var(--muted)}
+  .swipe{display:inline-flex;align-items:center;gap:12px;color:var(--violet);font-weight:700}
+  .swipe .dots{display:flex;gap:6px}
+  .swipe .dots i{width:8px;height:8px;border-radius:50%;background:rgba(124,58,237,.25);display:block}
+  .swipe .dots i.on{background:var(--violet);width:22px;border-radius:4px}
+
+  /* En-tête éditorial */
+  .lead{margin-bottom:30px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:20px;color:var(--violet);
+    text-transform:uppercase;letter-spacing:.10em;margin-bottom:18px}
+  .eyebrow .bar{width:34px;height:4px;border-radius:3px;background:var(--brand)}
+  h1.title{font-family:'Sora';font-weight:800;letter-spacing:-.025em;line-height:1.04;font-size:62px}
+  h2.title{font-family:'Sora';font-weight:800;letter-spacing:-.02em;line-height:1.06;font-size:52px}
+  .title .g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{margin-top:18px;font-size:25px;line-height:1.45;color:var(--muted);max-width:940px}
+
+  /* Fenêtre applicative (mock UI) */
+  .win{flex:1;min-height:0;border-radius:26px;background:var(--card);border:1px solid var(--line);
+    box-shadow:0 40px 90px -50px rgba(20,30,60,.55),0 10px 30px -20px rgba(20,30,60,.35);
+    overflow:hidden;display:flex;flex-direction:column}
+  .win-bar{height:52px;flex:none;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;
+    padding:0 20px;gap:9px}
+  .win-bar .dot{width:13px;height:13px;border-radius:50%}
+  .win-bar .dot.r{background:#ff5f57}.win-bar .dot.y{background:#febc2e}.win-bar .dot.g{background:#28c840}
+  .win-bar .url{margin-left:16px;background:#fff;border:1px solid var(--line);border-radius:8px;height:32px;flex:1;max-width:520px;
+    display:flex;align-items:center;padding:0 14px;color:var(--faint);font-size:16px;gap:8px}
+  .win-body{flex:1;min-height:0;display:flex}
+  .side{width:216px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+  .side .grp{font-size:12px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;padding:12px 12px 6px}
+  .nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;color:var(--muted);font-size:16px;font-weight:600}
+  .nav svg{width:19px;height:19px;flex:none;stroke:currentColor}
+  .nav.on{background:var(--soft-violet);color:var(--violet)}
+  .nav .badge{margin-left:auto;background:var(--danger-soft);color:var(--danger);font-size:12px;font-weight:800;border-radius:999px;padding:2px 8px}
+  .main{flex:1;min-height:0;padding:24px 26px;overflow:hidden;display:flex;flex-direction:column;gap:18px}
+  .main-head{display:flex;align-items:center;justify-content:space-between}
+  .main-head .h{font-family:'Sora';font-weight:700;font-size:24px}
+  .main-head .s{font-size:15px;color:var(--faint);margin-top:2px}
+  .btnp{background:var(--brand);color:#fff;font-weight:700;font-size:15px;padding:11px 18px;border-radius:11px;display:inline-flex;gap:8px;align-items:center;box-shadow:0 10px 24px -10px rgba(124,58,237,.5)}
+  .btno{background:#fff;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:15px;padding:11px 16px;border-radius:11px}
+
+  /* Cartes KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .kpi .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;margin-bottom:12px}
+  .kpi .ico svg{width:21px;height:21px}
+  .kpi .lbl{font-size:14px;color:var(--faint);font-weight:600}
+  .kpi .val{font-family:'Sora';font-weight:800;font-size:27px;margin-top:3px;letter-spacing:-.02em}
+  .kpi .chg{font-size:13px;font-weight:700;margin-top:6px;display:inline-flex;align-items:center;gap:4px}
+  .i-v{background:var(--soft-violet);color:var(--violet)}
+  .i-o{background:var(--soft-orange);color:var(--orange)}
+  .i-p{background:var(--soft-pink);color:var(--pink)}
+  .i-c{background:rgba(10,151,181,.12);color:var(--cyan)}
+  .up{color:var(--success)}.down{color:var(--danger)}
+
+  /* Panneau IA */
+  .ai{background:linear-gradient(160deg,#fbf9ff, #fff 40%);border:1px solid rgba(124,58,237,.18);border-radius:20px;padding:22px 24px;flex:1;min-height:0;display:flex;flex-direction:column}
+  .ai-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .ai-head .spark{width:38px;height:38px;border-radius:11px;background:var(--brand);display:grid;place-items:center;box-shadow:0 8px 20px -8px rgba(124,58,237,.6)}
+  .ai-head .spark svg{width:21px;height:21px}
+  .ai-head .t{font-family:'Sora';font-weight:800;font-size:22px}
+  .ai-head .t small{display:block;font-family:'Inter';font-weight:600;font-size:14px;color:var(--faint)}
+  .ai-head .live{margin-left:auto;font-size:13px;font-weight:700;color:var(--violet);background:var(--soft-violet);padding:7px 13px;border-radius:999px;display:flex;align-items:center;gap:7px}
+  .ai-head .live b{width:8px;height:8px;border-radius:50%;background:var(--violet);display:block}
+  .ai-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;flex:1;min-height:0;margin-top:12px}
+  .chartbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 14px 10px;display:flex;flex-direction:column;min-height:0}
+  .chartbox .lg{display:flex;gap:18px;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px;padding-left:4px}
+  .chartbox .lg span{display:inline-flex;align-items:center;gap:7px}
+  .chartbox .lg i{width:16px;height:4px;border-radius:2px;display:block}
+  .chartbox svg{flex:1;width:100%;min-height:0}
+  .ai-side{display:flex;flex-direction:column;gap:12px}
+  .aicard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+  .aicard .k{font-size:14px;color:var(--faint);font-weight:600;display:flex;align-items:center;gap:8px}
+  .aicard .k svg{width:16px;height:16px}
+  .aicard .v{font-family:'Sora';font-weight:800;font-size:25px;margin-top:5px;letter-spacing:-.02em}
+  .aicard .v small{font-size:15px;color:var(--muted);font-weight:600}
+  .risk{background:var(--warning-soft);border-color:rgba(224,133,11,.25)}
+  .risk .v{font-size:18px;color:var(--warning)}
+
+  /* Tables génériques */
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700;padding:12px 12px;border-bottom:1px solid var(--line)}
+  tbody td{padding:14px 12px;border-bottom:1px solid var(--line-2);font-size:16px}
+  tbody tr:last-child td{border-bottom:0}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:13px;font-weight:700}
+  .t-ok{background:var(--success-soft);color:var(--success)}
+  .t-warn{background:var(--warning-soft);color:var(--warning)}
+  .t-dng{background:var(--danger-soft);color:var(--danger)}
+  .t-info{background:var(--soft-violet);color:var(--violet)}
+  .t-cyan{background:rgba(10,151,181,.12);color:var(--cyan)}
+  .av{width:38px;height:38px;border-radius:11px;background:var(--brand-soft);color:var(--violet);display:inline-grid;place-items:center;font-weight:800;font-size:15px;border:1px solid rgba(124,58,237,.14)}
+  .cellname{display:flex;align-items:center;gap:12px}
+  .cellname b{font-weight:700}.cellname small{display:block;color:var(--faint);font-weight:500;font-size:13px}
+  .money{font-family:'Sora';font-weight:700}
+
+  /* Points forts (bullets) */
+  .feats{display:flex;gap:14px;margin-top:22px}
+  .feat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .feat .fi{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:12px}
+  .feat .fi svg{width:22px;height:22px;stroke:var(--violet)}
+  .feat b{font-family:'Sora';font-size:19px;display:block;margin-bottom:4px}
+  .feat p{font-size:15px;color:var(--muted);line-height:1.4}
+
+  /* Caisse / POS */
+  .pos{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;flex:1;min-height:0}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+  .prod{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+  .prod .ph{height:64px;border-radius:10px;background:var(--brand-soft);margin-bottom:10px;display:grid;place-items:center}
+  .prod .ph svg{width:30px;height:30px;stroke:var(--violet);opacity:.8}
+  .prod b{font-size:15px;display:block}.prod .pr{font-family:'Sora';font-weight:700;color:var(--violet);margin-top:4px}
+  .cart{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column}
+  .citem{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-2);font-size:15px}
+  .citem small{color:var(--faint)}
+  .ctot{margin-top:auto;padding-top:14px;border-top:2px solid var(--line)}
+  .ctot .row{display:flex;justify-content:space-between;font-size:16px;color:var(--muted);margin-bottom:8px}
+  .ctot .grand{display:flex;justify-content:space-between;align-items:baseline}
+  .ctot .grand b{font-family:'Sora';font-size:30px;font-weight:800}
+  .mm{display:flex;gap:8px;margin-top:14px}
+  .mm .m{flex:1;height:44px;border-radius:11px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-weight:800;font-size:13px}
+  .mm .wave{color:#1dc4ff;border-color:rgba(29,196,255,.4)}
+  .mm .om{color:#ff7900;border-color:rgba(255,121,0,.4)}
+  .mm .free{color:#e2001a;border-color:rgba(226,0,26,.35)}
+
+  /* Ordonnance grid */
+  .rx{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;flex:1;min-height:0;align-content:start}
+  .rxcard{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff}
+  .rxcard .eye{font-family:'Sora';font-weight:800;font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:9px}
+  .rxcard .eye span{font-size:13px;font-weight:700;color:#fff;background:var(--violet);border-radius:8px;padding:3px 9px}
+  .rxrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .rxf{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .rxf small{font-size:12px;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .rxf b{display:block;font-family:'Sora';font-size:20px;font-weight:700;margin-top:2px}
+
+  /* Agenda */
+  .agenda{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+  .appt{display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+  .appt .time{font-family:'Sora';font-weight:800;font-size:17px;color:var(--violet);width:74px;flex:none}
+  .appt .bar{width:4px;align-self:stretch;border-radius:3px;background:var(--brand)}
+  .appt .who b{font-size:16px}.appt .who small{display:block;color:var(--faint);font-size:13px}
+  .appt .type{margin-left:auto}
+
+  /* Rapports bars */
+  .report{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;flex:1;min-height:0}
+  .bars{display:flex;align-items:flex-end;gap:14px;height:100%;padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff}
+  .bars .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:8px;height:100%}
+  .bars .bar{width:100%;border-radius:10px 10px 0 0;background:var(--brand)}
+  .bars .col small{font-size:13px;color:var(--faint);font-weight:600}
+  .donut{border:1px solid var(--line);border-radius:16px;background:#fff;padding:18px;display:flex;flex-direction:column;gap:12px}
+  .lgn{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted);font-weight:600}
+  .lgn i{width:12px;height:12px;border-radius:4px;display:block}
+
+  /* Cover & CTA */
+  .cover{justify-content:center;text-align:left;background:radial-gradient(1200px 700px at 80% -5%,rgba(124,58,237,.10),transparent 55%),radial-gradient(1000px 700px at -10% 105%,rgba(249,115,22,.10),transparent 55%),#fff}
+  .cover h1{font-size:82px;line-height:1.02}
+  .cover .sub{font-size:30px;max-width:900px;margin-top:26px}
+  .cover .pills{display:flex;flex-wrap:wrap;gap:12px;margin-top:38px}
+  .cover .pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:13px 20px;font-weight:600;font-size:20px;color:var(--muted);display:flex;align-items:center;gap:10px}
+  .cover .pill svg{width:20px;height:20px;stroke:var(--violet)}
+  .hero-badge{display:inline-flex;align-items:center;gap:10px;background:var(--soft-violet);color:var(--violet);font-weight:700;font-size:20px;padding:12px 22px;border-radius:999px;border:1px solid rgba(124,58,237,.18);margin-bottom:30px;align-self:flex-start}
+  .device{margin-top:44px;border-radius:22px;border:1px solid var(--line);box-shadow:0 40px 90px -50px rgba(20,30,60,.55);overflow:hidden;background:#fff}
+  .device .db{height:46px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 18px}
+  .device .db .dot{width:11px;height:11px;border-radius:50%}
+  .device .dp{display:flex}
+  .device .mini-side{width:60px;background:var(--panel);border-right:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:14px}
+  .device .mini-side i{width:26px;height:26px;border-radius:8px;background:var(--brand-soft);display:block}
+  .device .mini-side i:first-child{background:var(--brand)}
+  .device .mini-main{flex:1;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .device .mrow{display:flex;gap:12px}
+  .device .mk{flex:1;height:66px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+  .device .mchart{height:150px;border-radius:12px;background:linear-gradient(180deg,rgba(124,58,237,.10),rgba(124,58,237,0));border:1px solid var(--line);position:relative;overflow:hidden}
+
+  .cta{justify-content:center;text-align:center;align-items:center;background:radial-gradient(1000px 700px at 50% -10%,rgba(124,58,237,.12),transparent 55%),#fff}
+  .cta .lead{align-items:center;display:flex;flex-direction:column}
+  .cta h1{font-size:74px;text-align:center}
+  .cta .sub{text-align:center;font-size:28px;margin-left:auto;margin-right:auto}
+  .cta .go{margin-top:44px;display:inline-flex;align-items:center;gap:14px;background:var(--brand);color:#fff;font-family:'Sora';font-weight:800;font-size:30px;padding:24px 44px;border-radius:18px;box-shadow:0 26px 60px -24px rgba(124,58,237,.7)}
+  .cta .urlbig{margin-top:26px;font-size:26px;font-weight:700;color:var(--muted)}
+  .cta .feats{margin-top:44px;max-width:1000px}
+  .cta-body{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%}
+  .cover-body{flex:1;display:flex;flex-direction:column;justify-content:center;width:100%}
+
+  /* Garde-fous de taille pour les icônes SVG injectées inline (évite l'explosion à 300×150 par défaut) */
+  .win-bar .url svg{width:16px;height:16px;flex:none}
+  .chrome-bottom .site svg{width:20px;height:20px;flex:none}
+  .swipe svg{width:26px;height:26px;flex:none}
+  .hero-badge svg{width:22px;height:22px;flex:none}
+  .rxcard .eye svg{width:22px;height:22px;flex:none}
+  .cta .urlbig svg{width:24px;height:24px;vertical-align:-4px}
+  .eyebrow svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- ================= SLIDE 1 — COVER ================= -->
+  <section class="slide cover">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand">
+        <span class="logo">__EYE__</span>
+        <span class="name">Oculo<b>SaaS</b></span>
+      </div>
+      <span class="chip">__SHIELD__ Pensé pour l'Afrique de l'Ouest</span>
+    </div>
+
+    <div class="cover-body">
+    <span class="hero-badge">__SPARK__ Logiciel de gestion optique &amp; clinique</span>
+    <h1 class="title">La gestion <span class="g">premium</span> de votre magasin d'optique et de votre clinique.</h1>
+    <p class="sub">Caisse, stocks, patients, ordonnances, paiements Mobile Money, rapports — et une <b>IA prédictive</b> qui anticipe votre chiffre d'affaires. Tout-en-un, en ligne.</p>
+
+    <div class="device">
+      <div class="db"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span></div>
+      <div class="dp">
+        <div class="mini-side"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="mini-main">
+          <div class="mrow"><div class="mk"></div><div class="mk"></div><div class="mk"></div><div class="mk"></div></div>
+          <div class="mchart"><svg viewBox="0 0 900 150" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><path d="M0 120 L90 108 L180 116 L270 90 L360 96 L450 66 L540 72 L630 44 L720 52 L810 26 L900 16" fill="none" stroke="#7c3aed" stroke-width="4"/><path d="M0 120 L90 108 L180 116 L270 90 L360 96 L450 66 L540 72 L630 44 L720 52 L810 26 L900 16 L900 150 L0 150 Z" fill="rgba(124,58,237,.10)"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pills">
+      <span class="pill">__CHECK__ Activation immédiate</span>
+      <span class="pill">__CHECK__ Paiement Mobile Money</span>
+      <span class="pill">__CHECK__ Multi-magasins &amp; multi-cliniques</span>
+    </div>
+    </div>
+
+    <div class="chrome-bottom">
+      <span class="site">__GLOBE__ oculosaas.com</span>
+      <span class="swipe">Faites glisser <span class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></span> __ARROW__</span>
+    </div>
+  </section>
+
+  <!-- ================= SLIDE 2 — DASHBOARD + IA ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__SPARK__ Tableau de bord &amp; IA prédictive</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Pilotage intelligent</div>
+      <h2 class="title">Votre <span class="g">IA prédictive</span> anticipe le chiffre d'affaires.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/dashboard</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav on">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="kpis">
+            <div class="kpi"><span class="ico i-v">__I_MONEY__</span><div class="lbl">CA du jour</div><div class="val">485 000</div><div class="chg up">__UP__ +12,4% <span style="color:var(--faint);font-weight:500">FCFA</span></div></div>
+            <div class="kpi"><span class="ico i-o">__I_CART2__</span><div class="lbl">Ventes du jour</div><div class="val">27</div><div class="chg up">__UP__ +5 vs hier</div></div>
+            <div class="kpi"><span class="ico i-p">__I_USERS2__</span><div class="lbl">Clients</div><div class="val">1 248</div><div class="chg up">__UP__ +34 ce mois</div></div>
+            <div class="kpi"><span class="ico i-c">__I_BOX2__</span><div class="lbl">Alertes stock</div><div class="val">3</div><div class="chg down">__DOWN__ à réappro.</div></div>
+          </div>
+          <div class="ai">
+            <div class="ai-head">
+              <span class="spark">__SPARK_W__</span>
+              <div class="t">IA prédictive — Prévisions économiques<small>Régression de tendance + saisonnalité hebdomadaire · 90 jours analysés</small></div>
+              <span class="live"><b></b>En direct</span>
+            </div>
+            <div class="ai-grid">
+              <div class="chartbox">
+                <div class="lg"><span><i style="background:#7c3aed"></i>Réalisé (30 j)</span><span><i style="background:#f97316;opacity:.9"></i>Prévision IA (14 j)</span></div>
+                <svg id="fchart" viewBox="0 0 980 300" preserveAspectRatio="none"></svg>
+              </div>
+              <div class="ai-side">
+                <div class="aicard"><div class="k">__I_TREND__ CA projeté ce mois</div><div class="v">4 250 000 <small>FCFA</small></div></div>
+                <div class="aicard"><div class="k">__I_UPARR__ Tendance (14 j)</div><div class="v" style="color:var(--success)">+18%</div></div>
+                <div class="aicard"><div class="k">__I_STAR__ Meilleur jour</div><div class="v">Samedi <small>~222 000 F</small></div></div>
+                <div class="aicard risk"><div class="k">__I_ALERT__ Rupture anticipée</div><div class="v">Verres progressifs · 6 j</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i class="on"></i><i></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 3 — CAISSE / POS ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_CART__ Caisse &amp; Mobile Money</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Point de vente</div>
+      <h2 class="title">Encaissez en 3 clics, <span class="g">Wave, Orange &amp; Free</span> intégrés.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/caisse</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav on">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Nouvelle vente</div><div class="s">Client : Aminata Diallo · Magasin Plateau</div></div><span class="btno">Rechercher un article…</span></div>
+          <div class="pos">
+            <div class="pgrid">
+              <div class="prod"><div class="ph">__I_GLASS__</div><b>Monture Ray-Ban</b><div class="pr">45 000 F</div></div>
+              <div class="prod"><div class="ph">__I_GLASS__</div><b>Verres progressifs</b><div class="pr">85 000 F</div></div>
+              <div class="prod"><div class="ph">__I_LENS__</div><b>Lentilles Acuvue</b><div class="pr">28 000 F</div></div>
+              <div class="prod"><div class="ph">__I_GLASS__</div><b>Monture Titane</b><div class="pr">62 000 F</div></div>
+              <div class="prod"><div class="ph">__I_LENS__</div><b>Solution 360ml</b><div class="pr">6 500 F</div></div>
+              <div class="prod"><div class="ph">__I_GLASS__</div><b>Verres anti-lumière</b><div class="pr">38 000 F</div></div>
+              <div class="prod"><div class="ph">__I_GLASS__</div><b>Monture acétate</b><div class="pr">34 000 F</div></div>
+              <div class="prod"><div class="ph">__I_LENS__</div><b>Lentilles couleur</b><div class="pr">18 000 F</div></div>
+              <div class="prod"><div class="ph">__I_LENS__</div><b>Étui + cordon</b><div class="pr">4 500 F</div></div>
+            </div>
+            <div class="cart">
+              <div class="citem"><span>Monture Ray-Ban<br><small>1 × 45 000 F</small></span><span class="money">45 000</span></div>
+              <div class="citem"><span>Verres progressifs<br><small>1 × 85 000 F</small></span><span class="money">85 000</span></div>
+              <div class="citem"><span>Traitement anti-reflet<br><small>1 × 15 000 F</small></span><span class="money">15 000</span></div>
+              <div class="ctot">
+                <div class="row"><span>Sous-total</span><span>145 000 F</span></div>
+                <div class="row"><span>Remise fidélité</span><span style="color:var(--success)">−5 000 F</span></div>
+                <div class="grand"><span style="color:var(--muted);font-weight:600">Total à payer</span><b>140 000 <span style="font-size:18px;color:var(--muted)">F</span></b></div>
+                <div class="mm">
+                  <div class="m wave">Wave</div>
+                  <div class="m om">Orange</div>
+                  <div class="m free">Free</div>
+                  <div class="m" style="color:var(--muted)">Espèces</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i class="on"></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 4 — CLIENTS & FIDÉLITÉ ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_USERS__ Clients &amp; fidélité</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Relation client</div>
+      <h2 class="title">Un <span class="g">fichier patient</span> complet, avec points de fidélité.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/clients</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav on">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Clients</div><div class="s">1 248 clients · 84 fidèles ce mois</div></div><span class="btnp">__PLUSW__ Nouveau client</span></div>
+          <table>
+            <thead><tr><th>Client</th><th>Téléphone</th><th>Dernière visite</th><th>Fidélité</th><th>Total dépensé</th></tr></thead>
+            <tbody>
+              <tr><td><div class="cellname"><span class="av">AD</span><span><b>Aminata Diallo</b><small>Dakar · Plateau</small></span></div></td><td>+221 77 812 45 09</td><td>12 juin 2026</td><td><span class="tag t-info">1 240 pts</span></td><td class="money">1 245 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">OS</span><span><b>Ousmane Sow</b><small>Thiès</small></span></div></td><td>+221 78 204 11 78</td><td>10 juin 2026</td><td><span class="tag t-ok">Or</span></td><td class="money">862 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">FN</span><span><b>Fatou Ndiaye</b><small>Dakar · Almadies</small></span></div></td><td>+221 76 559 30 22</td><td>8 juin 2026</td><td><span class="tag t-info">640 pts</span></td><td class="money">598 500 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">MB</span><span><b>Moussa Ba</b><small>Rufisque</small></span></div></td><td>+221 77 390 88 14</td><td>5 juin 2026</td><td><span class="tag t-cyan">Argent</span></td><td class="money">431 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">KF</span><span><b>Khady Faye</b><small>Dakar · Médina</small></span></div></td><td>+221 78 771 62 40</td><td>3 juin 2026</td><td><span class="tag t-info">310 pts</span></td><td class="money">276 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">IG</span><span><b>Ibrahima Gueye</b><small>Saint-Louis</small></span></div></td><td>+221 70 118 24 55</td><td>1 juin 2026</td><td><span class="tag t-cyan">Argent</span></td><td class="money">389 500 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">AC</span><span><b>Awa Camara</b><small>Dakar · Yoff</small></span></div></td><td>+221 77 645 90 33</td><td>31 mai 2026</td><td><span class="tag t-info">520 pts</span></td><td class="money">342 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">CM</span><span><b>Cheikh Mbaye</b><small>Touba</small></span></div></td><td>+221 76 300 47 21</td><td>29 mai 2026</td><td><span class="tag t-ok">Or</span></td><td class="money">910 500 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">RS</span><span><b>Ramatoulaye Sy</b><small>Dakar · Ouakam</small></span></div></td><td>+221 78 512 08 66</td><td>27 mai 2026</td><td><span class="tag t-info">180 pts</span></td><td class="money">154 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">MD</span><span><b>Modou Diop</b><small>Mbour</small></span></div></td><td>+221 70 884 12 09</td><td>25 mai 2026</td><td><span class="tag t-cyan">Argent</span></td><td class="money">407 000 F</td></tr>
+              <tr><td><div class="cellname"><span class="av">BF</span><span><b>Bineta Fall</b><small>Dakar · Grand Yoff</small></span></div></td><td>+221 77 209 55 84</td><td>23 mai 2026</td><td><span class="tag t-info">95 pts</span></td><td class="money">88 500 F</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i class="on"></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 5 — ORDONNANCES ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_EYE__ Ordonnances optiques</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Précision médicale</div>
+      <h2 class="title">Des <span class="g">ordonnances complètes</span> : sphère, cylindre, axe, PD.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/ordonnances</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav on">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Ordonnance — Aminata Diallo</div><div class="s">Prescrite par Dr. Diagne · 12 juin 2026</div></div><span class="btnp">__PRINTW__ Imprimer</span></div>
+          <div class="rx" style="flex:none">
+            <div class="rxcard">
+              <div class="eye">__I_EYEV__ Œil droit <span>OD</span></div>
+              <div class="rxrow">
+                <div class="rxf"><small>Sphère</small><b>−2,25</b></div>
+                <div class="rxf"><small>Cylindre</small><b>−0,75</b></div>
+                <div class="rxf"><small>Axe</small><b>90°</b></div>
+                <div class="rxf"><small>Addition</small><b>+2,00</b></div>
+                <div class="rxf"><small>PD</small><b>32,0</b></div>
+                <div class="rxf"><small>Hauteur</small><b>18 mm</b></div>
+              </div>
+            </div>
+            <div class="rxcard">
+              <div class="eye">__I_EYEV__ Œil gauche <span>OG</span></div>
+              <div class="rxrow">
+                <div class="rxf"><small>Sphère</small><b>−2,00</b></div>
+                <div class="rxf"><small>Cylindre</small><b>−0,50</b></div>
+                <div class="rxf"><small>Axe</small><b>85°</b></div>
+                <div class="rxf"><small>Addition</small><b>+2,00</b></div>
+                <div class="rxf"><small>PD</small><b>31,5</b></div>
+                <div class="rxf"><small>Hauteur</small><b>18 mm</b></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;gap:16px;margin-top:2px">
+            <div class="rxcard" style="flex:1;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(160deg,#fbf9ff,#fff 55%)">
+              <div style="font-size:13px;color:var(--violet);font-weight:800;text-transform:uppercase;letter-spacing:.06em">Synthèse visuelle</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:26px;margin-top:10px;letter-spacing:-.02em">Myopie légère + presbytie débutante</div>
+              <div style="color:var(--muted);font-size:17px;margin-top:12px;line-height:1.55">Verres <b>progressifs</b> recommandés · traitement anti-reflet &amp; anti-lumière bleue. Ordonnance transmissible en 1 clic à l'atelier.</div>
+              <div style="display:flex;gap:10px;margin-top:18px">
+                <span class="tag t-ok">__DOTW__ Ordonnance valide</span>
+                <span class="tag t-info">__DOTW__ Prochaine visite : 12 mois</span>
+              </div>
+            </div>
+            <div class="rxcard" style="width:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:14px;background:var(--brand-soft);border-color:rgba(124,58,237,.16)">
+              <div style="width:96px;height:96px;border-radius:24px;background:#fff;display:grid;place-items:center;box-shadow:0 14px 30px -16px rgba(124,58,237,.5)">__I_GLASSBIG__</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:22px">Verres progressifs</div>
+              <div style="color:var(--muted);font-size:15px">Essilor · indice 1.6<br>Anti-reflet premium</div>
+            </div>
+          </div>
+          <div class="feats" style="margin-top:2px">
+            <div class="feat"><div class="fi">__I_GLASS2__</div><b>Type de verres</b><p>Progressifs · anti-reflet · anti-lumière bleue</p></div>
+            <div class="feat"><div class="fi">__I_HISTORY__</div><b>Historique</b><p>Suivi des corrections visite après visite</p></div>
+            <div class="feat"><div class="fi">__I_BELL__</div><b>Renouvellement</b><p>Rappel automatique quand l'ordonnance expire</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i></i><i class="on"></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 6 — STOCK ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_BOX__ Stock &amp; alertes</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Inventaire temps réel</div>
+      <h2 class="title">Ne tombez <span class="g">jamais en rupture</span> — alertes automatiques.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/stock</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav on">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Stock — Magasin Plateau</div><div class="s">642 références · 3 en alerte</div></div><span class="btnp">__PLUSW__ Entrée de stock</span></div>
+          <table>
+            <thead><tr><th>Article</th><th>Référence</th><th>Quantité</th><th>Seuil</th><th>État</th></tr></thead>
+            <tbody>
+              <tr><td><b>Verres progressifs 1.6</b></td><td>VP-160-AR</td><td>4</td><td>10</td><td><span class="tag t-dng">__DOTW__ Critique</span></td></tr>
+              <tr><td><b>Monture Ray-Ban RB-2140</b></td><td>MT-RB2140</td><td>7</td><td>8</td><td><span class="tag t-warn">__DOTW__ Bas</span></td></tr>
+              <tr><td><b>Lentilles Acuvue Oasys</b></td><td>LN-ACO-30</td><td>6</td><td>12</td><td><span class="tag t-warn">__DOTW__ Bas</span></td></tr>
+              <tr><td><b>Solution multifonction 360ml</b></td><td>SL-MF-360</td><td>48</td><td>20</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Monture enfant Flex</b></td><td>MT-KID-FX</td><td>32</td><td>15</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Étui rigide premium</b></td><td>AC-ETUI-P</td><td>120</td><td>40</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Verres unifocaux 1.5</b></td><td>VU-150-STD</td><td>86</td><td>30</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Monture acétate écaille</b></td><td>MT-ACE-EC</td><td>9</td><td>10</td><td><span class="tag t-warn">__DOTW__ Bas</span></td></tr>
+              <tr><td><b>Lentilles couleur (boîte)</b></td><td>LN-COL-10</td><td>24</td><td>10</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Spray nettoyant 50ml</b></td><td>AC-SPR-50</td><td>64</td><td>25</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+              <tr><td><b>Cordon lunettes (lot)</b></td><td>AC-CRD-LT</td><td>140</td><td>50</td><td><span class="tag t-ok">__DOTW__ OK</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 7 — COMMANDES & RÉPARATIONS ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_PKG__ Commandes de verres &amp; réparations</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Atelier &amp; laboratoire</div>
+      <h2 class="title">Suivez chaque <span class="g">commande &amp; réparation</span>, étape par étape.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/commandes</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav on">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Commandes de verres</div><div class="s">6 en cours · 2 prêtes à livrer</div></div><span class="btnp">__PLUSW__ Nouvelle commande</span></div>
+          <table>
+            <thead><tr><th>N°</th><th>Client</th><th>Verres</th><th>Fournisseur</th><th>Statut</th></tr></thead>
+            <tbody>
+              <tr><td>#CV-1042</td><td>Aminata Diallo</td><td>Progressifs 1.6 AR</td><td>Essilor</td><td><span class="tag t-ok">__DOTW__ Prête</span></td></tr>
+              <tr><td>#CV-1041</td><td>Ousmane Sow</td><td>Unifocaux anti-lumière</td><td>Zeiss</td><td><span class="tag t-info">__DOTW__ En atelier</span></td></tr>
+              <tr><td>#CV-1040</td><td>Fatou Ndiaye</td><td>Progressifs teintés</td><td>Essilor</td><td><span class="tag t-warn">__DOTW__ Commandée</span></td></tr>
+              <tr><td>#CV-1039</td><td>Moussa Ba</td><td>Verres photochromiques</td><td>Hoya</td><td><span class="tag t-info">__DOTW__ En atelier</span></td></tr>
+              <tr><td>#CV-1038</td><td>Awa Camara</td><td>Unifocaux 1.5 AR</td><td>Essilor</td><td><span class="tag t-ok">__DOTW__ Prête</span></td></tr>
+              <tr><td>#CV-1037</td><td>Cheikh Mbaye</td><td>Progressifs indice 1.67</td><td>Zeiss</td><td><span class="tag t-warn">__DOTW__ Commandée</span></td></tr>
+            </tbody>
+          </table>
+          <div class="main-head" style="margin-top:6px"><div><div class="h" style="font-size:20px">Réparations</div></div></div>
+          <table>
+            <thead><tr><th>Client</th><th>Type</th><th>Reçu le</th><th>Statut</th></tr></thead>
+            <tbody>
+              <tr><td>Khady Faye</td><td>Changement de branche</td><td>11 juin</td><td><span class="tag t-ok">__DOTW__ Terminée</span></td></tr>
+              <tr><td>Ibrahima Gueye</td><td>Remontage de verres</td><td>12 juin</td><td><span class="tag t-info">__DOTW__ En cours</span></td></tr>
+              <tr><td>Modou Diop</td><td>Soudure de monture</td><td>12 juin</td><td><span class="tag t-warn">__DOTW__ À diagnostiquer</span></td></tr>
+              <tr><td>Bineta Fall</td><td>Remplacement plaquettes</td><td>13 juin</td><td><span class="tag t-ok">__DOTW__ Terminée</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 8 — CLINIQUE / AGENDA ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_CAL__ Clinique &amp; rendez-vous</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Volet ophtalmologie</div>
+      <h2 class="title">Gérez <span class="g">consultations &amp; rendez-vous</span> de la clinique.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/clinique</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav on">__I_CAL__ Clinique</div>
+          <div class="nav">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="main-head"><div><div class="h">Agenda — Jeudi 12 juin 2026</div><div class="s">Dr. Diagne · 9 rendez-vous</div></div><span class="btnp">__PLUSW__ Nouveau RDV</span></div>
+          <div class="agenda">
+            <div class="appt"><span class="time">08:30</span><span class="bar"></span><span class="who"><b>Aminata Diallo</b><small>Contrôle annuel de la vue</small></span><span class="type tag t-ok">Confirmé</span></div>
+            <div class="appt"><span class="time">09:15</span><span class="bar"></span><span class="who"><b>Ousmane Sow</b><small>Suivi glaucome · tension oculaire</small></span><span class="type tag t-ok">Confirmé</span></div>
+            <div class="appt"><span class="time">10:00</span><span class="bar"></span><span class="who"><b>Fatou Ndiaye</b><small>Première consultation · baisse de vision</small></span><span class="type tag t-info">En attente</span></div>
+            <div class="appt"><span class="time">11:00</span><span class="bar"></span><span class="who"><b>Moussa Ba</b><small>Renouvellement d'ordonnance</small></span><span class="type tag t-ok">Confirmé</span></div>
+            <div class="appt"><span class="time">11:45</span><span class="bar"></span><span class="who"><b>Khady Faye</b><small>Examen fond d'œil</small></span><span class="type tag t-warn">Nouveau</span></div>
+            <div class="appt"><span class="time">14:00</span><span class="bar"></span><span class="who"><b>Awa Camara</b><small>Adaptation lentilles de contact</small></span><span class="type tag t-ok">Confirmé</span></div>
+            <div class="appt"><span class="time">15:30</span><span class="bar"></span><span class="who"><b>Ibrahima Gueye</b><small>Post-opératoire cataracte</small></span><span class="type tag t-ok">Confirmé</span></div>
+            <div class="appt"><span class="time">16:15</span><span class="bar"></span><span class="who"><b>Cheikh Mbaye</b><small>Bilan visuel · renouvellement lunettes</small></span><span class="type tag t-info">En attente</span></div>
+            <div class="appt"><span class="time">17:00</span><span class="bar"></span><span class="who"><b>Ramatoulaye Sy</b><small>Contrôle tension oculaire</small></span><span class="type tag t-ok">Confirmé</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 9 — RAPPORTS ================= -->
+  <section class="slide">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__I_CHART__ Rapports &amp; finances</span>
+    </div>
+    <div class="lead">
+      <div class="eyebrow"><span class="bar"></span>Décidez avec des chiffres</div>
+      <h2 class="title">Des <span class="g">rapports clairs</span> : CA, marges, top ventes.</h2>
+    </div>
+    <div class="win">
+      <div class="win-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">__LOCK__ app.oculosaas.com/rapports</span></div>
+      <div class="win-body">
+        <aside class="side">
+          <span class="grp">Général</span>
+          <div class="nav">__I_GRID__ Tableau de bord</div>
+          <div class="nav">__I_CART__ Caisse</div>
+          <div class="nav">__I_USERS__ Clients</div>
+          <div class="nav">__I_EYE__ Ordonnances</div>
+          <span class="grp">Gestion</span>
+          <div class="nav">__I_BOX__ Stock <span class="badge">3</span></div>
+          <div class="nav">__I_PKG__ Commandes</div>
+          <div class="nav">__I_CAL__ Clinique</div>
+          <div class="nav on">__I_CHART__ Rapports</div>
+        </aside>
+        <div class="main">
+          <div class="kpis">
+            <div class="kpi"><span class="ico i-v">__I_MONEY__</span><div class="lbl">CA du mois</div><div class="val">3,72 M</div><div class="chg up">__UP__ +18% FCFA</div></div>
+            <div class="kpi"><span class="ico i-o">__I_TREND__</span><div class="lbl">Marge brute</div><div class="val">54%</div><div class="chg up">__UP__ +3 pts</div></div>
+            <div class="kpi"><span class="ico i-p">__I_CART2__</span><div class="lbl">Panier moyen</div><div class="val">68 500</div><div class="chg up">__UP__ +6%</div></div>
+            <div class="kpi"><span class="ico i-c">__I_USERS2__</span><div class="lbl">Nouveaux clients</div><div class="val">34</div><div class="chg up">__UP__ ce mois</div></div>
+          </div>
+          <div class="report">
+            <div class="bars">
+              <div class="col"><div class="bar" style="height:46%"></div><small>Jan</small></div>
+              <div class="col"><div class="bar" style="height:54%"></div><small>Fév</small></div>
+              <div class="col"><div class="bar" style="height:50%"></div><small>Mar</small></div>
+              <div class="col"><div class="bar" style="height:66%"></div><small>Avr</small></div>
+              <div class="col"><div class="bar" style="height:78%"></div><small>Mai</small></div>
+              <div class="col"><div class="bar" style="height:96%"></div><small>Juin</small></div>
+            </div>
+            <div class="donut">
+              <div style="font-family:'Sora';font-weight:700;font-size:18px">Répartition des ventes</div>
+              <div class="lgn"><i style="background:#7c3aed"></i>Montures — 42%</div>
+              <div class="lgn"><i style="background:#ec4899"></i>Verres correcteurs — 34%</div>
+              <div class="lgn"><i style="background:#f97316"></i>Lentilles — 14%</div>
+              <div class="lgn"><i style="background:#0a97b5"></i>Accessoires — 10%</div>
+              <div style="margin-top:auto;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:15px">Export PDF &amp; Excel · par magasin, période et vendeur</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe">Faites glisser <span class="dots"><i></i><i></i><i></i><i></i><i></i></span> __ARROW__</span></div>
+  </section>
+
+  <!-- ================= SLIDE 10 — CTA ================= -->
+  <section class="slide cta">
+    <div class="grid-bg"></div>
+    <div class="chrome-top">
+      <div class="brand"><span class="logo">__EYE__</span><span class="name">Oculo<b>SaaS</b></span></div>
+      <span class="chip">__SHIELD__ Afrique de l'Ouest</span>
+    </div>
+    <div class="cta-body">
+      <div class="lead">
+        <div class="eyebrow" style="justify-content:center"><span class="bar"></span>Passez au premium</div>
+        <h1 class="title">Digitalisez votre <span class="g">optique &amp; clinique</span> dès aujourd'hui.</h1>
+        <p class="sub">Rejoignez les opticiens et ophtalmologues qui pilotent leur activité avec OculoSaaS. Activation immédiate, paiement Mobile Money.</p>
+      </div>
+      <div class="go">__ARROWBIG__ Utiliser le logiciel</div>
+      <div class="urlbig">__GLOBE__ oculosaas.com</div>
+      <div class="feats">
+        <div class="feat"><div class="fi">__I_SPARKV__</div><b>IA prédictive</b><p>Anticipez votre chiffre d'affaires et vos ruptures</p></div>
+        <div class="feat"><div class="fi">__I_PHONE__</div><b>Mobile Money</b><p>Wave, Orange, Free, MTN, Moov intégrés</p></div>
+        <div class="feat"><div class="fi">__I_SHIELDV__</div><b>Données sécurisées</b><p>Multi-magasins, chiffrées et isolées</p></div>
+      </div>
+    </div>
+    <div class="chrome-bottom"><span class="site">__GLOBE__ oculosaas.com</span><span class="swipe"><span class="dots"><i></i><i></i><i></i><i></i><i class="on"></i></span></span></div>
+  </section>
+
+</div>
+
+<script>
+  // ---- Icônes (SVG inline injectées dans les jetons __X__) ----
+  var ICON = {
+    EYE:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    SHIELD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/></svg>',
+    SPARK:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>',
+    SPARK_W:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>',
+    CHECK:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>',
+    GLOBE:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
+    ARROW:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    ARROWBIG:'<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    LOCK:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    UP:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 15l6-6 6 6"/></svg>',
+    DOWN:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>',
+    PLUSW:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>',
+    PRINTW:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>',
+    DOTW:'<svg viewBox="0 0 24 24" width="9" height="9"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>',
+    // Nav
+    I_GRID:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    I_CART:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/></svg>',
+    I_USERS:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5.2a3.2 3.2 0 0 1 0 6M18 20a6.5 6.5 0 0 0-2-4.7"/></svg>',
+    I_EYE:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    I_BOX:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+    I_PKG:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>',
+    I_CAL:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>',
+    I_CHART:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"/></svg>',
+    // KPI / divers (héritent color)
+    I_MONEY:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v6M18 9v6"/></svg>',
+    I_CART2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/></svg>',
+    I_USERS2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5.2a3.2 3.2 0 0 1 0 6M18 20a6.5 6.5 0 0 0-2-4.7"/></svg>',
+    I_BOX2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+    I_TREND:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>',
+    I_UPARR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+    I_STAR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6L20.5 9l-4.5 4 1.2 6-5.2-3-5.2 3 1.2-6-4.5-4 5.9-.4L12 3Z"/></svg>',
+    I_ALERT:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4M12 17.5v.2"/></svg>',
+    I_GLASS:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="6" cy="14" r="3.4"/><circle cx="18" cy="14" r="3.4"/><path d="M9.4 13.5c.8-1 4.4-1 5.2 0M2.6 12 4.5 8h3M21.4 12 19.5 8h-3"/></svg>',
+    I_GLASS2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="6" cy="14" r="3.4"/><circle cx="18" cy="14" r="3.4"/><path d="M9.4 13.5c.8-1 4.4-1 5.2 0M2.6 12 4.5 8h3M21.4 12 19.5 8h-3"/></svg>',
+    I_LENS:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4c5 0 8 3.6 8 8 0 3-2 4-4 4s-2.4-2-4-2-2 2-4 2-4-1-4-4c0-4.4 3-8 8-8Z"/></svg>',
+    I_EYEV:'<svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    I_HISTORY:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/><path d="M12 8v4l3 2"/></svg>',
+    I_BELL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 0 0 4 0"/></svg>',
+    I_PHONE:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+    I_SPARKV:'<svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>',
+    I_SHIELDV:'<svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/></svg>',
+    I_GLASSBIG:'<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#7c3aed" stroke-width="1.7"><circle cx="6" cy="14" r="3.4"/><circle cx="18" cy="14" r="3.4"/><path d="M9.4 13.5c.8-1 4.4-1 5.2 0M2.6 12 4.5 8h3M21.4 12 19.5 8h-3"/></svg>'
+  };
+  var html = document.body.innerHTML;
+  html = html.replace(/__([A-Z0-9_]+)__/g, function(m, key){ return ICON[key] || ''; });
+  document.body.innerHTML = html;
+
+  // ---- Graphe IA prédictive (SVG) ----
+  (function(){
+    var hist = [95,110,120,105,140,180,90, 100,118,128,112,150,190,98, 108,126,138,120,162,205,110, 120,140,150,132,178,222,120, 132,152];
+    var fc   = [160,170,180,152,198,246,134, 152,178,188,160,208,258,142];
+    var all = hist.concat(fc);
+    var W=980,H=300,pl=10,pr=10,pt=16,pb=20;
+    var min = Math.min.apply(null,all)*0.75;
+    var max = Math.max.apply(null,all)*1.06;
+    var X = function(i){ return pl + i*(W-pl-pr)/(all.length-1); };
+    var Y = function(v){ return H-pb - (v-min)/(max-min)*(H-pt-pb); };
+    function path(vals, i0){ var d=''; for(var i=0;i<vals.length;i++){ d += (i? 'L':'M') + X(i0+i).toFixed(1) + ' ' + Y(vals[i]).toFixed(1) + ' '; } return d; }
+    var svg = document.getElementById('fchart');
+    if(!svg) return;
+    var histPath = path(hist,0);
+    var joinX = X(hist.length-1).toFixed(1), joinY = Y(hist[hist.length-1]).toFixed(1);
+    var fcPath = 'M'+joinX+' '+joinY+' ' + fc.map(function(v,i){ return 'L'+X(hist.length+i).toFixed(1)+' '+Y(v).toFixed(1); }).join(' ');
+    var area = histPath + 'L'+joinX+' '+(H-pb)+' L'+X(0).toFixed(1)+' '+(H-pb)+' Z';
+    // grille horizontale
+    var grid='';
+    for(var g=0; g<=3; g++){ var gy=(pt + g*(H-pt-pb)/3).toFixed(1); grid += '<line x1="'+pl+'" y1="'+gy+'" x2="'+(W-pr)+'" y2="'+gy+'" stroke="rgba(15,23,42,.06)" stroke-width="1"/>'; }
+    // séparateur aujourd'hui
+    var sep = '<line x1="'+joinX+'" y1="'+pt+'" x2="'+joinX+'" y2="'+(H-pb)+'" stroke="rgba(124,58,237,.30)" stroke-width="1.5" stroke-dasharray="4 5"/>';
+    var lastFcX = X(all.length-1).toFixed(1), lastFcY = Y(fc[fc.length-1]).toFixed(1);
+    svg.innerHTML =
+      '<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="rgba(124,58,237,.22)"/><stop offset="1" stop-color="rgba(124,58,237,0)"/>'+
+      '</linearGradient></defs>'+
+      grid + sep +
+      '<path d="'+area+'" fill="url(#ag)"/>'+
+      '<path d="'+histPath+'" fill="none" stroke="#7c3aed" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<path d="'+fcPath+'" fill="none" stroke="#f97316" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 8"/>'+
+      '<circle cx="'+joinX+'" cy="'+joinY+'" r="5" fill="#7c3aed"/>'+
+      '<circle cx="'+lastFcX+'" cy="'+lastFcY+'" r="5" fill="#f97316"/>';
+  })();
+
+  // Signale au capteur que tout est prêt (après chargement des polices)
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function(){
+    setTimeout(function(){ window.__CAROUSEL_READY = true; document.body.setAttribute('data-ready','1'); }, 120);
+  });
+</script>
+</body>
+</html>

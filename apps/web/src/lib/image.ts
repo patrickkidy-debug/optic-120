@@ -108,3 +108,65 @@ export async function fileToResizedDataUrl(
     `Image trop lourde après compression (${formatBytes(dataUrlBytes(out))}, maximum ${formatBytes(maxOutputBytes)}). Utilisez une photo moins détaillée.`,
   );
 }
+
+/** Convertit une Data URL en objet Blob pour le transfert HTTP/Storage. */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+/**
+ * Envoie une image sur Supabase Storage (bucket "OCL 4") et renvoie son URL publique.
+ * Si Supabase n'est pas configuré ou en cas d'erreur de réseau, bascule sur la Data URL locale.
+ */
+export async function uploadImageToSupabase(
+  file: File,
+  folder = 'uploads',
+  maxSize = 800,
+  maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
+): Promise<string> {
+  const localDataUrl = await fileToResizedDataUrl(file, maxSize, maxOutputBytes);
+
+  try {
+    const { supabase, SUPABASE_STORAGE_BUCKET, isSupabaseConfigured } = await import('./supabase');
+
+    if (!isSupabaseConfigured()) {
+      return localDataUrl;
+    }
+
+    const blob = dataUrlToBlob(localDataUrl);
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from(SUPABASE_STORAGE_BUCKET)
+      .upload(filename, blob, {
+        contentType: blob.type || 'image/jpeg',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.warn(`Supabase Storage upload error (${error.message}), fallback data URL`, error);
+      return localDataUrl;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(SUPABASE_STORAGE_BUCKET)
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl || localDataUrl;
+  } catch (err) {
+    console.warn('Erreur lors de l\'envoi vers Supabase Storage, fallback Data URL', err);
+    return localDataUrl;
+  }
+}
+

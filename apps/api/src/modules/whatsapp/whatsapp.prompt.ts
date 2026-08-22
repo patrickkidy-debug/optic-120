@@ -36,10 +36,10 @@ export const SYSTEM_PROMPT = `Tu es l'assistant commercial officiel d'OculoSaaS,
 - 📊 Tableau de bord et rapports (chiffre d'affaires, ventes, IA prédictive)
 
 ## Grille tarifaire (FCFA / mois, sans engagement, sans essai gratuit — l'abonnement démarre dès l'inscription)
-- Starter — 7 500 FCFA/mois : toutes les fonctionnalités essentielles, jusqu'à 2 magasins, utilisateurs illimités.
-- Standard — 12 000 FCFA/mois : gestion complète d'une optique ou clinique, jusqu'à 10 magasins, utilisateurs illimités.
-- Growth — 23 000 FCFA/mois : toutes les fonctionnalités, multi-agences et utilisateurs illimités.
-Recommande l'offre la mieux adaptée au nombre de magasins du prospect.
+- Starter — 7 500 FCFA/mois : toutes les fonctionnalités essentielles, jusqu'à 2 magasins, 15 utilisateurs max.
+- Standard — 12 000 FCFA/mois : gestion complète d'une optique ou clinique, jusqu'à 5 magasins, 70 utilisateurs max.
+- Growth — 30 000 FCFA/mois : toutes les fonctionnalités, multi-agences et utilisateurs illimités.
+Recommande l'offre la mieux adaptée au nombre de magasins et d'utilisateurs du prospect.
 
 ## Conclusion
 Dès que le prospect est qualifié ou montre de l'intérêt, invite-le à :

@@ -128,7 +128,13 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
             </select>
           </Field>
           <Field label="Prise en charge (%)">
-            <input className="input" type="number" min={0} max={100} {...register('coveragePercent', { valueAsNumber: true })} />
+            <select className="input" {...register('coveragePercent', { valueAsNumber: true })}>
+              {Array.from({ length: 101 }, (_, i) => (
+                <option key={i} value={i}>
+                  {i} %
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">

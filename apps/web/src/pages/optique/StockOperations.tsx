@@ -1,18 +1,21 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Trash2, PackagePlus, ArrowLeftRight } from 'lucide-react';
+import { Search, Trash2, PackagePlus, ArrowLeftRight, Check } from 'lucide-react';
 import {
   getStock,
   receiveStock,
   transferStock,
   listBranches,
+  listStockTransfers,
+  confirmStockTransfer,
+  cancelStockTransfer,
   type StockRow,
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, Field, PageLoader } from '../../components/ui';
 
 interface Line {
@@ -269,9 +272,10 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
         reason: reason.trim() || undefined,
         items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       }),
-    onSuccess: (r) => {
+    onSuccess: () => {
       invalidateProductViews(qc);
-      alert(`Transfert effectué : ${r.moved} article(s) déplacés.`);
+      qc.invalidateQueries({ queryKey: ['stockTransfers'] });
+      alert("Demande de transfert transmise ! Le stock sera crédité au magasin destinataire dès sa confirmation de réception.");
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),
@@ -333,6 +337,103 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
             </div>
           </>
         )}
+      </div>
+    </Modal>
+  );
+}
+
+/** Modal de gestion des transferts en attente de confirmation de réception. */
+export function PendingTransfersModal({
+  branchId,
+  onClose,
+}: {
+  branchId: string;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [error, setError] = useState('');
+
+  const { data: transfers, isLoading } = useQuery({
+    queryKey: ['stockTransfers', branchId],
+    queryFn: () => listStockTransfers({ branchId, direction: 'incoming', status: 'PENDING' }),
+  });
+
+  const confirmMut = useMutation({
+    mutationFn: (id: string) => confirmStockTransfer(id),
+    onSuccess: () => {
+      invalidateProductViews(qc);
+      qc.invalidateQueries({ queryKey: ['stockTransfers'] });
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (id: string) => cancelStockTransfer(id),
+    onSuccess: () => {
+      invalidateProductViews(qc);
+      qc.invalidateQueries({ queryKey: ['stockTransfers'] });
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title="Réceptions de stock en attente" size="lg">
+      <div className="space-y-4">
+        {isLoading ? (
+          <PageLoader />
+        ) : !transfers || transfers.length === 0 ? (
+          <p className="rounded-xl bg-surface-2 p-4 text-center text-sm text-content-muted">
+            Aucun transfert en attente de réception pour ce magasin.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {transfers.map((t) => (
+              <div key={t.id} className="rounded-xl border bg-surface p-4 shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                  <div>
+                    <span className="font-mono text-sm font-bold text-primary">{t.number}</span>
+                    <span className="ml-2 text-xs text-content-muted">
+                      Provenance : <strong>{t.fromBranch.name}</strong>
+                    </span>
+                  </div>
+                  <span className="text-xs text-content-faint">{formatDateTime(t.createdAt)}</span>
+                </div>
+                {t.reason && <p className="mt-2 text-xs italic text-content-muted">Motif : {t.reason}</p>}
+                <div className="mt-3 space-y-1">
+                  {t.items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-xs text-content">
+                      <span>{item.product.name} ({item.product.sku})</span>
+                      <span className="font-bold">x {item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2 border-t pt-3">
+                  <Button
+                    variant="outline"
+                    className="h-8 px-3 text-xs text-danger"
+                    loading={cancelMut.isPending}
+                    onClick={() => cancelMut.mutate(t.id)}
+                  >
+                    Refuser
+                  </Button>
+                  <Button
+                    className="h-8 px-3 text-xs"
+                    loading={confirmMut.isPending}
+                    onClick={() => confirmMut.mutate(t.id)}
+                  >
+                    <Check className="h-3.5 w-3.5 text-white" /> Confirmer la réception
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end pt-2">
+          <Button variant="ghost" onClick={onClose}>
+            Fermer
+          </Button>
+        </div>
       </div>
     </Modal>
   );
