@@ -60,33 +60,34 @@ model Tenant {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  demoProgress    DemoProgress?
-  branches        Branch[]
-  users           User[]
-  roles           Role[]
-  products        Product[]
-  stockItems      StockItem[]
-  stockMovements  StockMovement[]
-  customers       Customer[]
-  prescriptions   OpticalPrescription[]
-  sales           Sale[]
-  payments        Payment[]
-  cashRegisters   CashRegister[]
-  auditLogs       AuditLog[]
-  patients        Patient[]
-  consultations   Consultation[]
-  appointments    Appointment[]
-  surgeries       Surgery[]
-  employees       Employee[]
-  expenses        Expense[]
-  suppliers       Supplier[]
-  insurers        Insurer[]
-  lensOrders      LensOrder[]
-  repairs         Repair[]
-  subscription    Subscription?
-  subInvoices     SubscriptionInvoice[]
-  inventoryCounts InventoryCount[]
-  stockTransfers  StockTransfer[]
+  demoProgress      DemoProgress?
+  branches          Branch[]
+  users             User[]
+  roles             Role[]
+  products          Product[]
+  stockItems        StockItem[]
+  stockMovements    StockMovement[]
+  customers         Customer[]
+  prescriptions     OpticalPrescription[]
+  sales             Sale[]
+  payments          Payment[]
+  cashRegisters     CashRegister[]
+  auditLogs         AuditLog[]
+  patients          Patient[]
+  consultations     Consultation[]
+  appointments      Appointment[]
+  surgeries         Surgery[]
+  employees         Employee[]
+  expenses          Expense[]
+  suppliers         Supplier[]
+  insurers          Insurer[]
+  lensOrders        LensOrder[]
+  repairs           Repair[]
+  subscription      Subscription?
+  subInvoices       SubscriptionInvoice[]
+  inventoryCounts   InventoryCount[]
+  stockTransfers    StockTransfer[]
+  demoVideoProgress DemoVideoProgress[]
 }
 
 /// Progression de la visite guidée démo (tenant isDemo). Persistée côté
@@ -168,6 +169,7 @@ model User {
   startedInventoryCounts   InventoryCount[]     @relation("InventoryCountStartedBy")
   completedInventoryCounts InventoryCount[]     @relation("InventoryCountCompletedBy")
   countedInventoryLines    InventoryCountLine[] @relation("InventoryCountLineCountedBy")
+  demoVideoProgress        DemoVideoProgress[]
   createdTransfers         StockTransfer[]      @relation("TransferCreatedBy")
   confirmedTransfers       StockTransfer[]      @relation("TransferConfirmedBy")
 
@@ -1272,4 +1274,32 @@ model WhatsappMessage {
 
   @@index([contactId, createdAt])
   @@index([waMessageId])
+}
+
+/// Progression d'un utilisateur sur une vidéo de démonstration commerciale.
+/// Sert à reprendre où il s'est arrêté ET à mesurer l'intérêt d'un prospect
+/// (console fondateur : qui rappeler en priorité).
+model DemoVideoProgress {
+  id                  String    @id @default(uuid())
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "1".."4" — identifiant de la vidéo dans le parcours.
+  videoKey            String
+  /// Position exacte de reprise (secondes).
+  lastPositionSeconds Int       @default(0)
+  durationSeconds     Int?
+  /// MEILLEUR pourcentage atteint : ne redescend jamais quand l'utilisateur
+  /// revient en arrière. C'est lui qui mesure l'intérêt, pas la position courante.
+  maxPercent          Int       @default(0)
+  viewCount           Int       @default(0)
+  completedAt         DateTime?
+  /// Réponse au questionnaire de compréhension : YES | UNSURE | NO.
+  understood          String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([userId, videoKey])
+  @@index([tenantId])
 }

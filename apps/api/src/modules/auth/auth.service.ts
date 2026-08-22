@@ -321,17 +321,12 @@ async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
       // paiement — voir ensurePendingSubscription.
       await ensurePendingSubscription(tx, skeleton.tenantId, opts.plan);
 
-      // Pré-remplit le tableau de bord (produits, ventes, clients...) pour que
-      // le prospect comprenne le logiciel pendant la visite guidée automatique,
-      // au lieu d'atterrir sur un compte vide. Les identifiants créés sont
-      // mémorisés dans DemoProgress.seedManifest : la visite guidée déclenche
-      // leur suppression précise (purgeSampleData) une fois terminée/passée,
-      // sans jamais toucher aux vraies données que l'utilisateur aurait déjà
-      // saisies entre-temps.
-      const manifest = await seedSampleBusinessData(tx, skeleton.tenantId, skeleton.branchId, user.id);
-      await tx.demoProgress.create({
-        data: { tenantId: skeleton.tenantId, seedManifest: manifest as unknown as Prisma.InputJsonValue },
-      });
+      // Plus aucun pré-remplissage de données fictives : le compte démarre vide
+      // et propre. La démonstration se fait désormais en VIDÉO (page /demo/videos),
+      // où le prospect voit le logiciel déjà rempli — inutile de mélanger de
+      // faux produits avec ses vraies données. Le générateur d'exemples
+      // (seedSampleBusinessData) et sa purge restent disponibles si un compte
+      // de démonstration devait être reproposé un jour.
 
       return { userId: user.id, tenantId: skeleton.tenantId };
     },

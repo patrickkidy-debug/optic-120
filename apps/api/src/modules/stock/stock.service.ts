@@ -228,6 +228,15 @@ export async function transferStock(
   });
 }
 
+export async function getTransferAccessScope(tenantId: string, transferId: string) {
+  const transfer = await prisma.stockTransfer.findFirst({
+    where: { id: transferId, tenantId },
+    select: { fromBranchId: true, toBranchId: true },
+  });
+  if (!transfer) throw notFound('Transfert introuvable');
+  return transfer;
+}
+
 /**
  * Confirmation de réception d'un transfert par le magasin destinataire.
  * Les articles sont crédités au stock de la destination et le statut passe à CONFIRMED.

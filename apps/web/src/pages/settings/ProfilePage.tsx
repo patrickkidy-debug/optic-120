@@ -19,7 +19,7 @@ import {
   disableTwoFactor,
 } from '../../features/auth/api';
 import { getBranding, updateBranding } from '../../features/settings/api';
-import { RestartTourCard } from '../../features/tour';
+import { WatchDemoCard } from '../../features/demo/WatchDemoCard';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings, LensPricing, OpticalSettings } from '@oculo/shared-types';
@@ -221,7 +221,7 @@ export function ProfilePage() {
 
       {active === 'profil' && (
       <div className="mb-4">
-        <RestartTourCard />
+        <WatchDemoCard compact />
       </div>
       )}
 

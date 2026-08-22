@@ -151,13 +151,17 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
       if (!existing) throw notFound('Ordonnance introuvable');
       const input = clean(prescriptionCreateSchema.partial().parse(req.body));
       const { date, expiresAt, ...rest } = input;
-      const prescription = await req.db!.opticalPrescription.update({
+      const result = await req.db!.opticalPrescription.updateMany({
         where: { id: prescriptionId },
         data: {
           ...(date ? { date: new Date(date) } : {}),
           ...(expiresAt !== undefined ? { expiresAt: toDate(expiresAt) } : {}),
           ...rest,
         },
+      });
+      if (result.count === 0) throw notFound('Ordonnance introuvable');
+      const prescription = await req.db!.opticalPrescription.findFirst({
+        where: { id: prescriptionId },
       });
       return reply.send({ prescription });
     },
@@ -172,9 +176,9 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
         where: { id: prescriptionId, customerId: id },
       });
       if (!existing) throw notFound('Ordonnance introuvable');
-      await req.db!.opticalPrescription.delete({ where: { id: prescriptionId } });
+      const result = await req.db!.opticalPrescription.deleteMany({ where: { id: prescriptionId } });
+      if (result.count === 0) throw notFound('Ordonnance introuvable');
       return reply.send({ ok: true });
     },
   );
 }
-

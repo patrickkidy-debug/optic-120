@@ -25,6 +25,7 @@ import {
   LifeBuoy,
   BadgeCheck,
   Wallet,
+  Flame,
   TrendingUp,
   TrendingDown,
   Receipt,
@@ -81,6 +82,7 @@ import {
   confirmPayment,
   listDemoRequests,
   setDemoRequestStatus,
+  getDemoEngagement,
   type DemoRequest,
 } from '../../features/billing/api';
 import { googleCalendarUrl, downloadIcs } from '../../lib/calendar';
@@ -223,7 +225,7 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'subs' | 'payments' | 'demos' | 'users' | 'plans' | 'support' | 'finance' | 'team';
+type Tab = 'subs' | 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -302,6 +304,7 @@ export function PlatformPage() {
           { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
+          { id: 'engagement' as Tab, label: 'Engagement', icon: Flame },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
           { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
@@ -326,6 +329,7 @@ export function PlatformPage() {
         {tab === 'subs' && <SubscriptionsTab />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'demos' && <DemosTab />}
+        {tab === 'engagement' && <EngagementTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'plans' && <PlansTab />}
@@ -1611,6 +1615,105 @@ function PlanEditor({ plan }: { plan: PlatformPlan }) {
           <Save className="h-4 w-4" /> Enregistrer
         </Button>
         {saved && <span className="text-sm text-success">Enregistré ✓</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Engagement sur les vidéos de démonstration : qui rappeler en priorité.
+ * Trié par score d'intérêt calculé côté serveur (vidéos terminées, % moyen,
+ * demandes d'aide) — les prospects les plus chauds arrivent en tête.
+ */
+function EngagementTab() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['platform-demo-engagement'],
+    queryFn: getDemoEngagement,
+  });
+
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        icon={Flame}
+        title="Aucun visionnage pour l'instant"
+        hint="Dès qu'un prospect regarde la démonstration, son niveau d'intérêt apparaît ici."
+      />
+    );
+  }
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+              <th className="table-cell font-semibold">Établissement</th>
+              <th className="table-cell font-semibold">Contact</th>
+              <th className="table-cell text-center font-semibold">Vidéos</th>
+              <th className="table-cell text-center font-semibold">Visionnage</th>
+              <th className="table-cell text-center font-semibold">Aide</th>
+              <th className="table-cell font-semibold">Dernière activité</th>
+              <th className="table-cell text-center font-semibold">Intérêt</th>
+              <th className="table-cell text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((r) => {
+              const wa = r.whatsappPhone
+                ? waLink(r.whatsappPhone, r.contactName ?? undefined, r.tenantName)
+                : null;
+              return (
+                <tr key={r.tenantId} className="border-b last:border-0 hover:bg-surface-2/50">
+                  <td className="table-cell font-medium text-content">{r.tenantName}</td>
+                  <td className="table-cell text-content-muted">
+                    <div>{r.contactName}</div>
+                    <div className="text-xs text-content-faint">{r.contactEmail}</div>
+                  </td>
+                  <td className="table-cell text-center">
+                    <Badge tone={r.videosCompleted >= 4 ? 'success' : r.videosCompleted > 0 ? 'info' : 'neutral'}>
+                      {r.videosCompleted}/4
+                    </Badge>
+                  </td>
+                  <td className="table-cell text-center text-content">{r.avgPercent} %</td>
+                  <td className="table-cell text-center">
+                    {r.notUnderstoodCount > 0 ? (
+                      <Badge tone="warning">{r.notUnderstoodCount}</Badge>
+                    ) : (
+                      <span className="text-content-faint">—</span>
+                    )}
+                  </td>
+                  <td className="table-cell text-content-muted">
+                    {r.lastActivityAt ? formatDate(r.lastActivityAt) : '—'}
+                  </td>
+                  <td className="table-cell text-center">
+                    <span
+                      className={`font-display font-bold ${
+                        r.score >= 80 ? 'text-success' : r.score >= 40 ? 'text-accent' : 'text-content-muted'
+                      }`}
+                    >
+                      {r.score}
+                    </span>
+                  </td>
+                  <td className="table-cell text-right">
+                    {wa ? (
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-outline h-8 rounded-lg px-3 text-xs"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                      </a>
+                    ) : (
+                      <span className="text-xs text-content-faint">Pas de numéro</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

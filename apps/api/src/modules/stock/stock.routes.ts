@@ -106,8 +106,9 @@ export async function stockRoutes(app: FastifyInstance): Promise<void> {
   // Confirmation de réception d'un transfert par le magasin destinataire.
   app.post('/transfers/:id/confirm', { preHandler: requirePermission('optique.stock.transfer') }, async (req, reply) => {
     const { id } = req.params as { id: string };
+    const scope = await stockService.getTransferAccessScope(req.auth!.tenantId, id);
+    assertBranchAccess(req, scope.toBranchId);
     const transfer = await stockService.confirmTransfer(req.auth!.tenantId, req.auth!.userId, id);
-    assertBranchAccess(req, transfer.toBranchId);
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
@@ -123,8 +124,9 @@ export async function stockRoutes(app: FastifyInstance): Promise<void> {
   // Annulation d'un transfert en attente par la source.
   app.post('/transfers/:id/cancel', { preHandler: requirePermission('optique.stock.transfer') }, async (req, reply) => {
     const { id } = req.params as { id: string };
+    const scope = await stockService.getTransferAccessScope(req.auth!.tenantId, id);
+    assertBranchAccess(req, scope.fromBranchId);
     const transfer = await stockService.cancelTransfer(req.auth!.tenantId, req.auth!.userId, id);
-    assertBranchAccess(req, transfer.fromBranchId);
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,

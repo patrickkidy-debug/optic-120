@@ -12,6 +12,7 @@ import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
 import * as support from '../support/support.service.js';
+import { getEngagementForFounder } from '../demo/demo-video.service.js';
 import { getOperatorEmails, isEnvOperator } from '../../lib/operators.js';
 
 /** Garde opérateur : réservé aux emails déclarés comme administrateurs plateforme. */
@@ -96,6 +97,12 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       take: 300,
     });
     return reply.send({ demos });
+  });
+
+  // Engagement sur les vidéos de démonstration : qui rappeler en priorité.
+  app.get('/demo-engagement', async (_req, reply) => {
+    const rows = await getEngagementForFounder();
+    return reply.send({ rows });
   });
 
   app.patch('/demo-requests/:id', async (req, reply) => {

@@ -7,6 +7,8 @@ import { requestMeta, recordAudit } from '../../lib/audit.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
 import { appOrigin } from '../../config/env.js';
 import * as demoService from './demo.service.js';
+import * as demoVideo from './demo-video.service.js';
+import { badRequest } from '../../lib/http-error.js';
 
 export async function demoRoutes(app: FastifyInstance): Promise<void> {
   // Limiteur renforcé, alignée sur /auth/signup (anti brute-force / anti-spam de tenants démo).
@@ -76,6 +78,40 @@ export async function demoRoutes(app: FastifyInstance): Promise<void> {
       metadata: input.metadata,
       ...requestMeta(req),
     });
+    return reply.status(201).send({ ok: true });
+  });
+
+  /* ---------------- Vidéos de démonstration commerciale ---------------- */
+  // Aucune permission dédiée : tout utilisateur connecté peut voir la démo.
+
+  app.get('/videos/progress', { preHandler: requireAuth }, async (req, reply) => {
+    const progress = await demoVideo.getMyProgress(req.auth!.tenantId, req.auth!.userId);
+    return reply.send({ progress });
+  });
+
+  app.put('/videos/:key/progress', { preHandler: requireAuth }, async (req, reply) => {
+    const { key } = req.params as { key: string };
+    if (!demoVideo.isValidVideoKey(key)) throw badRequest('Vidéo inconnue');
+    const body = req.body as { positionSeconds?: number; durationSeconds?: number; isNewView?: boolean };
+    if (typeof body.positionSeconds !== 'number' || !Number.isFinite(body.positionSeconds)) {
+      throw badRequest('positionSeconds requis');
+    }
+    const row = await demoVideo.saveProgress(req.auth!.tenantId, req.auth!.userId, key, {
+      positionSeconds: body.positionSeconds,
+      durationSeconds: body.durationSeconds,
+      isNewView: body.isNewView,
+    });
+    return reply.send({ maxPercent: row.maxPercent, completedAt: row.completedAt });
+  });
+
+  app.post('/videos/:key/feedback', { preHandler: requireAuth }, async (req, reply) => {
+    const { key } = req.params as { key: string };
+    if (!demoVideo.isValidVideoKey(key)) throw badRequest('Vidéo inconnue');
+    const { understood } = req.body as { understood?: string };
+    if (!understood || !['YES', 'UNSURE', 'NO'].includes(understood)) {
+      throw badRequest('Réponse invalide');
+    }
+    await demoVideo.saveFeedback(req.auth!.tenantId, req.auth!.userId, key, understood);
     return reply.status(201).send({ ok: true });
   });
 }

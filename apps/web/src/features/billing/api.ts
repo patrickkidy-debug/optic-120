@@ -440,3 +440,23 @@ export async function setTrialSettings(minutes: number): Promise<{ minutes: numb
   const { data } = await api.patch<{ minutes: number }>('/platform/settings/trial', { minutes });
   return data;
 }
+
+export interface DemoEngagementRow {
+  tenantId: string;
+  tenantName: string;
+  whatsappPhone: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  videosCompleted: number;
+  avgPercent: number;
+  totalViews: number;
+  notUnderstoodCount: number;
+  lastActivityAt: string | null;
+  score: number;
+}
+
+/** Engagement sur les vidéos de démonstration, trié par score d'intérêt (console fondateur). */
+export async function getDemoEngagement(): Promise<DemoEngagementRow[]> {
+  const { data } = await api.get<{ rows: DemoEngagementRow[] }>('/platform/demo-engagement');
+  return data.rows;
+}

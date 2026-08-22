@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Check, ArrowRight, MessageCircle, PartyPopper } from 'lucide-react';
 import { PageHeader, Button } from '../../components/ui';
 import { demoWhatsappLink } from '../../lib/whatsapp';
-import { trackDemoEvent } from '../../features/tour/api';
+import { trackDemoEvent } from '../../features/demo/api';
 
 const RECAP = [
   'Gestion des stocks',

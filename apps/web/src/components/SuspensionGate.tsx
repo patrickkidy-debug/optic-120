@@ -1,8 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { AlertOctagon } from 'lucide-react';
 import { Logo } from './Logo';
 import { usePermission } from '../store/auth';
 import { logout } from '../features/auth/api';
-import { SubscriptionPage } from '../pages/settings/SubscriptionPage';
+import { PageLoader } from './ui';
+import { named } from '../lib/lazyChunk';
+
+const SubscriptionPage = lazy(() => named(import('../pages/settings/SubscriptionPage'), 'SubscriptionPage'));
 
 /**
  * Écran affiché tant que l'abonnement n'est pas payé : accès au dashboard et
@@ -35,7 +39,11 @@ export function SuspensionGate() {
           </div>
         </div>
 
-        {canManage && <SubscriptionPage />}
+        {canManage && (
+          <Suspense fallback={<PageLoader />}>
+            <SubscriptionPage />
+          </Suspense>
+        )}
       </div>
     </div>
   );

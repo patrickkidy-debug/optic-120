@@ -5,7 +5,6 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { TrialBanner } from '../TrialBanner';
 import { SupportChatWidget } from '../SupportChatWidget';
-import { ProductTourProvider } from '../../features/tour';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
@@ -57,7 +56,6 @@ export function AppShell() {
   }, []);
 
   return (
-    <ProductTourProvider>
     <div className="min-h-screen bg-bg">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
         <Sidebar />
@@ -97,6 +95,5 @@ export function AppShell() {
 
       {showSupportChat && <SupportChatWidget />}
     </div>
-    </ProductTourProvider>
   );
 }

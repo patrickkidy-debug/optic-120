@@ -312,9 +312,7 @@ export function ProductsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-          <input
-            data-tour="product-search"
-            className="input pl-9"
+          <input            className="input pl-9"
             placeholder="Rechercher…"
             value={search}
             onChange={(e) => {

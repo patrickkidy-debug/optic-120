@@ -13,6 +13,9 @@ const TENANT_MODELS = new Set<string>([
   'Product',
   'StockItem',
   'StockMovement',
+  'StockTransfer',
+  'InventoryCount',
+  'InventoryCountLine',
   'Customer',
   'OpticalPrescription',
   'Sale',
@@ -29,6 +32,13 @@ const TENANT_MODELS = new Set<string>([
   'Insurer',
   'LensOrder',
   'Repair',
+  'Subscription',
+  'SubscriptionInvoice',
+  'SubscriptionPayment',
+  'SupportTicket',
+  'DemoProgress',
+  'DemoRequest',
+  'PlatformNotification',
 ]);
 
 /**
