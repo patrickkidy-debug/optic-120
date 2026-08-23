@@ -902,6 +902,24 @@ function ImportTab() {
         <Badge tone="danger">{counts.bad} invalides</Badge>
       </div>
 
+      {/* Toutes les lignes rejetées : c'est presque toujours la structure du
+          fichier, pas son contenu. On explique quoi vérifier plutôt que de
+          laisser un tableau rouge sans issue. */}
+      {counts.neu === 0 && counts.bad > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 p-4 text-sm">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+          <div className="text-content">
+            <p className="font-semibold">Aucune colonne reconnue dans ce fichier</p>
+            <p className="mt-1 text-content-muted">
+              Vérifiez que la feuille contient bien une ligne d&apos;en-tête avec au minimum une colonne
+              <b> Établissement</b> (ou Nom, Entreprise, Magasin) et une colonne <b>Téléphone</b>. Un titre
+              ou des lignes vides au-dessus du tableau sont détectés automatiquement, mais un tableau sans
+              en-tête ne peut pas être interprété.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="card max-h-[420px] overflow-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-surface">

@@ -45,9 +45,9 @@ const ALIASES: Record<Field, string[]> = {
   phone: ['telephone', 'tel', 'phone', 'whatsapp', 'mobile', 'numero', 'contact'],
   email: ['email', 'e-mail', 'mail', 'courriel'],
   country: ['pays', 'country'],
-  city: ['ville', 'city', 'localite'],
+  city: ['ville', 'city', 'localite', 'quartier', 'zone', 'commune'],
   address: ['adresse', 'address', 'localisation'],
-  segment: ['segment', 'categorie', 'type'],
+  segment: ['segment', 'categorie', 'profil', 'cible', 'type'],
 };
 
 // Du plus spécifique au plus générique : « nom de famille » doit être capté
@@ -121,11 +121,43 @@ function toSegment(raw: string): ProspectSegment {
  * Lit un .xlsx/.csv, normalise chaque ligne et la confronte à la base pour
  * repérer les doublons — SANS rien écrire. Le fondateur valide ensuite.
  */
+/**
+ * Trouve la ligne d'en-tête. Les fichiers de prospection réels commencent
+ * souvent par un titre et une ligne de description avant le vrai tableau :
+ * prendre aveuglément la première ligne ferait échouer toute la détection.
+ * On garde la ligne des 12 premières qui reconnaît le plus de colonnes.
+ */
+function findHeaderRow(aoa: unknown[][]): number {
+  let bestRow = 0;
+  let bestScore = -1;
+  for (let i = 0; i < Math.min(12, aoa.length); i++) {
+    const cells = (aoa[i] ?? []).map((c) => String(c ?? '').trim()).filter(Boolean);
+    if (cells.length < 2) continue;
+    const fake: Record<string, unknown> = {};
+    for (const c of cells) fake[c] = '';
+    const score = Object.keys(detectColumns(fake)).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestRow = i;
+    }
+  }
+  return bestRow;
+}
+
 export async function previewImport(buffer: Buffer): Promise<ImportPreviewRow[]> {
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = wb.SheetNames[0];
   if (!sheetName) return [];
-  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], { defval: '' });
+  const sheet = wb.Sheets[sheetName];
+
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '' });
+  if (aoa.length === 0) return [];
+  const headerRow = findHeaderRow(aoa);
+
+  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    defval: '',
+    range: headerRow,
+  });
   if (raw.length === 0) return [];
 
   const cols = detectColumns(raw[0]);
@@ -173,15 +205,19 @@ export async function previewImport(buffer: Buffer): Promise<ImportPreviewRow[]>
       })
     : [];
   const known = new Set(existing.map((e) => e.phoneNormalized));
-  // Doublons internes au fichier lui-même.
-  const seen = new Set<string>();
+  // Doublons internes au fichier : on retient qui a pris le numéro en premier,
+  // pour pouvoir l'expliquer au lieu d'un « doublon » sec.
+  const seen = new Map<string, string>();
 
   return parsed.map((p): ImportPreviewRow => {
     if (!p.establishmentName) return { ...p, outcome: 'invalid', reason: "Nom d'établissement manquant" };
     if (!p.phoneNormalized) return { ...p, outcome: 'invalid', reason: 'Numéro invalide ou pays inconnu' };
     if (known.has(p.phoneNormalized)) return { ...p, outcome: 'duplicate', reason: 'Déjà dans le CRM' };
-    if (seen.has(p.phoneNormalized)) return { ...p, outcome: 'duplicate', reason: 'En double dans le fichier' };
-    seen.add(p.phoneNormalized);
+    const owner = seen.get(p.phoneNormalized);
+    if (owner) {
+      return { ...p, outcome: 'duplicate', reason: `Même numéro que « ${owner} »` };
+    }
+    seen.set(p.phoneNormalized, p.establishmentName);
     return { ...p, outcome: 'new' };
   });
 }
