@@ -70,6 +70,7 @@ export interface ProspectFilters {
   city?: string;
   minScore?: number;
   dueOnly?: boolean;
+  hasEmail?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -207,5 +208,30 @@ export async function renderMessage(prospectId: string, templateId: string) {
     `/crm/prospects/${prospectId}/message`,
     { params: { templateId } },
   );
+  return data;
+}
+
+export interface ProspectCountry {
+  code: string;
+  name: string;
+  dial: string;
+  flag: string;
+  count: number;
+}
+
+/** Pays presents dans le CRM, deduits de l'indicatif telephonique. */
+export async function listProspectCountries() {
+  const { data } = await api.get<{ countries: ProspectCountry[] }>('/crm/countries');
+  return data.countries;
+}
+
+/** Message e-mail pret a envoyer (objet + corps), variables deja remplacees. */
+export async function renderEmail(prospectId: string, templateId: string) {
+  const { data } = await api.get<{
+    subject: string;
+    body: string;
+    templateName: string;
+    email: string | null;
+  }>(`/crm/prospects/${prospectId}/email`, { params: { templateId } });
   return data;
 }

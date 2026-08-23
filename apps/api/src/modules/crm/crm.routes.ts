@@ -50,6 +50,7 @@ export async function crmRoutes(app: FastifyInstance): Promise<void> {
       city: q.city,
       minScore: q.minScore ? Number(q.minScore) : undefined,
       dueOnly: q.dueOnly === 'true',
+      hasEmail: q.hasEmail === 'true',
       page: q.page ? Number(q.page) : undefined,
       pageSize: q.pageSize ? Number(q.pageSize) : undefined,
     });
@@ -225,6 +226,19 @@ export async function crmRoutes(app: FastifyInstance): Promise<void> {
       demoBookingUrl: b.demoBookingUrl?.trim() || null,
     });
     return reply.send({ settings });
+  });
+
+  /** Pays presents dans le CRM, deduits de l'indicatif telephonique. */
+  app.get('/countries', async (_req, reply) => {
+    return reply.send({ countries: await crm.listProspectCountries() });
+  });
+
+  /** Message e-mail pret a envoyer (objet + corps), envoi manuel comme WhatsApp. */
+  app.get('/prospects/:id/email', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { templateId } = req.query as { templateId?: string };
+    if (!templateId) throw badRequest('templateId requis');
+    return reply.send(await crm.renderEmail(id, templateId));
   });
 
   /** Message prêt à envoyer (variables remplacées) — l'envoi reste manuel. */

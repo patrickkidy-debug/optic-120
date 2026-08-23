@@ -10,6 +10,7 @@ import {
 import { prisma } from '../../lib/prisma.js';
 import { notFound } from '../../lib/http-error.js';
 import { appOrigin } from '../../config/env.js';
+import { SUPPORTED_COUNTRIES } from '@oculo/shared-types';
 import {
   normalizePhone,
   whatsappStatusFromPhone,
@@ -286,6 +287,7 @@ export interface ListFilters {
   city?: string;
   minScore?: number;
   dueOnly?: boolean;
+  hasEmail?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -300,7 +302,11 @@ export async function listProspects(f: ListFilters) {
   if (f.priority) where.priority = f.priority;
   if (f.source) where.source = f.source;
   if (f.whatsappStatus) where.whatsappStatus = f.whatsappStatus;
-  if (f.country) where.country = { equals: f.country, mode: 'insensitive' };
+  // Le pays vient de l'INDICATIF du numéro (phoneCountry), pas de la colonne
+  // « Pays » du fichier : celle-ci est souvent absente ou remplie librement,
+  // alors que l'indicatif est fiable et déjà normalisé à l'import.
+  if (f.country) where.phoneCountry = f.country;
+  if (f.hasEmail) where.email = { not: null };
   if (f.city) where.city = { contains: f.city, mode: 'insensitive' };
   if (f.minScore != null) where.leadScore = { gte: f.minScore };
   if (f.dueOnly) where.nextFollowUpAt = { lte: new Date() };
@@ -780,4 +786,50 @@ export async function renderMessage(prospectId: string, templateId: string) {
   });
 
   return { body, templateName: template.name, phone: prospect.phoneNormalized };
+}
+
+/**
+ * Pays réellement présents dans le CRM, déduits de l'indicatif téléphonique
+ * (source fiable, contrairement à la colonne « Pays » souvent absente des
+ * fichiers). Sert à alimenter le filtre sans proposer des pays vides.
+ */
+export async function listProspectCountries() {
+  const rows = await prisma.prospect.groupBy({
+    by: ['phoneCountry'],
+    _count: { _all: true },
+    orderBy: { _count: { phoneCountry: 'desc' } },
+  });
+  return rows
+    .filter((r) => r.phoneCountry)
+    .map((r) => {
+      const meta = SUPPORTED_COUNTRIES.find((c) => c.code === r.phoneCountry);
+      return {
+        code: r.phoneCountry as string,
+        name: meta?.name ?? r.phoneCountry,
+        dial: meta?.dial ?? '',
+        flag: meta?.flag ?? '',
+        count: r._count._all,
+      };
+    });
+}
+
+/**
+ * Message e-mail prêt à envoyer : mêmes modèles et mêmes variables que
+ * WhatsApp, pour ne pas maintenir deux contenus en parallèle. L'objet reprend
+ * le nom du modèle, adapté au format courrier.
+ */
+export async function renderEmail(prospectId: string, templateId: string) {
+  const { body, templateName } = await renderMessage(prospectId, templateId);
+  const prospect = await prisma.prospect.findUnique({
+    where: { id: prospectId },
+    select: { email: true, establishmentName: true },
+  });
+  if (!prospect) throw notFound('Prospect introuvable');
+
+  const subject =
+    templateName === 'Premier contact'
+      ? `OculoSaaS — la gestion de ${prospect.establishmentName}`
+      : `OculoSaaS — ${templateName}`;
+
+  return { subject, body, templateName, email: prospect.email };
 }

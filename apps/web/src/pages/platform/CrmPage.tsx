@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   HelpCircle,
   Flame,
+  Mail,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -34,6 +35,8 @@ import {
   getCrmSettings,
   updateCrmSettings,
   renderMessage,
+  renderEmail,
+  listProspectCountries,
   createProspect,
   type Prospect,
   type ImportRow,
@@ -241,6 +244,8 @@ function ProspectsTab() {
   const [priority, setPriority] = useState('');
   const [wa, setWa] = useState('');
   const [dueOnly, setDueOnly] = useState(false);
+  const [country, setCountry] = useState('');
+  const [hasEmail, setHasEmail] = useState(false);
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [contactFor, setContactFor] = useState<Prospect | null>(null);
@@ -264,16 +269,21 @@ function ProspectsTab() {
       priority: priority || undefined,
       whatsappStatus: wa || undefined,
       dueOnly: dueOnly || undefined,
+      country: country || undefined,
+      hasEmail: hasEmail || undefined,
       page,
       pageSize: 50,
     }),
-    [debounced, status, segment, priority, wa, dueOnly, page],
+    [debounced, status, segment, priority, wa, dueOnly, country, hasEmail, page],
   );
 
   const { data, isLoading } = useQuery({
     queryKey: ['crm-prospects', filters],
     queryFn: () => listProspects(filters),
   });
+  // Pays reellement presents, deduits de l'indicatif : on ne propose jamais un
+  // pays sans prospect.
+  const { data: countries } = useQuery({ queryKey: ['crm-countries'], queryFn: listProspectCountries });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -309,6 +319,23 @@ function ProspectsTab() {
             <option key={k} value={k}>{WA_LABELS[k].label}</option>
           ))}
         </select>
+        <select className="input w-auto" value={country} onChange={(e) => { setCountry(e.target.value); setPage(1); }}>
+          <option value="">Tous les pays</option>
+          {countries?.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.flag} {c.name} ({c.count})
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => { setHasEmail((v) => !v); setPage(1); }}
+          className={clsx(
+            'flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition',
+            hasEmail ? 'border-primary bg-primary/10 text-primary' : 'text-content-muted hover:text-content',
+          )}
+        >
+          <Mail className="h-4 w-4" /> Avec e-mail
+        </button>
         <button
           onClick={() => { setDueOnly((v) => !v); setPage(1); }}
           className={clsx(
@@ -340,6 +367,7 @@ function ProspectsTab() {
                   <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                     <th className="table-cell font-semibold">Établissement</th>
                     <th className="table-cell font-semibold">Contact</th>
+                    <th className="table-cell font-semibold">Pays</th>
                     <th className="table-cell font-semibold">Téléphone</th>
                     <th className="table-cell font-semibold">WhatsApp</th>
                     <th className="table-cell text-center font-semibold">Score</th>
@@ -365,7 +393,8 @@ function ProspectsTab() {
                         <td className="table-cell text-content-muted">
                           {[p.firstName, p.lastName].filter(Boolean).join(' ') || '—'}
                         </td>
-                        <td className="table-cell font-mono text-xs text-content-muted">
+                        <td className='table-cell text-content-muted'>{p.phoneCountry ?? '—'}</td>
+                        <td className='table-cell font-mono text-xs text-content-muted'>
                           {p.phoneNormalized ?? p.phone ?? '—'}
                         </td>
                         <td className="table-cell"><Badge tone={wl.tone}>{wl.label}</Badge></td>
@@ -649,8 +678,15 @@ function ContactModal({
   const { data: templates } = useQuery({ queryKey: ['crm-templates'], queryFn: listTemplates });
   const [templateId, setTemplateId] = useState('');
   const [preview, setPreview] = useState('');
+  const [subject, setSubject] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [error, setError] = useState('');
+  // Canal de contact : WhatsApp par défaut, e-mail si le prospect en a un.
+  // Le contenu vient du MÊME modèle dans les deux cas — un seul texte à tenir
+  // à jour, seul l'objet est ajouté pour le courrier.
+  const canWhatsapp = prospect.whatsappStatus !== 'PHONE_INVALID' && Boolean(prospect.phoneNormalized);
+  const canEmail = Boolean(prospect.email);
+  const [channel, setChannel] = useState<'whatsapp' | 'email'>(canWhatsapp ? 'whatsapp' : 'email');
 
   useEffect(() => {
     if (!templateId && templates?.length) setTemplateId(templates[0].id);
@@ -659,7 +695,14 @@ function ContactModal({
   useEffect(() => {
     if (!templateId) return;
     let cancelled = false;
-    renderMessage(prospect.id, templateId)
+    const load =
+      channel === 'email'
+        ? renderEmail(prospect.id, templateId).then((r) => {
+            setSubject(r.subject);
+            return r;
+          })
+        : renderMessage(prospect.id, templateId);
+    load
       .then((r) => {
         if (cancelled) return;
         setPreview(r.body);
@@ -669,24 +712,62 @@ function ContactModal({
     return () => {
       cancelled = true;
     };
-  }, [templateId, prospect.id]);
+  }, [templateId, prospect.id, channel]);
 
   const unconfirmed = prospect.whatsappStatus === 'PHONE_VALID_WHATSAPP_UNCONFIRMED';
 
   function open() {
-    const digits = (prospect.phoneNormalized ?? '').replace(/[^\d]/g, '');
-    if (!digits) return;
-    // L'envoi n'est JAMAIS automatique : on ouvre WhatsApp avec le texte
-    // prérempli, le fondateur relit et appuie lui-même sur Envoyer.
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(preview)}`, '_blank', 'noopener');
-    void markContacted(prospect.id, templateName).then(onSent).catch(() => undefined);
+    // L'envoi n'est JAMAIS automatique, quel que soit le canal : on ouvre
+    // l'application avec le texte prérempli, le fondateur relit et envoie.
+    if (channel === 'email') {
+      if (!prospect.email) return;
+      const href = `mailto:${prospect.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(preview)}`;
+      window.open(href, '_blank', 'noopener');
+    } else {
+      const digits = (prospect.phoneNormalized ?? '').replace(/[^\d]/g, '');
+      if (!digits) return;
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(preview)}`, '_blank', 'noopener');
+    }
+    const label = channel === 'email' ? `${templateName} (e-mail)` : templateName;
+    void markContacted(prospect.id, label).then(onSent).catch(() => undefined);
     onClose();
   }
 
   return (
     <Modal open onClose={onClose} title={`Contacter ${prospect.establishmentName}`} size="lg">
       <div className="space-y-4">
-        {unconfirmed && (
+        {/* Choix du canal : seuls ceux réellement disponibles sont proposés. */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setChannel('whatsapp')}
+            disabled={!canWhatsapp}
+            className={clsx(
+              'flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition',
+              channel === 'whatsapp'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'text-content-muted hover:text-content',
+              !canWhatsapp && 'cursor-not-allowed opacity-40',
+            )}
+          >
+            <MessageSquare className="h-4 w-4" /> WhatsApp
+          </button>
+          <button
+            onClick={() => setChannel('email')}
+            disabled={!canEmail}
+            title={canEmail ? undefined : "Ce prospect n'a pas d'adresse e-mail"}
+            className={clsx(
+              'flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition',
+              channel === 'email'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'text-content-muted hover:text-content',
+              !canEmail && 'cursor-not-allowed opacity-40',
+            )}
+          >
+            <Mail className="h-4 w-4" /> E-mail
+          </button>
+        </div>
+
+        {unconfirmed && channel === 'whatsapp' && (
           <div className="flex items-start gap-2 rounded-xl bg-[color:var(--warning)]/10 p-3 text-sm text-content">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <span>
@@ -705,6 +786,12 @@ function ContactModal({
           </select>
         </Field>
 
+        {channel === 'email' && (
+          <Field label='Objet'>
+            <input className='input' value={subject} onChange={(e) => setSubject(e.target.value)} />
+          </Field>
+        )}
+
         <Field label="Aperçu (modifiable)">
           <textarea
             className="input min-h-[220px] font-mono text-xs"
@@ -716,11 +803,14 @@ function ContactModal({
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex items-center justify-between gap-2 border-t pt-3">
-          <span className="font-mono text-xs text-content-muted">{prospect.phoneNormalized}</span>
+          <span className='truncate font-mono text-xs text-content-muted'>
+            {channel === 'email' ? prospect.email : prospect.phoneNormalized}
+          </span>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Annuler</Button>
             <Button disabled={!preview.trim()} onClick={open}>
-              <MessageSquare className="h-4 w-4" /> Ouvrir WhatsApp
+              {channel === 'email' ? <Mail className='h-4 w-4' /> : <MessageSquare className='h-4 w-4' />}
+              {channel === 'email' ? 'Ouvrir le courrier' : 'Ouvrir WhatsApp'}
             </Button>
           </div>
         </div>
