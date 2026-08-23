@@ -1305,3 +1305,139 @@ model DemoVideoProgress {
   @@unique([userId, videoKey])
   @@index([tenantId])
 }
+
+/**
+ * ---------------- CRM PROSPECTION (console fondateur) ----------------
+ */
+
+enum ProspectStatus {
+  NEW
+  CONTACTED
+  REPLIED
+  DEMO_SCHEDULED
+  DEMO_COMPLETED
+  TRIAL
+  CUSTOMER
+  LOST
+}
+
+enum ProspectSegment {
+  DISCOVERY
+  STANDARD
+  PREMIUM
+}
+
+enum ProspectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  HOT
+}
+
+enum ProspectSource {
+  IMPORT_EXCEL
+  FACEBOOK_ADS
+  WHATSAPP
+  LANDING_PAGE
+  DEMO
+  REFERRAL
+  MANUAL
+}
+
+/// Joignabilité WhatsApp. Meta n'expose aucun moyen officiel de savoir si un
+/// numéro possède WhatsApp sans lui écrire : le statut VERIFIED n'est donc
+/// JAMAIS déduit du format, il vient d'une preuve réelle (le prospect a
+/// répondu) ou d'un marquage manuel du fondateur.
+enum WhatsappStatus {
+  WHATSAPP_VERIFIED
+  PHONE_VALID_WHATSAPP_UNCONFIRMED
+  PHONE_INVALID
+  VERIFICATION_FAILED
+}
+
+/// Prospect commercial (opticien démarché). Données strictement privées au
+/// fondateur : aucune relation avec Tenant, aucun accès client possible.
+model Prospect {
+  id                String  @id @default(uuid())
+  firstName         String?
+  lastName          String?
+  establishmentName String
+  /// Numéro tel que saisi/importé (conservé pour affichage et contrôle).
+  phone             String?
+  /// Numéro normalisé E.164 — clé de déduplication.
+  phoneNormalized   String? @unique
+  phoneCountry      String?
+  email             String?
+  country           String?
+  city              String?
+  address           String?
+  website           String?
+
+  segment       ProspectSegment  @default(STANDARD)
+  leadScore     Int              @default(0)
+  /// Score forcé par le fondateur : quand il est posé, le calcul auto ne l'écrase plus.
+  scoreOverride Int?
+  priority      ProspectPriority @default(MEDIUM)
+  status        ProspectStatus   @default(NEW)
+  source        ProspectSource   @default(IMPORT_EXCEL)
+
+  lastContactAt   DateTime?
+  nextFollowUpAt  DateTime?
+  demoDate        DateTime?
+  demoCompletedAt DateTime?
+  trialStartDate  DateTime?
+  trialEndDate    DateTime?
+  convertedAt     DateTime?
+  notes           String?
+
+  whatsappStatus            WhatsappStatus @default(PHONE_VALID_WHATSAPP_UNCONFIRMED)
+  whatsappVerifiedAt        DateTime?
+  whatsappVerificationError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events ProspectEvent[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([country, city])
+  @@index([nextFollowUpAt])
+}
+
+/// Historique horodaté d'un prospect (timeline de la fiche).
+model ProspectEvent {
+  id          String   @id @default(uuid())
+  prospectId  String
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  /// IMPORTED | STATUS_CHANGED | CONTACTED | NOTE | FOLLOW_UP | WHATSAPP_MARKED
+  type        String
+  label       String
+  metadata    Json?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([prospectId, createdAt])
+}
+
+/// Modèle de message WhatsApp réutilisable (variables {{first_name}}...).
+model ProspectMessageTemplate {
+  id        String   @id @default(uuid())
+  /// Clé stable des modèles livrés par défaut (FIRST_CONTACT, FOLLOW_UP_2...).
+  key       String   @unique
+  name      String
+  body      String
+  isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Réglages CRM (ligne unique) : URLs de conversion jamais codées en dur.
+model CrmSettings {
+  id             String   @id @default("default")
+  demoVideosUrl  String?
+  signupUrl      String?
+  demoBookingUrl String?
+  updatedAt      DateTime @updatedAt
+}

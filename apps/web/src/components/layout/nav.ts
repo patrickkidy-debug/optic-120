@@ -20,6 +20,7 @@ import {
   ScrollText,
   Crown,
   PlayCircle,
+  Target,
   Server,
   LifeBuoy,
   Glasses,
@@ -111,6 +112,7 @@ export const NAV: NavGroup[] = [
     titleKey: 'nav.operator',
     items: [
       { to: '/plateforme', labelKey: 'nav.platform', icon: Server, operatorOnly: true },
+      { to: '/plateforme/crm', labelKey: 'nav.crm', icon: Target, operatorOnly: true },
     ],
   },
 ];
