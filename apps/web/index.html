@@ -28,9 +28,17 @@
       content="Caisse, stocks, patients, paiements Mobile Money et rapports — réunis dans une seule plateforme moderne. À partir de 7 500 FCFA/mois."
     />
     <meta property="og:url" content="https://oculosaas.com/" />
-    <meta property="og:image" content="https://oculosaas.com/og-image.png" />
+    <!-- Nouveau nom de fichier a chaque changement d'image : WhatsApp et Facebook
+         gardent l'ancienne en cache plusieurs jours par URL. Ecraser og-image.png
+         laisserait les prospects voir la precedente. -->
+    <meta property="og:image" content="https://oculosaas.com/og-image-v2.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Interface OculoSaaS : catalogue de montures avec marques, prix en FCFA et etat du stock"
+    />
     <meta property="og:locale" content="fr_FR" />
 
     <!-- Twitter -->
@@ -40,7 +48,7 @@
       name="twitter:description"
       content="Le logiciel tout-en-un pour optiques et cliniques : caisse, stocks, patients, Mobile Money. À partir de 7 500 FCFA/mois."
     />
-    <meta name="twitter:image" content="https://oculosaas.com/og-image.png" />
+    <meta name="twitter:image" content="https://oculosaas.com/og-image-v2.jpg" />
 
     <!-- Données structurées -->
     <script type="application/ld+json">
@@ -51,6 +59,7 @@
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "url": "https://oculosaas.com/",
+        "image": "https://oculosaas.com/og-image-v2.jpg",
         "description": "Logiciel tout-en-un de gestion pour optiques et cliniques ophtalmologiques : caisse, stocks, patients, paiements Mobile Money et rapports.",
         "offers": {
           "@type": "Offer",
