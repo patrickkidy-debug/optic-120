@@ -64,7 +64,36 @@ export async function buildApp() {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: corsOrigins, credentials: true });
   await app.register(cookie);
-  await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  /**
+   * Quota compté par UTILISATEUR, pas par adresse IP. Toute une boutique
+   * partage la même IP publique : à 300/min par IP, dix employés se
+   * bloquaient mutuellement en usage tout à fait normal (mesuré : 61 requêtes
+   * refusées sur 360 pour 10 postes). L'identité vient du `sub` du jeton — il
+   * ne sert qu'à compter, jamais à autoriser (l'authentification réelle reste
+   * faite par requireAuth), donc le lire sans vérifier la signature est sans
+   * risque : un jeton falsifié ne donnerait qu'un compteur séparé, et sera de
+   * toute façon rejeté ensuite.
+   *
+   * Les appels sans jeton (connexion, inscription, webhooks) restent comptés
+   * par IP : c'est justement là que la protection anti-force-brute compte.
+   */
+  await app.register(rateLimit, {
+    max: Number(process.env.RATE_LIMIT_MAX ?? 300),
+    timeWindow: '1 minute',
+    keyGenerator: (req) => {
+      const header = req.headers.authorization;
+      if (header?.startsWith('Bearer ')) {
+        try {
+          const payload = header.slice(7).split('.')[1];
+          const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string };
+          if (claims.sub) return `user:${claims.sub}`;
+        } catch {
+          /* jeton illisible : on retombe sur l'IP */
+        }
+      }
+      return `ip:${req.ip}`;
+    },
+  });
   // Import Excel/CSV de produits : fichier tableur, distinct de bodyLimit (JSON).
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
