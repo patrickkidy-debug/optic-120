@@ -895,6 +895,76 @@ function NewProspectModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
 /* -------------------------------- Import -------------------------------- */
 
+/**
+ * Diagnostic quand rien n'est importable. On distingue le fichier illisible
+ * (aucun nom d'établissement extrait = en-tête non trouvé) du fichier bien lu
+ * dont les numéros sont refusés : dans le second cas la structure est bonne et
+ * répéter « vérifiez vos colonnes » ferait perdre du temps.
+ */
+function ImportDiagnosis({ rows }: { rows: ImportRow[] }) {
+  const bad = rows.filter((r) => r.outcome === 'invalid');
+  const headerFailed = rows.every((r) => !r.establishmentName.trim());
+
+  // Motif dominant : une raison qui revient sur 80 lignes sur 100 est LA cause.
+  const tally = new Map<string, number>();
+  for (const r of bad) {
+    const reason = r.reason ?? 'Numéro invalide';
+    tally.set(reason, (tally.get(reason) ?? 0) + 1);
+  }
+  const ranked = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+  const [topReason, topCount] = ranked[0] ?? ['', 0];
+  const unknownDial = topReason.startsWith('Indicatif non reconnu');
+
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 p-4 text-sm">
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+      <div className="text-content">
+        {headerFailed ? (
+          <>
+            <p className="font-semibold">Aucune colonne reconnue dans ce fichier</p>
+            <p className="mt-1 text-content-muted">
+              Vérifiez que la feuille contient bien une ligne d&apos;en-tête avec au minimum une colonne
+              <b> Établissement</b> (ou Nom, Entreprise, Magasin) et une colonne <b>Téléphone</b>. Un titre
+              ou des lignes vides au-dessus du tableau sont détectés automatiquement, mais un tableau sans
+              en-tête ne peut pas être interprété.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold">
+              Le fichier est bien lu, mais aucun numéro n&apos;est exploitable
+            </p>
+            <p className="mt-1 text-content-muted">
+              Les noms et les villes ont été reconnus : la structure du fichier est bonne. Le blocage
+              vient des numéros de téléphone.
+            </p>
+            {unknownDial && (
+              <p className="mt-2 text-content-muted">
+                L&apos;indicatif de ces numéros n&apos;est pas encore couvert par OculoSaaS. Écrivez-moi
+                le pays concerné pour qu&apos;il soit ajouté.
+              </p>
+            )}
+            <ul className="mt-2 space-y-1 text-content-muted">
+              {ranked.slice(0, 3).map(([reason, count]) => (
+                <li key={reason}>
+                  <b>{count}</b> ligne{count > 1 ? 's' : ''} — {reason}
+                </li>
+              ))}
+            </ul>
+            {topCount === bad.length && ranked.length === 1 && (
+              <p className="mt-2 text-content-muted">
+                Toutes les lignes échouent pour la même raison : une seule correction dans le fichier
+                devrait suffire.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function ImportTab() {
   const qc = useQueryClient();
   const [rows, setRows] = useState<ImportRow[] | null>(null);
@@ -983,23 +1053,11 @@ function ImportTab() {
         <Badge tone="danger">{counts.bad} invalides</Badge>
       </div>
 
-      {/* Toutes les lignes rejetées : c'est presque toujours la structure du
-          fichier, pas son contenu. On explique quoi vérifier plutôt que de
-          laisser un tableau rouge sans issue. */}
-      {counts.neu === 0 && counts.bad > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 p-4 text-sm">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-          <div className="text-content">
-            <p className="font-semibold">Aucune colonne reconnue dans ce fichier</p>
-            <p className="mt-1 text-content-muted">
-              Vérifiez que la feuille contient bien une ligne d&apos;en-tête avec au minimum une colonne
-              <b> Établissement</b> (ou Nom, Entreprise, Magasin) et une colonne <b>Téléphone</b>. Un titre
-              ou des lignes vides au-dessus du tableau sont détectés automatiquement, mais un tableau sans
-              en-tête ne peut pas être interprété.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Toutes les lignes rejetées : le diagnostic dépend de CE qui a échoué.
+          En-tête introuvable et numéros refusés demandent deux corrections
+          opposées — un message unique enverrait la moitié des cas sur une
+          fausse piste. */}
+      {counts.neu === 0 && counts.bad > 0 && <ImportDiagnosis rows={rows} />}
 
       <div className="card max-h-[420px] overflow-auto">
         <table className="w-full text-sm">

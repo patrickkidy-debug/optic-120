@@ -10,12 +10,13 @@ import {
 import { prisma } from '../../lib/prisma.js';
 import { notFound } from '../../lib/http-error.js';
 import { appOrigin } from '../../config/env.js';
-import { SUPPORTED_COUNTRIES } from '@oculo/shared-types';
 import {
   normalizePhone,
   whatsappStatusFromPhone,
   computeLeadScore,
   fillTemplate,
+  stripAccents,
+  allDialCodes,
 } from './prospect.utils.js';
 
 /* ----------------------------- Import fichier ----------------------------- */
@@ -67,14 +68,6 @@ const ORDER: Field[] = [
   'establishmentName',
 ];
 
-function stripAccents(s: string): string {
-  let out = '';
-  for (const ch of s.normalize('NFD')) {
-    const c = ch.codePointAt(0) ?? 0;
-    if (c < 0x0300 || c > 0x036f) out += ch;
-  }
-  return out;
-}
 const norm = (s: string) => stripAccents(s).toLowerCase().trim();
 
 function detectColumns(sample: Record<string, unknown>): Partial<Record<Field, string>> {
@@ -213,7 +206,9 @@ export async function previewImport(buffer: Buffer): Promise<ImportPreviewRow[]>
 
   return parsed.map((p): ImportPreviewRow => {
     if (!p.establishmentName) return { ...p, outcome: 'invalid', reason: "Nom d'établissement manquant" };
-    if (!p.phoneNormalized) return { ...p, outcome: 'invalid', reason: 'Numéro invalide ou pays inconnu' };
+    if (!p.phoneNormalized) {
+      return { ...p, outcome: 'invalid', reason: phoneRejectReason(p.phone, p.country) };
+    }
     if (known.has(p.phoneNormalized)) return { ...p, outcome: 'duplicate', reason: 'Déjà dans le CRM' };
     const owner = seen.get(p.phoneNormalized);
     if (owner) {
@@ -222,6 +217,41 @@ export async function previewImport(buffer: Buffer): Promise<ImportPreviewRow[]>
     seen.set(p.phoneNormalized, p.establishmentName);
     return { ...p, outcome: 'new' };
   });
+}
+
+/**
+ * Explique PRÉCISÉMENT pourquoi un numéro est rejeté. Un « invalide » sec
+ * n'apprend rien : selon le cas il faut ajouter une colonne Pays, corriger une
+ * saisie, ou l'indicatif n'est tout simplement pas encore couvert — trois
+ * corrections très différentes.
+ */
+function phoneRejectReason(raw: string, country: string): string {
+  const cleaned = String(raw ?? '').replace(/[^\d+]/g, '');
+  if (!cleaned) return 'Numéro absent';
+
+  let digits = cleaned.startsWith('00') ? `+${cleaned.slice(2)}` : cleaned;
+  if (digits.includes('+')) digits = `+${digits.replace(/\+/g, '')}`;
+
+  if (digits.startsWith('+')) {
+    const match = allDialCodes().find((c) => digits.startsWith(c.dial));
+    if (!match) {
+      const guess = digits.slice(0, 5);
+      return `Indicatif non reconnu (${guess}…)`;
+    }
+    const rest = digits.slice(match.dial.length);
+    if (rest.length < 6) return `Numéro trop court après ${match.dial}`;
+    return `Numéro de remplissage (${match.dial} ${rest})`;
+  }
+
+  if (!country.trim()) {
+    return 'Pas d’indicatif et aucune colonne « Pays » : impossible de savoir de quel pays';
+  }
+  const known = allDialCodes().some(
+    (c) => c.code.toLowerCase() === country.trim().toLowerCase() ||
+           stripAccents(c.name).toLowerCase() === stripAccents(country.trim().toLowerCase()),
+  );
+  if (!known) return `Pays « ${country} » non reconnu`;
+  return 'Numéro trop court';
 }
 
 /** Crée les prospects retenus. Les doublons sont ignorés (skipDuplicates). */
@@ -802,7 +832,7 @@ export async function listProspectCountries() {
   return rows
     .filter((r) => r.phoneCountry)
     .map((r) => {
-      const meta = SUPPORTED_COUNTRIES.find((c) => c.code === r.phoneCountry);
+      const meta = allDialCodes().find((c) => c.code === r.phoneCountry);
       return {
         code: r.phoneCountry as string,
         name: meta?.name ?? r.phoneCountry,
