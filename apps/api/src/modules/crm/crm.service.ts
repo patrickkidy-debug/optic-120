@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { notFound } from '../../lib/http-error.js';
+import { appOrigin } from '../../config/env.js';
 import {
   normalizePhone,
   whatsappStatusFromPhone,
@@ -714,17 +715,35 @@ export async function deleteTemplate(id: string) {
 
 const SETTINGS_ID = 'default';
 
+/** Numéro WhatsApp de l'équipe pour les démonstrations personnalisées. */
+const DEMO_WHATSAPP_NUMBER = '2385936598';
+
+/**
+ * Valeurs de départ des liens de conversion, déduites du domaine réel de
+ * l'application : le fondateur peut prospecter sans avoir rien à configurer,
+ * tout en gardant la possibilité de les remplacer dans Paramètres.
+ */
+function defaultSettings() {
+  const base = appOrigin.replace(/\/$/, '');
+  return {
+    demoVideosUrl: `${base}/demo/videos`,
+    signupUrl: `${base}/signup`,
+    demoBookingUrl: `https://wa.me/${DEMO_WHATSAPP_NUMBER}`,
+  };
+}
+
 export async function getCrmSettings() {
   const row = await prisma.crmSettings.findUnique({ where: { id: SETTINGS_ID } });
-  return (
-    row ?? {
-      id: SETTINGS_ID,
-      demoVideosUrl: null,
-      signupUrl: null,
-      demoBookingUrl: null,
-      updatedAt: new Date(),
-    }
-  );
+  const fallback = defaultSettings();
+  // Un champ laissé vide retombe sur la valeur par défaut : un message ne part
+  // jamais avec un lien manquant.
+  return {
+    id: SETTINGS_ID,
+    demoVideosUrl: row?.demoVideosUrl || fallback.demoVideosUrl,
+    signupUrl: row?.signupUrl || fallback.signupUrl,
+    demoBookingUrl: row?.demoBookingUrl || fallback.demoBookingUrl,
+    updatedAt: row?.updatedAt ?? new Date(),
+  };
 }
 
 export async function updateCrmSettings(input: {

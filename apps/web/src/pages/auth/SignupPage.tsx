@@ -32,7 +32,10 @@ export function SignupPage() {
   // mène au dashboard, pas directement au paiement — voir 2h d'essai gratuit ci-dessous).
   const rawCycle = params.get('cycle');
   if (rawCycle === 'QUARTERLY' || rawCycle === 'SEMIANNUAL') sessionStorage.setItem('oculo-cycle', rawCycle);
-  const redirectTo = '/dashboard';
+  // Un prospect arrive souvent par un lien de prospection (vidéos de démo) :
+  // apres inscription on le renvoie sur la page demandee, pas sur le dashboard.
+  const nextParam = params.get('next');
+  const redirectTo = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');

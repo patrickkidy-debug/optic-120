@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   HelpCircle,
   Flame,
-  X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -69,16 +68,6 @@ const STATUS_ORDER: ProspectStatus[] = [
 ];
 const SEGMENTS = ['DISCOVERY', 'STANDARD', 'PREMIUM'] as const;
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'HOT'] as const;
-const SOURCES = [
-  'IMPORT_EXCEL',
-  'FACEBOOK_ADS',
-  'WHATSAPP',
-  'LANDING_PAGE',
-  'DEMO',
-  'REFERRAL',
-  'MANUAL',
-] as const;
-
 const WA_LABELS: Record<WhatsappStatus, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
   WHATSAPP_VERIFIED: { label: 'WhatsApp vérifié', tone: 'success' },
   PHONE_VALID_WHATSAPP_UNCONFIRMED: { label: 'WhatsApp non confirmé', tone: 'warning' },
@@ -99,7 +88,7 @@ function scoreBandLabel(score: number): string {
   return 'LOW';
 }
 
-type CrmTab = 'overview' | 'prospects' | 'import' | 'messages' | 'settings';
+type CrmTab = 'overview' | 'prospects' | 'pipeline' | 'import' | 'messages' | 'settings';
 
 export function CrmPage() {
   const [tab, setTab] = useState<CrmTab>('overview');
@@ -115,6 +104,7 @@ export function CrmPage() {
         {[
           { id: 'overview' as CrmTab, label: "Vue d'ensemble", icon: BarChart3 },
           { id: 'prospects' as CrmTab, label: 'Prospects', icon: Users },
+          { id: 'pipeline' as CrmTab, label: 'Pipeline', icon: Flame },
           { id: 'import' as CrmTab, label: 'Import', icon: Upload },
           { id: 'messages' as CrmTab, label: 'Messages', icon: MessageSquare },
           { id: 'settings' as CrmTab, label: 'Paramètres', icon: SettingsIcon },
@@ -136,6 +126,7 @@ export function CrmPage() {
 
       {tab === 'overview' && <OverviewTab onGoToDue={() => setTab('prospects')} />}
       {tab === 'prospects' && <ProspectsTab />}
+      {tab === 'pipeline' && <PipelineTab />}
       {tab === 'import' && <ImportTab />}
       {tab === 'messages' && <MessagesTab />}
       {tab === 'settings' && <SettingsTab />}
@@ -1168,3 +1159,184 @@ function SettingsTab() {
 }
 
 export default CrmPage;
+
+/* -------------------------------- Pipeline -------------------------------- */
+
+const COLUMN_TONE: Record<ProspectStatus, string> = {
+  NEW: 'border-t-content-faint',
+  CONTACTED: 'border-t-primary/60',
+  REPLIED: 'border-t-cyan/60',
+  DEMO_SCHEDULED: 'border-t-accent/60',
+  DEMO_COMPLETED: 'border-t-accent',
+  TRIAL: 'border-t-[color:var(--warning)]',
+  CUSTOMER: 'border-t-[color:var(--success)]',
+  LOST: 'border-t-[color:var(--danger)]',
+};
+
+/**
+ * Pipeline Kanban. Glisser-déposer HTML5 natif, même mécanique que le tableau
+ * des commandes de verres — aucune librairie supplémentaire à charger.
+ *
+ * Le tableau charge jusqu'à 400 prospects : au-delà, un Kanban devient de
+ * toute façon illisible et l'onglet Prospects (filtré, paginé) est l'outil
+ * adapté. Un compteur signale les prospects non affichés.
+ */
+function PipelineTab() {
+  const qc = useQueryClient();
+  const [dragOver, setDragOver] = useState<ProspectStatus | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [contactFor, setContactFor] = useState<Prospect | null>(null);
+  const [error, setError] = useState('');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['crm-pipeline'],
+    queryFn: () => listProspects({ pageSize: 400 }),
+  });
+
+  const byColumn = useMemo(() => {
+    const m = new Map<ProspectStatus, Prospect[]>();
+    STATUS_ORDER.forEach((s) => m.set(s, []));
+    (data?.items ?? []).forEach((p) => m.get(p.status)?.push(p));
+    return m;
+  }, [data]);
+
+  async function move(id: string, status: ProspectStatus) {
+    setError('');
+    try {
+      await updateProspect(id, { status });
+      await qc.invalidateQueries({ queryKey: ['crm-pipeline'] });
+      void qc.invalidateQueries({ queryKey: ['crm-stats'] });
+      void qc.invalidateQueries({ queryKey: ['crm-prospects'] });
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    }
+  }
+
+  if (isLoading) return <PageLoader />;
+  if (!data || data.items.length === 0) {
+    return (
+      <EmptyState
+        icon={Flame}
+        title="Pipeline vide"
+        hint="Importez des prospects pour les suivre étape par étape."
+      />
+    );
+  }
+
+  const hidden = data.total - data.items.length;
+
+  return (
+    <div className="space-y-3">
+      {error && <p className="text-sm text-danger">{error}</p>}
+      {hidden > 0 && (
+        <p className="text-xs text-content-muted">
+          {data.items.length} prospects affichés sur {data.total}. Utilisez l&apos;onglet Prospects et ses
+          filtres pour travailler sur le reste.
+        </p>
+      )}
+
+      <div className="flex gap-3 overflow-x-auto pb-3">
+        {STATUS_ORDER.map((status) => {
+          const items = byColumn.get(status) ?? [];
+          return (
+            <div
+              key={status}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(status);
+              }}
+              onDragLeave={() => setDragOver((s) => (s === status ? null : s))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(null);
+                const id = e.dataTransfer.getData('text/plain');
+                if (id) void move(id, status);
+              }}
+              className={clsx(
+                'flex w-64 shrink-0 flex-col rounded-2xl border-t-4 bg-surface-2/40',
+                COLUMN_TONE[status],
+                dragOver === status && 'ring-2 ring-primary/40',
+              )}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-content">
+                  {STATUS_LABELS[status]}
+                </h3>
+                <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-semibold text-content-muted">
+                  {items.length}
+                </span>
+              </div>
+
+              <div className="flex max-h-[65vh] flex-col gap-2 overflow-y-auto px-2 pb-3">
+                {items.length === 0 ? (
+                  <p className="px-2 py-4 text-center text-xs text-content-faint">Aucun prospect</p>
+                ) : (
+                  items.map((p) => (
+                    <div
+                      key={p.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', p.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onClick={() => setOpenId(p.id)}
+                      className="card cursor-grab space-y-1.5 p-2.5 text-left transition hover:border-primary active:cursor-grabbing"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-content">
+                          {p.establishmentName}
+                        </span>
+                        <Badge tone={scoreTone(p.leadScore)}>{p.leadScore}</Badge>
+                      </div>
+                      <p className="truncate text-xs text-content-faint">
+                        {[p.city, p.country].filter(Boolean).join(', ') || '—'}
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[11px] text-content-muted">
+                          {p.phoneNormalized ?? '—'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setContactFor(p);
+                          }}
+                          disabled={p.whatsappStatus === 'PHONE_INVALID'}
+                          title={p.whatsappStatus === 'PHONE_INVALID' ? 'Numéro invalide' : 'Contacter'}
+                          className="rounded-lg p-1 text-primary transition hover:bg-primary/10 disabled:opacity-30"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {openId && (
+        <ProspectDrawer
+          id={openId}
+          onClose={() => setOpenId(null)}
+          onChanged={() => {
+            void qc.invalidateQueries({ queryKey: ['crm-pipeline'] });
+            void qc.invalidateQueries({ queryKey: ['crm-stats'] });
+          }}
+          onContact={(p) => setContactFor(p)}
+        />
+      )}
+      {contactFor && (
+        <ContactModal
+          prospect={contactFor}
+          onClose={() => setContactFor(null)}
+          onSent={() => {
+            void qc.invalidateQueries({ queryKey: ['crm-pipeline'] });
+            void qc.invalidateQueries({ queryKey: ['crm-stats'] });
+          }}
+        />
+      )}
+    </div>
+  );
+}

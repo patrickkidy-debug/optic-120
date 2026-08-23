@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { warmUpApi } from '../../lib/warmup';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loginSchema, type LoginInput, type EstablishmentChoice } from '@oculo/shared-types';
 import { login, loginTwoFactor, loginSelectTenant } from '../../features/auth/api';
@@ -16,6 +16,10 @@ import { WhatsappField } from '../../components/WhatsappField';
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Retour sur la page demandee (lien de prospection) plutot que le dashboard.
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get('next');
+  const redirectTo = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
   const [serverError, setServerError] = useState('');
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -66,7 +70,7 @@ export function LoginPage() {
         setChallenge(res.challenge);
         return;
       }
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Connexion impossible'));
     }
@@ -82,7 +86,7 @@ export function LoginPage() {
         setChallenge(res.challenge);
         return;
       }
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (e) {
       setServerError(apiErrorMessage(e, 'Connexion impossible'));
     } finally {
@@ -97,7 +101,7 @@ export function LoginPage() {
     setVerifying(true);
     try {
       await loginTwoFactor(challenge, code.trim());
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err) {
       setServerError(apiErrorMessage(err, 'Code invalide'));
     } finally {

@@ -13,6 +13,14 @@ import { BrandSplash } from './BrandSplash';
  */
 const ALLOWED_WHILE_SUSPENDED = ['/demo/videos'];
 
+/**
+ * Écrans qu'un PROSPECT peut atteindre directement (lien WhatsApp de
+ * prospection). Sans compte, on l'envoie s'inscrire plutôt que se connecter :
+ * il n'en a pas encore, et créer le compte est justement l'objectif. Il
+ * revient sur la page demandée juste après.
+ */
+const PROSPECT_ENTRY_POINTS = ['/demo/videos'];
+
 export function RequireAuth() {
   const status = useAuthStore((s) => s.status);
   const locked = useAuthStore((s) => s.locked);
@@ -22,7 +30,10 @@ export function RequireAuth() {
   // Vérification de session en cours : seules les routes protégées patientent
   // (les pages publiques, elles, s'affichent immédiatement — voir main.tsx).
   if (status === 'loading') return <BrandSplash />;
-  if (status === 'unauthenticated') return <Navigate to="/login" replace />;
+  if (status === 'unauthenticated') {
+    const target = PROSPECT_ENTRY_POINTS.includes(pathname) ? '/signup' : '/login';
+    return <Navigate to={`${target}?next=${encodeURIComponent(pathname)}`} replace />;
+  }
   if (locked) return <LockScreen />;
   if (suspended && !ALLOWED_WHILE_SUSPENDED.includes(pathname)) return <SuspensionGate />;
   return <Outlet />;
