@@ -33,6 +33,19 @@ export interface WebhookResult {
 }
 
 /**
+ * Contexte brut d'un webhook. Nécessaire aux passerelles qui signent le corps
+ * en HMAC (GeniusPay) : la signature porte sur les octets exacts reçus, et
+ * ré-encoder l'objet parsé la ferait échouer dès qu'un caractère s'encode
+ * différemment d'un langage à l'autre.
+ */
+export interface WebhookContext {
+  /** Corps de la requête tel quel, avant parsing JSON. */
+  rawBody?: string;
+  /** En-têtes en minuscules, tels que Fastify les expose. */
+  headers?: Record<string, string | string[] | undefined>;
+}
+
+/**
  * Contrat d'abstraction des fournisseurs de paiement. Permet de brancher
  * indifféremment la simulation (dev / pas de clés) ou Moneroo réel sans
  * toucher au flux de vente.
@@ -41,5 +54,14 @@ export interface PaymentProvider {
   readonly name: string;
   initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentResult>;
   verifyPayment(providerRef: string): Promise<VerifyResult>;
-  handleWebhook(payload: unknown, signature?: string): Promise<WebhookResult>;
+  /**
+   * `context` n'est fourni que par les routes qui capturent le corps brut ; les
+   * passerelles qui n'en ont pas besoin (PayTech, Moneroo) l'ignorent, une
+   * implémentation avec moins de paramètres reste compatible.
+   */
+  handleWebhook(
+    payload: unknown,
+    signature?: string,
+    context?: WebhookContext,
+  ): Promise<WebhookResult>;
 }

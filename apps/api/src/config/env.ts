@@ -77,6 +77,14 @@ const envSchema = z.object({
   PAYTECH_API_SECRET: z.string().optional().default(''),
   PAYTECH_ENV: z.enum(['test', 'prod']).default('prod'),
   PAYTECH_BASE_URL: z.string().default('https://paytech.sn/api'),
+  // GeniusPay — orchestrateur multi-passerelles, 23 pays africains. Le préfixe
+  // des clés (pk_sandbox_ / pk_live_) détermine seul l'environnement : il n'y a
+  // pas de variable ENV séparée côté GeniusPay.
+  GENIUSPAY_API_KEY: z.string().optional().default(''),
+  GENIUSPAY_API_SECRET: z.string().optional().default(''),
+  /** Secret `whsec_…` du webhook — distinct des clés d'API. */
+  GENIUSPAY_WEBHOOK_SECRET: z.string().optional().default(''),
+  GENIUSPAY_BASE_URL: z.string().default('https://geniuspay.ci/api/v1/merchant'),
   // URL publique de l'API (pour les IPN PayTech). Ex : https://oculosaas-api.onrender.com
   PUBLIC_API_URL: z.string().optional().default(''),
 

@@ -213,8 +213,59 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
-/** Webhook public PayTech (IPN) pour les paiements d'abonnement (/webhooks). */
+/** Webhooks publics des paiements d'abonnement (prefixe /webhooks). */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
+  /**
+   * GeniusPay signe le corps brut en HMAC : il faut donc les octets exacts
+   * recus, avant tout parsing. Ce parser est declare DANS ce plugin, donc
+   * encapsule par Fastify : le reste de l'API garde le parser JSON standard et
+   * ne paie pas le cout de conserver une copie du corps a chaque requete.
+   */
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (req, body, done) => {
+      (req as FastifyRequest & { rawBody?: string }).rawBody = body as string;
+      try {
+        done(null, body ? JSON.parse(body as string) : {});
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    },
+  );
+
+  app.post('/geniuspay-subscription', async (req, reply) => {
+    const signature = req.headers['x-webhook-signature'];
+    const event = String(req.headers['x-webhook-event'] ?? '');
+
+    // Ping de configuration depuis le tableau de bord GeniusPay : on accuse
+    // reception sans rien crediter, sinon le test echoue cote GeniusPay.
+    if (event === 'webhook.test') return reply.send({ ok: true, test: true });
+
+    const provider = resolvePlatformProvider();
+    // SECURITE : la signature HMAC est verifiee ici. Un webhook non signe, mal
+    // signe ou trop ancien leve une erreur et ne credite rien.
+    const advisory = await provider.handleWebhook(
+      req.body,
+      typeof signature === 'string' ? signature : undefined,
+      {
+        rawBody: (req as FastifyRequest & { rawBody?: string }).rawBody,
+        headers: req.headers as Record<string, string | string[] | undefined>,
+      },
+    );
+
+    const payment = await billing.findPaymentByProviderRef(advisory.providerRef);
+    if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
+
+    // SECURITE (deuxieme barriere) : meme signe, le corps du webhook reste une
+    // donnee entrante. Le statut qui debloque l'abonnement est relu aupres de
+    // GeniusPay avec nos propres cles.
+    const verified = await provider.verifyPayment(advisory.providerRef);
+    await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+
+    return reply.send({ ok: true });
+  });
+
   app.post('/paytech-subscription', async (req, reply) => {
     const body = (req.body ?? {}) as { token?: string; ref_command?: string };
     const providerRef = body.token ?? body.ref_command;
