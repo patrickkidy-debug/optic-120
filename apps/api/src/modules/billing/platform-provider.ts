@@ -28,6 +28,11 @@ export function resolvePlatformProvider(): PaymentProvider {
       webhookSecret: env.GENIUSPAY_WEBHOOK_SECRET || undefined,
       successUrl: `${appOrigin}/parametres/abonnement`,
       errorUrl: `${appOrigin}/parametres/abonnement`,
+      // L'écran d'abonnement n'offre aucun choix de moyen de paiement : il
+      // envoie « WAVE » en dur, valeur héritée de Moneroo qui l'ignorait. On
+      // laisse donc GeniusPay présenter sa page, seule à connaître les
+      // opérateurs réellement disponibles dans le pays du client.
+      forceHostedCheckout: true,
     });
   }
 

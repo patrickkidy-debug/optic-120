@@ -636,7 +636,13 @@ function BillingPaymentModal({
                 S'abonner maintenant
               </Button>
               <div className="mt-3 border-t pt-3">
-                <p className="mb-2 text-center text-xs text-content-faint">Paiement sécurisé via Moneroo</p>
+                {/* Pas de nom de passerelle : elle est choisie côté serveur
+                    selon les clés configurées (GeniusPay, Moneroo, PayTech).
+                    L'écrire en dur affichait « Moneroo » alors que GeniusPay
+                    encaissait déjà. */}
+                <p className="mb-2 text-center text-xs text-content-faint">
+                  Paiement sécurisé — choisissez votre moyen à l&apos;étape suivante
+                </p>
                 <PaymentMethodLogos />
               </div>
             </>

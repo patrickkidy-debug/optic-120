@@ -21,6 +21,16 @@ export interface GeniusPayConfig {
   webhookSecret?: string;
   successUrl?: string;
   errorUrl?: string;
+  /**
+   * Force la page de checkout GeniusPay, où le client choisit lui-même son
+   * opérateur, en n'envoyant jamais `payment_method`.
+   *
+   * Indispensable pour les ABONNEMENTS : l'écran d'abonnement envoie « WAVE »
+   * en dur, hérité de Moneroo qui ignorait cette valeur et affichait sa propre
+   * page. GeniusPay, lui, la respecte — sans ce drapeau, un client marocain
+   * serait envoyé chez Wave, qui n'existe pas dans son pays.
+   */
+  forceHostedCheckout?: boolean;
 }
 
 /**
@@ -116,7 +126,7 @@ export class GeniusPayProvider implements PaymentProvider {
 
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentResult> {
     const url = `${this.config.baseUrl}/payments`;
-    const methodCode = METHOD_CODES[input.method];
+    const methodCode = this.config.forceHostedCheckout ? undefined : METHOD_CODES[input.method];
 
     const body: Record<string, unknown> = {
       amount: Math.round(input.amount),
