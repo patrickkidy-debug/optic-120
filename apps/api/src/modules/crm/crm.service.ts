@@ -8,7 +8,7 @@ import {
   WhatsappStatus,
 } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
-import { notFound } from '../../lib/http-error.js';
+import { notFound, badRequest } from '../../lib/http-error.js';
 import { appOrigin } from '../../config/env.js';
 import {
   normalizePhone,
@@ -322,9 +322,13 @@ export interface ListFilters {
   pageSize?: number;
 }
 
-export async function listProspects(f: ListFilters) {
-  const page = Math.max(1, f.page ?? 1);
-  const pageSize = Math.min(200, Math.max(1, f.pageSize ?? 50));
+/**
+ * Construit le filtre Prisma commun a la liste et a la suppression en masse.
+ * Extrait pour que « supprimer tout ce qui est filtre » porte EXACTEMENT sur
+ * les memes lignes que celles affichees : deux constructions separees finiraient
+ * par diverger, et sur une suppression la divergence coute des donnees.
+ */
+function buildProspectWhere(f: ListFilters): Prisma.ProspectWhereInput {
   const where: Prisma.ProspectWhereInput = {};
 
   if (f.status) where.status = f.status;
@@ -351,6 +355,14 @@ export async function listProspects(f: ListFilters) {
     ];
   }
 
+  return where;
+}
+
+export async function listProspects(f: ListFilters) {
+  const page = Math.max(1, f.page ?? 1);
+  const pageSize = Math.min(200, Math.max(1, f.pageSize ?? 50));
+  const where = buildProspectWhere(f);
+
   const [items, total] = await Promise.all([
     prisma.prospect.findMany({
       where,
@@ -361,6 +373,48 @@ export async function listProspects(f: ListFilters) {
     prisma.prospect.count({ where }),
   ]);
   return { items, total, page, pageSize };
+}
+
+/** Suppression d'une selection explicite. Les evenements suivent en cascade. */
+export async function deleteProspectsByIds(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const res = await prisma.prospect.deleteMany({ where: { id: { in: ids } } });
+  return res.count;
+}
+
+/**
+ * Supprime tous les prospects correspondant au filtre courant — c'est ainsi
+ * qu'on retire « un fichier importe » : filtrer sur son pays, puis supprimer.
+ *
+ * Deux garde-fous, parce qu'une erreur ici est irreversible :
+ *
+ * 1. Un filtre VIDE viderait tout le CRM. On refuse, sauf `confirmAll` explicite.
+ * 2. `expectedCount` doit correspondre au total reel. Si des prospects ont ete
+ *    ajoutes entre l'affichage et la confirmation, on refuse au lieu d'en
+ *    supprimer plus que ce que le fondateur avait sous les yeux.
+ */
+export async function deleteProspectsByFilter(
+  f: ListFilters,
+  expectedCount: number,
+  confirmAll = false,
+): Promise<number> {
+  const where = buildProspectWhere(f);
+
+  if (Object.keys(where).length === 0 && !confirmAll) {
+    throw badRequest(
+      'Aucun filtre actif : cette action viderait tout le CRM. Filtrez d’abord, ou confirmez explicitement.',
+    );
+  }
+
+  const actual = await prisma.prospect.count({ where });
+  if (actual !== expectedCount) {
+    throw badRequest(
+      `La liste a change depuis l’affichage : ${actual} prospect(s) correspondent maintenant au filtre, contre ${expectedCount} attendus. Rafraichissez puis reessayez.`,
+    );
+  }
+
+  const res = await prisma.prospect.deleteMany({ where });
+  return res.count;
 }
 
 export async function getProspect(id: string) {

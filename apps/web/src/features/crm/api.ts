@@ -101,6 +101,21 @@ export async function deleteProspect(id: string) {
   await api.delete(`/crm/prospects/${id}`);
 }
 
+/**
+ * Suppression en masse. Soit `ids` (cases cochées), soit `filters` +
+ * `expectedCount` (tout le filtre courant — c'est ainsi qu'on retire un fichier
+ * importé). Le serveur refuse si le total a bougé depuis l'affichage.
+ */
+export async function bulkDeleteProspects(body: {
+  ids?: string[];
+  filters?: Record<string, string | undefined>;
+  expectedCount?: number;
+  confirmAll?: boolean;
+}) {
+  const { data } = await api.post<{ deleted: number }>('/crm/prospects/bulk-delete', body);
+  return data.deleted;
+}
+
 export async function addProspectNote(id: string, text: string) {
   await api.post(`/crm/prospects/${id}/notes`, { text });
 }

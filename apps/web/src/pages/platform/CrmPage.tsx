@@ -23,6 +23,7 @@ import {
   getProspect,
   updateProspect,
   deleteProspect,
+  bulkDeleteProspects,
   addProspectNote,
   markContacted,
   setWhatsappStatus,
@@ -250,6 +251,8 @@ function ProspectsTab() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [contactFor, setContactFor] = useState<Prospect | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [purging, setPurging] = useState(false);
 
   // Recherche serveur : on attend la fin de la frappe pour ne pas lancer une
   // requête par caractère.
@@ -286,6 +289,105 @@ function ProspectsTab() {
   const { data: countries } = useQuery({ queryKey: ['crm-countries'], queryFn: listProspectCountries });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+
+  // La selection est videe des que le filtre ou la page bouge : conserver des
+  // identifiants coches puis devenus invisibles reviendrait a supprimer des
+  // lignes que le fondateur n'a plus sous les yeux.
+  useEffect(() => setSelected(new Set()), [filters]);
+
+  const pageIds = data?.items.map((p) => p.id) ?? [];
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function togglePage() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allOnPage) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  async function removeSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (!confirm(`Supprimer definitivement ${ids.length} prospect(s) ? Cette action est irreversible.`)) return;
+    setPurging(true);
+    try {
+      const n = await bulkDeleteProspects({ ids });
+      setSelected(new Set());
+      await qc.invalidateQueries({ queryKey: ['crm-prospects'] });
+      await qc.invalidateQueries({ queryKey: ['crm-countries'] });
+      alert(`${n} prospect(s) supprime(s).`);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setPurging(false);
+    }
+  }
+
+  /**
+   * Supprime TOUT ce que le filtre renvoie, pas seulement la page affichee.
+   * C'est ainsi qu'on retire un fichier importe : filtrer sur son pays, puis
+   * vider. On exige de retaper le nombre exact — un simple « OK » sur plusieurs
+   * centaines de lignes irrecuperables ne suffit pas.
+   */
+  async function removeFiltered() {
+    const total = data?.total ?? 0;
+    if (total === 0) return;
+    const label = country
+      ? `du pays selectionne`
+      : `correspondant au filtre courant`;
+    const typed = prompt(
+      `Supprimer les ${total} prospects ${label} ?
+
+` +
+        `Cette action est IRREVERSIBLE et porte sur toutes les pages, pas seulement celle affichee.
+
+` +
+        `Tapez ${total} pour confirmer :`,
+    );
+    if (typed === null) return;
+    if (typed.trim() !== String(total)) {
+      alert('Nombre incorrect : rien n’a ete supprime.');
+      return;
+    }
+    setPurging(true);
+    try {
+      const n = await bulkDeleteProspects({
+        filters: {
+          search: debounced || undefined,
+          status: status || undefined,
+          segment: segment || undefined,
+          priority: priority || undefined,
+          whatsappStatus: wa || undefined,
+          country: country || undefined,
+          dueOnly: dueOnly ? 'true' : undefined,
+          hasEmail: hasEmail ? 'true' : undefined,
+        },
+        expectedCount: total,
+        // Aucun filtre actif = vider tout le CRM : le serveur l'exige explicitement.
+        confirmAll: !debounced && !status && !segment && !priority && !wa && !country && !dueOnly && !hasEmail,
+      });
+      setSelected(new Set());
+      setPage(1);
+      await qc.invalidateQueries({ queryKey: ['crm-prospects'] });
+      await qc.invalidateQueries({ queryKey: ['crm-countries'] });
+      alert(`${n} prospect(s) supprime(s).`);
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setPurging(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -360,11 +462,58 @@ function ProspectsTab() {
         />
       ) : (
         <>
+          {/* Barre de suppression. Deux portees bien distinguees : la selection
+              cochee, et TOUT ce que le filtre renvoie (toutes pages confondues)
+              — c'est cette seconde action qui retire un fichier importe. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-surface-2/40 px-4 py-3">
+            <p className="text-sm text-content-muted">
+              {selected.size > 0 ? (
+                <>
+                  <b className="text-content">{selected.size}</b> selectionne
+                  {selected.size > 1 ? 's' : ''} sur cette page
+                </>
+              ) : (
+                <>
+                  <b className="text-content">{data.total}</b> prospect{data.total > 1 ? 's' : ''}{' '}
+                  {country || debounced || status || segment || priority || wa || dueOnly || hasEmail
+                    ? 'correspondent au filtre'
+                    : 'au total'}
+                </>
+              )}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {selected.size > 0 && (
+                <Button variant="ghost" loading={purging} onClick={removeSelected}>
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Supprimer la selection ({selected.size})
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                loading={purging}
+                onClick={removeFiltered}
+                className="text-danger hover:bg-[color:var(--danger)]/10"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Supprimer les {data.total} du filtre
+              </Button>
+            </div>
+          </div>
+
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                    <th className="table-cell w-10">
+                      <input
+                        type="checkbox"
+                        aria-label="Tout selectionner sur cette page"
+                        checked={allOnPage}
+                        onChange={togglePage}
+                        className="h-4 w-4 cursor-pointer accent-[color:var(--primary)]"
+                      />
+                    </th>
                     <th className="table-cell font-semibold">Établissement</th>
                     <th className="table-cell font-semibold">Contact</th>
                     <th className="table-cell font-semibold">Pays</th>
@@ -382,6 +531,15 @@ function ProspectsTab() {
                     const overdue = p.nextFollowUpAt && new Date(p.nextFollowUpAt) <= new Date();
                     return (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
+                        <td className="table-cell">
+                          <input
+                            type="checkbox"
+                            aria-label={`Selectionner ${p.establishmentName}`}
+                            checked={selected.has(p.id)}
+                            onChange={() => toggle(p.id)}
+                            className="h-4 w-4 cursor-pointer accent-[color:var(--primary)]"
+                          />
+                        </td>
                         <td className="table-cell">
                           <button onClick={() => setOpenId(p.id)} className="text-left font-medium text-content hover:text-primary">
                             {p.establishmentName}

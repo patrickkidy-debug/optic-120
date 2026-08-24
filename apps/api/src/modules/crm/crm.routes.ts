@@ -141,6 +141,64 @@ export async function crmRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  /**
+   * Suppression en masse. Deux modes exclusifs :
+   *  - `ids` : une sélection cochée à l'écran.
+   *  - `filters` + `expectedCount` : tout ce que le filtre courant renvoie,
+   *    ce qui permet de retirer un fichier importé en filtrant sur son pays.
+   * Le service refuse un filtre vide et refuse un total qui a bougé depuis
+   * l'affichage — voir `deleteProspectsByFilter`.
+   */
+  app.post('/prospects/bulk-delete', async (req, reply) => {
+    const b = req.body as {
+      ids?: string[];
+      filters?: Record<string, string | undefined>;
+      expectedCount?: number;
+      confirmAll?: boolean;
+    };
+
+    let deleted: number;
+    let scope: string;
+
+    if (b.ids?.length) {
+      deleted = await crm.deleteProspectsByIds(b.ids);
+      scope = `selection de ${b.ids.length}`;
+    } else if (b.filters && typeof b.expectedCount === 'number') {
+      const q = b.filters;
+      deleted = await crm.deleteProspectsByFilter(
+        {
+          search: q.search,
+          status: enumOrUndefined(ProspectStatus, q.status),
+          segment: enumOrUndefined(ProspectSegment, q.segment),
+          priority: enumOrUndefined(ProspectPriority, q.priority),
+          source: enumOrUndefined(ProspectSource, q.source),
+          whatsappStatus: enumOrUndefined(WhatsappStatus, q.whatsappStatus),
+          country: q.country,
+          city: q.city,
+          minScore: q.minScore ? Number(q.minScore) : undefined,
+          dueOnly: q.dueOnly === 'true',
+          hasEmail: q.hasEmail === 'true',
+        },
+        b.expectedCount,
+        b.confirmAll === true,
+      );
+      scope = `filtre ${JSON.stringify(q)}`;
+    } else {
+      throw badRequest('Fournissez soit une liste d’identifiants, soit un filtre avec son total attendu');
+    }
+
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'CRM_PROSPECTS_BULK_DELETED',
+      entity: 'Prospect',
+      metadata: { deleted, scope },
+      ...requestMeta(req),
+    });
+
+    return reply.send({ deleted });
+  });
+
   app.post('/prospects/:id/notes', async (req, reply) => {
     const { id } = req.params as { id: string };
     const { text } = req.body as { text?: string };
