@@ -612,8 +612,12 @@ export async function listAllUsers(limit = 200) {
           name: true,
           slug: true,
           // Abonnement de l'établissement : permet de distinguer, côté console,
-          // les comptes réellement payants des essais et des impayés.
-          subscription: { select: { status: true, currentPeriodEnd: true, plan: { select: { name: true } } } },
+          // les comptes réellement payants des essais et des impayés. Le code
+          // (en plus du nom) sert à présélectionner l'offre lors d'une
+          // activation manuelle depuis l'onglet Utilisateurs.
+          subscription: {
+            select: { status: true, currentPeriodEnd: true, plan: { select: { name: true, code: true } } },
+          },
         },
       },
       role: { select: { name: true } },
@@ -630,6 +634,9 @@ export async function listAllUsers(limit = 200) {
       sub.currentPeriodEnd.getTime() > now;
     return {
       id: u.id,
+      // Établissement du compte : permet d'agir sur son abonnement (essai,
+      // activation, suspension) directement depuis cette liste.
+      tenantId: u.tenantId,
       name: `${u.firstName} ${u.lastName}`,
       email: u.email,
       phone: u.phone,
@@ -642,6 +649,7 @@ export async function listAllUsers(limit = 200) {
       subscriptionStatus: sub?.status ?? null,
       subscriptionEndsAt: sub?.currentPeriodEnd ?? null,
       planName: sub?.plan.name ?? null,
+      planCode: sub?.plan.code ?? null,
       isPaid,
     };
   });

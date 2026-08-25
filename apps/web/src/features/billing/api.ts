@@ -267,6 +267,8 @@ export async function getPlatformStats(): Promise<PlatformStats> {
 
 export interface PlatformUser {
   id: string;
+  /** Établissement du compte — sert à agir sur son abonnement (essai, activation, suspension). */
+  tenantId: string;
   name: string;
   email: string;
   phone: string | null;
@@ -280,6 +282,7 @@ export interface PlatformUser {
   subscriptionStatus: string | null;
   subscriptionEndsAt: string | null;
   planName: string | null;
+  planCode: string | null;
   /** Vrai si l'abonnement est actif ET la période encore valide (hors essai). */
   isPaid: boolean;
 }

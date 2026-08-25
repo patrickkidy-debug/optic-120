@@ -18,7 +18,6 @@ import {
   Play,
   Pause,
   RefreshCw,
-  Server,
   Layers,
   UserPlus,
   Save,
@@ -41,14 +40,12 @@ import {
   MessageCircle,
   CalendarClock,
   CalendarPlus,
-  AlertTriangle,
   Download,
   Bell,
   Clock,
   type LucideIcon,
 } from 'lucide-react';
 import {
-  listAllSubscriptions,
   platformSuspend,
   platformReactivate,
   platformActivate,
@@ -73,7 +70,6 @@ import {
   setTrialSettings,
   type PlatformPlan,
   type PlatformUser,
-  type PlatformSub,
   type PlatformNotification,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
@@ -100,14 +96,6 @@ function waLink(phone: string, name?: string, tenantName?: string): string {
   const text = `${greeting}, merci pour votre inscription${establishment} sur OculoSaaS ! Je suis le fondateur d'OculoSaaS. Je vous contacte pour vous réserver une démonstration gratuite afin de vous aider à bien configurer votre espace. Quand seriez-vous disponible pour un court échange ?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
-
-const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
-  TRIALING: { label: 'Essai', tone: 'info' },
-  ACTIVE: { label: 'Actif', tone: 'success' },
-  PAST_DUE: { label: 'En retard', tone: 'warning' },
-  SUSPENDED: { label: 'Suspendu', tone: 'danger' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
-};
 
 const KPI_TONES = {
   primary: 'bg-primary/10 text-primary',
@@ -225,18 +213,18 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'subs' | 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team';
+type Tab = 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team';
 
 export function PlatformPage() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>('subs');
+  const [tab, setTab] = useState<Tab>('users');
 
   const { data: stats } = useQuery({ queryKey: ['platform-stats'], queryFn: getPlatformStats });
 
   const billingMut = useMutation({
     mutationFn: runBilling,
     onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ['platform-subs'] });
+      qc.invalidateQueries({ queryKey: ['platform-users'] });
       qc.invalidateQueries({ queryKey: ['platform-stats'] });
       alert(`Cycle exécuté : ${r.markedPastDue} en retard, ${r.suspended} suspendu(s).`);
     },
@@ -301,7 +289,6 @@ export function PlatformPage() {
       <div className="mt-6 flex gap-1 overflow-x-auto border-b">
         {[
           { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
-          { id: 'subs' as Tab, label: 'Abonnements', icon: Server },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
           { id: 'engagement' as Tab, label: 'Engagement', icon: Flame },
@@ -326,7 +313,6 @@ export function PlatformPage() {
 
       <div className="mt-5">
         {tab === 'finance' && <FinanceTab />}
-        {tab === 'subs' && <SubscriptionsTab />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'demos' && <DemosTab />}
         {tab === 'engagement' && <EngagementTab />}
@@ -362,199 +348,6 @@ function realState(status: string, periodEnd: string) {
   return { label: `Actif — ${days} j`, tone: 'success' as const, days, urgent: false };
 }
 
-function SubscriptionsTab() {
-  const qc = useQueryClient();
-  const { data, isLoading, dataUpdatedAt } = useQuery({
-    queryKey: ['platform-subs'],
-    queryFn: listAllSubscriptions,
-    // Suivi en temps réel : les échéances tombent sans action de notre part.
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
-  });
-  const [urgentOnly, setUrgentOnly] = useState(false);
-  const [activating, setActivating] = useState<PlatformSub | null>(null);
-  const [extending, setExtending] = useState<PlatformSub | null>(null);
-
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['platform-subs'] });
-    qc.invalidateQueries({ queryKey: ['platform-stats'] });
-  };
-  const suspendMut = useMutation({ mutationFn: platformSuspend, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
-  const reactivateMut = useMutation({ mutationFn: platformReactivate, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
-  const now = Date.now();
-
-  // Les échéances les plus urgentes d'abord : c'est là qu'il faut agir.
-  const sorted = useMemo(() => {
-    const rows = [...(data ?? [])];
-    rows.sort(
-      (a, b) => new Date(a.currentPeriodEnd).getTime() - new Date(b.currentPeriodEnd).getTime(),
-    );
-    return rows;
-  }, [data]);
-
-  const counts = useMemo(() => {
-    let expired = 0;
-    let soon = 0;
-    sorted.forEach((s) => {
-      const st = realState(s.status, s.currentPeriodEnd);
-      if (st.days < 0 && s.status !== 'CANCELLED') expired += 1;
-      else if (st.days >= 0 && st.days <= 7) soon += 1;
-    });
-    return { expired, soon };
-  }, [sorted]);
-
-  const rows = urgentOnly
-    ? sorted.filter((s) => realState(s.status, s.currentPeriodEnd).urgent)
-    : sorted;
-
-  if (isLoading) return <PageLoader />;
-  if (!data || data.length === 0) return <EmptyState icon={Server} title="Aucun abonnement" />;
-
-  return (
-    <div>
-      {/* Synthèse temps réel des échéances */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setUrgentOnly((v) => !v)}
-          className={`badge px-3 py-1.5 text-xs ${
-            urgentOnly ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
-          }`}
-        >
-          <AlertTriangle className="h-3.5 w-3.5" /> À traiter ({counts.expired + counts.soon})
-        </button>
-        <span className="badge bg-[color:var(--danger)]/15 px-3 py-1.5 text-xs text-danger">
-          {counts.expired} expiré(s)
-        </span>
-        <span className="badge bg-[color:var(--warning)]/15 px-3 py-1.5 text-xs text-warning">
-          {counts.soon} sous 7 jours
-        </span>
-        <span className="ml-auto text-xs text-content-faint">
-          Actualisé à {new Date(dataUpdatedAt).toLocaleTimeString('fr-FR')} · toutes les minutes
-        </span>
-      </div>
-
-      <div className="card overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-            <th className="table-cell font-semibold">Établissement</th>
-            <th className="table-cell font-semibold">WhatsApp</th>
-            <th className="table-cell font-semibold">Offre</th>
-            <th className="table-cell font-semibold">État réel</th>
-            <th className="table-cell font-semibold">Échéance</th>
-            <th className="table-cell text-right font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((s) => (
-            <tr key={s.tenantId} className="border-b last:border-0 hover:bg-surface-2/50">
-              <td className="table-cell">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary-soft text-primary">
-                    <Building2 className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <div className="font-medium text-content">{s.tenantName}</div>
-                    <div className="text-xs text-content-faint">{s.tenantSlug}</div>
-                  </div>
-                </div>
-              </td>
-              <td className="table-cell">
-                {s.whatsapp ? (
-                  <a
-                    href={waLink(s.whatsapp, undefined, s.tenantName)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366]/12 px-2 py-1 text-xs font-medium text-[#128C7E] hover:bg-[#25D366]/20"
-                    title="Contacter sur WhatsApp"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    {s.whatsapp}
-                  </a>
-                ) : (
-                  <span className="text-xs text-content-faint">—</span>
-                )}
-              </td>
-              <td className="table-cell text-content-muted">{s.planName}</td>
-              <td className="table-cell">
-                {(() => {
-                  const st = realState(s.status, s.currentPeriodEnd);
-                  return (
-                    <div className="flex flex-col gap-0.5">
-                      <Badge tone={st.tone}>{st.label}</Badge>
-                      {/* Statut enregistré, utile quand il diverge de l'état réel. */}
-                      <span className="text-[10px] text-content-faint">
-                        {STATUS[s.status]?.label ?? s.status}
-                      </span>
-                    </div>
-                  );
-                })()}
-              </td>
-              <td className="table-cell text-content-muted">{formatDate(s.currentPeriodEnd)}</td>
-              <td className="table-cell text-right">
-                {(() => {
-                  const hasAccess = s.status === 'ACTIVE' && new Date(s.currentPeriodEnd).getTime() > now;
-                  return (
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => setExtending(s)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-primary">
-                        <Clock className="h-3.5 w-3.5" /> Essai
-                      </button>
-                      {hasAccess ? (
-                        <>
-                          <button onClick={() => setActivating(s)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted">
-                            <BadgeCheck className="h-3.5 w-3.5" /> Prolonger
-                          </button>
-                          <button onClick={() => { if (confirm(`Suspendre ${s.tenantName} ?`)) suspendMut.mutate(s.tenantId); }} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger">
-                            <Pause className="h-3.5 w-3.5" /> Suspendre
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {s.status === 'SUSPENDED' && (
-                            <button onClick={() => reactivateMut.mutate(s.tenantId)} className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted">
-                              <Play className="h-3.5 w-3.5" /> Réactiver
-                            </button>
-                          )}
-                          <button onClick={() => setActivating(s)} className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success">
-                            <BadgeCheck className="h-3.5 w-3.5" /> Activer
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-
-      {activating && (
-        <ActivateSubscriptionModal
-          sub={activating}
-          onClose={() => setActivating(null)}
-          onDone={() => {
-            setActivating(null);
-            invalidate();
-          }}
-        />
-      )}
-
-      {extending && (
-        <ExtendTrialModal
-          sub={extending}
-          onClose={() => setExtending(null)}
-          onDone={() => {
-            setExtending(null);
-            invalidate();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 /**
  * Reconduit l'essai gratuit d'un tenant précis, à la demande — n'importe
  * quand, sur n'importe quel établissement. Reste gratuit (statut TRIALING) :
@@ -565,7 +358,7 @@ function ExtendTrialModal({
   onClose,
   onDone,
 }: {
-  sub: PlatformSub;
+  sub: { tenantId: string; tenantName: string };
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -632,12 +425,12 @@ function ActivateSubscriptionModal({
   onClose,
   onDone,
 }: {
-  sub: PlatformSub;
+  sub: { tenantId: string; tenantName: string; planCode: string | null };
   onClose: () => void;
   onDone: () => void;
 }) {
   const { data: plans } = useQuery({ queryKey: ['platform-plans'], queryFn: getPlatformPlans });
-  const [planCode, setPlanCode] = useState(sub.planCode);
+  const [planCode, setPlanCode] = useState(sub.planCode ?? '');
   const [months, setMonths] = useState('1');
   const [error, setError] = useState('');
 
@@ -702,7 +495,10 @@ function UsersTab() {
   // Filtre d'état : « Comptes actifs » par défaut sur « Tous ».
   const [status, setStatus] = useState<'all' | 'paid' | 'active' | 'inactive'>('all');
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['platform-users'] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['platform-users'] });
+    qc.invalidateQueries({ queryKey: ['platform-stats'] });
+  };
   const activeMut = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setUserActive(id, isActive),
     onSuccess: invalidate,
@@ -718,6 +514,14 @@ function UsersTab() {
     onError: (e) => alert(apiErrorMessage(e)),
   });
   const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
+  // Actions sur l'abonnement de l'établissement (essai, activation, suspension) —
+  // regroupées ici avec la gestion des comptes : l'ex-onglet « Abonnements »
+  // faisait doublon avec cette liste sans rien offrir de plus.
+  const [activating, setActivating] = useState<{ tenantId: string; tenantName: string; planCode: string | null } | null>(null);
+  const [extending, setExtending] = useState<{ tenantId: string; tenantName: string } | null>(null);
+  const suspendMut = useMutation({ mutationFn: platformSuspend, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
+  const reactivateMut = useMutation({ mutationFn: platformReactivate, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
+  const now = Date.now();
 
   const counts = useMemo(() => {
     const rows = data ?? [];
@@ -851,18 +655,18 @@ function UsersTab() {
                 </td>
                 <td className="table-cell text-content-muted">{u.tenantName}</td>
                 <td className="table-cell">
-                  {u.isPaid ? (
-                    <div className="flex flex-col gap-0.5">
-                      <Badge tone="success">Payé</Badge>
-                      <span className="text-[10px] text-content-faint">
-                        {u.planName}
-                        {u.subscriptionEndsAt ? ` · jusqu'au ${formatDate(u.subscriptionEndsAt)}` : ''}
-                      </span>
-                    </div>
+                  {u.subscriptionStatus && u.subscriptionEndsAt ? (
+                    (() => {
+                      const st = realState(u.subscriptionStatus!, u.subscriptionEndsAt!);
+                      return (
+                        <div className="flex flex-col gap-0.5">
+                          <Badge tone={st.tone}>{st.label}</Badge>
+                          <span className="text-[10px] text-content-faint">{u.planName}</span>
+                        </div>
+                      );
+                    })()
                   ) : (
-                    <Badge tone={STATUS[u.subscriptionStatus ?? '']?.tone ?? 'neutral'}>
-                      {STATUS[u.subscriptionStatus ?? '']?.label ?? 'Aucun'}
-                    </Badge>
+                    <Badge tone="neutral">Aucun</Badge>
                   )}
                 </td>
                 <td className="table-cell text-content-muted">{u.roleLabel}</td>
@@ -871,7 +675,58 @@ function UsersTab() {
                 </td>
                 <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
                 <td className="table-cell text-right">
-                  <div className="flex justify-end gap-1.5">
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <button
+                      title="Régler la durée d'essai de cet établissement"
+                      onClick={() => setExtending({ tenantId: u.tenantId, tenantName: u.tenantName })}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-primary"
+                    >
+                      <Clock className="h-3.5 w-3.5" /> Essai
+                    </button>
+                    {(() => {
+                      const hasAccess =
+                        u.subscriptionStatus === 'ACTIVE' &&
+                        !!u.subscriptionEndsAt &&
+                        new Date(u.subscriptionEndsAt).getTime() > now;
+                      return hasAccess ? (
+                        <>
+                          <button
+                            title="Prolonger l'abonnement payé"
+                            onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
+                            className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted"
+                          >
+                            <BadgeCheck className="h-3.5 w-3.5" /> Prolonger
+                          </button>
+                          <button
+                            title="Suspendre l'abonnement"
+                            onClick={() => { if (confirm(`Suspendre l'abonnement de ${u.tenantName} ?`)) suspendMut.mutate(u.tenantId); }}
+                            className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                          >
+                            <Pause className="h-3.5 w-3.5" /> Suspendre
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {u.subscriptionStatus === 'SUSPENDED' && (
+                            <button
+                              title="Réactiver l'abonnement suspendu"
+                              onClick={() => reactivateMut.mutate(u.tenantId)}
+                              className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted"
+                            >
+                              <Play className="h-3.5 w-3.5" /> Réactiver
+                            </button>
+                          )}
+                          <button
+                            title="Activer manuellement l'abonnement (paiement reçu en direct)"
+                            onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
+                            className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                          >
+                            <BadgeCheck className="h-3.5 w-3.5" /> Activer
+                          </button>
+                        </>
+                      );
+                    })()}
+                    <span className="mx-0.5 h-6 w-px bg-border" />
                     <button
                       title="Réinitialiser le mot de passe (sans email)"
                       onClick={() => {
@@ -919,6 +774,28 @@ function UsersTab() {
           user={resetResult.user}
           tempPassword={resetResult.tempPassword}
           onClose={() => setResetResult(null)}
+        />
+      )}
+
+      {activating && (
+        <ActivateSubscriptionModal
+          sub={activating}
+          onClose={() => setActivating(null)}
+          onDone={() => {
+            setActivating(null);
+            invalidate();
+          }}
+        />
+      )}
+
+      {extending && (
+        <ExtendTrialModal
+          sub={extending}
+          onClose={() => setExtending(null)}
+          onDone={() => {
+            setExtending(null);
+            invalidate();
+          }}
         />
       )}
     </div>
