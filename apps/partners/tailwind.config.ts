@@ -25,8 +25,13 @@ export default {
           hover: 'rgb(var(--accent-hover-rgb) / <alpha-value>)',
           soft: 'var(--accent-soft)',
         },
+        secondary: {
+          DEFAULT: 'rgb(var(--secondary-rgb) / <alpha-value>)',
+          soft: 'var(--secondary-soft)',
+        },
         content: {
           DEFAULT: 'rgb(var(--text-rgb) / <alpha-value>)',
+          heading: 'rgb(var(--text-heading-rgb) / <alpha-value>)',
           muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
           faint: 'rgb(var(--text-faint-rgb) / <alpha-value>)',
         },

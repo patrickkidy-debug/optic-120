@@ -122,4 +122,32 @@
   .bottom-nav-link-active {
     @apply text-primary;
   }
+  /* Navigation latérale (desktop) : liseré gauche + fond teinté sur l'onglet actif. */
+  .side-nav-link {
+    @apply flex items-center gap-3 rounded-r-lg border-l-4 border-transparent px-4 py-3 text-sm font-medium
+      text-content-faint transition hover:bg-surface-3 hover:text-content;
+  }
+  .side-nav-link-active {
+    @apply border-primary bg-surface-3 font-bold text-primary;
+  }
+  /* Carte à liseré dégradé (violet → transparent → vert), pour mettre en avant
+     UNE carte par écran (ex. le lien de parrainage). Technique : le dégradé
+     est un pseudo-élément légèrement plus grand que la carte, débordant d'1px
+     tout autour — la carte elle-même reste opaque par-dessus. */
+  .gradient-border-card {
+    @apply relative rounded-2xl bg-surface;
+  }
+  .gradient-border-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      rgba(124, 58, 237, 0.5),
+      rgba(124, 58, 237, 0) 50%,
+      rgba(74, 222, 157, 0.2)
+    );
+    z-index: -1;
+  }
 }
