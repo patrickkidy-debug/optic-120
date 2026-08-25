@@ -1364,6 +1364,10 @@ export const saleItemSchema = z.object({
   // Prix unitaire personnalisé (optionnel) : si absent, le serveur applique le
   // prix catalogue du produit. Permet de fixer un prix libre à la caisse.
   unitPrice: z.number().nonnegative().optional(),
+  // Référence libre de l'article vendu (ex. référence fabricant d'une
+  // monture), indépendante du stock : plusieurs ventes peuvent partager la
+  // même fiche produit/prix tout en distinguant l'article réellement remis.
+  reference: z.string().max(80).optional().or(z.literal('')),
 });
 
 export const saleCreateSchema = z.object({

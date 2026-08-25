@@ -641,6 +641,10 @@ model SaleItem {
   quantity  Int
   unitPrice Decimal @db.Decimal(12, 2)
   lineTotal Decimal @db.Decimal(12, 2)
+  // Référence libre saisie à la vente (ex. référence fabricant d'une monture),
+  // indépendante du stock : plusieurs articles peuvent partager la même fiche
+  // produit/prix au catalogue sans qu'on ait à créer un SKU par référence.
+  reference String? @db.VarChar(80)
 
   @@index([saleId])
 }

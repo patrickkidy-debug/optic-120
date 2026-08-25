@@ -660,6 +660,9 @@ function SaleDetailModal({
                   <td className="table-cell">
                     <div className="text-content">{i.product.name}</div>
                     <div className="font-mono text-[11px] text-content-faint">{i.product.sku}</div>
+                    {i.reference && (
+                      <div className="text-[11px] text-content-faint">Réf. {i.reference}</div>
+                    )}
                   </td>
                   <td className="table-cell text-center text-content-muted">{i.quantity}</td>
                   <td className="table-cell text-right text-content-muted">{formatCurrency(Number(i.unitPrice))}</td>
@@ -780,6 +783,9 @@ interface QuoteLine {
   sku: string;
   unitPrice: number;
   quantity: number;
+  // Référence libre de l'article remis (ex. référence fabricant d'une
+  // monture), indépendante du stock — voir SaleItem.reference côté API.
+  reference?: string;
 }
 
 /**
@@ -814,6 +820,7 @@ function QuoteModal({
           sku: i.product.sku,
           unitPrice: Number(i.unitPrice),
           quantity: i.quantity,
+          reference: i.reference ?? undefined,
         }))
       : [],
   );
@@ -885,6 +892,9 @@ function QuoteModal({
       prev.map((l) => (l.productId === productId ? { ...l, unitPrice: Math.max(0, price) } : l)),
     );
   }
+  function setReference(productId: string, reference: string) {
+    setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, reference } : l)));
+  }
 
   // Taux effectif : celui choisi pour ce devis, sinon celui de l'établissement.
   const effectiveVat = vatRate ?? vatPct;
@@ -905,6 +915,7 @@ function QuoteModal({
     productId: l.productId,
     quantity: l.quantity,
     unitPrice: l.unitPrice,
+    reference: l.reference || undefined,
   }));
 
   const createMut = useMutation({
@@ -1011,14 +1022,25 @@ function QuoteModal({
                   <div key={l.productId} className="flex items-center gap-2 rounded-lg bg-surface-2 p-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-content">{l.name}</p>
+                      <div className="mt-0.5 flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          value={l.unitPrice || ''}
+                          onChange={(e) => setPrice(l.productId, Number(e.target.value) || 0)}
+                          className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
+                          title={t('pos.unitPriceEditable')}
+                          placeholder={t('pos.pricePlaceholder')}
+                        />
+                      </div>
+                      {/* Référence libre de l'article remis, indépendante du stock. */}
                       <input
-                        type="number"
-                        min={0}
-                        value={l.unitPrice || ''}
-                        onChange={(e) => setPrice(l.productId, Number(e.target.value) || 0)}
-                        className="mt-0.5 h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
-                        title={t('pos.unitPriceEditable')}
-                        placeholder={t('pos.pricePlaceholder')}
+                        type="text"
+                        value={l.reference ?? ''}
+                        onChange={(e) => setReference(l.productId, e.target.value)}
+                        className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
+                        placeholder="Référence (optionnel)"
+                        maxLength={80}
                       />
                     </div>
                     <input

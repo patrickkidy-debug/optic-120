@@ -33,6 +33,9 @@ interface ComputedLine {
   lineTotal: number;
   name: string;
   category: string;
+  // Référence libre saisie à la vente (ex. référence fabricant d'une
+  // monture), indépendante du stock — voir SaleItem.reference.
+  reference: string | null;
 }
 
 /**
@@ -82,7 +85,15 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
       const lineTotal = unitPrice * i.quantity;
       subtotal += lineTotal;
-      return { productId: i.productId, quantity: i.quantity, unitPrice, lineTotal, name: p.name, category: p.category };
+      return {
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPrice,
+        lineTotal,
+        name: p.name,
+        category: p.category,
+        reference: i.reference?.trim() || null,
+      };
     });
 
     // Taux de TVA et devise de l'établissement. Le taux est en % (0 = exonéré),
@@ -170,6 +181,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
             quantity: l.quantity,
             unitPrice: l.unitPrice,
             lineTotal: l.lineTotal,
+            reference: l.reference,
           })),
         },
       },
@@ -294,6 +306,7 @@ export async function updateSale(
             lineTotal: unitPrice * i.quantity,
             name: p.name,
             category: p.category,
+            reference: i.reference?.trim() || null,
           };
         })
       : sale.items.map((i) => ({
@@ -303,6 +316,7 @@ export async function updateSale(
           lineTotal: Number(i.lineTotal),
           name: byId.get(i.productId)?.name ?? '',
           category: byId.get(i.productId)?.category ?? '',
+          reference: i.reference,
         }));
 
     const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
@@ -447,6 +461,7 @@ export async function updateSale(
                   quantity: l.quantity,
                   unitPrice: l.unitPrice,
                   lineTotal: l.lineTotal,
+                  reference: l.reference,
                 })),
               },
             }

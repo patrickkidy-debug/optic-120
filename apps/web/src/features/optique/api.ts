@@ -337,6 +337,8 @@ export interface SaleDetailItem {
   quantity: number;
   unitPrice: string;
   lineTotal: string;
+  /** Référence libre saisie à la vente (ex. référence fabricant), indépendante du stock. */
+  reference: string | null;
   product: { name: string; sku: string };
 }
 

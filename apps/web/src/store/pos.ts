@@ -7,6 +7,9 @@ export interface CartLine {
   sku: string;
   unitPrice: number;
   quantity: number;
+  // Référence libre saisie à la caisse (ex. référence fabricant d'une
+  // monture), indépendante du stock — voir SaleItem.reference côté API.
+  reference?: string;
 }
 
 interface PosState {
@@ -21,6 +24,7 @@ interface PosState {
   setDiscount: (n: number) => void;
   setInsurance: (n: number) => void;
   setUnitPrice: (productId: string, price: number) => void;
+  setReference: (productId: string, reference: string) => void;
   clear: () => void;
 }
 
@@ -57,6 +61,10 @@ export const usePosStore = create<PosState>((set) => ({
       lines: s.lines.map((l) =>
         l.productId === productId ? { ...l, unitPrice: Math.max(0, Math.round(price)) } : l,
       ),
+    })),
+  setReference: (productId, reference) =>
+    set((s) => ({
+      lines: s.lines.map((l) => (l.productId === productId ? { ...l, reference } : l)),
     })),
   clear: () => set({ lines: [], customerId: null, discountAmount: 0, insuranceAmount: 0 }),
 }));

@@ -154,7 +154,12 @@ export function PosPage() {
         branchId: branchId!,
         customerId: pos.customerId ?? undefined,
         type,
-        items: pos.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })),
+        items: pos.lines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          reference: l.reference || undefined,
+        })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,
         // Ordonnance la plus récente du client, si elle en a une enregistrée.
@@ -267,6 +272,17 @@ export function PosPage() {
                           {CURRENCY_FORMAT[(user?.tenantCurrency ?? 'XOF') as SupportedCurrency]?.symbol ?? ''}
                         </span>
                       </div>
+                      {/* Référence libre de l'article remis (ex. référence fabricant
+                          d'une monture) : indépendante du stock, pour distinguer des
+                          articles qui partagent la même fiche produit/prix. */}
+                      <input
+                        type="text"
+                        value={l.reference ?? ''}
+                        onChange={(e) => pos.setReference(l.productId, e.target.value)}
+                        className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
+                        placeholder="Référence (optionnel)"
+                        maxLength={80}
+                      />
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => pos.setQuantity(l.productId, l.quantity - 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
