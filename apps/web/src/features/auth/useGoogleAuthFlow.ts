@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { SignupInput } from '@oculo/shared-types';
 import { googleLogin, googleSignup, loginTwoFactor } from './api';
 import { apiErrorMessage } from '../../lib/api';
+import { getStoredReferral } from '../../lib/partnerReferral';
 
 type GoogleStep =
   | { kind: 'idle' }
@@ -46,7 +47,8 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
     setError('');
     setLoading(true);
     try {
-      await googleSignup({ idToken: step.idToken, tenantName, branchName, whatsapp, plan: plan ?? 'STARTER' });
+      const referral = getStoredReferral();
+      await googleSignup({ idToken: step.idToken, tenantName, branchName, whatsapp, plan: plan ?? 'STARTER', ...referral });
       navigate(redirectTo);
     } catch (e) {
       setError(apiErrorMessage(e, 'Inscription impossible'));

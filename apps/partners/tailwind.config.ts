@@ -1,0 +1,67 @@
+import type { Config } from 'tailwindcss';
+
+// Tokens identiques à OculoSaaS (apps/web/tailwind.config.ts) : même identité
+// visuelle entre l'app magasin et l'espace partenaire.
+export default {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        bg: 'rgb(var(--bg-rgb) / <alpha-value>)',
+        'bg-subtle': 'rgb(var(--bg-subtle-rgb) / <alpha-value>)',
+        surface: 'rgb(var(--surface-rgb) / <alpha-value>)',
+        'surface-2': 'rgb(var(--surface-2-rgb) / <alpha-value>)',
+        'surface-3': 'rgb(var(--surface-3-rgb) / <alpha-value>)',
+        line: 'var(--border)',
+        'line-strong': 'var(--border-strong)',
+        primary: {
+          DEFAULT: 'rgb(var(--primary-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--primary-hover-rgb) / <alpha-value>)',
+          soft: 'var(--primary-soft)',
+        },
+        accent: {
+          DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--accent-hover-rgb) / <alpha-value>)',
+          soft: 'var(--accent-soft)',
+        },
+        content: {
+          DEFAULT: 'rgb(var(--text-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+          faint: 'rgb(var(--text-faint-rgb) / <alpha-value>)',
+        },
+        success: 'rgb(var(--success-rgb) / <alpha-value>)',
+        warning: 'rgb(var(--warning-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
+      },
+      borderColor: {
+        DEFAULT: 'var(--border)',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Manrope', 'Outfit', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        lg: '0.65rem',
+        xl: '0.9rem',
+        '2xl': '1.15rem',
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        'card-md': 'var(--shadow-card-md)',
+        'card-lg': 'var(--shadow-card-lg)',
+        glow: '0 0 0 1px var(--primary-soft), 0 8px 24px rgba(124,58,237,0.18)',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.25s ease-out',
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;

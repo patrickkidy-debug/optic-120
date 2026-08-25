@@ -8,6 +8,7 @@ import { signup } from '../../features/auth/api';
 import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
+import { getStoredReferral } from '../../lib/partnerReferral';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
@@ -55,7 +56,11 @@ export function SignupPage() {
   async function onSubmit(values: SignupInput) {
     setServerError('');
     try {
-      const user = await signup({ ...values, plan });
+      // OculoPartners : transmet l'attribution en cours (clic sur un lien de
+      // parrainage), s'il y en a une valide. Le serveur ignore silencieusement
+      // un code absent, expiré ou invalide.
+      const referral = getStoredReferral();
+      const user = await signup({ ...values, plan, ...referral });
       // eventID identique au eventId envoyé côté serveur (Conversions API) → déduplication Meta.
       trackPixelEvent('CompleteRegistration', { content_name: plan, status: true }, `registration_${user.id}`);
       // Accès immédiat au dashboard : 2 h d'essai gratuit sans interruption, puis

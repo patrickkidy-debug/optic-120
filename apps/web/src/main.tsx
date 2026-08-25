@@ -11,6 +11,7 @@ import { useAuthStore } from './store/auth';
 import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
 import { trackPixelPageView } from './lib/pixel';
+import { captureReferralFromUrl } from './lib/partnerReferral';
 import { PwaControls } from './components/PwaControls';
 
 applyTheme(getStoredTheme());
@@ -30,6 +31,9 @@ function Root() {
     void refreshSession().then((token) => {
       if (!token) useAuthStore.getState().setStatus('unauthenticated');
     });
+    // OculoPartners : capture un lien de parrainage (?ref=CODE) présent dans
+    // l'URL d'atterrissage, quelle que soit la page. Fire-and-forget.
+    void captureReferralFromUrl();
     return unwatch;
   }, []);
 
