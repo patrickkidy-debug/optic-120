@@ -118,9 +118,17 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   });
   const convertMut = useMutation({
     mutationFn: convertQuote,
-    onSuccess: () => {
+    onSuccess: (sale) => {
       refreshSalesViews();
-      alert('Devis converti en vente.');
+      // La conversion suit le même parcours qu'une vente créée depuis la
+      // caisse : le caissier peut immédiatement renseigner le montant reçu
+      // aujourd'hui et son moyen de règlement (acompte ou paiement total).
+      const due = Number(sale.totalAmount) - Number(sale.paidAmount);
+      if (due > 0 && canPay) {
+        setPaySale({ id: sale.id, due, number: sale.number });
+      } else {
+        alert(due <= 0 ? 'Devis converti en vente et déjà soldé.' : 'Devis converti en vente.');
+      }
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -492,10 +500,16 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                       {isQuote && canConvert && s.status !== 'CANCELLED' && (
                         <button
                           onClick={() => convertMut.mutate(s.id)}
+                          disabled={convertMut.isPending}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs"
                           title={t('sales.convertToSale')}
                         >
-                          <ArrowRightLeft className="h-3.5 w-3.5" /> Convertir
+                          {convertMut.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                          )}
+                          Convertir
                         </button>
                       )}
                       {!isQuote && canRefund && s.status !== 'CANCELLED' && (
