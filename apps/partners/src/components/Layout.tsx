@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Building2, Wallet, Share2, LogOut, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Wallet, Share2, LogOut, Sparkles, User } from 'lucide-react';
 import { usePartnerAuthStore } from '../store/auth';
 import { logoutPartner } from '../lib/partnerApi';
 
@@ -62,9 +62,13 @@ export function Layout() {
           ))}
         </nav>
         <div className="border-t px-3 pt-3">
-          {partner && (
-            <p className="truncate px-4 pb-2 text-xs text-content-faint">{partner.firstName} {partner.lastName}</p>
-          )}
+          <NavLink
+            to="/profil"
+            className={({ isActive }) => `side-nav-link ${isActive ? 'side-nav-link-active' : ''}`}
+          >
+            <User className="h-[18px] w-[18px]" />
+            {partner ? `${partner.firstName} ${partner.lastName}` : 'Mon profil'}
+          </NavLink>
           <button onClick={() => handleLogout(clear)} className="side-nav-link w-full text-danger hover:bg-danger/10">
             <LogOut className="h-[18px] w-[18px]" />
             Déconnexion
@@ -76,9 +80,14 @@ export function Layout() {
         {/* En-tête (mobile uniquement) */}
         <header className="flex items-center justify-between border-b bg-surface px-4 py-3 lg:hidden">
           <Brand />
-          <button onClick={() => handleLogout(clear)} className="btn-ghost h-9 w-9 rounded-lg p-0" aria-label="Déconnexion">
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <NavLink to="/profil" className="btn-ghost flex h-9 w-9 items-center justify-center rounded-lg p-0" aria-label="Mon profil">
+              <User className="h-4 w-4" />
+            </NavLink>
+            <button onClick={() => handleLogout(clear)} className="btn-ghost h-9 w-9 rounded-lg p-0" aria-label="Déconnexion">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
         <main className="pb-20 lg:pb-8">

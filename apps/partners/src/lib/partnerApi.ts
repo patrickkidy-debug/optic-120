@@ -4,6 +4,8 @@ import type {
   PartnerLoginInput,
   PartnerLeadCreateInput,
   PartnerLeadUpdateInput,
+  PartnerProfileUpdateInput,
+  PartnerChangePasswordInput,
   PartnerAuthUser,
   PartnerDashboardStats,
   PartnerLeadStatus,
@@ -33,6 +35,15 @@ export async function logoutPartner(): Promise<void> {
 export async function getMe(): Promise<PartnerAuthUser> {
   const { data } = await api.get<{ partner: PartnerAuthUser }>('/partners/me');
   return data.partner;
+}
+
+export async function updateProfile(input: PartnerProfileUpdateInput): Promise<PartnerAuthUser> {
+  const { data } = await api.patch<{ partner: PartnerAuthUser }>('/partners/me', input);
+  return data.partner;
+}
+
+export async function changePassword(input: PartnerChangePasswordInput): Promise<void> {
+  await api.post('/partners/me/password', input);
 }
 
 export async function getDashboard(periodDays?: number): Promise<PartnerDashboardStats> {

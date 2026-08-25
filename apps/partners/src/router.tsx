@@ -9,6 +9,7 @@ import { LeadsPage } from './pages/LeadsPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { CommissionsPage } from './pages/CommissionsPage';
 import { SharePage } from './pages/SharePage';
+import { ProfilePage } from './pages/ProfilePage';
 
 function RequirePartnerAuth() {
   const status = usePartnerAuthStore((s) => s.status);
@@ -42,6 +43,7 @@ export const router = createBrowserRouter(
             { path: '/clients', element: <CustomersPage /> },
             { path: '/commissions', element: <CommissionsPage /> },
             { path: '/partager', element: <SharePage /> },
+            { path: '/profil', element: <ProfilePage /> },
           ],
         },
       ],

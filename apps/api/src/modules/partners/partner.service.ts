@@ -14,6 +14,7 @@ import {
   type PartnerCommissionActionInput,
   type PartnerAuthUser,
   type PartnerDashboardStats,
+  type PartnerProfileUpdateInput,
 } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
@@ -67,6 +68,7 @@ function toPartnerAuthUser(p: {
   whatsapp: string;
   countryCode: string | null;
   city: string | null;
+  payoutMethod: string | null;
   status: string;
   tier: string;
   referralCode: string;
@@ -79,6 +81,7 @@ function toPartnerAuthUser(p: {
     whatsapp: p.whatsapp,
     countryCode: p.countryCode,
     city: p.city,
+    payoutMethod: p.payoutMethod,
     status: p.status as PartnerStatus,
     tier: p.tier as PartnerTierCode,
     referralCode: p.referralCode,
@@ -215,6 +218,87 @@ export async function getPartnerAuthUser(partnerId: string): Promise<PartnerAuth
   const partner = await prisma.partner.findUnique({ where: { id: partnerId } });
   if (!partner) throw notFound('Partenaire introuvable');
   return toPartnerAuthUser(partner);
+}
+
+/**
+ * Mise à jour du profil par le partenaire lui-même. Ne touche jamais
+ * `status`, `tier` ni `referralCode` — ces champs-là sont réservés à
+ * l'opérateur (voir setPartnerStatus/setPartnerTier) ou immuables.
+ */
+export async function updatePartnerProfile(
+  partnerId: string,
+  input: PartnerProfileUpdateInput,
+): Promise<PartnerAuthUser> {
+  if (input.email || input.whatsapp) {
+    const existing = await prisma.partner.findFirst({
+      where: {
+        id: { not: partnerId },
+        OR: [
+          ...(input.email ? [{ email: input.email.toLowerCase() }] : []),
+          ...(input.whatsapp ? [{ whatsapp: input.whatsapp }] : []),
+        ],
+      },
+    });
+    if (existing) {
+      throw conflict('Cet email ou ce numéro WhatsApp est déjà utilisé par un autre compte partenaire');
+    }
+  }
+
+  const partner = await prisma.partner.update({
+    where: { id: partnerId },
+    data: {
+      firstName: input.firstName,
+      lastName: input.lastName,
+      email: input.email ? input.email.toLowerCase() : undefined,
+      whatsapp: input.whatsapp,
+      countryCode: input.countryCode === '' ? null : input.countryCode,
+      city: input.city === '' ? null : input.city,
+      payoutMethod: input.payoutMethod === '' ? null : input.payoutMethod,
+      payoutDetails: input.payoutDetails ?? undefined,
+    },
+  });
+
+  await recordPartnerAudit({
+    partnerId,
+    actorType: 'PARTNER',
+    actorId: partnerId,
+    action: 'PARTNER_PROFILE_UPDATED',
+    entity: 'Partner',
+    entityId: partnerId,
+  });
+
+  return toPartnerAuthUser(partner);
+}
+
+/**
+ * Change le mot de passe (exige l'ancien). Révoque toutes les sessions
+ * actives — y compris l'appel courant — par sécurité : le frontend doit
+ * renvoyer le partenaire à l'écran de connexion juste après.
+ */
+export async function changePartnerPassword(
+  partnerId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const partner = await prisma.partner.findUnique({ where: { id: partnerId } });
+  if (!partner) throw notFound('Partenaire introuvable');
+  if (!(await verifyPassword(partner.passwordHash, currentPassword))) {
+    throw badRequest('Mot de passe actuel incorrect');
+  }
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.partner.update({ where: { id: partnerId }, data: { passwordHash } });
+  await prisma.partnerSession.updateMany({
+    where: { partnerId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  await recordPartnerAudit({
+    partnerId,
+    actorType: 'PARTNER',
+    actorId: partnerId,
+    action: 'PARTNER_PASSWORD_CHANGED',
+    entity: 'Partner',
+    entityId: partnerId,
+  });
 }
 
 /* ------------------------------ Attribution ------------------------------ */

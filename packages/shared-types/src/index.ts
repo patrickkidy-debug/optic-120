@@ -2091,6 +2091,26 @@ export const partnerLoginSchema = z.object({
 });
 export type PartnerLoginInput = z.infer<typeof partnerLoginSchema>;
 
+/** Mise à jour du profil par le partenaire lui-même — jamais le statut, le
+ * niveau ou le code de parrainage (réservés à l'opérateur, voir platform.routes). */
+export const partnerProfileUpdateSchema = z.object({
+  firstName: z.string().min(1).max(80).optional(),
+  lastName: z.string().min(1).max(80).optional(),
+  email: z.string().email().optional(),
+  whatsapp: whatsappSchema.optional(),
+  countryCode: z.string().length(2).optional().or(z.literal('')),
+  city: z.string().max(80).optional().or(z.literal('')),
+  payoutMethod: z.string().max(40).optional().or(z.literal('')),
+  payoutDetails: z.record(z.string(), z.string().max(200)).optional(),
+});
+export type PartnerProfileUpdateInput = z.infer<typeof partnerProfileUpdateSchema>;
+
+export const partnerChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: passwordSchema,
+});
+export type PartnerChangePasswordInput = z.infer<typeof partnerChangePasswordSchema>;
+
 /** Enregistrement d'un clic sur un lien de parrainage (`/?ref=CODE`), avant inscription. */
 export const partnerTrackSchema = z.object({
   referralCode: z.string().min(1).max(40),
@@ -2148,6 +2168,7 @@ export interface PartnerAuthUser {
   whatsapp: string;
   countryCode: string | null;
   city: string | null;
+  payoutMethod: string | null;
   status: PartnerStatus;
   tier: PartnerTierCode;
   referralCode: string;

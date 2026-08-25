@@ -5,6 +5,8 @@ import {
   partnerTrackSchema,
   partnerLeadCreateSchema,
   partnerLeadUpdateSchema,
+  partnerProfileUpdateSchema,
+  partnerChangePasswordSchema,
 } from '@oculo/shared-types';
 import * as partnerService from './partner.service.js';
 import {
@@ -82,6 +84,20 @@ export async function partnerRoutes(app: FastifyInstance): Promise<void> {
     partner.get('/me', async (req, reply) => {
       const me = await partnerService.getPartnerAuthUser(req.partnerAuth!.partnerId);
       return reply.send({ partner: me });
+    });
+
+    partner.patch('/me', async (req, reply) => {
+      const input = partnerProfileUpdateSchema.parse(req.body);
+      const me = await partnerService.updatePartnerProfile(req.partnerAuth!.partnerId, input);
+      return reply.send({ partner: me });
+    });
+
+    // Révoque les sessions du partenaire (y compris celle-ci) : le frontend
+    // renvoie systématiquement vers l'écran de connexion après ce succès.
+    partner.post('/me/password', async (req, reply) => {
+      const input = partnerChangePasswordSchema.parse(req.body);
+      await partnerService.changePartnerPassword(req.partnerAuth!.partnerId, input.currentPassword, input.newPassword);
+      return reply.send({ ok: true });
     });
 
     // period en jours (7/30/90/365) ; absent = depuis toujours.
