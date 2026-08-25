@@ -69,23 +69,26 @@ Deux options :
 > lance-le une fois si besoin : `npm run db:seed --workspace @oculo/api`.
 > `db:seed:admin` exige que les rôles système existent déjà.
 
-### 5. OculoPartners (espace partenaire) — Vercel, en plus
+### 5. OculoPartners (espace partenaire) — Netlify, en plus
 
 `apps/partners` est une app séparée (mobile-first, inscription/dashboard des
 partenaires affiliés). Elle appelle la MÊME API Render — pas de backend
-séparé à déployer.
+séparé à déployer. Config prête dans [`apps/partners/netlify.toml`](./apps/partners/netlify.toml).
 
-1. [vercel.com](https://vercel.com) → **Add New** → **Project** → importer
-   `optic-120` **une seconde fois** (un projet Vercel = une racine).
-2. **Root Directory** → `apps/partners`. Vercel détecte `vite.config.ts`
-   automatiquement (pas de `vercel.json` dédié : les réglages par défaut
-   pour un projet Vite conviennent — build `npm run build`, output `dist`).
-3. **Environment Variables** : `VITE_API_URL` = la même URL Render qu'à
-   l'étape 1 (ex. `https://oculosaas-api.onrender.com`).
-4. **Deploy**. Noter l'URL, ex. `https://optic-120-partners.vercel.app`.
+1. [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an
+   existing project** → connecter GitHub → sélectionner `optic-120`.
+2. **Base directory** → `apps/partners` (Netlify lit alors `netlify.toml` à
+   cet endroit et applique build command / publish directory / redirection
+   SPA automatiquement — rien d'autre à saisir dans ce formulaire).
+3. **Site settings → Environment variables** : ajouter `VITE_API_URL` = la
+   même URL Render qu'à l'étape 1 (ex. `https://oculosaas-api.onrender.com`),
+   puis relancer un déploiement (les variables ne s'appliquent qu'au build
+   suivant).
+4. **Deploy site**. Noter l'URL, ex. `https://oculopartners.netlify.app`
+   (personnalisable dans **Site settings → Domain management**).
 5. Render → `oculosaas-api` → **Environment** → `CORS_ORIGIN` : ajouter
    cette URL à la liste existante, séparée par une virgule (ex.
-   `https://optic-120.vercel.app,https://optic-120-partners.vercel.app`).
+   `https://optic-120.vercel.app,https://oculopartners.netlify.app`).
    Sauvegarder → redéploiement automatique.
 
 Le lien de parrainage généré pour chaque partenaire pointe vers le site

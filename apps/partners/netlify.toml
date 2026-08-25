@@ -1,0 +1,22 @@
+# OculoPartners sur Netlify — site distinct de apps/web (Vercel), même API Render.
+# Sur netlify.com : New site from Git > sélectionner ce repo. Netlify lit ce
+# fichier automatiquement s'il détecte que la racine du site est apps/partners
+# (champ "Base directory" à renseigner une fois à la création du site) ; sinon
+# reporter ces mêmes valeurs dans Site settings > Build & deploy > Build settings.
+
+[build]
+  base = "apps/partners"
+  # Repart de la racine du monorepo pour que npm résolve les workspaces
+  # (le paquet @oculo/shared-types doit être construit avant apps/partners).
+  command = "cd ../.. && npm install && npm run build --workspace @oculo/shared-types && npm run build --workspace @oculo/partners"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA (React Router) : toute URL non trouvée sert index.html, sinon
+# /dashboard, /prospects... renvoient une 404 Netlify au rechargement.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
