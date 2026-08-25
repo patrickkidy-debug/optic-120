@@ -671,6 +671,9 @@ function UsersTab() {
                         <div className="flex flex-col gap-0.5">
                           <Badge tone={st.tone}>{st.label}</Badge>
                           <span className="text-[10px] text-content-faint">{u.planName}</span>
+                          <span className="text-[11px] font-medium text-content-muted">
+                            Échéance : {formatDateTime(u.subscriptionEndsAt!)}
+                          </span>
                         </div>
                       );
                     })()
