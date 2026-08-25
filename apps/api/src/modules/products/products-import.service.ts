@@ -167,8 +167,18 @@ export async function previewImportRows(db: TenantPrisma, rows: ParsedProductRow
     : [];
   const bySku = new Map(existing.map((p) => [p.sku.toLowerCase(), p.id]));
 
+  const seenSkus = new Set<string>();
   return rows.map((row) => {
     if (!row.name) return { ...row, status: 'error', error: 'Nom manquant' };
+    const normalizedSku = row.sku.trim().toLowerCase();
+    // Deux références identiques dans le même fichier ne pouvaient pas être
+    // détectées par la requête DB ci-dessus. La seconde faisait donc tomber la
+    // transaction au moment du commit — on la signale maintenant, avant toute
+    // écriture, afin que l'utilisateur puisse la corriger.
+    if (normalizedSku && seenSkus.has(normalizedSku)) {
+      return { ...row, status: 'error', error: 'Référence en double dans le fichier' };
+    }
+    if (normalizedSku) seenSkus.add(normalizedSku);
     const matchId = row.sku ? bySku.get(row.sku.toLowerCase()) : undefined;
     return matchId ? { ...row, status: 'update', existingProductId: matchId } : { ...row, status: 'create' };
   });
@@ -203,16 +213,20 @@ export async function commitImport(
   let updated = 0;
   const errors: string[] = [];
 
-  await db.$transaction(
-    async (tx) => {
-      for (const row of rows) {
-        if (!row.name?.trim()) {
-          errors.push('Ligne ignorée (nom manquant)');
-          continue;
-        }
-        try {
+  for (const [index, row] of rows.entries()) {
+    if (!row.name?.trim()) {
+      errors.push(`Ligne ${index + 1} : nom manquant`);
+      continue;
+    }
+    try {
+      // Une transaction PAR ligne : un SKU déjà utilisé ou une donnée erronée
+      // ne met plus PostgreSQL dans l'état « transaction is aborted » pour
+      // toutes les montures suivantes. Produit et stock restent néanmoins
+      // enregistrés (ou annulés) ensemble pour cette ligne.
+      await db.$transaction(
+        async (tx) => {
           if (row.existingProductId) {
-            await tx.product.updateMany({
+            const result = await tx.product.updateMany({
               where: { id: row.existingProductId },
               data: {
                 name: row.name,
@@ -222,6 +236,7 @@ export async function commitImport(
                 sellPrice: row.sellPrice,
               },
             });
+            if (result.count === 0) throw new Error('Produit à mettre à jour introuvable');
             if (row.stock != null) {
               await tx.stockItem.upsert({
                 where: { productId_branchId: { productId: row.existingProductId, branchId } },
@@ -235,7 +250,6 @@ export async function commitImport(
                 update: { quantity: row.stock },
               });
             }
-            updated += 1;
           } else {
             const sku = row.sku?.trim() || (await generateSku(tx, row.category));
             const product = await tx.product.create({
@@ -258,15 +272,23 @@ export async function commitImport(
                 minAlert: 0,
               },
             });
-            created += 1;
           }
-        } catch (e) {
-          errors.push(`${row.name || row.sku} : ${e instanceof Error ? e.message : 'erreur inconnue'}`);
-        }
-      }
-    },
-    { timeout: 30000 },
-  );
+        },
+        { timeout: 30000 },
+      );
+      if (row.existingProductId) updated += 1;
+      else created += 1;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '';
+      const readable =
+        /unique constraint|duplicate key|P2002/i.test(message)
+          ? 'référence déjà utilisée'
+          : /stock/i.test(message)
+            ? 'stock impossible à enregistrer'
+            : message || 'erreur inconnue';
+      errors.push(`Ligne ${index + 1} — ${row.name || row.sku || 'produit sans nom'} : ${readable}`);
+    }
+  }
 
   return { created, updated, errors };
 }
