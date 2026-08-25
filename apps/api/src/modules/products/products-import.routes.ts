@@ -15,7 +15,15 @@ export async function productsImportRoutes(app: FastifyInstance): Promise<void> 
     const file = await req.file();
     if (!file) throw badRequest('Fichier requis (.xlsx ou .csv)');
     const buffer = await file.toBuffer();
-    const parsed = parseImportFile(buffer);
+    let parsed;
+    try {
+      parsed = parseImportFile(buffer);
+    } catch (err) {
+      // Les erreurs de structure Excel (titre avant l'en-tête, colonnes non
+      // reconnues…) viennent du fichier utilisateur : elles doivent être
+      // affichées comme telles, jamais comme une erreur interne 500.
+      throw badRequest(err instanceof Error ? err.message : 'Fichier Excel ou CSV illisible');
+    }
     if (parsed.length === 0) throw badRequest('Aucune ligne exploitable dans ce fichier');
     const rows = await previewImportRows(req.db!, parsed);
     return reply.send({ rows });
