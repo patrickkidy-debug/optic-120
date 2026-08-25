@@ -7,17 +7,28 @@ import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
 
 /**
  * Fournisseur de paiement de la PLATEFORME (l'éditeur SaaS encaisse les
- * abonnements). Ordre de priorité : GeniusPay (23 pays) → Moneroo → PayTech
+ * abonnements). Ordre de priorité : Moneroo → GeniusPay (23 pays) → PayTech
  * (Sénégal) → simulation. Distinct du provider des ventes, qui encaisse pour le
  * compte du tenant.
  *
- * GeniusPay passe en tête parce qu'il est le seul à couvrir le Maghreb et
- * l'Afrique de l'Est : PayTech ne peut pas encaisser un opticien marocain.
- * L'ordre reste une simple cascade — retirer les clés GeniusPay fait
- * automatiquement redescendre sur le fournisseur suivant.
+ * Moneroo repasse en tête le 2026-08-25 : GeniusPay tombait en panne côté
+ * clients (paiements bloqués). L'ordre reste une simple cascade — retirer les
+ * clés Moneroo fait automatiquement redescendre sur GeniusPay sans changement
+ * de code. Remettre GeniusPay en tête (Maghreb/Afrique de l'Est, hors
+ * couverture Moneroo) une fois l'incident résolu côté GeniusPay.
  */
 export function resolvePlatformProvider(): PaymentProvider {
-  // 1) GeniusPay (orchestrateur multi-passerelles, couverture continentale).
+  // 1) Moneroo (orchestrateur multi-passerelles) — un seul lien, toutes les méthodes.
+  if (env.MONEROO_SECRET_KEY) {
+    return new MonerooProvider({
+      secretKey: env.MONEROO_SECRET_KEY,
+      baseUrl: env.MONEROO_BASE_URL,
+      returnUrl: `${appOrigin}/parametres/abonnement`,
+      webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
+    });
+  }
+
+  // 2) GeniusPay (orchestrateur multi-passerelles, couverture continentale).
   // Pas d'URL de webhook ici : chez GeniusPay elle s'enregistre une fois pour
   // toutes via POST /webhooks, pas à chaque paiement comme l'IPN PayTech.
   if (env.GENIUSPAY_API_KEY && env.GENIUSPAY_API_SECRET) {
@@ -33,16 +44,6 @@ export function resolvePlatformProvider(): PaymentProvider {
       // laisse donc GeniusPay présenter sa page, seule à connaître les
       // opérateurs réellement disponibles dans le pays du client.
       forceHostedCheckout: true,
-    });
-  }
-
-  // 2) Moneroo (orchestrateur multi-passerelles) — un seul lien, toutes les méthodes.
-  if (env.MONEROO_SECRET_KEY) {
-    return new MonerooProvider({
-      secretKey: env.MONEROO_SECRET_KEY,
-      baseUrl: env.MONEROO_BASE_URL,
-      returnUrl: `${appOrigin}/parametres/abonnement`,
-      webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
     });
   }
   // 3) PayTech (passerelle directe Sénégal/XOF).
