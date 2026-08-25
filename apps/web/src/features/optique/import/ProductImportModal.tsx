@@ -116,6 +116,11 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
           <p className="text-sm text-content-muted">
             Corrigez ce qui doit l'être avant de valider — rien n'est encore enregistré.
           </p>
+          {rows.some((r) => r.status === 'error') && (
+            <div className="rounded-xl bg-[color:var(--danger)]/10 px-3 py-2 text-xs text-danger">
+              Certaines lignes ne peuvent pas être importées. Survolez « Erreur » pour voir la cause, ou corrigez les champs.
+            </div>
+          )}
           <div className="max-h-[420px] overflow-y-auto rounded-xl border">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-surface">
@@ -196,7 +201,9 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                       />
                     </td>
                     <td className="table-cell">
-                      <Badge tone={STATUS_BADGE[r.status].tone}>{STATUS_BADGE[r.status].label}</Badge>
+                      <Badge tone={STATUS_BADGE[r.status].tone}>
+                        <span title={r.error}>{r.status === 'error' && r.error ? `Erreur : ${r.error}` : STATUS_BADGE[r.status].label}</span>
+                      </Badge>
                     </td>
                     <td className="table-cell">
                       <button onClick={() => removeRow(i)} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">

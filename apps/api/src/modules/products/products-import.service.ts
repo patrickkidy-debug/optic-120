@@ -48,13 +48,13 @@ type CanonicalField = 'sku' | 'name' | 'category' | 'brand' | 'buyPrice' | 'sell
 
 /** Alias d'en-têtes (FR/EN, insensible casse/accents) reconnus par colonne. */
 const FIELD_ALIASES: Record<CanonicalField, string[]> = {
-  sku: ['sku', 'reference', 'ref', 'code'],
-  name: ['nom', 'designation', 'produit', 'article', 'name'],
-  buyPrice: ["prix d'achat", 'prix achat', 'buy price', 'cost', 'cout'],
+  sku: ['sku', 'reference', 'ref', 'code', 'code article', 'code produit'],
+  name: ['nom', 'designation', 'désignation', 'produit', 'article', 'name', 'modele', 'modèle', 'model', 'libelle', 'libellé'],
+  buyPrice: ["prix d'achat", 'prix achat', 'buy price', 'cost', 'cout', 'coût', 'prix coutant'],
   sellPrice: ['prix de vente', 'prix vente', 'sell price', 'prix', 'price'],
-  category: ['categorie', 'category', 'type'],
-  brand: ['marque', 'brand'],
-  stock: ['stock initial', 'stock', 'quantite', 'qty', 'quantity'],
+  category: ['categorie', 'catégorie', 'category', 'type', 'famille'],
+  brand: ['marque', 'brand', 'fabricant'],
+  stock: ['stock initial', 'stock', 'quantite', 'quantité', 'qty', 'quantity'],
 };
 // Ordre de détection : du plus spécifique au plus générique (ex. "prix d'achat"
 // avant le générique "prix" de sellPrice), pour qu'une colonne ne soit jamais
@@ -126,20 +126,35 @@ export function parseImportFile(buffer: Buffer): ParsedProductRow[] {
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) return [];
   const sheet = workbook.Sheets[sheetName];
-  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-  if (raw.length === 0) return [];
-  const columns = detectColumns(raw[0]);
+  // `header: 1` conserve les premières lignes telles quelles. Beaucoup de
+  // fichiers Excel commencent par un titre, un logo ou une ligne vide avant
+  // les vrais en-têtes : `sheet_to_json` prenait alors ce titre pour en-tête
+  // et produisait des produits entièrement vides.
+  const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: false });
+  if (grid.length === 0) return [];
+  const headerIndex = grid.slice(0, 20).findIndex((cells) => {
+    const header = Object.fromEntries(cells.map((cell, index) => [String(index), cell]));
+    const detected = detectColumns(header);
+    return Boolean(detected.name) || Object.keys(detected).length >= 2;
+  });
+  if (headerIndex < 0) {
+    throw new Error('En-têtes introuvables : ajoutez au minimum une colonne « Nom », « Désignation » ou « Modèle »');
+  }
+  const headers = grid[headerIndex].map((cell) => String(cell ?? '').trim());
+  const columns = detectColumns(Object.fromEntries(headers.map((header, index) => [String(index), header])));
 
-  const get = (row: Record<string, unknown>, field: CanonicalField): string => {
+  const get = (row: unknown[], field: CanonicalField): string => {
     const key = columns[field];
-    return key ? String(row[key] ?? '').trim() : '';
+    return key !== undefined ? String(row[Number(key)] ?? '').trim() : '';
   };
   const toNumber = (s: string): number => {
     const n = Number(s.replace(/[^\d.-]/g, ''));
     return Number.isFinite(n) ? n : 0;
   };
 
-  return raw.map((row) => {
+  return grid.slice(headerIndex + 1)
+    .filter((row) => row.some((cell) => String(cell ?? '').trim() !== ''))
+    .map((row) => {
     const stockRaw = get(row, 'stock');
     return {
       sku: get(row, 'sku'),
