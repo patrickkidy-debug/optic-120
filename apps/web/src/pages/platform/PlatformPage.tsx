@@ -624,7 +624,12 @@ function UsersTab() {
               <th className="table-cell font-semibold">Rôle</th>
               <th className="table-cell font-semibold">Statut</th>
               <th className="table-cell font-semibold">Dernière connexion</th>
-              <th className="table-cell text-right font-semibold">Actions</th>
+              <th className="table-cell min-w-[250px] font-semibold">
+                <span className="block text-content">Actions</span>
+                <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-content-faint">
+                  Gestion du compte et de l'abonnement
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -678,17 +683,17 @@ function UsersTab() {
                   <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Actif' : 'Inactif'}</Badge>
                 </td>
                 <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
-                <td className="table-cell text-right">
-                  {/* Boutons icône seule (titre au survol) : les libellés en toutes
-                      lettres poussaient cette colonne bien au-delà de la largeur
-                      de l'écran. */}
-                  <div className="flex flex-wrap justify-end gap-1">
+                <td className="table-cell min-w-[250px]">
+                  {/* Les libellés restent visibles : les icônes seules rendaient les
+                      actions difficiles à identifier sans survol. La grille garde
+                      toutefois la colonne compacte et lisible. */}
+                  <div className="grid grid-cols-2 gap-1.5">
                     <button
                       title="Régler la durée d'essai de cet établissement"
                       onClick={() => setExtending({ tenantId: u.tenantId, tenantName: u.tenantName })}
-                      className="btn-ghost h-8 rounded-lg px-2 text-primary"
+                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-primary"
                     >
-                      <Clock className="h-3.5 w-3.5" />
+                      <Clock className="h-3.5 w-3.5 shrink-0" /> Essai
                     </button>
                     {(() => {
                       const hasAccess =
@@ -700,16 +705,16 @@ function UsersTab() {
                           <button
                             title="Prolonger l'abonnement payé"
                             onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
-                            className="btn-ghost h-8 rounded-lg px-2 text-content-muted"
+                            className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-content-muted"
                           >
-                            <BadgeCheck className="h-3.5 w-3.5" />
+                            <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Prolonger
                           </button>
                           <button
                             title="Suspendre l'abonnement"
                             onClick={() => { if (confirm(`Suspendre l'abonnement de ${u.tenantName} ?`)) suspendMut.mutate(u.tenantId); }}
-                            className="btn-ghost h-8 rounded-lg px-2 text-danger"
+                            className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-danger"
                           >
-                            <Pause className="h-3.5 w-3.5" />
+                            <Pause className="h-3.5 w-3.5 shrink-0" /> Suspendre
                           </button>
                         </>
                       ) : (
@@ -718,22 +723,21 @@ function UsersTab() {
                             <button
                               title="Réactiver l'abonnement suspendu"
                               onClick={() => reactivateMut.mutate(u.tenantId)}
-                              className="btn-ghost h-8 rounded-lg px-2 text-content-muted"
+                              className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-content-muted"
                             >
-                              <Play className="h-3.5 w-3.5" />
+                              <Play className="h-3.5 w-3.5 shrink-0" /> Réactiver
                             </button>
                           )}
                           <button
                             title="Activer manuellement l'abonnement (paiement reçu en direct)"
                             onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
-                            className="btn-outline h-8 rounded-lg px-2 text-success"
+                            className="btn-outline h-8 justify-start rounded-lg px-2.5 text-xs text-success"
                           >
-                            <BadgeCheck className="h-3.5 w-3.5" />
+                            <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Activer
                           </button>
                         </>
                       );
                     })()}
-                    <span className="mx-0.5 h-6 w-px bg-border" />
                     <button
                       title="Réinitialiser le mot de passe (sans email)"
                       onClick={() => {
@@ -743,32 +747,32 @@ function UsersTab() {
                           });
                         }
                       }}
-                      className="btn-ghost h-8 rounded-lg px-2"
+                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs"
                     >
-                      <KeyRound className="h-3.5 w-3.5" />
+                      <KeyRound className="h-3.5 w-3.5 shrink-0" /> Mot de passe
                     </button>
                     <button
                       title="Déconnecter de toutes les sessions"
                       onClick={() => { if (confirm(`Forcer la déconnexion de ${u.name} ?`)) logoutMut.mutate(u.id); }}
-                      className="btn-ghost h-8 rounded-lg px-2"
+                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs"
                     >
-                      <LogOut className="h-3.5 w-3.5" />
+                      <LogOut className="h-3.5 w-3.5 shrink-0" /> Déconnecter
                     </button>
                     {u.isActive ? (
                       <button
                         title="Désactiver le compte"
                         onClick={() => { if (confirm(`Désactiver le compte de ${u.name} ?`)) activeMut.mutate({ id: u.id, isActive: false }); }}
-                        className="btn-ghost h-8 rounded-lg px-2 text-danger"
+                        className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-danger"
                       >
-                        <ShieldOff className="h-3.5 w-3.5" />
+                        <ShieldOff className="h-3.5 w-3.5 shrink-0" /> Désactiver
                       </button>
                     ) : (
                       <button
                         title="Réactiver le compte"
                         onClick={() => activeMut.mutate({ id: u.id, isActive: true })}
-                        className="btn-outline h-8 rounded-lg px-2 text-success"
+                        className="btn-outline h-8 justify-start rounded-lg px-2.5 text-xs text-success"
                       >
-                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Réactiver
                       </button>
                     )}
                   </div>
