@@ -69,6 +69,29 @@ Deux options :
 > lance-le une fois si besoin : `npm run db:seed --workspace @oculo/api`.
 > `db:seed:admin` exige que les rôles système existent déjà.
 
+### 5. OculoPartners (espace partenaire) — Vercel, en plus
+
+`apps/partners` est une app séparée (mobile-first, inscription/dashboard des
+partenaires affiliés). Elle appelle la MÊME API Render — pas de backend
+séparé à déployer.
+
+1. [vercel.com](https://vercel.com) → **Add New** → **Project** → importer
+   `optic-120` **une seconde fois** (un projet Vercel = une racine).
+2. **Root Directory** → `apps/partners`. Vercel détecte `vite.config.ts`
+   automatiquement (pas de `vercel.json` dédié : les réglages par défaut
+   pour un projet Vite conviennent — build `npm run build`, output `dist`).
+3. **Environment Variables** : `VITE_API_URL` = la même URL Render qu'à
+   l'étape 1 (ex. `https://oculosaas-api.onrender.com`).
+4. **Deploy**. Noter l'URL, ex. `https://optic-120-partners.vercel.app`.
+5. Render → `oculosaas-api` → **Environment** → `CORS_ORIGIN` : ajouter
+   cette URL à la liste existante, séparée par une virgule (ex.
+   `https://optic-120.vercel.app,https://optic-120-partners.vercel.app`).
+   Sauvegarder → redéploiement automatique.
+
+Le lien de parrainage généré pour chaque partenaire pointe vers le site
+PRINCIPAL (`<CORS_ORIGIN[0]>/?ref=CODE`, capturé sur `apps/web`) — c'est
+normal : le clic a lieu sur la landing du magasin, pas sur l'app partenaire.
+
 ---
 
 ## Variables d'environnement de l'API (référence)
