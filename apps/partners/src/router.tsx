@@ -26,24 +26,30 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export const router = createBrowserRouter([
-  { path: '/login', element: <RedirectIfAuthed><LoginPage /></RedirectIfAuthed> },
-  { path: '/inscription', element: <RedirectIfAuthed><SignupPage /></RedirectIfAuthed> },
-  {
-    element: <RequirePartnerAuth />,
-    children: [
-      {
-        element: <Layout />,
-        children: [
-          { path: '/', element: <Navigate to="/dashboard" replace /> },
-          { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/prospects', element: <LeadsPage /> },
-          { path: '/clients', element: <CustomersPage /> },
-          { path: '/commissions', element: <CommissionsPage /> },
-          { path: '/partager', element: <SharePage /> },
-        ],
-      },
-    ],
-  },
-  { path: '*', element: <Navigate to="/dashboard" replace /> },
-]);
+export const router = createBrowserRouter(
+  [
+    { path: '/login', element: <RedirectIfAuthed><LoginPage /></RedirectIfAuthed> },
+    { path: '/inscription', element: <RedirectIfAuthed><SignupPage /></RedirectIfAuthed> },
+    {
+      element: <RequirePartnerAuth />,
+      children: [
+        {
+          element: <Layout />,
+          children: [
+            { path: '/', element: <Navigate to="/dashboard" replace /> },
+            { path: '/dashboard', element: <DashboardPage /> },
+            { path: '/prospects', element: <LeadsPage /> },
+            { path: '/clients', element: <CustomersPage /> },
+            { path: '/commissions', element: <CommissionsPage /> },
+            { path: '/partager', element: <SharePage /> },
+          ],
+        },
+      ],
+    },
+    { path: '*', element: <Navigate to="/dashboard" replace /> },
+  ],
+  // Servi sous oculosaas.com/partners (proxy Netlify) : toutes les routes
+  // ci-dessus restent écrites sans le préfixe, React Router l'ajoute/l'attend
+  // automatiquement dans l'URL visible.
+  { basename: '/partners' },
+);

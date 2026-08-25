@@ -4,11 +4,12 @@ Architecture : **monorepo full-stack**.
 
 | Partie | Techno | Hébergeur |
 |--------|--------|-----------|
-| `apps/web` | Vite + React (SPA) | **Vercel** |
+| `apps/web` (oculosaas.com) | Vite + React (SPA) | **Netlify** |
+| `apps/partners` (oculosaas.com/partners) | Vite + React (SPA) | **Netlify** (site séparé, proxyé sous `/partners`) |
 | `apps/api` | Fastify + Prisma | **Render** (web service) |
 | Base de données | PostgreSQL | **Render** (managée) |
 
-Le frontend (Vercel) et l'API (Render) sont sur des domaines différents : les cookies
+Le frontend (Netlify) et l'API (Render) sont sur des domaines différents : les cookies
 d'auth sont donc configurés en `SameSite=None` + `Secure` (voir `COOKIE_*` plus bas).
 
 ---
@@ -34,28 +35,34 @@ puis frontend, puis on reconnecte le CORS.
 
 > `JWT_ACCESS_SECRET` et le mot de passe de la base sont générés automatiquement.
 
-### 2. Frontend — Vercel
+### 2. Frontend (oculosaas.com) — Netlify
 
-1. [vercel.com](https://vercel.com) → se connecter avec GitHub.
-2. **Add New** → **Project** → importer `optic-120`.
-   Vercel détecte [`vercel.json`](./vercel.json) — ne rien changer aux réglages de build.
-3. **Environment Variables** :
-   | Variable | Valeur |
-   |----------|--------|
-   | `VITE_API_URL` | l'URL Render de l'étape 1 |
-4. **Deploy**. Noter l'URL, ex. `https://optic-120.vercel.app`.
+Config prête dans [`netlify.toml`](./netlify.toml) (racine du repo).
+
+1. [app.netlify.com](https://app.netlify.com) → **Add new project** → **Import
+   an existing project** → connecter GitHub → sélectionner `optic-120`.
+2. Netlify lit `netlify.toml` à la racine automatiquement (build command,
+   `apps/web/dist`, redirection SPA, en-têtes de sécurité) — rien à changer.
+3. **Site settings → Environment variables** : `VITE_API_URL` est déjà fixée
+   dans `netlify.toml` (`https://api.oculosaas.com`) ; ajuster seulement si
+   l'URL Render réelle diffère (puis relancer un déploiement).
+4. **Deploy site**. Noter l'URL, ex. `https://oculosaas.netlify.app`
+   (domaine personnalisé `oculosaas.com` à brancher ensuite dans **Domain
+   management**).
 
 ### 3. Reconnecter le CORS
 
 1. Render → service `oculosaas-api` → **Environment**.
-2. `CORS_ORIGIN` = l'URL Vercel exacte (**sans slash final**), ex. `https://optic-120.vercel.app`.
+2. `CORS_ORIGIN` = l'URL du site Netlify (**sans slash final**), ex.
+   `https://oculosaas.com` (ou l'URL `*.netlify.app` en attendant le domaine
+   personnalisé).
 3. Sauvegarder → Render redéploie automatiquement.
 
 ### 4. Créer le compte administrateur
 
 Deux options :
 
-- **Via l'UI** : ouvrir le site Vercel → page d'inscription → créer ton entreprise.
+- **Via l'UI** : ouvrir le site → page d'inscription → créer ton entreprise.
 - **Via seed** (Render → service API → onglet **Shell**) :
   ```bash
   ADMIN_EMAIL=admin@maclinique.com \
@@ -69,31 +76,44 @@ Deux options :
 > lance-le une fois si besoin : `npm run db:seed --workspace @oculo/api`.
 > `db:seed:admin` exige que les rôles système existent déjà.
 
-### 5. OculoPartners (espace partenaire) — Netlify, en plus
+### 5. OculoPartners (oculosaas.com/partners) — second site Netlify + proxy
 
-`apps/partners` est une app séparée (mobile-first, inscription/dashboard des
-partenaires affiliés). Elle appelle la MÊME API Render — pas de backend
-séparé à déployer. Config prête dans [`apps/partners/netlify.toml`](./apps/partners/netlify.toml).
+`apps/partners` est déployé comme un **site Netlify séparé**, puis rendu
+accessible sous `oculosaas.com/partners` par un **rewrite proxy** configuré
+dans le `netlify.toml` du site PRINCIPAL (pas de sous-domaine visible, pas
+de second nom de domaine à gérer). Config prête dans
+[`apps/partners/netlify.toml`](./apps/partners/netlify.toml).
 
-1. [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an
-   existing project** → connecter GitHub → sélectionner `optic-120`.
-2. **Base directory** → `apps/partners` (Netlify lit alors `netlify.toml` à
-   cet endroit et applique build command / publish directory / redirection
-   SPA automatiquement — rien d'autre à saisir dans ce formulaire).
-3. **Site settings → Environment variables** : ajouter `VITE_API_URL` = la
-   même URL Render qu'à l'étape 1 (ex. `https://oculosaas-api.onrender.com`),
-   puis relancer un déploiement (les variables ne s'appliquent qu'au build
-   suivant).
-4. **Deploy site**. Noter l'URL, ex. `https://oculopartners.netlify.app`
-   (personnalisable dans **Site settings → Domain management**).
-5. Render → `oculosaas-api` → **Environment** → `CORS_ORIGIN` : ajouter
-   cette URL à la liste existante, séparée par une virgule (ex.
-   `https://optic-120.vercel.app,https://oculopartners.netlify.app`).
-   Sauvegarder → redéploiement automatique.
+1. [app.netlify.com](https://app.netlify.com) → **Add new project** →
+   **Import an existing project** → GitHub → `optic-120` (même repo, un
+   second site).
+2. **Base directory** → `apps/partners` (Netlify lit alors son
+   `netlify.toml` et propose déjà la bonne commande de build / dossier de
+   publication).
+3. **Project name** → choisir explicitement **`oculopartners`**, pour que
+   l'URL générée soit `https://oculopartners.netlify.app` — c'est cette URL
+   exacte que le proxy du site principal cible (voir `[[redirects]]` dans le
+   `netlify.toml` racine, règle `/partners/*`). Un autre nom fonctionne aussi,
+   mais il faut alors modifier cette URL cible dans le `netlify.toml` racine.
+4. **Environment variables** : `VITE_API_URL` = la même URL Render qu'à
+   l'étape 1.
+5. **Deploy site**.
+6. Retourner sur le site PRINCIPAL et **redéployer** (le proxy vers
+   `oculopartners.netlify.app` vient d'être ajouté au `netlify.toml` racine :
+   un nouveau déploiement du site principal est nécessaire pour qu'il prenne
+   effet — un simple `git push`, ou **Trigger deploy** dans Netlify, suffit).
+7. Vérifier : `https://oculosaas.com/partners/inscription` doit afficher la
+   page d'inscription partenaire.
+
+**Pas d'étape CORS supplémentaire** : le proxy est un *rewrite* (statut 200,
+l'URL dans la barre d'adresse ne change pas), donc le navigateur voit
+toujours l'origine `oculosaas.com` — les appels API de `apps/partners`
+passent par le `CORS_ORIGIN` déjà autorisé à l'étape 3.
 
 Le lien de parrainage généré pour chaque partenaire pointe vers le site
-PRINCIPAL (`<CORS_ORIGIN[0]>/?ref=CODE`, capturé sur `apps/web`) — c'est
-normal : le clic a lieu sur la landing du magasin, pas sur l'app partenaire.
+PRINCIPAL (`https://oculosaas.com/?ref=CODE`, capturé dans `apps/web`) —
+c'est normal : le clic a lieu sur la landing du magasin, pas sur l'espace
+partenaire.
 
 ---
 
@@ -104,7 +124,7 @@ Voir [`.env.example`](./.env.example). Les essentielles en production :
 | Variable | Production |
 |----------|-----------|
 | `DATABASE_URL` | fourni par la base Render |
-| `CORS_ORIGIN` | URL du frontend Vercel |
+| `CORS_ORIGIN` | URL du site Netlify principal (`oculosaas.com`) |
 | `COOKIE_DOMAIN` | `""` (vide — cookie host-only en cross-domaine) |
 | `COOKIE_SAMESITE` | `none` |
 | `COOKIE_SECURE` | `true` |
@@ -120,6 +140,6 @@ Voir [`.env.example`](./.env.example). Les essentielles en production :
   (premier appel ~30 s pour la réveiller). Pour la prod, passer les `plan: free`
   en `plan: starter` dans [`render.yaml`](./render.yaml).
 - **Redéploiement** : chaque `git push` sur `main` redéploie automatiquement
-  Vercel et Render.
+  Netlify (les deux sites) et Render.
 - **Emails** (réinit. mot de passe) : `MAIL_DRIVER=console` par défaut (logués).
   Pour de vrais emails, passer `MAIL_DRIVER=smtp` et renseigner les `SMTP_*`.

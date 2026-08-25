@@ -20,6 +20,20 @@
   # le bundle au build. Publique par nature. Surchargeable depuis le dashboard.
   VITE_API_URL = "https://api.oculosaas.com"
 
+# OculoPartners : proxy transparent vers le site Netlify séparé apps/partners,
+# pour que l'espace partenaire vive sous oculosaas.com/partners au lieu d'un
+# sous-domaine à part. Statut 200 = rewrite (l'URL dans la barre d'adresse ne
+# change pas) ; :splat = tout ce qui suit "/partners/" est transmis TEL QUEL
+# au site cible, qui le reçoit donc comme si on l'avait visité à sa racine —
+# cohérent avec vite.config.ts (base: '/partners/') et le basename du router
+# côté apps/partners. DOIT rester AVANT le fallback SPA "/*" ci-dessous
+# (Netlify applique la première règle qui correspond).
+[[redirects]]
+  from = "/partners/*"
+  to = "https://oculopartners.netlify.app/:splat"
+  status = 200
+  force = true
+
 # SPA : toutes les routes inconnues renvoient index.html (React Router gère ensuite).
 [[redirects]]
   from = "/*"
