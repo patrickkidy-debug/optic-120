@@ -35,6 +35,7 @@ import { mergeOpticalSettings } from '../../lib/optical-settings.js';
 import { mailer } from '../../lib/mailer.js';
 import { logger } from '../../lib/logger.js';
 import { ensurePendingSubscription } from '../billing/billing.service.js';
+import { linkAttributionOnSignup } from '../partners/partner.service.js';
 import { seedSampleBusinessData } from '../demo/sample-data.js';
 import { notifyFounderNewTenant } from '../billing/platform.service.js';
 import { env, appOrigin } from '../../config/env.js';
@@ -389,6 +390,16 @@ export async function signupTenant(input: SignupInput, meta: RequestMeta): Promi
     logger.error({ err }, 'Envoi email de confirmation échoué');
   }
 
+  // OculoPartners : lie l'inscription à son attribution s'il y en a une
+  // valide. Jamais bloquant — voir linkAttributionOnSignup.
+  void linkAttributionOnSignup(
+    user.tenantId,
+    input.referralCode,
+    { email: input.adminEmail, whatsapp: input.whatsapp },
+    input.visitorId,
+    meta,
+  );
+
   const session = await issueSession(user, meta);
   return { ...session, user: buildAuthUser(user) };
 }
@@ -525,6 +536,14 @@ export async function signupWithGoogle(input: GoogleSignupInput, meta: RequestMe
     entityId: user.tenantId,
     ...meta,
   });
+
+  void linkAttributionOnSignup(
+    user.tenantId,
+    input.referralCode,
+    { email: profile.email, whatsapp: input.whatsapp },
+    input.visitorId,
+    meta,
+  );
 
   const session = await issueSession(user, meta);
   return { ...session, user: buildAuthUser(user) };

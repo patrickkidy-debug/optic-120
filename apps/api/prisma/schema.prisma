@@ -1445,3 +1445,193 @@ model CrmSettings {
   demoBookingUrl String?
   updatedAt      DateTime @updatedAt
 }
+
+/**
+ * ---------------- OCULO PARTNERS ----------------
+ *
+ * Ces modèles sont globaux : un partenaire n'est pas un utilisateur d'un
+ * magasin et ne doit jamais être soumis au client Prisma tenant-scopé.
+ */
+
+enum PartnerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum PartnerTierCode {
+  AMBASSADOR
+  PARTNER_PRO
+  PARTNER_EXPERT
+}
+
+enum PartnerLeadStatus {
+  NEW
+  CONTACTED
+  DEMO
+  TRIAL
+  SUBSCRIBED
+  LOST
+}
+
+enum PartnerCommissionStatus {
+  PENDING
+  APPROVED
+  PAYABLE
+  PAID
+  CANCELLED
+  REVERSED
+}
+
+model Partner {
+  id              String            @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String            @unique
+  whatsapp        String            @unique
+  countryCode     String?
+  city            String?
+  passwordHash    String
+  referralCode    String            @unique
+  status          PartnerStatus     @default(PENDING)
+  tier            PartnerTierCode   @default(AMBASSADOR)
+  payoutMethod    String?
+  payoutDetails   Json?
+  termsAcceptedAt DateTime
+  approvedAt      DateTime?
+  suspendedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  sessions     PartnerSession[]
+  attributions PartnerAttribution[]
+  leads        PartnerLead[]
+  commissions  PartnerCommission[]
+  auditLogs    PartnerAuditLog[]
+}
+
+model PartnerSession {
+  id         String   @id @default(uuid())
+  partnerId  String
+  partner    Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([partnerId])
+}
+
+/// Attribution durable : un tenant ne peut appartenir qu'à un partenaire.
+model PartnerAttribution {
+  id          String   @id @default(uuid())
+  partnerId   String
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  referralCode String
+  visitorId   String?
+  tenantId    String?  @unique
+  emailHash   String?
+  firstSeenAt DateTime @default(now())
+  expiresAt   DateTime
+  linkedAt    DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([partnerId, expiresAt])
+  @@index([referralCode])
+  @@index([visitorId])
+}
+
+model PartnerLead {
+  id                String            @id @default(uuid())
+  partnerId         String
+  partner           Partner           @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  establishmentName String
+  contactName       String?
+  phone             String?
+  email             String?
+  countryCode       String?
+  city              String?
+  source            String            @default("MANUAL")
+  status            PartnerLeadStatus @default(NEW)
+  tenantId          String?           @unique
+  lastActivityAt    DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([partnerId, status])
+}
+
+/// Règle serveur : montant fixe par offre et niveau partenaire, jamais frontend.
+model PartnerCommissionRule {
+  id            String          @id @default(uuid())
+  planCode      String
+  tier          PartnerTierCode
+  amount        Decimal         @db.Decimal(12, 2)
+  currency      String          @default("XOF")
+  isActive      Boolean         @default(true)
+  effectiveFrom DateTime        @default(now())
+  effectiveTo   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([planCode, tier, isActive])
+}
+
+/// Une commission par premier paiement d'abonnement, garantie par l'unicité.
+model PartnerCommission {
+  id                    String                  @id @default(uuid())
+  partnerId             String
+  partner               Partner                 @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  tenantId              String
+  subscriptionPaymentId String                  @unique
+  subscriptionInvoiceId String                  @unique
+  planCode              String
+  customerAmount        Decimal                 @db.Decimal(12, 2)
+  amount                Decimal                 @db.Decimal(12, 2)
+  currency              String                  @default("XOF")
+  status                PartnerCommissionStatus @default(PENDING)
+  ruleSnapshot          Json
+  approvedAt            DateTime?
+  payableAt             DateTime?
+  paidAt                DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  @@index([partnerId, status])
+  @@index([tenantId])
+}
+
+model PartnerEvent {
+  id             String   @id @default(uuid())
+  type           String
+  idempotencyKey String   @unique
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([type, createdAt])
+}
+
+model PartnerAuditLog {
+  id        String   @id @default(uuid())
+  partnerId String?
+  partner   Partner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  actorType String
+  actorId   String?
+  action    String
+  entity    String?
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([partnerId, createdAt])
+  @@index([action, createdAt])
+}

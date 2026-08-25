@@ -32,6 +32,7 @@ import { supportRoutes } from './modules/support/support.routes.js';
 import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
 import { demoRoutes } from './modules/demo/demo.routes.js';
 import { crmRoutes } from './modules/crm/crm.routes.js';
+import { partnerRoutes } from './modules/partners/partner.routes.js';
 
 /** Horodatage de démarrage : distingue un redéploiement d'un simple réveil. */
 const startedAt = new Date();
@@ -149,6 +150,7 @@ export async function buildApp() {
   await app.register(whatsappWebhookRoutes, { prefix: '/webhooks' });
   await app.register(demoRoutes, { prefix: '/demo' });
   await app.register(crmRoutes, { prefix: '/crm' });
+  await app.register(partnerRoutes, { prefix: '/partners' });
 
   return app;
 }

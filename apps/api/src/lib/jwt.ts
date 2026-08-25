@@ -68,3 +68,23 @@ export async function verifyLoginSelection(token: string): Promise<string[]> {
   }
   return (payload.uids as unknown[]).map(String);
 }
+
+/**
+ * Jeton d'accès OculoPartners — distinct des jetons magasin (`signAccessToken`)
+ * par sa réclamation `typ`, pour qu'un jeton partenaire ne puisse jamais être
+ * confondu avec celui d'un utilisateur de magasin (frontières RBAC séparées).
+ */
+export async function signPartnerAccessToken(partnerId: string): Promise<string> {
+  return new SignJWT({ typ: 'partner' })
+    .setProtectedHeader({ alg: ALG })
+    .setSubject(partnerId)
+    .setIssuedAt()
+    .setExpirationTime(env.JWT_ACCESS_TTL)
+    .sign(secret);
+}
+
+export async function verifyPartnerAccessToken(token: string): Promise<string> {
+  const { payload } = await jwtVerify(token, secret, { algorithms: [ALG] });
+  if (payload.typ !== 'partner') throw new Error('Jeton partenaire invalide');
+  return String(payload.sub);
+}

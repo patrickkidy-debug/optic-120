@@ -1,6 +1,7 @@
 import 'fastify';
 import type { TenantPrisma } from '../lib/prisma-tenant.js';
 import type { AuthContext } from './auth.js';
+import type { PartnerAuthContext } from './partner-auth.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -8,5 +9,7 @@ declare module 'fastify' {
     auth?: AuthContext;
     /** Client Prisma scopé au tenant (présent après tenantScope). */
     db?: TenantPrisma;
+    /** Contexte partenaire (présent après requirePartnerAuth) — jamais mélangé avec `auth`. */
+    partnerAuth?: PartnerAuthContext;
   }
 }

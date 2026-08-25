@@ -14,6 +14,7 @@ import { prisma } from '../../lib/prisma.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
+import { recordCommissionForPayment } from '../partners/partner.service.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
 import { appOrigin } from '../../config/env.js';
 
@@ -516,9 +517,23 @@ export async function settleSubscriptionPayment(
       }),
       prisma.subscriptionPlan.findUnique({
         where: { id: payment.invoice.planId },
-        select: { name: true },
+        select: { name: true, code: true },
       }),
     ]);
+
+    // OculoPartners : commission au premier paiement confirmé, si ce tenant a
+    // une attribution. Toujours dans sa propre transaction (idempotente via
+    // subscriptionPaymentId), jamais bloquante pour le règlement du client.
+    if (plan) {
+      void recordCommissionForPayment({
+        id: payment.id,
+        invoiceId: payment.invoiceId,
+        tenantId: payment.tenantId,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        planCode: plan.code,
+      });
+    }
     const ctx = (payment.capiContext ?? {}) as CapiContext;
     void sendConversionEvent({
       eventName: 'Purchase',

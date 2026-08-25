@@ -43,6 +43,9 @@ import {
   Download,
   Bell,
   Clock,
+  Handshake,
+  Percent,
+  Ban,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -73,6 +76,18 @@ import {
   type PlatformNotification,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
+import {
+  listPartnersAdmin,
+  setPartnerStatusAdmin,
+  setPartnerTierAdmin,
+  listCommissionRulesAdmin,
+  upsertCommissionRuleAdmin,
+  listCommissionsAdmin,
+  applyCommissionActionAdmin,
+  type AdminPartner,
+  type CommissionRule,
+  type AdminCommission,
+} from '../../features/partners/api';
 import {
   listPendingPayments,
   confirmPayment,
@@ -213,7 +228,7 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team';
+type Tab = 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -295,6 +310,7 @@ export function PlatformPage() {
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
           { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
+          { id: 'partners' as Tab, label: 'Partenaires', icon: Handshake },
           { id: 'support' as Tab, label: 'Support', icon: LifeBuoy },
         ].map((t) => (
           <button
@@ -319,6 +335,7 @@ export function PlatformPage() {
         {tab === 'users' && <UsersTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'plans' && <PlansTab />}
+        {tab === 'partners' && <PartnersTab />}
         {tab === 'support' && <SupportTab />}
       </div>
     </div>
@@ -1608,6 +1625,373 @@ function EngagementTab() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/* ============================== OculoPartners ============================== */
+
+const PARTNER_STATUS_LABEL: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+  PENDING: { label: 'En attente', tone: 'warning' },
+  ACTIVE: { label: 'Actif', tone: 'success' },
+  SUSPENDED: { label: 'Suspendu', tone: 'danger' },
+  REJECTED: { label: 'Refusé', tone: 'neutral' },
+};
+const PARTNER_TIER_LABEL: Record<string, string> = {
+  AMBASSADOR: 'Ambassador',
+  PARTNER_PRO: 'Partner Pro',
+  PARTNER_EXPERT: 'Partner Expert',
+};
+const COMMISSION_STATUS_LABEL: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+  PENDING: { label: 'En attente', tone: 'warning' },
+  APPROVED: { label: 'Validée', tone: 'info' },
+  PAYABLE: { label: 'À payer', tone: 'info' },
+  PAID: { label: 'Payée', tone: 'success' },
+  CANCELLED: { label: 'Annulée', tone: 'neutral' },
+  REVERSED: { label: 'Reversée', tone: 'danger' },
+};
+const PLAN_CODES = ['STARTER', 'STANDARD', 'GROWTH'] as const;
+const TIER_CODES = ['AMBASSADOR', 'PARTNER_PRO', 'PARTNER_EXPERT'] as const;
+
+/**
+ * Programme d'affiliation OculoPartners : gestion des partenaires, des règles
+ * de commission (par offre × niveau) et de la file de validation des
+ * commissions. Séparé en trois sous-sections pour rester lisible.
+ */
+function PartnersTab() {
+  const [section, setSection] = useState<'list' | 'commissions' | 'rules'>('list');
+  const SECTIONS = [
+    { key: 'list' as const, label: 'Partenaires' },
+    { key: 'commissions' as const, label: 'Commissions' },
+    { key: 'rules' as const, label: 'Règles de commission' },
+  ];
+  return (
+    <div>
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl border bg-surface p-1">
+        {SECTIONS.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSection(s.key)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+              section === s.key ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {section === 'list' && <PartnersListSection />}
+      {section === 'commissions' && <PartnerCommissionsSection />}
+      {section === 'rules' && <PartnerRulesSection />}
+    </div>
+  );
+}
+
+function PartnersListSection() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['admin-partners'], queryFn: () => listPartnersAdmin() });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-partners'] });
+  const statusMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AdminPartner['status'] }) => setPartnerStatusAdmin(id, status),
+    onSuccess: invalidate,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const tierMut = useMutation({
+    mutationFn: ({ id, tier }: { id: string; tier: AdminPartner['tier'] }) => setPartnerTierAdmin(id, tier),
+    onSuccess: invalidate,
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0) return <EmptyState icon={Handshake} title="Aucun partenaire inscrit" />;
+
+  return (
+    <div className="card overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+            <th className="table-cell font-semibold">Partenaire</th>
+            <th className="table-cell font-semibold">Contact</th>
+            <th className="table-cell font-semibold">Code</th>
+            <th className="table-cell font-semibold">Statut</th>
+            <th className="table-cell font-semibold">Niveau</th>
+            <th className="table-cell text-center font-semibold">Prospects</th>
+            <th className="table-cell text-center font-semibold">Commissions</th>
+            <th className="table-cell text-right font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((p) => (
+            <tr key={p.id} className="border-b last:border-0 hover:bg-surface-2/50">
+              <td className="table-cell">
+                <div className="font-medium text-content">{p.firstName} {p.lastName}</div>
+                <div className="text-xs text-content-faint">{formatDate(p.createdAt)}</div>
+              </td>
+              <td className="table-cell text-content-muted">
+                <div>{p.email}</div>
+                <a
+                  href={waLink(p.whatsapp, `${p.firstName} ${p.lastName}`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-content-faint hover:text-success"
+                >
+                  <MessageCircle className="h-3 w-3" /> {p.whatsapp}
+                </a>
+              </td>
+              <td className="table-cell font-mono text-xs text-content-muted">{p.referralCode}</td>
+              <td className="table-cell">
+                <Badge tone={PARTNER_STATUS_LABEL[p.status]?.tone ?? 'neutral'}>
+                  {PARTNER_STATUS_LABEL[p.status]?.label ?? p.status}
+                </Badge>
+              </td>
+              <td className="table-cell">
+                <select
+                  value={p.tier}
+                  onChange={(e) => tierMut.mutate({ id: p.id, tier: e.target.value as AdminPartner['tier'] })}
+                  className="input h-8 py-0 text-xs"
+                >
+                  {TIER_CODES.map((t) => (
+                    <option key={t} value={t}>{PARTNER_TIER_LABEL[t]}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="table-cell text-center text-content-muted">{p._count.leads}</td>
+              <td className="table-cell text-center text-content-muted">{p._count.commissions}</td>
+              <td className="table-cell text-right">
+                <div className="flex justify-end gap-1.5">
+                  {p.status === 'PENDING' && (
+                    <button
+                      onClick={() => statusMut.mutate({ id: p.id, status: 'ACTIVE' })}
+                      className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                    >
+                      <BadgeCheck className="h-3.5 w-3.5" /> Approuver
+                    </button>
+                  )}
+                  {p.status === 'PENDING' && (
+                    <button
+                      onClick={() => statusMut.mutate({ id: p.id, status: 'REJECTED' })}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                    >
+                      <Ban className="h-3.5 w-3.5" /> Refuser
+                    </button>
+                  )}
+                  {p.status === 'ACTIVE' && (
+                    <button
+                      onClick={() => { if (confirm(`Suspendre ${p.firstName} ${p.lastName} ?`)) statusMut.mutate({ id: p.id, status: 'SUSPENDED' }); }}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                    >
+                      <Pause className="h-3.5 w-3.5" /> Suspendre
+                    </button>
+                  )}
+                  {p.status === 'SUSPENDED' && (
+                    <button
+                      onClick={() => statusMut.mutate({ id: p.id, status: 'ACTIVE' })}
+                      className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted"
+                    >
+                      <Play className="h-3.5 w-3.5" /> Réactiver
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PartnerCommissionsSection() {
+  const qc = useQueryClient();
+  const [status, setStatus] = useState<AdminCommission['status'] | 'ALL'>('ALL');
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-commissions', status],
+    queryFn: () => listCommissionsAdmin(status === 'ALL' ? undefined : status),
+  });
+  const actionMut = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'APPROVE' | 'CANCEL' | 'REVERSE' | 'MARK_PAID' }) =>
+      applyCommissionActionAdmin(id, { action }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-commissions'] }),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  const FILTERS: { key: AdminCommission['status'] | 'ALL'; label: string }[] = [
+    { key: 'ALL', label: 'Toutes' },
+    { key: 'PENDING', label: 'En attente' },
+    { key: 'APPROVED', label: 'Validées' },
+    { key: 'PAID', label: 'Payées' },
+  ];
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setStatus(f.key)}
+            className={`badge px-3 py-1.5 text-xs ${
+              status === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {isLoading ? (
+        <PageLoader />
+      ) : !data || data.length === 0 ? (
+        <EmptyState icon={Percent} title="Aucune commission" />
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                <th className="table-cell font-semibold">Partenaire</th>
+                <th className="table-cell font-semibold">Offre</th>
+                <th className="table-cell text-right font-semibold">Payé par le client</th>
+                <th className="table-cell text-right font-semibold">Commission</th>
+                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell font-semibold">Date</th>
+                <th className="table-cell text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((c) => (
+                <tr key={c.id} className="border-b last:border-0 hover:bg-surface-2/50">
+                  <td className="table-cell">
+                    <div className="font-medium text-content">{c.partner.firstName} {c.partner.lastName}</div>
+                    <div className="text-xs text-content-faint">{c.partner.email}</div>
+                  </td>
+                  <td className="table-cell text-content-muted">{c.planCode}</td>
+                  <td className="table-cell text-right text-content-muted">{formatCurrency(Number(c.customerAmount))}</td>
+                  <td className="table-cell text-right font-semibold text-content">{formatCurrency(Number(c.amount))}</td>
+                  <td className="table-cell">
+                    <Badge tone={COMMISSION_STATUS_LABEL[c.status]?.tone ?? 'neutral'}>
+                      {COMMISSION_STATUS_LABEL[c.status]?.label ?? c.status}
+                    </Badge>
+                  </td>
+                  <td className="table-cell text-content-muted">{formatDate(c.createdAt)}</td>
+                  <td className="table-cell text-right">
+                    <div className="flex justify-end gap-1.5">
+                      {c.status === 'PENDING' && (
+                        <button
+                          onClick={() => actionMut.mutate({ id: c.id, action: 'APPROVE' })}
+                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+                        >
+                          <BadgeCheck className="h-3.5 w-3.5" /> Valider
+                        </button>
+                      )}
+                      {(c.status === 'PENDING' || c.status === 'APPROVED') && (
+                        <button
+                          onClick={() => { if (confirm('Annuler cette commission ?')) actionMut.mutate({ id: c.id, action: 'CANCEL' }); }}
+                          className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                        >
+                          <Ban className="h-3.5 w-3.5" /> Annuler
+                        </button>
+                      )}
+                      {c.status === 'APPROVED' && (
+                        <button
+                          onClick={() => actionMut.mutate({ id: c.id, action: 'MARK_PAID' })}
+                          className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-content-muted"
+                        >
+                          <Banknote className="h-3.5 w-3.5" /> Marquer payée
+                        </button>
+                      )}
+                      {c.status === 'PAID' && (
+                        <button
+                          onClick={() => { if (confirm('Reverser cette commission (remboursement client) ?')) actionMut.mutate({ id: c.id, action: 'REVERSE' }); }}
+                          className="btn-ghost h-8 rounded-lg px-2.5 text-xs text-danger"
+                        >
+                          <Ban className="h-3.5 w-3.5" /> Reverser
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PartnerRulesSection() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['admin-commission-rules'], queryFn: listCommissionRulesAdmin });
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const saveMut = useMutation({
+    mutationFn: (input: { planCode: (typeof PLAN_CODES)[number]; tier: (typeof TIER_CODES)[number]; amount: number }) =>
+      upsertCommissionRuleAdmin({
+        planCode: input.planCode,
+        tier: input.tier,
+        amount: input.amount,
+        currency: 'XOF',
+        isActive: true,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-commission-rules'] }),
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+
+  if (isLoading) return <PageLoader />;
+
+  const ruleFor = (planCode: string, tier: string): CommissionRule | undefined =>
+    data?.find((r) => r.planCode === planCode && r.tier === tier);
+
+  return (
+    <div className="card overflow-x-auto p-4">
+      <p className="mb-4 text-sm text-content-muted">
+        Montant fixe versé au partenaire au premier paiement d'abonnement confirmé d'un client qu'il a apporté,
+        selon l'offre souscrite et son niveau. Modifier un montant ne change jamais les commissions déjà générées.
+      </p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+            <th className="table-cell font-semibold">Offre</th>
+            {TIER_CODES.map((t) => (
+              <th key={t} className="table-cell text-center font-semibold">{PARTNER_TIER_LABEL[t]}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {PLAN_CODES.map((plan) => (
+            <tr key={plan} className="border-b last:border-0">
+              <td className="table-cell font-medium text-content">{plan}</td>
+              {TIER_CODES.map((tier) => {
+                const key = `${plan}-${tier}`;
+                const rule = ruleFor(plan, tier);
+                const value = amounts[key] ?? (rule ? String(Number(rule.amount)) : '');
+                return (
+                  <td key={tier} className="table-cell">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        value={value}
+                        onChange={(e) => setAmounts((a) => ({ ...a, [key]: e.target.value }))}
+                        className="input h-8 w-24 px-2 text-right text-xs"
+                        placeholder="0"
+                      />
+                      <button
+                        title="Enregistrer"
+                        onClick={() => {
+                          const amount = Number(amounts[key] ?? rule?.amount ?? 0);
+                          if (!Number.isFinite(amount) || amount < 0) return;
+                          saveMut.mutate({ planCode: plan, tier, amount });
+                        }}
+                        className="btn-ghost h-8 w-8 rounded-lg p-0 text-primary"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

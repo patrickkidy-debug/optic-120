@@ -4,6 +4,12 @@ import {
   SubscriptionStatus,
   operatorCreateSchema,
   userActiveSchema,
+  type PartnerStatus,
+  type PartnerCommissionStatus,
+  partnerUpdateStatusSchema,
+  partnerUpdateTierSchema,
+  partnerCommissionRuleUpsertSchema,
+  partnerCommissionActionSchema,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { forbidden, notFound, badRequest } from '../../lib/http-error.js';
@@ -11,6 +17,7 @@ import { prisma } from '../../lib/prisma.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
+import * as partners from '../partners/partner.service.js';
 import * as support from '../support/support.service.js';
 import { getEngagementForFounder } from '../demo/demo-video.service.js';
 import { getOperatorEmails, isEnvOperator } from '../../lib/operators.js';
@@ -357,5 +364,51 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     return reply.send(result);
+  });
+
+  /* ------------------------------ OculoPartners ----------------------------- */
+
+  app.get('/partners', async (req, reply) => {
+    const { status } = req.query as { status?: string };
+    const rows = await partners.listPartnersForAdmin(status as PartnerStatus | undefined);
+    return reply.send({ partners: rows });
+  });
+
+  app.patch('/partners/:id/status', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { status } = partnerUpdateStatusSchema.parse(req.body);
+    const partner = await partners.setPartnerStatus(id, status, req.auth!.userId, requestMeta(req));
+    return reply.send({ partner });
+  });
+
+  app.patch('/partners/:id/tier', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { tier } = partnerUpdateTierSchema.parse(req.body);
+    const partner = await partners.setPartnerTier(id, tier, req.auth!.userId, requestMeta(req));
+    return reply.send({ partner });
+  });
+
+  app.get('/partners/commission-rules', async (_req, reply) => {
+    const rules = await partners.listCommissionRules();
+    return reply.send({ rules });
+  });
+
+  app.put('/partners/commission-rules', async (req, reply) => {
+    const input = partnerCommissionRuleUpsertSchema.parse(req.body);
+    const rule = await partners.upsertCommissionRule(input, req.auth!.userId, requestMeta(req));
+    return reply.status(201).send({ rule });
+  });
+
+  app.get('/partners/commissions', async (req, reply) => {
+    const { status } = req.query as { status?: string };
+    const commissions = await partners.listAllCommissionsForAdmin(status as PartnerCommissionStatus | undefined);
+    return reply.send({ commissions });
+  });
+
+  app.post('/partners/commissions/:id/action', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = partnerCommissionActionSchema.parse(req.body);
+    const commission = await partners.applyCommissionAction(id, input, req.auth!.userId, requestMeta(req));
+    return reply.send({ commission });
   });
 }

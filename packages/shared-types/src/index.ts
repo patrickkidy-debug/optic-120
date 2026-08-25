@@ -763,6 +763,13 @@ export const signupSchema = z.object({
   // Offre choisie (présélectionnée à Starter si absente) — aucun essai
   // gratuit : l'accès au dashboard reste bloqué jusqu'au paiement.
   plan: z.enum(['STARTER', 'STANDARD', 'GROWTH']).default(DEFAULT_PLAN_CODE),
+  // Code de parrainage OculoPartners (?ref=CODE), transmis par le frontend
+  // depuis le cookie/localStorage posé à la visite. Facultatif, jamais
+  // affiché : une attribution invalide/expirée est simplement ignorée.
+  referralCode: z.string().max(40).optional(),
+  // Identifiant anonyme de visiteur (même valeur que celle envoyée à /partners/track
+  // au clic) : permet de retrouver l'attribution posée avant l'inscription.
+  visitorId: z.string().max(100).optional(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -817,6 +824,9 @@ export const googleSignupSchema = z.object({
   // Numéro WhatsApp obligatoire, comme pour l'inscription par mot de passe.
   whatsapp: whatsappSchema,
   plan: z.enum(['STARTER', 'STANDARD', 'GROWTH']).default(DEFAULT_PLAN_CODE),
+  // OculoPartners — voir signupSchema.referralCode/visitorId.
+  referralCode: z.string().max(40).optional(),
+  visitorId: z.string().max(100).optional(),
 });
 export type GoogleSignupInput = z.infer<typeof googleSignupSchema>;
 
@@ -2009,4 +2019,155 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export interface AuthResponse {
   accessToken: string;
   user: AuthUser;
+}
+
+/* ============================================================
+ * OCULO PARTNERS — programme d'affiliation (Phase 1)
+ * ============================================================ */
+
+export const PartnerStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  REJECTED: 'REJECTED',
+} as const;
+export type PartnerStatus = (typeof PartnerStatus)[keyof typeof PartnerStatus];
+
+export const PartnerTierCode = {
+  AMBASSADOR: 'AMBASSADOR',
+  PARTNER_PRO: 'PARTNER_PRO',
+  PARTNER_EXPERT: 'PARTNER_EXPERT',
+} as const;
+export type PartnerTierCode = (typeof PartnerTierCode)[keyof typeof PartnerTierCode];
+
+export const PartnerLeadStatus = {
+  NEW: 'NEW',
+  CONTACTED: 'CONTACTED',
+  DEMO: 'DEMO',
+  TRIAL: 'TRIAL',
+  SUBSCRIBED: 'SUBSCRIBED',
+  LOST: 'LOST',
+} as const;
+export type PartnerLeadStatus = (typeof PartnerLeadStatus)[keyof typeof PartnerLeadStatus];
+
+export const PartnerCommissionStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  PAYABLE: 'PAYABLE',
+  PAID: 'PAID',
+  CANCELLED: 'CANCELLED',
+  REVERSED: 'REVERSED',
+} as const;
+export type PartnerCommissionStatus =
+  (typeof PartnerCommissionStatus)[keyof typeof PartnerCommissionStatus];
+
+/** Durée par défaut d'une attribution (clic → inscription), en jours. */
+export const DEFAULT_ATTRIBUTION_DAYS = 90;
+
+/** Nom du cookie / clé localStorage posés à la visite d'un lien de parrainage. */
+export const PARTNER_REF_STORAGE_KEY = 'oculo-partner-ref';
+/** Identifiant anonyme de visiteur, généré côté client et envoyé au clic. */
+export const PARTNER_VISITOR_STORAGE_KEY = 'oculo-partner-visitor';
+
+export const partnerSignupSchema = z.object({
+  firstName: z.string().min(1).max(80),
+  lastName: z.string().min(1).max(80),
+  email: z.string().email(),
+  whatsapp: whatsappSchema,
+  countryCode: z.string().length(2).optional(),
+  city: z.string().max(80).optional(),
+  password: passwordSchema,
+  payoutMethod: z.string().max(40).optional(),
+  payoutDetails: z.record(z.string(), z.string().max(200)).optional(),
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Les conditions du programme doivent être acceptées' }),
+  }),
+});
+export type PartnerSignupInput = z.infer<typeof partnerSignupSchema>;
+
+export const partnerLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+export type PartnerLoginInput = z.infer<typeof partnerLoginSchema>;
+
+/** Enregistrement d'un clic sur un lien de parrainage (`/?ref=CODE`), avant inscription. */
+export const partnerTrackSchema = z.object({
+  referralCode: z.string().min(1).max(40),
+  visitorId: z.string().min(1).max(100),
+});
+export type PartnerTrackInput = z.infer<typeof partnerTrackSchema>;
+
+export const partnerLeadCreateSchema = z.object({
+  establishmentName: z.string().min(1).max(160),
+  contactName: z.string().max(120).optional(),
+  phone: z.string().max(30).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  countryCode: z.string().length(2).optional(),
+  city: z.string().max(80).optional(),
+});
+export type PartnerLeadCreateInput = z.infer<typeof partnerLeadCreateSchema>;
+
+export const partnerLeadUpdateSchema = z.object({
+  status: z.enum(['NEW', 'CONTACTED', 'DEMO', 'TRIAL', 'SUBSCRIBED', 'LOST']).optional(),
+  contactName: z.string().max(120).optional(),
+  phone: z.string().max(30).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+});
+export type PartnerLeadUpdateInput = z.infer<typeof partnerLeadUpdateSchema>;
+
+/** Règle de commission (admin) : montant fixe par offre + niveau partenaire. */
+export const partnerCommissionRuleUpsertSchema = z.object({
+  planCode: z.enum(['STARTER', 'STANDARD', 'GROWTH']),
+  tier: z.enum(['AMBASSADOR', 'PARTNER_PRO', 'PARTNER_EXPERT']),
+  amount: z.number().nonnegative(),
+  currency: z.string().length(3).default('XOF'),
+  isActive: z.boolean().default(true),
+});
+export type PartnerCommissionRuleUpsertInput = z.infer<typeof partnerCommissionRuleUpsertSchema>;
+
+export const partnerUpdateStatusSchema = z.object({
+  status: z.enum(['PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED']),
+});
+export const partnerUpdateTierSchema = z.object({
+  tier: z.enum(['AMBASSADOR', 'PARTNER_PRO', 'PARTNER_EXPERT']),
+});
+
+export const partnerCommissionActionSchema = z.object({
+  action: z.enum(['APPROVE', 'CANCEL', 'REVERSE', 'MARK_PAID']),
+  note: z.string().max(300).optional(),
+});
+export type PartnerCommissionActionInput = z.infer<typeof partnerCommissionActionSchema>;
+
+/** Session partenaire authentifiée (renvoyée au frontend OculoPartners). */
+export interface PartnerAuthUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  whatsapp: string;
+  countryCode: string | null;
+  city: string | null;
+  status: PartnerStatus;
+  tier: PartnerTierCode;
+  referralCode: string;
+  referralLink: string;
+}
+
+export interface PartnerAuthResponse {
+  accessToken: string;
+  partner: PartnerAuthUser;
+}
+
+/** Tableau de bord partenaire : chiffres agrégés sur la période choisie. */
+export interface PartnerDashboardStats {
+  leadsTotal: number;
+  customersTotal: number;
+  customersActive: number;
+  conversionRatePct: number;
+  commissionPending: number;
+  commissionApproved: number;
+  commissionPaid: number;
+  commissionTotal: number;
+  currency: string;
 }
