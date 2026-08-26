@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Search, Frame, X, Glasses, CircleDot, Package, Tag, type LucideIcon } from 'lucide-react';
-import type { LensOrderCategory } from '@oculo/shared-types';
+import type { LensOrderCategory, LensIndexId } from '@oculo/shared-types';
 import {
   LENS_ORDER_CATEGORIES,
   DEFAULT_LENS_PRICING,
+  LENS_MATERIALS,
+  LENS_INDICES,
+  lensIndicesForMaterial,
   lensBaseOptions,
   lensBaseLabel,
   lensBasePrice,
@@ -23,12 +26,6 @@ const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> =
   AUTRE: { label: 'Autre', icon: Tag },
 };
 
-const LENS_INDEX = [
-  { id: '1.5', label: '1.5 (standard)', mult: 1 },
-  { id: '1.6', label: '1.6 (aminci)', mult: 1.3 },
-  { id: '1.67', label: '1.67 (extra-aminci)', mult: 1.7 },
-  { id: '1.74', label: '1.74 (ultra-aminci)', mult: 2.2 },
-] as const;
 const TREATMENTS = [
   { id: 'ar', label: 'Anti-reflet' },
   { id: 'blue', label: 'Anti-lumière bleue' },
@@ -143,7 +140,8 @@ export function LensOrderForm({ onClose, onCreated }: { onClose: () => void; onC
   const [cost, setCost] = useState('');
   // Configurateur (Verres).
   const [ltype, setLtype] = useState<string>('progressif');
-  const [lindex, setLindex] = useState<(typeof LENS_INDEX)[number]['id']>('1.6');
+  const [lmaterial, setLmaterial] = useState<string>('');
+  const [lindex, setLindex] = useState<LensIndexId>('1.6');
   const [treats, setTreats] = useState<string[]>(['ar']);
   const [error, setError] = useState('');
 
@@ -153,14 +151,24 @@ export function LensOrderForm({ onClose, onCreated }: { onClose: () => void; onC
   const isVerres = category === 'VERRES';
   const typeOptions = lensBaseOptions(pricing);
   const typeLabel = lensBaseLabel(pricing, ltype);
-  const indexDef = LENS_INDEX.find((i) => i.id === lindex)!;
+  const availableIndices = lensIndicesForMaterial(lmaterial);
+  const indexDef = LENS_INDICES.find((i) => i.id === lindex) ?? LENS_INDICES[0];
   const treatLabels = TREATMENTS.filter((t) => treats.includes(t.id)).map((t) => t.label);
   const treatSum = TREATMENTS.filter((t) => treats.includes(t.id)).reduce((s, t) => s + (pricing[t.id] ?? 0), 0);
   const configPrice = Math.round((lensBasePrice(pricing, ltype) * indexDef.mult + treatSum) * 2);
   const configDesc =
-    `Verres ${typeLabel.toLowerCase()} indice ${lindex}` +
+    `Verres ${typeLabel.toLowerCase()}${lmaterial ? ` ${lmaterial}` : ''} indice ${lindex}` +
     (treatLabels.length ? ` — ${treatLabels.join(', ')}` : '') +
     ' (paire)';
+
+  // Un matériau à indice unique (CR-39, Polycarbonate, Trivex) fixe l'indice
+  // automatiquement ; sinon on ne garde l'indice actuel que s'il reste valide.
+  function handleMaterialChange(material: string) {
+    setLmaterial(material);
+    const available = lensIndicesForMaterial(material);
+    if (available.length === 1) setLindex(available[0].id);
+    else if (!available.some((i) => i.id === lindex)) setLindex(available[0]?.id ?? '1.5');
+  }
 
   const finalDescription = isVerres ? configDesc : description.trim();
   const finalCost = isVerres ? configPrice : Number(cost) || undefined;
@@ -269,13 +277,28 @@ export function LensOrderForm({ onClose, onCreated }: { onClose: () => void; onC
                 })}
               </div>
             </div>
-            <Field label="Indice (amincissement)">
-              <select className="input" value={lindex} onChange={(e) => setLindex(e.target.value as typeof lindex)}>
-                {LENS_INDEX.map((i) => (
-                  <option key={i.id} value={i.id}>{i.label}</option>
-                ))}
-              </select>
-            </Field>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Matériau">
+                <select className="input" value={lmaterial} onChange={(e) => handleMaterialChange(e.target.value)}>
+                  <option value="">—</option>
+                  {LENS_MATERIALS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Indice (amincissement)">
+                <select
+                  className="input"
+                  value={lindex}
+                  disabled={availableIndices.length <= 1 && !!lmaterial}
+                  onChange={(e) => setLindex(e.target.value as LensIndexId)}
+                >
+                  {availableIndices.map((i) => (
+                    <option key={i.id} value={i.id}>{i.label}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
             <div>
               <span className="label">Traitements</span>
               <div className="grid grid-cols-2 gap-2">

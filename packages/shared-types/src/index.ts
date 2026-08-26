@@ -1826,11 +1826,34 @@ export type LensTreatmentKey = (typeof LENS_TREATMENTS)[number]['key'];
 /** Indices d'amincissement (multiplicateur physique appliqué au prix du verre). */
 export const LENS_INDICES = [
   { id: '1.5', label: '1.5 (standard)', mult: 1 },
+  { id: '1.53', label: '1.53 (Trivex)', mult: 1.15 },
+  { id: '1.59', label: '1.59 (Polycarbonate)', mult: 1.2 },
   { id: '1.6', label: '1.6 (aminci)', mult: 1.3 },
   { id: '1.67', label: '1.67 (extra-aminci)', mult: 1.7 },
   { id: '1.74', label: '1.74 (ultra-aminci)', mult: 2.2 },
 ] as const;
 export type LensIndexId = (typeof LENS_INDICES)[number]['id'];
+
+/**
+ * Indices réellement disponibles pour chaque matériau (optique physique — un
+ * verre Polycarbonate n'existe qu'en 1.59, un Trivex qu'en 1.53 ; seuls le
+ * Minéral et le Haut indice se déclinent sur plusieurs indices). Sert à
+ * filtrer le sélecteur d'indice une fois le matériau choisi.
+ */
+export const LENS_MATERIAL_INDICES: Record<(typeof LENS_MATERIALS)[number], LensIndexId[]> = {
+  'Organique (CR-39)': ['1.5'],
+  Polycarbonate: ['1.59'],
+  Trivex: ['1.53'],
+  Minéral: ['1.5', '1.6', '1.67', '1.74'],
+  'Haut indice': ['1.6', '1.67', '1.74'],
+};
+
+/** Indices compatibles avec un matériau donné (tous, si matériau absent/inconnu). */
+export function lensIndicesForMaterial(material?: string): (typeof LENS_INDICES)[number][] {
+  const allowed = material ? LENS_MATERIAL_INDICES[material as keyof typeof LENS_MATERIAL_INDICES] : undefined;
+  if (!allowed) return [...LENS_INDICES];
+  return LENS_INDICES.filter((i) => (allowed as readonly string[]).includes(i.id));
+}
 
 /**
  * Tous les types de verres disponibles = 3 types fixes + types personnalisés

@@ -9,8 +9,8 @@ import {
   FRAME_MATERIALS,
   FRAME_COLORS,
   LENS_FAMILIES,
-  LENS_INDICES,
   LENS_MATERIALS,
+  lensIndicesForMaterial,
   LENS_TINTS,
   LENS_DESIGNS,
   LENS_USAGES,
@@ -562,21 +562,46 @@ export function LensFormModal({
 
           {step === 2 && (
             <>
-              <Field label="Indice de réfraction">
-                <select className="input" value={a.index ?? ''} onChange={(e) => setAttr({ index: e.target.value })}>
-                  <option value="">—</option>
-                  {LENS_INDICES.map((i) => (
-                    <option key={i.id} value={i.id}>{i.label}</option>
-                  ))}
-                </select>
-              </Field>
               <Field label="Matériau">
-                <select className="input" value={a.material ?? ''} onChange={(e) => setAttr({ material: e.target.value })}>
+                <select
+                  className="input"
+                  value={a.material ?? ''}
+                  onChange={(e) => {
+                    const material = e.target.value;
+                    const available = lensIndicesForMaterial(material);
+                    // Un matériau à indice unique (CR-39, Polycarbonate, Trivex) le
+                    // fixe automatiquement ; sinon on efface l'indice s'il n'est
+                    // plus valide pour le nouveau matériau (Minéral/Haut indice).
+                    const nextIndex =
+                      available.length === 1
+                        ? available[0].id
+                        : available.some((i) => i.id === a.index)
+                          ? a.index
+                          : '';
+                    setAttr({ material, index: nextIndex });
+                  }}
+                >
                   <option value="">—</option>
                   {LENS_MATERIALS.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Indice de réfraction">
+                <select
+                  className="input"
+                  value={a.index ?? ''}
+                  disabled={lensIndicesForMaterial(a.material).length <= 1 && !!a.material}
+                  onChange={(e) => setAttr({ index: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {lensIndicesForMaterial(a.material).map((i) => (
+                    <option key={i.id} value={i.id}>{i.label}</option>
+                  ))}
+                </select>
+                {!a.material && (
+                  <p className="mt-1 text-xs text-content-faint">Choisissez d'abord le matériau pour affiner les indices proposés.</p>
+                )}
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Design">
