@@ -31,6 +31,12 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+  // Catégorie choisie AVANT l'import : le fichier n'a pas toujours une colonne
+  // catégorie exploitable (ou une valeur non reconnue), ce qui faisait tout
+  // retomber sur « Autres » sans que l'utilisateur s'en aperçoive. On la
+  // demande explicitement et on l'applique à toutes les lignes — modifiable
+  // ensuite ligne par ligne si le fichier mélange plusieurs catégories.
+  const [defaultCategory, setDefaultCategory] = useState('MONTURE');
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -39,7 +45,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
     setLoading(true);
     try {
       const preview = await previewProductImport(file);
-      setRows(preview);
+      setRows(preview.map((r) => ({ ...r, category: defaultCategory })));
       setPhase('review');
     } catch (err) {
       setError(apiErrorMessage(err, "Impossible de lire ce fichier"));
@@ -92,6 +98,25 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
             (référence, nom, catégorie, marque, prix, stock) et vous permet de tout vérifier avant
             d'enregistrer quoi que ce soit.
           </p>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-content-muted">
+              Dans quelle catégorie importer ces produits ?
+            </label>
+            <select
+              className="input"
+              value={defaultCategory}
+              onChange={(e) => setDefaultCategory(e.target.value)}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-content-faint">
+              Appliquée à toutes les lignes du fichier — modifiable ensuite ligne par ligne si besoin.
+            </p>
+          </div>
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition hover:border-primary">
             <FileUp className="h-8 w-8 text-content-faint" />
             <span className="text-sm font-medium text-content">Choisir un fichier .xlsx ou .csv</span>
