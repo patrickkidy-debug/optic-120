@@ -61,21 +61,70 @@ const FIELD_ALIASES: Record<CanonicalField, string[]> = {
 // captée par le mauvais champ.
 const DETECTION_ORDER: CanonicalField[] = ['sku', 'name', 'buyPrice', 'sellPrice', 'category', 'brand', 'stock'];
 
+// `sampleRow` mappe un INDICE de colonne ("0", "1"…) vers le TEXTE de l'en-tête
+// à cet indice (voir les deux appels dans parseImportFile) — jamais un nom de
+// colonne vers une valeur de cellule. Le "match" retourné reste la clé
+// (l'indice), pour indexer ensuite la ligne brute via row[Number(match)].
 function detectColumns(sampleRow: Record<string, unknown>): Partial<Record<CanonicalField, string>> {
   const keys = Object.keys(sampleRow);
   const claimed = new Set<string>();
   const result: Partial<Record<CanonicalField, string>> = {};
   for (const field of DETECTION_ORDER) {
     const aliases = FIELD_ALIASES[field];
-    const match = keys.find(
-      (k) => !claimed.has(k) && aliases.some((a) => norm(k) === norm(a) || norm(k).includes(norm(a))),
-    );
+    const match = keys.find((k) => {
+      if (claimed.has(k)) return false;
+      const nk = norm(String(sampleRow[k] ?? ''));
+      if (!nk) return false;
+      return aliases.some((a) => {
+        const na = norm(a);
+        // Égalité, en-tête contenant l'alias ("nom du produit" ⊇ "nom"), ou
+        // l'inverse pour un en-tête abrégé ("désig." — l'alias le contient).
+        return nk === na || nk.includes(na) || (nk.length >= 3 && na.startsWith(nk));
+      });
+    });
     if (match) {
       result[field] = match;
       claimed.add(match);
     }
   }
   return result;
+}
+
+// Signature ZIP ('PK') : un .xlsx est une archive ZIP, un .csv est du texte brut.
+const ZIP_MAGIC_0 = 0x50;
+const ZIP_MAGIC_1 = 0x4b;
+
+/**
+ * Ouvre un classeur .xlsx OU .csv. Les CSV posent un problème que .xlsx n'a
+ * pas : Excel en français les enregistre par défaut en Windows-1252 (ANSI)
+ * sans BOM (la virgule étant déjà le séparateur décimal du pays, le séparateur
+ * de champ devient ';'). Décoder ce texte à tort en UTF-8 transforme les
+ * en-têtes accentués ("Désignation", "Prix d'achat"…) en octets invalides —
+ * la détection de colonnes échoue alors qu'un humain ouvrant le fichier verrait
+ * des en-têtes parfaitement lisibles.
+ */
+function readWorkbook(buffer: Buffer): XLSX.WorkBook {
+  const isZip = buffer.length >= 2 && buffer[0] === ZIP_MAGIC_0 && buffer[1] === ZIP_MAGIC_1;
+  if (isZip) return XLSX.read(buffer, { type: 'buffer' });
+
+  let text: string;
+  try {
+    // TextDecoder en mode strict : lève une erreur sur une séquence UTF-8
+    // invalide au lieu de la remplacer silencieusement par des "�".
+    text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    // Repli Windows-1252 : Node n'a pas cet encodage nommé, mais 'latin1'
+    // lui est identique sur la plage des lettres accentuées (0xA0-0xFF),
+    // largement suffisante pour des en-têtes de tableur.
+    text = buffer.toString('latin1');
+  }
+
+  const firstLine = text.split(/\r?\n/).find((l) => l.trim() !== '') ?? '';
+  const semicolons = (firstLine.match(/;/g) ?? []).length;
+  const commas = (firstLine.match(/,/g) ?? []).length;
+  const FS = semicolons > commas ? ';' : ',';
+
+  return XLSX.read(text, { type: 'string', FS });
 }
 
 const CATEGORY_ALIASES: Record<string, ProductCategory> = {
@@ -122,7 +171,7 @@ export interface ParsedProductRow {
 
 /** Lit un .xlsx OU .csv (même lecteur) et détecte les colonnes — aucun accès base. */
 export function parseImportFile(buffer: Buffer): ParsedProductRow[] {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const workbook = readWorkbook(buffer);
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) return [];
   const sheet = workbook.Sheets[sheetName];
@@ -132,7 +181,7 @@ export function parseImportFile(buffer: Buffer): ParsedProductRow[] {
   // et produisait des produits entièrement vides.
   const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: false });
   if (grid.length === 0) return [];
-  const headerIndex = grid.slice(0, 20).findIndex((cells) => {
+  const headerIndex = grid.slice(0, 30).findIndex((cells) => {
     const header = Object.fromEntries(cells.map((cell, index) => [String(index), cell]));
     const detected = detectColumns(header);
     return Boolean(detected.name) || Object.keys(detected).length >= 2;
