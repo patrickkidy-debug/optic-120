@@ -911,6 +911,14 @@ export const productCategoryEnum = z.enum([
   ProductCategory.AUTRE,
 ]);
 
+/** Réattribution en masse : déplace tous les produits d'une catégorie vers une
+ * autre (ex. corriger un import où la catégorie n'a pas été détectée). */
+export const productsRecategorizeSchema = z.object({
+  from: productCategoryEnum,
+  to: productCategoryEnum,
+});
+export type ProductsRecategorizeInput = z.infer<typeof productsRecategorizeSchema>;
+
 /* ============================================================
  * CATALOGUE OPTIQUE — référentiels montures & verres
  * Ces listes alimentent les formulaires et les filtres du catalogue.

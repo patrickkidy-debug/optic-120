@@ -20,6 +20,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  recategorizeProducts,
   getStock,
   adjustStock,
   type Product,
@@ -84,7 +85,18 @@ export function ProductsPage() {
   const [lensForm, setLensForm] = useState<{ product: Product | null } | null>(null);
   const [frameDetail, setFrameDetail] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [moveTo, setMoveTo] = useState('MONTURE');
   const navigate = useNavigate();
+
+  const recategorizeMut = useMutation({
+    mutationFn: (to: string) => recategorizeProducts(category, to),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      alert(`${res.count} produit(s) déplacé(s) vers « ${catLabel(moveTo)} ».`);
+      setCategory(moveTo);
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', search],
@@ -344,6 +356,41 @@ export function ProductsPage() {
           ))}
         </div>
       </div>
+
+      {/* Action de masse : déplacer toute la catégorie filtrée vers une autre —
+          utile pour corriger un import où la catégorie n'a pas été détectée. */}
+      {canUpdate && category && filteredProducts.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+          <span className="text-content">
+            <b>{filteredProducts.length}</b> produit(s) dans <b>{catLabel(category)}</b>
+          </span>
+          <span className="text-content-faint">·</span>
+          <span className="text-content-muted">Déplacer tout vers</span>
+          <select
+            className="input h-8 w-auto py-0 text-xs"
+            value={moveTo}
+            onChange={(e) => setMoveTo(e.target.value)}
+          >
+            {CATEGORIES.filter((c) => c.value !== category).map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            className="h-8 px-3 text-xs"
+            variant="outline"
+            loading={recategorizeMut.isPending}
+            onClick={() => {
+              if (confirm(`Déplacer les ${filteredProducts.length} produit(s) de « ${catLabel(category)} » vers « ${catLabel(moveTo)} » ?`)) {
+                recategorizeMut.mutate(moveTo);
+              }
+            }}
+          >
+            Appliquer
+          </Button>
+        </div>
+      )}
 
       {/* Résultat de la recherche : total de références et d'unités trouvées. */}
       {searchSummary && (

@@ -4,6 +4,7 @@ import { ProductCategory } from '@prisma/client';
 import {
   productCreateSchema,
   productUpdateSchema,
+  productsRecategorizeSchema,
   lensProductSchema,
   computeLensPrice,
   lensSku,
@@ -191,6 +192,28 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     if (result.count === 0) throw notFound('Produit introuvable');
     const product = await req.db!.product.findFirst({ where: { id } });
     return reply.send({ product });
+  });
+
+  /**
+   * Réattribution en masse : déplace tous les produits d'une catégorie vers une
+   * autre. Sert notamment à corriger un import où la catégorie n'a pas été
+   * détectée (tombée par défaut sur AUTRE) sans repasser produit par produit.
+   */
+  app.patch('/recategorize', { preHandler: requirePermission('optique.products.update') }, async (req, reply) => {
+    const input = productsRecategorizeSchema.parse(req.body);
+    const result = await req.db!.product.updateMany({
+      where: { category: input.from },
+      data: { category: input.to },
+    });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PRODUCTS_RECATEGORIZED',
+      entity: 'Product',
+      metadata: { from: input.from, to: input.to, count: result.count },
+      ...requestMeta(req),
+    });
+    return reply.send({ count: result.count });
   });
 
   /**

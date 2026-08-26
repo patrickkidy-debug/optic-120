@@ -60,6 +60,12 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
   return data.product;
 }
 
+/** Déplace en masse tous les produits d'une catégorie vers une autre (ex. corriger un import). */
+export async function recategorizeProducts(from: string, to: string): Promise<{ count: number }> {
+  const { data } = await api.patch<{ count: number }>('/products/recategorize', { from, to });
+  return data;
+}
+
 /**
  * Supprime définitivement un produit. Un produit déjà vendu ne peut pas
  * disparaître (les lignes de factures en dépendent) : il est alors retiré du
