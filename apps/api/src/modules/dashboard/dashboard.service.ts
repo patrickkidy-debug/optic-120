@@ -62,6 +62,7 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     prevWeekAgg,
     activeCustomersRaw,
     activeCustomersPrevRaw,
+    todayExpensesAgg,
   ] = await Promise.all([
     // Part assurance : acquise a la vente (aucun Payment n'est cree pour elle).
     prisma.sale.aggregate({
@@ -151,6 +152,11 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       distinct: ['customerId'],
       select: { customerId: true },
     }),
+    // Les dépenses du jour réduisent le résultat réellement réalisé aujourd'hui.
+    prisma.expense.aggregate({
+      where: { tenantId, ...branchFilter, date: { gte: startOfToday() } },
+      _sum: { amount: true },
+    }),
   ]);
 
   // Série des 7 derniers jours (CA encaissé + nombre de ventes, pour le mini
@@ -199,9 +205,12 @@ export async function getDashboard(tenantId: string, branchId?: string) {
   // la date de la vente) vs encaissé auprès des clients (daté au paiement).
   const todayInsurance = Number(todayAgg._sum.insuranceAmount ?? 0);
   const monthInsurance = Number(monthAgg._sum.insuranceAmount ?? 0);
+  const todayExpenses = Number(todayExpensesAgg._sum.amount ?? 0);
 
   return {
-    todayRevenue: todayCollectedValue + todayInsurance,
+    // Résultat net du jour : encaissements + part assurance - dépenses saisies.
+    todayRevenue: todayCollectedValue + todayInsurance - todayExpenses,
+    todayExpenses,
     monthRevenue: monthRevenueValue,
     todayInsurance,
     monthInsurance,

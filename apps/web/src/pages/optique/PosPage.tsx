@@ -98,7 +98,7 @@ export function PosPage() {
   // Points de fidélité convertis en remise + garantie accordée sur cette vente.
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [warrantyMonths, setWarrantyMonths] = useState<number | null>(null);
-  const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
+  const [paySale, setPaySale] = useState<{ id: string; due: number; number: string; coveredByInsurance: boolean } | null>(null);
 
   const { data: insurers } = useQuery({
     queryKey: ['insurers'],
@@ -179,7 +179,13 @@ export function PosPage() {
         setLoyaltyPoints(0);
         alert(`Devis ${sale.number} créé.`);
       } else {
-        setPaySale({ id: sale.id, due: Number(sale.totalAmount) - Number(sale.paidAmount), number: sale.number });
+        const due = Number(sale.totalAmount) - Number(sale.paidAmount);
+        setPaySale({
+          id: sale.id,
+          due,
+          number: sale.number,
+          coveredByInsurance: due === 0 && Number(sale.insuranceAmount) >= Number(sale.totalAmount),
+        });
       }
     },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -468,7 +474,7 @@ export function PaymentModal({
   onPaid,
   onPaidLabel,
 }: {
-  sale: { id: string; due: number; number: string };
+  sale: { id: string; due: number; number: string; coveredByInsurance?: boolean };
   onClose: () => void;
   onPaid: () => void;
   onPaidLabel?: string;
@@ -578,13 +584,17 @@ export function PaymentModal({
       size="sm"
     >
       <div className="mb-4 rounded-xl bg-surface-2 p-3 text-center">
-        <p className="text-xs text-content-muted">{t('pos.due')}</p>
-        <p className="font-display text-2xl font-bold text-content">{formatCurrency(sale.due)}</p>
+        <p className="text-xs text-content-muted">{sale.coveredByInsurance ? 'Prise en charge assurance' : t('pos.due')}</p>
+        <p className="font-display text-2xl font-bold text-content">{sale.coveredByInsurance ? '100 %' : formatCurrency(sale.due)}</p>
       </div>
 
       {phase === 'choose' && (
         <>
-          <label className="mb-3 block text-sm">
+          {sale.coveredByInsurance ? (
+            <p className="mb-3 rounded-xl border border-primary/20 bg-primary-soft/30 p-3 text-sm text-content-muted">
+              La vente est entièrement couverte. Enregistrez le chèque remis par l'assurance pour tracer son mode d'encaissement.
+            </p>
+          ) : <label className="mb-3 block text-sm">
             <span className="text-content-muted">{t('pos.amountNow')}</span>
             <input
               type="number"
@@ -601,10 +611,10 @@ export function PaymentModal({
             ) : (
               <span className="mt-1 block text-xs text-content-faint">{t('pos.fullPayment')}</span>
             )}
-          </label>
-          <p className="mb-2 text-sm text-content-muted">{t('pos.chooseMethod')}</p>
+          </label>}
+          <p className="mb-2 text-sm text-content-muted">{sale.coveredByInsurance ? 'Mode de règlement de l’assurance' : t('pos.chooseMethod')}</p>
           <div className="grid grid-cols-2 gap-2">
-            {METHODS.map((m) => (
+            {METHODS.filter((m) => !sale.coveredByInsurance || m.value === 'CHEQUE').map((m) => (
               <button
                 key={m.value}
                 onClick={() => {

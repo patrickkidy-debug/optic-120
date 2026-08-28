@@ -532,6 +532,8 @@ export async function simulatePayment(paymentId: string, status: 'SUCCESS' | 'FA
 
 export interface DashboardData {
   todayRevenue: number;
+  /** Dépenses saisies aujourd'hui, déjà déduites de todayRevenue. */
+  todayExpenses?: number;
   monthRevenue: number;
   /** Part prise en charge par les assurances (jour / mois). */
   todayInsurance?: number;

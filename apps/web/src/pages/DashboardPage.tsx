@@ -486,7 +486,7 @@ export function DashboardPage() {
 
       {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard icon={Banknote} label={t('dashboard.todayRevenueFull')} value={formatCurrency(data.todayRevenue)} tone="primary" />
+        <KpiCard icon={Banknote} label={`${t('dashboard.todayRevenueFull')} net`} value={formatCurrency(data.todayRevenue)} tone="primary" />
         <KpiCard
           icon={TrendingUp}
           label={t('dashboard.monthRevenueFull')}
@@ -531,7 +531,7 @@ export function DashboardPage() {
         <h3 className="mb-4 font-display font-bold text-content">
           Chiffre d'affaires — encaissé vs assurances
         </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <MiniStat
             icon={HandCoins}
             label="Encaissé clients (jour)"
@@ -543,6 +543,12 @@ export function DashboardPage() {
             label="Part assurances (jour)"
             value={formatCurrency(data.todayInsurance ?? 0)}
             tone="accent"
+          />
+          <MiniStat
+            icon={Receipt}
+            label="Dépenses (jour)"
+            value={`- ${formatCurrency(data.todayExpenses ?? 0)}`}
+            tone="danger"
           />
           <MiniStat
             icon={HandCoins}

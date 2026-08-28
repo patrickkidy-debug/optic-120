@@ -1441,6 +1441,7 @@ export const paymentMethodEnum = z.enum([
   PaymentMethod.MOOV_MONEY,
   PaymentMethod.FREE_MONEY,
   PaymentMethod.CARD,
+  PaymentMethod.CHEQUE,
 ]);
 
 export const paymentCreateSchema = z.object({

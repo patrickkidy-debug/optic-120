@@ -42,7 +42,7 @@ export function CashRegisterPage() {
   const [opening, setOpening] = useState('');
   const [closing, setClosing] = useState('');
   const [closingTouched, setClosingTouched] = useState(false);
-  const [closeResult, setCloseResult] = useState<{ expected: number; counted: number } | null>(null);
+  const [closeResult, setCloseResult] = useState<{ expected: number; counted: number; expenses: number } | null>(null);
 
   const { data: register, isLoading } = useQuery({
     queryKey: ['cash-current', branchId],
@@ -76,7 +76,7 @@ export function CashRegisterPage() {
     mutationFn: (reg: CashRegister) =>
       closeRegister(reg.id, Math.max(0, Math.round(Number(closing) || 0))),
     onSuccess: (res) => {
-      setCloseResult({ expected: res.expectedAmount, counted: Number(res.register.closingAmount ?? 0) });
+      setCloseResult({ expected: res.expectedAmount, counted: Number(res.register.closingAmount ?? 0), expenses: res.expensesTotal });
       setClosing('');
       setClosingTouched(false);
       qc.invalidateQueries({ queryKey: ['cash-current'] });
@@ -103,6 +103,7 @@ export function CashRegisterPage() {
                 <h3 className="font-display font-bold text-content">Caisse fermée</h3>
               </div>
               <SummaryRow label="Attendu (fond + espèces)" value={formatCurrency(closeResult.expected)} />
+              <SummaryRow label="Dépenses déduites" value={`- ${formatCurrency(closeResult.expenses)}`} />
               <SummaryRow label="Compté" value={formatCurrency(closeResult.counted)} />
               <div className="my-2 border-t" />
               {(() => {
@@ -163,6 +164,14 @@ export function CashRegisterPage() {
                       <span className="text-sm font-semibold text-content">Total encaissé</span>
                       <span className="font-display font-bold text-content">{formatCurrency(summary.total)}</span>
                     </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-content-muted">Dépenses ({summary.expensesCount})</span>
+                      <span className="font-medium text-danger">- {formatCurrency(summary.expensesTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-1.5">
+                      <span className="text-sm font-semibold text-content">Net après dépenses</span>
+                      <span className="font-display font-bold text-content">{formatCurrency(summary.netTotal)}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -171,7 +180,7 @@ export function CashRegisterPage() {
                 <div className="mt-4 border-t pt-4">
                   {summary && (
                     <SummaryRow
-                      label="Espèces attendues (fond + ventes espèces)"
+                      label="Espèces attendues (fond + ventes espèces - dépenses)"
                       value={formatCurrency(summary.expectedCash)}
                     />
                   )}
@@ -202,7 +211,7 @@ export function CashRegisterPage() {
                     <Lock className="h-4 w-4" /> Fermer la caisse
                   </Button>
                   <p className="mt-2 text-xs text-content-faint">
-                    L'écart est calculé par rapport au fond de caisse + les ventes espèces depuis l'ouverture.
+                    L'écart tient compte du fond, des ventes espèces et des dépenses enregistrées depuis l'ouverture.
                   </p>
                 </div>
               ) : (

@@ -15,6 +15,9 @@ export interface RegisterSummary {
   byMethod: { method: string; amount: number; count: number }[];
   cash: number;
   total: number;
+  expensesTotal: number;
+  expensesCount: number;
+  netTotal: number;
   openingAmount: number;
   expectedCash: number;
   openedAt: string;
@@ -44,8 +47,8 @@ export async function openRegister(branchId: string, openingAmount: number): Pro
 export async function closeRegister(
   id: string,
   closingAmount: number,
-): Promise<{ register: CashRegister; expectedAmount: number }> {
-  const { data } = await api.post<{ register: CashRegister; expectedAmount: number }>(
+): Promise<{ register: CashRegister; expectedAmount: number; expensesTotal: number }> {
+  const { data } = await api.post<{ register: CashRegister; expectedAmount: number; expensesTotal: number }>(
     `/cashregister/${id}/close`,
     { closingAmount },
   );
