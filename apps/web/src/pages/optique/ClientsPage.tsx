@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer, MessageCircle, Download } from 'lucide-react';
+import { Plus, Search, Pencil, Contact, Glasses, FileText, Printer, MessageCircle, Download, Stethoscope } from 'lucide-react';
 
 /** Lien wa.me à partir d'un numéro (garde les chiffres uniquement). */
 function waLink(phone?: string | null): string | null {
@@ -25,6 +25,7 @@ import type { CompanyInfo } from '../../features/optique/saleDocument';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
+import { createPatientFromCustomer } from '../../features/clinic/api';
 import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
 import { ClientRecord } from './ClientRecord';
@@ -36,6 +37,7 @@ export function ClientsPage() {
   const canUpdate = usePermission('optique.customers.update');
   const canSeeRx = usePermission('optique.prescriptions.view');
   const canQuote = usePermission('optique.quotes.create');
+  const canCreatePatient = usePermission('clinic.patients.create');
   const user = useAuthStore((s) => s.user);
   const tenantName = user?.tenantName;
   const [search, setSearch] = useState('');
@@ -44,6 +46,7 @@ export function ClientsPage() {
   const [recordId, setRecordId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [dossierLoading, setDossierLoading] = useState<string | null>(null);
+  const [clinicLoading, setClinicLoading] = useState<string | null>(null);
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', search],
@@ -56,6 +59,18 @@ export function ClientsPage() {
     pos.clear();
     pos.setCustomer(customerId);
     navigate('/optique/caisse');
+  }
+
+  async function openClinicalRecord(customerId: string) {
+    setClinicLoading(customerId);
+    try {
+      const patient = await createPatientFromCustomer(customerId);
+      navigate('/clinique/patients', { state: { openPatientId: patient.id } });
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setClinicLoading(null);
+    }
   }
 
   // Dossier client complet (identité, ordonnances, achats, commandes verres,
@@ -221,6 +236,11 @@ export function ClientsPage() {
                       {canQuote && (
                         <button onClick={() => startQuote(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
                           <FileText className="h-3.5 w-3.5" /> Devis
+                        </button>
+                      )}
+                      {canCreatePatient && (
+                        <button onClick={() => openClinicalRecord(c.id)} disabled={clinicLoading === c.id} className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50" title="Ouvrir le dossier clinique">
+                          <Stethoscope className="h-3.5 w-3.5" /> {clinicLoading === c.id ? '…' : 'Clinique'}
                         </button>
                       )}
                       {canSeeRx && (

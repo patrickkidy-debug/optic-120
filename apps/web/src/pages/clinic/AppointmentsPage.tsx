@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, Plus, Check, X } from 'lucide-react';
+import { CalendarDays, Plus, Check, X, Pencil } from 'lucide-react';
 import type { AppointmentCreateInput } from '@oculo/shared-types';
 import { listAppointments, createAppointment, updateAppointment, listPatients } from '../../features/clinic/api';
 import { usePermission } from '../../store/auth';
@@ -22,6 +22,7 @@ export function AppointmentsPage() {
   const canCreate = usePermission('clinic.appointments.create');
   const canUpdate = usePermission('clinic.appointments.update');
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<import('../../features/clinic/api').Appointment | null>(null);
   const { data, isLoading } = useQuery({ queryKey: ['appointments'], queryFn: () => listAppointments() });
 
   const statusMut = useMutation({
@@ -63,6 +64,9 @@ export function AppointmentsPage() {
                 <Badge tone={STATUS[a.status]?.tone ?? 'neutral'}>{STATUS[a.status]?.label ?? a.status}</Badge>
                 {canUpdate && a.status !== 'COMPLETED' && a.status !== 'CANCELLED' && (
                   <>
+                    <button onClick={() => setEditing(a)} className="btn-ghost h-8 w-8 rounded-lg p-0" title="Modifier le rendez-vous">
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button onClick={() => statusMut.mutate({ id: a.id, status: 'COMPLETED' })} className="btn-ghost h-8 w-8 rounded-lg p-0 text-success" title="Marquer terminé">
                       <Check className="h-4 w-4" />
                     </button>
@@ -78,7 +82,36 @@ export function AppointmentsPage() {
       )}
 
       {open && <NewAppointmentModal onClose={() => setOpen(false)} />}
+      {editing && <EditAppointmentModal appointment={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function EditAppointmentModal({ appointment, onClose }: { appointment: import('../../features/clinic/api').Appointment; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [error, setError] = useState('');
+  const { register, handleSubmit } = useForm<Pick<AppointmentCreateInput, 'scheduledAt' | 'reason' | 'practitionerName'>>({
+    defaultValues: {
+      scheduledAt: new Date(appointment.scheduledAt).toISOString().slice(0, 16),
+      reason: appointment.reason ?? '',
+      practitionerName: appointment.practitionerName ?? '',
+    },
+  });
+  const mut = useMutation({
+    mutationFn: (v: Pick<AppointmentCreateInput, 'scheduledAt' | 'reason' | 'practitionerName'>) => updateAppointment(appointment.id, v),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['appointments'] }); onClose(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  return (
+    <Modal open onClose={onClose} title="Modifier le rendez-vous" size="md">
+      <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
+        <Field label="Date et heure"><input className="input" type="datetime-local" {...register('scheduledAt', { required: true })} /></Field>
+        <Field label="Motif"><input className="input" {...register('reason')} /></Field>
+        <Field label="Praticien"><input className="input" {...register('practitionerName')} /></Field>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Annuler</Button><Button type="submit" loading={mut.isPending}>Enregistrer</Button></div>
+      </form>
+    </Modal>
   );
 }
 

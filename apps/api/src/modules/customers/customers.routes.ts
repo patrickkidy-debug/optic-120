@@ -73,6 +73,22 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     });
     if (result.count === 0) throw notFound('Client introuvable');
     const customer = await req.db!.customer.findFirst({ where: { id } });
+    // Quand la fiche est liée à la clinique, les coordonnées communes restent
+    // cohérentes sans toucher aux données médicales du patient.
+    if (customer) {
+      await req.db!.patient.updateMany({
+        where: { customerId: customer.id },
+        data: {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          gender: customer.gender,
+          dateOfBirth: customer.dateOfBirth,
+          phone: customer.phone,
+          email: customer.email,
+          address: customer.address,
+        },
+      });
+    }
     return reply.send({ customer });
   });
 

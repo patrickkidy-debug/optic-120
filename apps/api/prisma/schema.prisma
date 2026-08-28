@@ -493,6 +493,7 @@ model Customer {
   prescriptions OpticalPrescription[]
   lensOrders    LensOrder[]
   repairs       Repair[]
+  patient       Patient?  @relation("CustomerPatient")
 
   @@index([tenantId])
 }
@@ -867,6 +868,9 @@ model Patient {
   bloodGroup     String?
   allergies      String?
   medicalHistory String?
+  // Une même personne peut être cliente de l'optique et patiente de la clinique.
+  customerId     String?   @unique
+  customer       Customer? @relation("CustomerPatient", fields: [customerId], references: [id], onDelete: SetNull)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

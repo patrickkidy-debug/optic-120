@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,6 +26,7 @@ const GENDERS = [
 
 export function PatientsPage() {
   const qc = useQueryClient();
+  const location = useLocation();
   const canCreate = usePermission('clinic.patients.create');
   const canUpdate = usePermission('clinic.patients.update');
   const canDelete = usePermission('clinic.patients.delete');
@@ -37,6 +39,11 @@ export function PatientsPage() {
     queryKey: ['patients', search],
     queryFn: () => listPatients(search || undefined),
   });
+
+  useEffect(() => {
+    const patientId = (location.state as { openPatientId?: string } | null)?.openPatientId;
+    if (patientId) setRecordId(patientId);
+  }, [location.state]);
 
   const removeMut = useMutation({
     mutationFn: deletePatient,

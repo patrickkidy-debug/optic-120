@@ -109,13 +109,13 @@ export async function updateSupplier(id: string, input: SupplierUpdateInput) {
 export interface InsurerUpcoming {
   items: { insurerId: string; name: string; amount: number; salesCount: number }[];
   total: number;
-  quarterStart: string;
+  monthStart: string;
   dueDate: string;
 }
 
-/** Paiements trimestriels à venir des assurances (trimestre civil en cours). */
-export async function getInsurerUpcoming(): Promise<InsurerUpcoming> {
-  const { data } = await api.get<InsurerUpcoming>('/insurance/upcoming');
+/** Paiements assurance à recevoir pour un mois donné. */
+export async function getInsurerUpcoming(month?: string): Promise<InsurerUpcoming> {
+  const { data } = await api.get<InsurerUpcoming>('/insurance/upcoming', { params: { month } });
   return data;
 }
 
@@ -132,11 +132,11 @@ export async function getInsuranceSummary(): Promise<InsuranceSummary> {
   return data;
 }
 
-/** Marque comme reçu le remboursement d'un assureur pour le trimestre débutant à quarterStart. */
-export async function markInsurancePaid(insurerId: string, quarterStart: string): Promise<number> {
+/** Marque comme reçu le remboursement d'un assureur pour le mois sélectionné. */
+export async function markInsurancePaid(insurerId: string, monthStart: string): Promise<number> {
   const { data } = await api.post<{ ok: boolean; count: number }>('/insurance/mark-paid', {
     insurerId,
-    quarterStart,
+    monthStart,
   });
   return data.count;
 }

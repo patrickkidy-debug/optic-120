@@ -177,13 +177,13 @@ async function insurersRoutes(app: FastifyInstance) {
     return reply.send({ insurers });
   });
 
-  // Paiements trimestriels à venir : montants pris en charge par chaque assureur
-  // sur le trimestre civil en cours, payables au début du trimestre suivant.
+  // Paiements mensuels à recevoir : permet de valider chaque mois séparément.
   app.get('/upcoming', { preHandler: requirePermission('insurance.view') }, async (req, reply) => {
-    const now = new Date();
-    const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
-    const quarterStart = new Date(now.getFullYear(), qStartMonth, 1);
-    const dueDate = new Date(now.getFullYear(), qStartMonth + 3, 1);
+    const { month } = req.query as { month?: string };
+    const parsedMonth = month ? new Date(`${month}-01T00:00:00`) : new Date();
+    if (Number.isNaN(parsedMonth.getTime())) throw badRequest('Mois invalide');
+    const monthStart = new Date(parsedMonth.getFullYear(), parsedMonth.getMonth(), 1);
+    const monthEnd = new Date(parsedMonth.getFullYear(), parsedMonth.getMonth() + 1, 1);
 
     const groups = await req.db!.sale.groupBy({
       by: ['insurerId'],
@@ -192,7 +192,8 @@ async function insurersRoutes(app: FastifyInstance) {
         status: { in: PAID_LIKE },
         insurerId: { not: null },
         insuranceAmount: { gt: 0 },
-        createdAt: { gte: quarterStart },
+        insurerPaidAt: null,
+        createdAt: { gte: monthStart, lt: monthEnd },
       },
       _sum: { insuranceAmount: true },
       _count: { _all: true },
@@ -211,8 +212,8 @@ async function insurersRoutes(app: FastifyInstance) {
     return reply.send({
       items,
       total: items.reduce((s, x) => s + x.amount, 0),
-      quarterStart: quarterStart.toISOString(),
-      dueDate: dueDate.toISOString(),
+      monthStart: monthStart.toISOString(),
+      dueDate: monthEnd.toISOString(),
     });
   });
 
@@ -242,7 +243,7 @@ async function insurersRoutes(app: FastifyInstance) {
   });
 
   // Résumé des remboursements assurance (widget tableau de bord) : payé
-  // (marqué manuellement), en attente (trimestre en cours) et en retard
+  // (marqué manuellement), en attente (mois en cours) et en retard
   // (échéance passée). Fenêtre glissante de 24 mois pour borner le scan.
   app.get('/summary', { preHandler: requirePermission('insurance.view') }, async (req, reply) => {
     const now = new Date();
@@ -268,8 +269,7 @@ async function insurersRoutes(app: FastifyInstance) {
         paid += amount;
         continue;
       }
-      const qStartMonth = Math.floor(s.createdAt.getMonth() / 3) * 3;
-      const dueDate = new Date(s.createdAt.getFullYear(), qStartMonth + 3, 1);
+      const dueDate = new Date(s.createdAt.getFullYear(), s.createdAt.getMonth() + 1, 1);
       if (dueDate < now) late += amount;
       else pending += amount;
     }
@@ -277,14 +277,14 @@ async function insurersRoutes(app: FastifyInstance) {
     return reply.send({ paid, pending, late, toCollect: pending + late });
   });
 
-  // Marque comme reçu le remboursement d'un assureur pour un trimestre donné
-  // (action groupée depuis le widget Assurances / la page à venir).
+  // Marque comme reçu le remboursement d'un assureur pour un mois donné.
   app.post('/mark-paid', { preHandler: requirePermission('insurance.update') }, async (req, reply) => {
-    const { insurerId, quarterStart } = req.body as { insurerId?: string; quarterStart?: string };
-    if (!insurerId || !quarterStart) throw badRequest('insurerId et quarterStart requis');
-    const start = new Date(quarterStart);
+    const { insurerId, monthStart } = req.body as { insurerId?: string; monthStart?: string };
+    if (!insurerId || !monthStart) throw badRequest('insurerId et monthStart requis');
+    const start = new Date(monthStart);
+    if (Number.isNaN(start.getTime())) throw badRequest('Mois invalide');
     const end = new Date(start);
-    end.setMonth(end.getMonth() + 3);
+    end.setMonth(end.getMonth() + 1);
     const res = await req.db!.sale.updateMany({
       where: {
         insurerId,

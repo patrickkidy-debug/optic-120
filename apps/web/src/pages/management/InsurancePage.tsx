@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ShieldCheck, Pencil } from 'lucide-react';
+import { Plus, ShieldCheck, Pencil, CheckCircle2 } from 'lucide-react';
 import { insurerCreateSchema, type InsurerCreateInput } from '@oculo/shared-types';
-import { listInsurers, createInsurer, updateInsurer, getInsurerUpcoming, type Insurer } from '../../features/management/api';
+import { listInsurers, createInsurer, updateInsurer, getInsurerUpcoming, markInsurancePaid, type Insurer } from '../../features/management/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
@@ -19,14 +19,23 @@ const TYPES = [
 const typeLabel = (v: string) => TYPES.find((t) => t.value === v)?.label ?? v;
 
 export function InsurancePage() {
+  const qc = useQueryClient();
   const canCreate = usePermission('insurance.create');
   const canUpdate = usePermission('insurance.update');
   const [editing, setEditing] = useState<Insurer | null>(null);
   const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const { data, isLoading } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers });
-  // Paiements trimestriels à venir (les assurances règlent chaque trimestre).
-  const { data: upcoming } = useQuery({ queryKey: ['insurer-upcoming'], queryFn: getInsurerUpcoming });
+  const { data: upcoming } = useQuery({ queryKey: ['insurer-upcoming', month], queryFn: () => getInsurerUpcoming(month) });
   const pendingFor = (id: string) => upcoming?.items.find((x) => x.insurerId === id);
+  const paymentMut = useMutation({
+    mutationFn: ({ insurerId, monthStart }: { insurerId: string; monthStart: string }) => markInsurancePaid(insurerId, monthStart),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
+      qc.invalidateQueries({ queryKey: ['insurance-summary'] });
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
 
   return (
     <div>
@@ -36,15 +45,14 @@ export function InsurancePage() {
         actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nouvelle assurance</Button>}
       />
 
-      {upcoming && upcoming.total > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
-          <p className="text-sm text-content">
-            <span className="font-semibold">Paiements à venir ce trimestre :</span>{' '}
-            {formatCurrency(upcoming.total)}
-          </p>
-          <Badge tone="info">Échéance : {formatDate(upcoming.dueDate)}</Badge>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
+        <div>
+          <p className="text-sm font-semibold text-content">Remboursements assurance par mois</p>
+          <p className="text-xs text-content-muted">Validez un paiement dès sa réception.</p>
         </div>
-      )}
+        <input aria-label="Mois de remboursement" className="input h-9 w-auto" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        {upcoming && <Badge tone="info">À recevoir : {formatCurrency(upcoming.total)} · échéance {formatDate(upcoming.dueDate)}</Badge>}
+      </div>
 
       {isLoading ? (
         <PageLoader />
@@ -72,10 +80,25 @@ export function InsurancePage() {
               {(() => {
                 const p = pendingFor(i.id);
                 return p ? (
-                  <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
-                    <span className="text-content-muted">En attente ce trimestre : </span>
-                    <span className="font-semibold text-content">{formatCurrency(p.amount)}</span>
-                    <span className="text-content-faint"> · {p.salesCount} vente(s)</span>
+                  <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs">
+                    <div>
+                      <span className="text-content-muted">En attente ce mois : </span>
+                      <span className="font-semibold text-content">{formatCurrency(p.amount)}</span>
+                      <span className="text-content-faint"> · {p.salesCount} vente(s)</span>
+                    </div>
+                    {canUpdate && upcoming && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Valider la réception de ${formatCurrency(p.amount)} pour ${i.name} ?`)) {
+                            paymentMut.mutate({ insurerId: i.id, monthStart: upcoming.monthStart });
+                          }
+                        }}
+                        disabled={paymentMut.isPending}
+                        className="btn-outline mt-2 h-7 w-full rounded-md text-xs text-success disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Paiement reçu
+                      </button>
+                    )}
                   </div>
                 ) : null;
               })()}

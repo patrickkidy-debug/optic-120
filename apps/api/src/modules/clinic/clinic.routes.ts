@@ -26,6 +26,33 @@ function clean<T extends Record<string, unknown>>(obj: T): T {
 }
 
 async function patientsRoutes(app: FastifyInstance) {
+  // Crée (une seule fois) le dossier clinique depuis une fiche client optique.
+  // Les données d'identité restent ainsi partagées entre les deux activités.
+  app.post('/from-customer/:customerId', { preHandler: requirePermission('clinic.patients.create') }, async (req, reply) => {
+    const { customerId } = req.params as { customerId: string };
+    const customer = await req.db!.customer.findFirst({ where: { id: customerId } });
+    if (!customer) throw notFound('Client introuvable');
+
+    const existing = await req.db!.patient.findFirst({ where: { customerId } });
+    if (existing) return reply.send({ patient: existing, created: false });
+
+    await assertWithinLimit(req.auth!.tenantId, 'patients');
+    const patient = await req.db!.patient.create({
+      data: {
+        tenantId: req.auth!.tenantId,
+        customerId: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        gender: customer.gender,
+        dateOfBirth: customer.dateOfBirth,
+        phone: customer.phone,
+        email: customer.email,
+        address: customer.address,
+      },
+    });
+    return reply.status(201).send({ patient, created: true });
+  });
+
   app.get('/', { preHandler: requirePermission('clinic.patients.view') }, async (req, reply) => {
     const q = req.query as { search?: string };
     const where = q.search
@@ -84,6 +111,22 @@ async function patientsRoutes(app: FastifyInstance) {
     const res = await req.db!.patient.updateMany({ where: { id }, data });
     if (res.count === 0) throw notFound('Patient introuvable');
     const patient = await req.db!.patient.findFirst({ where: { id } });
+    // Synchronise uniquement l'identité/les coordonnées avec la fiche optique
+    // associée ; les informations spécifiques à chaque module restent séparées.
+    if (patient?.customerId) {
+      await req.db!.customer.updateMany({
+        where: { id: patient.customerId },
+        data: {
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          gender: patient.gender,
+          dateOfBirth: patient.dateOfBirth,
+          phone: patient.phone,
+          email: patient.email,
+          address: patient.address,
+        },
+      });
+    }
     return reply.send({ patient });
   });
 

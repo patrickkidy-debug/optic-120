@@ -401,11 +401,11 @@ export function DashboardPage() {
     enabled: isAdmin,
   });
 
-  // Paiements trimestriels à venir des assurances (visible avec insurance.view).
+  // Paiements mensuels à venir des assurances (visible avec insurance.view).
   const canSeeInsurers = usePermission('insurance.view');
   const { data: insurerUpcoming } = useQuery({
     queryKey: ['insurer-upcoming'],
-    queryFn: getInsurerUpcoming,
+    queryFn: () => getInsurerUpcoming(),
     enabled: canSeeInsurers,
   });
 
@@ -559,7 +559,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Paiements trimestriels à venir des assurances. */}
+      {/* Paiements mensuels à venir des assurances. */}
       {canSeeInsurers && insurerUpcoming && insurerUpcoming.items.length > 0 && (
         <div className="mt-6 card p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -582,7 +582,7 @@ export function DashboardPage() {
                   </span>
                   <div>
                     <p className="text-sm font-medium text-content">{i.name}</p>
-                    <p className="text-xs text-content-faint">{i.salesCount} vente(s) ce trimestre</p>
+                    <p className="text-xs text-content-faint">{i.salesCount} vente(s) ce mois</p>
                   </div>
                 </div>
                 <span className="font-display font-bold text-content">{formatCurrency(i.amount)}</span>
@@ -590,7 +590,7 @@ export function DashboardPage() {
             ))}
           </div>
           <div className="mt-3 flex justify-between border-t pt-3 text-sm">
-            <span className="text-content-muted">Total attendu ce trimestre</span>
+            <span className="text-content-muted">Total attendu ce mois</span>
             <span className="font-display font-bold text-content">{formatCurrency(insurerUpcoming.total)}</span>
           </div>
         </div>

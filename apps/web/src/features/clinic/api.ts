@@ -20,6 +20,7 @@ export interface Patient {
   bloodGroup: string | null;
   allergies: string | null;
   medicalHistory: string | null;
+  customerId: string | null;
   createdAt: string;
 }
 
@@ -83,6 +84,10 @@ export async function getPatient(id: string) {
 }
 export async function createPatient(input: PatientCreateInput) {
   const { data } = await api.post('/patients', input);
+  return data.patient as Patient;
+}
+export async function createPatientFromCustomer(customerId: string) {
+  const { data } = await api.post('/patients/from-customer/' + customerId);
   return data.patient as Patient;
 }
 export async function updatePatient(id: string, input: Partial<PatientCreateInput>) {
