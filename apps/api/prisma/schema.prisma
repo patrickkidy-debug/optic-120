@@ -624,9 +624,6 @@ model Sale {
   // (marqué manuellement) : distingue le "recouvré" du simplement "attendu"
   // dans le widget Assurances du tableau de bord.
   insurerPaidAt     DateTime?
-  // Montant réellement reçu de l'assureur. Permet les remboursements partiels
-  // avant le solde complet de la prise en charge.
-  insurerPaidAmount Decimal              @default(0) @db.Decimal(12, 2)
   totalAmount       Decimal              @db.Decimal(12, 2)
   paidAmount        Decimal              @default(0) @db.Decimal(12, 2)
   currency          String               @default("XOF")
