@@ -211,3 +211,33 @@ export function Button({
     </button>
   );
 }
+
+export function ProgressBar({
+  value,
+  max = 100,
+  label,
+  sublabel,
+}: {
+  value: number;
+  max?: number;
+  label?: string;
+  sublabel?: string;
+}) {
+  const pct = Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+  return (
+    <div className="w-full">
+      {(label || sublabel) && (
+        <div className="mb-1.5 flex items-center justify-between text-xs sm:text-sm">
+          {label && <span className="font-semibold text-content">{label}</span>}
+          {sublabel && <span className="text-content-muted">{sublabel}</span>}
+        </div>
+      )}
+      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-3">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
