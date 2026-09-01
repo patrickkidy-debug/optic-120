@@ -42,7 +42,8 @@ import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard, listLensOrders } from '../features/optique/api';
-import { StatCard, EmptyState, Badge } from '../components/ui';
+import { StatCard, EmptyState, Badge, Button } from '../components/ui';
+import { apiErrorMessage } from '../lib/api';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
 import { formatCurrency, formatDate, formatDateTime } from '../lib/format';
@@ -391,7 +392,7 @@ export function DashboardPage() {
 
   const isAdmin = usePermission('finance.expenses.view');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
     queryKey: ['dashboard', branchId],
     queryFn: () => getDashboard(branchId ?? undefined),
   });
@@ -423,6 +424,22 @@ export function DashboardPage() {
     enabled: canSeeOrders,
   });
   const ongoingOrders = (lensOrders ?? []).filter((o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length;
+
+  // Échec définitif (pas juste "en cours") : sans ce garde-fou distinct de
+  // isLoading, la page restait bloquée sur le squelette pour toujours, sans
+  // jamais indiquer qu'une erreur s'était produite.
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-24 text-center">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[color:var(--danger)]/15 text-danger">
+          <AlertTriangle className="h-7 w-7" />
+        </span>
+        <p className="font-display text-lg font-bold text-content">Impossible de charger le tableau de bord</p>
+        <p className="max-w-sm text-sm text-content-muted">{apiErrorMessage(error)}</p>
+        <Button onClick={() => refetch()} loading={isFetching}>Réessayer</Button>
+      </div>
+    );
+  }
 
   // On affiche tout de suite l'ossature de la page (titre + cartes en attente)
   // plutôt qu'un spinner plein écran : l'accès paraît instantané, les chiffres
