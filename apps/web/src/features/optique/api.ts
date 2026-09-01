@@ -622,6 +622,7 @@ export async function getDashboardActivity(branchId?: string): Promise<ActivityI
 import type {
   LensOrderCreateInput,
   LensOrderStatus,
+  LensOrderConfig,
   RepairCreateInput,
   RepairStatus,
 } from '@oculo/shared-types';
@@ -644,6 +645,7 @@ export interface LensOrder {
   notifiedAt: string | null;
   cost: string | number | null;
   notes: string | null;
+  lensConfig: LensOrderConfig | null;
   createdAt: string;
 }
 /** Nombre de commandes de verres en retard (échéance dépassée, non livrées). */
@@ -657,8 +659,9 @@ export async function listLensOrders(status?: string): Promise<LensOrder[]> {
   });
   return data.orders;
 }
-export async function createLensOrder(input: LensOrderCreateInput): Promise<void> {
-  await api.post('/optique/lens-orders', input);
+export async function createLensOrder(input: LensOrderCreateInput): Promise<LensOrder> {
+  const { data } = await api.post<{ order: LensOrder }>('/optique/lens-orders', input);
+  return data.order;
 }
 export async function setLensOrderStatus(id: string, status: LensOrderStatus): Promise<void> {
   await api.patch(`/optique/lens-orders/${id}`, { status });

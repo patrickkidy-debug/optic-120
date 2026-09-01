@@ -87,7 +87,14 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
           expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
           cost: input.cost ?? null,
           notes: input.notes ?? null,
+          lensConfig: input.lensConfig ?? undefined,
           createdById: req.auth!.userId,
+        },
+        // Même forme que GET /lens-orders : le frontend peut ouvrir directement
+        // la fiche détail de la commande tout juste créée sans requête de plus.
+        include: {
+          customer: { select: { firstName: true, lastName: true, phone: true } },
+          frameProduct: { select: { id: true, name: true, brand: true, photoUrl: true } },
         },
       }),
     );

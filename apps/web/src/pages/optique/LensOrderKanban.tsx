@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   Glasses,
-  Frame,
   Building2,
   CalendarClock,
   AlertTriangle,
@@ -11,6 +10,7 @@ import {
 import {
   LENS_ORDER_BOARD_STATUSES,
   LENS_ORDER_STATUS_LABELS,
+  LENS_TREATMENTS,
   type LensOrderStatus,
 } from '@oculo/shared-types';
 import type { LensOrder } from '../../features/optique/api';
@@ -58,6 +58,35 @@ function DelayBadge({ order }: { order: LensOrder }) {
     );
   }
   return null;
+}
+
+const LENS_TYPE_SHORT: Record<string, string> = {
+  unifocal: 'Unifocal',
+  progressif: 'Progressif',
+  degressif: 'Dégressif',
+};
+
+/** Badges courts (type, indice, traitement) : d'un coup d'œil, sans surcharger la carte. */
+function LensConfigBadges({ order }: { order: LensOrder }) {
+  const config = order.lensConfig;
+  if (!config) return null;
+  const treatmentLabels = config.treatments.map((t) => LENS_TREATMENTS.find((x) => x.key === t)?.label ?? t);
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+        {LENS_TYPE_SHORT[config.lensType] ?? config.lensType}
+      </span>
+      {config.index && (
+        <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] font-bold text-content-muted">{config.index}</span>
+      )}
+      {treatmentLabels[0] && (
+        <span className="rounded-md bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-content-muted">
+          {treatmentLabels[0]}
+          {treatmentLabels.length > 1 ? ` +${treatmentLabels.length - 1}` : ''}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function OrderCard({
@@ -134,7 +163,7 @@ function OrderCard({
             {order.frameProduct.photoUrl ? (
               <img src={order.frameProduct.photoUrl} alt="" className="h-full w-full object-contain" />
             ) : (
-              <Frame className="h-4 w-4 text-content-faint" />
+              <Glasses className="h-4 w-4 text-content-faint" />
             )}
           </div>
           <span className="truncate text-xs font-medium text-content">
@@ -143,6 +172,8 @@ function OrderCard({
           </span>
         </div>
       )}
+
+      <LensConfigBadges order={order} />
 
       {/* Verres OD/OG si renseignés, sinon la description libre */}
       {order.odLens || order.ogLens ? (

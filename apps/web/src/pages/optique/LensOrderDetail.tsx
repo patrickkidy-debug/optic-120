@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Frame, MessageCircle, Glasses } from 'lucide-react';
+import { CheckCircle2, Circle, MessageCircle, Glasses, Receipt } from 'lucide-react';
 import {
   LENS_ORDER_BOARD_STATUSES,
   LENS_ORDER_STATUS_LABELS,
@@ -174,7 +174,7 @@ export function LensOrderDetail({
                 {order.frameProduct.photoUrl ? (
                   <img src={order.frameProduct.photoUrl} alt="" className="h-full w-full object-contain" />
                 ) : (
-                  <Frame className="h-5 w-5 text-content-faint" />
+                  <Glasses className="h-5 w-5 text-content-faint" />
                 )}
               </div>
               <div className="min-w-0">
@@ -187,13 +187,31 @@ export function LensOrderDetail({
             </div>
           )}
 
-          {(order.odLens || order.ogLens) && (
+          {(order.odLens || order.ogLens || order.lensConfig) && (
             <div className="rounded-xl border p-3 text-sm">
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content-faint">
                 <Glasses className="h-3.5 w-3.5" /> Verres
               </p>
+              {order.lensConfig && (
+                <p className="mb-1 flex flex-wrap gap-1">
+                  <span className="rounded-md bg-primary-soft px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-primary">
+                    {order.lensConfig.lensType}
+                  </span>
+                  {order.lensConfig.index && (
+                    <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold text-content-muted">
+                      Indice {order.lensConfig.index}
+                    </span>
+                  )}
+                </p>
+              )}
               {order.odLens && <p className="text-content">OD — {order.odLens}</p>}
               {order.ogLens && <p className="text-content">OG — {order.ogLens}</p>}
+              {order.lensConfig?.priceBreakdown && (
+                <p className="mt-1.5 flex items-center gap-1 border-t pt-1.5 text-xs text-content-muted">
+                  <Receipt className="h-3 w-3" /> Verres {formatCurrency(order.lensConfig.priceBreakdown.base)} + traitements{' '}
+                  {formatCurrency(order.lensConfig.priceBreakdown.treatments)}
+                </p>
+              )}
             </div>
           )}
 

@@ -118,7 +118,16 @@ export function LensOrdersPage() {
         <LensOrderCalendar orders={orders} onOpen={setSelected} />
       )}
 
-      {open && <LensOrderForm onClose={() => setOpen(false)} onCreated={() => { setOpen(false); invalidate(); }} />}
+      {open && (
+        <LensOrderForm
+          onClose={() => setOpen(false)}
+          onCreated={(order, action) => {
+            setOpen(false);
+            invalidate();
+            if (action === 'view') setSelected(order);
+          }}
+        />
+      )}
 
       {liveSelected && (
         <LensOrderDetail order={liveSelected} canManage={canManage} onClose={() => setSelected(null)} />

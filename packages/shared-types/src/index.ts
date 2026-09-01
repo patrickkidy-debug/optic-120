@@ -1380,6 +1380,41 @@ export type LensOrderCategory = (typeof LENS_ORDER_CATEGORIES)[number];
 export const REPAIR_CATEGORIES = ['MONTURE', 'VERRE', 'VIS', 'PLAQUETTES', 'NETTOYAGE', 'AUTRE'] as const;
 export type RepairCategory = (typeof REPAIR_CATEGORIES)[number];
 
+/** Sphère/cylindre/axe/addition/prisme d'un œil, pour la config structurée d'une commande de verres. */
+const lensOrderEyeRxSchema = z.object({
+  sphere: z.number().optional(),
+  cylinder: z.number().optional(),
+  axis: z.number().min(0).max(180).optional(),
+  addition: z.number().optional(),
+  prism: z.number().optional(),
+  prismBase: z.string().max(10).optional(),
+});
+
+/**
+ * Configuration structurée d'une commande de verres (catégorie VERRES) :
+ * type, matériau, indice, traitements, prescription OD/OG, détail du prix.
+ * Stockée telle quelle dans `LensOrder.lensConfig` (Json?) — les valeurs de
+ * traitement/indice sont dupliquées en dur (comme `lensProductSchema`
+ * ci-dessus) plutôt que référencées depuis LENS_TREATMENTS/LENS_INDICES,
+ * définies plus bas dans ce fichier.
+ */
+export const lensOrderConfigSchema = z.object({
+  lensType: z.string().min(1).max(40),
+  material: z.string().max(60).optional(),
+  index: z.enum(['1.5', '1.53', '1.59', '1.6', '1.67', '1.74']).optional(),
+  treatments: z.array(z.enum(['ar', 'blue', 'photo', 'hard'])).default([]),
+  prescription: z
+    .object({
+      sameForBoth: z.boolean().default(false),
+      od: lensOrderEyeRxSchema,
+      og: lensOrderEyeRxSchema,
+    })
+    .optional(),
+  priceBreakdown: z.object({ base: z.number(), treatments: z.number(), total: z.number() }).optional(),
+});
+export type LensOrderConfig = z.infer<typeof lensOrderConfigSchema>;
+export type LensOrderEyeRx = z.infer<typeof lensOrderEyeRxSchema>;
+
 export const lensOrderCreateSchema = z.object({
   customerId: z.string().uuid().optional().or(z.literal('')),
   category: z.enum(LENS_ORDER_CATEGORIES).optional(),
@@ -1393,6 +1428,8 @@ export const lensOrderCreateSchema = z.object({
   expectedAt: z.string().optional().or(z.literal('')),
   cost: z.coerce.number().min(0).optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  /** Configuration structurée verres (catégorie VERRES) — voir lensOrderConfigSchema. */
+  lensConfig: lensOrderConfigSchema.optional(),
 });
 export type LensOrderCreateInput = z.infer<typeof lensOrderCreateSchema>;
 export const lensOrderStatusSchema = z.object({ status: z.enum(LENS_ORDER_STATUSES) });
@@ -1932,6 +1969,35 @@ export function lensLabel(pricing: LensPricing, base: string, treatments: LensTr
     .map((t) => LENS_TREATMENTS.find((x) => x.key === t)?.label ?? t)
     .join(' + ');
   return treats ? `Verre ${baseLabel.toLowerCase()} · ${treats}` : `Verre ${baseLabel.toLowerCase()}`;
+}
+
+export interface LensOrderPriceBreakdown {
+  /** Prix des verres (type × indice), pour la paire. */
+  base: number;
+  /** Prix des traitements choisis, pour la paire. */
+  treatments: number;
+  total: number;
+}
+
+/**
+ * Prix d'une commande de verres (paire) : type de base × multiplicateur
+ * d'indice + somme des traitements, doublé pour la paire. Formalise le calcul
+ * déjà utilisé par le configurateur de commande (même résultat numérique).
+ */
+export function computeLensOrderPrice(
+  pricing: LensPricing,
+  input: { lensType: string; index?: LensIndexId; treatments: LensTreatmentKey[] },
+): LensOrderPriceBreakdown {
+  const indexMult = input.index ? (LENS_INDICES.find((i) => i.id === input.index)?.mult ?? 1) : 1;
+  const baseRaw = lensBasePrice(pricing, input.lensType) * indexMult;
+  const treatmentsRaw = input.treatments.reduce((sum, t) => sum + (pricing[t] ?? 0), 0);
+  return {
+    base: Math.round(baseRaw * 2),
+    treatments: Math.round(treatmentsRaw * 2),
+    // Même expression que l'ancien calcul en ligne : un seul arrondi final,
+    // pour un total garanti identique à ce qui était déjà facturé.
+    total: Math.round((baseRaw + treatmentsRaw) * 2),
+  };
 }
 
 /** Référence déterministe d'un verre configuré (upsert idempotent côté serveur). */

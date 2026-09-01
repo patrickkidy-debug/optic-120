@@ -1,0 +1,1 @@
+ALTER TABLE "LensOrder" ADD COLUMN IF NOT EXISTS "lensConfig" JSONB;
