@@ -60,10 +60,13 @@ export function errorHandler(
   }
 
   logger.error({ err: error, url: req.url, method: req.method }, 'Erreur non gérée');
+  // TEMPORAIRE (diagnostic tableau de bord) : expose error.message même en
+  // prod le temps de trouver la cause d'un 500 sans accès aux logs Render.
+  // À REVERT juste après.
   reply.status(500).send({
     error: {
       code: 'INTERNAL_ERROR',
-      message: isProd ? 'Erreur interne du serveur' : error.message,
+      message: isProd ? `[DIAG] ${error.message}` : error.message,
     },
   });
 }
