@@ -810,6 +810,27 @@ export const demoProgressUpdateSchema = z.object({
 });
 export type DemoProgressUpdateInput = z.infer<typeof demoProgressUpdateSchema>;
 
+/* ============================================================
+ * CONFIGURATION DE LA BOUTIQUE (assistant d'installation)
+ * ============================================================ */
+
+/** Ordre fixe des étapes réelles (hors écran de vérification finale). */
+export const STORE_SETUP_STEPS = [
+  'store_information',
+  'team',
+  'products',
+  'inventory',
+  'payments',
+  'customers',
+  'documents',
+] as const;
+export type StoreSetupStepKey = (typeof STORE_SETUP_STEPS)[number];
+
+export const storeSetupStepOverrideSchema = z.object({
+  status: z.enum(['completed', 'skipped', 'reset']),
+});
+export type StoreSetupStepOverrideInput = z.infer<typeof storeSetupStepOverrideSchema>;
+
 /* --- Connexion avec Google --- */
 
 export const googleLoginSchema = z.object({

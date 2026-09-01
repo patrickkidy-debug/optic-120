@@ -44,7 +44,8 @@
     "audit": "Registo de atividade",
     "support": "Ajuda e suporte",
     "profile": "O meu perfil",
-    "settingsShortcut": "Definições"
+    "settingsShortcut": "Definições",
+    "storeSetup": "Configuração da loja"
   },
   "common": {
     "save": "Guardar",
@@ -386,5 +387,69 @@
       "Cópias de segurança reforçadas",
       "Suporte premium"
     ]
+  },
+  "storeSetup": {
+    "cardTitleNew": "Configure sua loja",
+    "cardSubtitleNew": "Sua loja está quase pronta! Configure seu espaço em poucas etapas para começar a usar o OculoSaaS com eficiência.",
+    "cardTitleExisting": "Sua configuração da loja",
+    "cardSubtitleExisting": "Algumas etapas já estão configuradas. Verifique as configurações restantes para otimizar sua loja.",
+    "progressLabel": "{{completed}} / {{total}} etapas concluídas",
+    "nextStep": "Próxima etapa",
+    "continue": "Continuar configuração",
+    "minimize": "Minimizar",
+    "expand": "Configuração da loja — {{percent}}% concluído",
+    "pageTitle": "Configuração da loja",
+    "pageSubtitle": "Acompanhe, conclua ou edite a configuração da sua loja a qualquer momento.",
+    "finalCheck": {
+      "title": "Sua loja está pronta!",
+      "subtitle": "Resumo da configuração",
+      "cta": "Começar a usar o OculoSaaS"
+    },
+    "markDone": "Marcar como concluído",
+    "skip": "Ignorar esta etapa",
+    "undo": "Desfazer",
+    "statusCompleted": "Concluído",
+    "statusInProgress": "Em andamento",
+    "statusNotStarted": "A fazer",
+    "statusSkipped": "Ignorado",
+    "noPermission": "Você não tem permissão para alterar esta etapa",
+    "goTo": "Abrir",
+    "steps": {
+      "storeInformation": {
+        "title": "Informações da loja",
+        "desc": "Nome, logotipo, endereço, telefone, email, moeda e país.",
+        "why": "Essas informações aparecem nos seus documentos comerciais e no aplicativo."
+      },
+      "team": {
+        "title": "Equipe",
+        "desc": "Convide sua equipe e defina funções e permissões.",
+        "why": "Cada membro da equipe deve ter seu próprio acesso conforme sua função."
+      },
+      "products": {
+        "title": "Produtos e categorias",
+        "desc": "Crie ou importe seu catálogo: armações, lentes, lentes de contato, acessórios.",
+        "why": "Sem produtos, você ainda não pode registrar uma venda."
+      },
+      "inventory": {
+        "title": "Estoque",
+        "desc": "Configure o estoque inicial e os alertas de estoque baixo.",
+        "why": "Saiba em tempo real o que está disponível na sua loja."
+      },
+      "payments": {
+        "title": "Vendas e pagamentos",
+        "desc": "Configure seus meios de pagamento (dinheiro, Mobile Money, cartão).",
+        "why": "Seus clientes precisam de uma forma fácil de pagar."
+      },
+      "customers": {
+        "title": "Clientes",
+        "desc": "Configure a gestão de clientes e crie seu primeiro cliente.",
+        "why": "Acompanhe o histórico de compras e fidelize seus clientes."
+      },
+      "documents": {
+        "title": "Configuração de documentos",
+        "desc": "Personalize suas faturas, recibos e orçamentos.",
+        "why": "Uma imagem profissional em todos os seus documentos comerciais."
+      }
+    }
   }
 }

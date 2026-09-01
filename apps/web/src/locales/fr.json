@@ -44,7 +44,8 @@
     "audit": "Journal d'activité",
     "support": "Aide & support",
     "profile": "Mon profil",
-    "settingsShortcut": "Réglages"
+    "settingsShortcut": "Réglages",
+    "storeSetup": "Configuration boutique"
   },
   "common": {
     "save": "Enregistrer",
@@ -386,5 +387,69 @@
       "Sauvegardes renforcées",
       "Support premium"
     ]
+  },
+  "storeSetup": {
+    "cardTitleNew": "Configurez votre boutique",
+    "cardSubtitleNew": "Votre boutique est presque prête ! Configurez votre espace en quelques étapes pour commencer à utiliser OculoSaaS efficacement.",
+    "cardTitleExisting": "Votre configuration boutique",
+    "cardSubtitleExisting": "Certaines étapes sont déjà configurées. Vérifiez les paramètres restants pour optimiser votre boutique.",
+    "progressLabel": "{{completed}} / {{total}} étapes terminées",
+    "nextStep": "Prochaine étape",
+    "continue": "Continuer la configuration",
+    "minimize": "Réduire",
+    "expand": "Configuration boutique — {{percent}} % terminé",
+    "pageTitle": "Configuration boutique",
+    "pageSubtitle": "Suivez, complétez ou modifiez la configuration de votre boutique à tout moment.",
+    "finalCheck": {
+      "title": "Votre boutique est prête !",
+      "subtitle": "Récapitulatif de votre configuration",
+      "cta": "Commencer à utiliser OculoSaaS"
+    },
+    "markDone": "Marquer comme fait",
+    "skip": "Ignorer cette étape",
+    "undo": "Annuler",
+    "statusCompleted": "Terminé",
+    "statusInProgress": "En cours",
+    "statusNotStarted": "À faire",
+    "statusSkipped": "Ignoré",
+    "noPermission": "Vous n'avez pas la permission de modifier cette étape",
+    "goTo": "Ouvrir",
+    "steps": {
+      "storeInformation": {
+        "title": "Informations de la boutique",
+        "desc": "Nom, logo, adresse, téléphone, email, devise et pays.",
+        "why": "Ces informations apparaissent sur vos documents commerciaux et dans l’application."
+      },
+      "team": {
+        "title": "Équipe",
+        "desc": "Invitez vos collaborateurs et définissez leurs rôles et permissions.",
+        "why": "Chaque membre de l’équipe doit avoir son propre accès selon son rôle."
+      },
+      "products": {
+        "title": "Produits et catégories",
+        "desc": "Créez ou importez votre catalogue : montures, verres, lentilles, accessoires.",
+        "why": "Sans produits, vous ne pouvez pas encore encaisser une vente."
+      },
+      "inventory": {
+        "title": "Stock",
+        "desc": "Configurez le stock initial et les seuils d'alerte.",
+        "why": "Pour savoir en temps réel ce que vous avez disponible dans votre boutique."
+      },
+      "payments": {
+        "title": "Ventes et paiements",
+        "desc": "Configurez vos moyens de paiement (espèces, Mobile Money, carte).",
+        "why": "Vos clients doivent pouvoir régler leurs achats facilement."
+      },
+      "customers": {
+        "title": "Clients",
+        "desc": "Configurez la gestion des clients et créez votre premier client.",
+        "why": "Pour suivre l’historique d’achat et fidéliser votre clientèle."
+      },
+      "documents": {
+        "title": "Paramètres des documents",
+        "desc": "Personnalisez vos factures, reçus et devis.",
+        "why": "Une image professionnelle sur tous vos documents commerciaux."
+      }
+    }
   }
 }

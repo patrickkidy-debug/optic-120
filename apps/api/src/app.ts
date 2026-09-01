@@ -28,6 +28,7 @@ import { managementRoutes } from './modules/management/management.routes.js';
 import { billingRoutes, billingWebhookRoutes } from './modules/billing/billing.routes.js';
 import { platformRoutes } from './modules/billing/platform.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
+import { storeSetupRoutes } from './modules/store-setup/store-setup.routes.js';
 import { supportRoutes } from './modules/support/support.routes.js';
 import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
 import { demoRoutes } from './modules/demo/demo.routes.js';
@@ -146,6 +147,7 @@ export async function buildApp() {
   await app.register(billingWebhookRoutes, { prefix: '/webhooks' });
   await app.register(platformRoutes, { prefix: '/platform' });
   await app.register(settingsRoutes, { prefix: '/settings' });
+  await app.register(storeSetupRoutes, { prefix: '/store-setup' });
   await app.register(supportRoutes, { prefix: '/support' });
   await app.register(whatsappWebhookRoutes, { prefix: '/webhooks' });
   await app.register(demoRoutes, { prefix: '/demo' });

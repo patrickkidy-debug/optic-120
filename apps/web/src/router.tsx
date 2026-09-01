@@ -45,6 +45,7 @@ const PaymentsPage = lazy(() => named(import('./pages/settings/PaymentsPage'), '
 const AuditPage = lazy(() => named(import('./pages/settings/AuditPage'), 'AuditPage'));
 const ProfilePage = lazy(() => named(import('./pages/settings/ProfilePage'), 'ProfilePage'));
 const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionPage'), 'SubscriptionPage'));
+const StoreSetupPage = lazy(() => named(import('./pages/settings/StoreSetupPage'), 'StoreSetupPage'));
 const PlatformPage = lazy(() => named(import('./pages/platform/PlatformPage'), 'PlatformPage'));
 const CrmPage = lazy(() => named(import('./pages/platform/CrmPage'), 'CrmPage'));
 const NotFound = lazy(() => named(import('./pages/NotFound'), 'NotFound'));
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
         element: pub(<AppShell />),
         children: [
           { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
+          { path: '/configuration-boutique', element: perm('dashboard.view', <StoreSetupPage />) },
           { path: '/onboarding/complete', element: perm('dashboard.view', <DemoCompletePage />) },
           { path: '/demo/videos', element: perm('dashboard.view', <DemoVideosPage />) },
           { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },

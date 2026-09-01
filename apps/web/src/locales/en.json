@@ -44,7 +44,8 @@
     "audit": "Activity log",
     "support": "Help & support",
     "profile": "My profile",
-    "settingsShortcut": "Settings"
+    "settingsShortcut": "Settings",
+    "storeSetup": "Store setup"
   },
   "common": {
     "save": "Save",
@@ -386,5 +387,69 @@
       "Enhanced backups",
       "Premium support"
     ]
+  },
+  "storeSetup": {
+    "cardTitleNew": "Set up your store",
+    "cardSubtitleNew": "Your store is almost ready! Complete a few steps to start using OculoSaaS effectively.",
+    "cardTitleExisting": "Your store setup",
+    "cardSubtitleExisting": "Some steps are already configured. Review the remaining settings to optimize your store.",
+    "progressLabel": "{{completed}} / {{total}} steps completed",
+    "nextStep": "Next step",
+    "continue": "Continue setup",
+    "minimize": "Minimize",
+    "expand": "Store setup — {{percent}}% complete",
+    "pageTitle": "Store setup",
+    "pageSubtitle": "Track, complete, or edit your store configuration at any time.",
+    "finalCheck": {
+      "title": "Your store is ready!",
+      "subtitle": "Setup summary",
+      "cta": "Start using OculoSaaS"
+    },
+    "markDone": "Mark as done",
+    "skip": "Skip this step",
+    "undo": "Undo",
+    "statusCompleted": "Completed",
+    "statusInProgress": "In progress",
+    "statusNotStarted": "To do",
+    "statusSkipped": "Skipped",
+    "noPermission": "You don't have permission to change this step",
+    "goTo": "Open",
+    "steps": {
+      "storeInformation": {
+        "title": "Store information",
+        "desc": "Name, logo, address, phone, email, currency and country.",
+        "why": "This information appears on your business documents and inside the app."
+      },
+      "team": {
+        "title": "Team",
+        "desc": "Invite your staff and set their roles and permissions.",
+        "why": "Every team member should have their own access based on their role."
+      },
+      "products": {
+        "title": "Products & categories",
+        "desc": "Create or import your catalog: frames, lenses, contact lenses, accessories.",
+        "why": "Without products you can't record a sale yet."
+      },
+      "inventory": {
+        "title": "Inventory",
+        "desc": "Set up initial stock and low-stock alerts.",
+        "why": "Know in real time what's available in your store."
+      },
+      "payments": {
+        "title": "Sales & payments",
+        "desc": "Set up your payment methods (cash, mobile money, card).",
+        "why": "Your customers need an easy way to pay."
+      },
+      "customers": {
+        "title": "Customers",
+        "desc": "Set up customer management and create your first customer.",
+        "why": "Track purchase history and build loyalty."
+      },
+      "documents": {
+        "title": "Document settings",
+        "desc": "Customize your invoices, receipts and quotes.",
+        "why": "A professional look on every business document."
+      }
+    }
   }
 }

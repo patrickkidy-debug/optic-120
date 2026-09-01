@@ -54,6 +54,7 @@ import { StockSummary } from '../components/dashboard/StockSummary';
 import { RenewalsWidget } from '../components/dashboard/RenewalsWidget';
 import { InsuranceWidget } from '../components/dashboard/InsuranceWidget';
 import { AlertsToday } from '../components/dashboard/AlertsToday';
+import { StoreSetupCard } from '../components/dashboard/StoreSetupCard';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
 
@@ -478,6 +479,10 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Assistant de configuration boutique : disparaît une fois toutes les
+          étapes terminées ET la fin confirmée par l'utilisateur (finishedAt). */}
+      <StoreSetupCard />
 
       {/* Démonstration vidéo : disparaît une fois les 4 vidéos vues. La demande
           de démonstration personnalisée WhatsApp vit désormais DANS cette page

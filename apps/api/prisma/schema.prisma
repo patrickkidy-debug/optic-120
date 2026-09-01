@@ -61,6 +61,7 @@ model Tenant {
   updatedAt         DateTime     @updatedAt
 
   demoProgress      DemoProgress?
+  storeSetupProgress StoreSetupProgress?
   branches          Branch[]
   users             User[]
   roles             Role[]
@@ -104,6 +105,27 @@ model DemoProgress {
   /// compte réel (voir seedSampleBusinessData/purgeSampleData) ; null une fois
   /// purgées ou sur un tenant jamais semé (ex. l'ancien flux démo isDemo).
   seedManifest  Json?
+  updatedAt     DateTime  @updatedAt
+}
+
+/// Progression de l'assistant "Configuration de la boutique" (checklist des 8
+/// étapes d'installation réelle : infos boutique, équipe, produits, stock,
+/// paiements, clients, documents, vérification finale). Le statut de chaque
+/// étape N'EST PAS stocké ici : il est recalculé à la volée depuis les vraies
+/// données (voir store-setup.service.ts) pour que les boutiques déjà
+/// existantes n'aient jamais l'impression de devoir tout refaire. Seules les
+/// exceptions manuelles (étape ignorée / forcée) et l'accusé de fin sont
+/// persistés.
+model StoreSetupProgress {
+  id            String    @id @default(uuid())
+  tenantId      String    @unique
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// { [stepKey]: "completed" | "skipped" } — exceptions manuelles uniquement.
+  stepOverrides Json      @default("{}")
+  /// Rempli quand l'utilisateur clique "Commencer à utiliser OculoSaaS" sur
+  /// l'étape finale : c'est ce qui masque la carte du Dashboard (pas le calcul
+  /// de progression lui-même), pour garder un vrai moment de conclusion.
+  finishedAt    DateTime?
   updatedAt     DateTime  @updatedAt
 }
 
