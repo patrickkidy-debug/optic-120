@@ -435,10 +435,20 @@
         "desc": "Configure o estoque inicial e os alertas de estoque baixo.",
         "why": "Saiba em tempo real o que está disponível na sua loja."
       },
-      "payments": {
-        "title": "Vendas e pagamentos",
-        "desc": "Configure seus meios de pagamento (dinheiro, Mobile Money, cartão).",
-        "why": "Seus clientes precisam de uma forma fácil de pagar."
+      "cashAndSales": {
+        "title": "Caixa e vendas",
+        "desc": "Abra o caixa e registe a sua primeira venda, mesmo que seja um teste.",
+        "why": "Nada melhor que uma venda real para confirmar que tudo funciona."
+      },
+      "lensPricing": {
+        "title": "Tarifários de lentes",
+        "desc": "Configure os seus preços por índice, material e tratamento.",
+        "why": "Preços atualizados evitam erros de orçamento e faturação."
+      },
+      "insurance": {
+        "title": "Seguradoras",
+        "desc": "Adicione as suas seguradoras parceiras e acompanhe os valores recebidos todos os meses.",
+        "why": "Um acompanhamento claro dos reembolsos evita perdas de receita."
       },
       "customers": {
         "title": "Clientes",

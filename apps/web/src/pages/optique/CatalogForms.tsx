@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Glasses, Sparkles } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Glasses, Package, Sparkles } from 'lucide-react';
 import {
   ProductCategory,
   FRAME_TYPES,
@@ -17,6 +17,7 @@ import {
   LENS_TREATMENTS,
   type FrameAttributes,
   type LensAttributes,
+  type GenericProductAttributes,
 } from '@oculo/shared-types';
 import {
   createProduct,
@@ -29,6 +30,7 @@ import { listSuppliers } from '../../features/management/api';
 import { PhotoUploader } from '../../features/optique/PhotoUploader';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
+import { formatCurrency, toLocalDatetimeString } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
 import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
@@ -72,6 +74,7 @@ function useSaveProduct({
   category,
   onClose,
   applyStock,
+  createdAt,
 }: {
   product: Product | null;
   branchId: string | null;
@@ -79,6 +82,8 @@ function useSaveProduct({
   category: string;
   onClose: () => void;
   applyStock: boolean;
+  /** Date d'ajout modifiable (formulaire générique uniquement). */
+  createdAt?: string;
 }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
@@ -101,6 +106,7 @@ function useSaveProduct({
         photoUrl: base.photoUrl,
         photos: base.photos,
         attributes,
+        ...(createdAt ? { createdAt: new Date(createdAt).toISOString() } : {}),
       };
       // Une duplication arrive avec un identifiant vide : c'est une création,
       // pas une modification de la fiche d'origine.
@@ -765,6 +771,289 @@ export function LensFormModal({
             </Button>
           )}
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ======================= FORMULAIRE PRODUIT GÉNÉRIQUE ======================= */
+
+/** Libellés d'affichage des 5 familles couvertes par le formulaire générique. */
+const GENERIC_CATEGORY_LABELS: Record<string, string> = {
+  LENTILLE: 'Lentilles',
+  ACCESSOIRE: 'Accessoires',
+  ENTRETIEN: "Produits d'entretien",
+  SERVICE: 'Services',
+  AUTRE: 'Autres',
+};
+
+function genericCategoryLabel(category: string): string {
+  return GENERIC_CATEGORY_LABELS[category] ?? category;
+}
+
+/** Attributs génériques d'un produit, typés et sûrs même si le JSON est vide. */
+function genericAttrs(p: Product | null): GenericProductAttributes {
+  return (p?.attributes ?? {}) as GenericProductAttributes;
+}
+
+/** Aperçu réduit de la carte, affiché en direct pendant la saisie. */
+function GenericProductPreview({
+  photoUrl,
+  name,
+  brand,
+  sku,
+  price,
+  category,
+}: {
+  photoUrl: string;
+  name: string;
+  brand: string;
+  sku: string;
+  price: number;
+  category: string;
+}) {
+  return (
+    <div className="card w-full max-w-[16rem] overflow-hidden">
+      <div className="aspect-[4/3] w-full bg-surface-2">
+        {photoUrl ? (
+          <img src={photoUrl} alt="Aperçu" className="h-full w-full object-contain" />
+        ) : (
+          <div className="grid h-full place-items-center">
+            <Package className="h-8 w-8 text-content-faint" />
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <span className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
+          {genericCategoryLabel(category)}
+        </span>
+        <p className="mt-1 truncate text-sm font-semibold text-content">{name || 'Nouveau produit'}</p>
+        {brand && <p className="truncate text-xs text-content-faint">{brand}</p>}
+        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || 'Référence auto'}</p>
+        <p className="mt-3 font-display text-lg font-bold text-content">{formatCurrency(price || 0)}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Saisie d'un produit des familles Lentilles / Accessoires / Entretien /
+ * Services / Autres : même architecture que la monture (photo + aperçu en
+ * direct à droite, sections groupées), mais avec des champs neutres — aucun
+ * n'est spécifique à une famille en particulier.
+ */
+export function GenericProductFormModal({
+  product,
+  branchId,
+  stockRow,
+  category,
+  onClose,
+}: {
+  product: Product | null;
+  branchId: string | null;
+  stockRow?: StockRow;
+  category: string;
+  onClose: () => void;
+}) {
+  const existing = genericAttrs(product);
+  const [base, setBase] = useState<BaseState>(() => baseFrom(product, stockRow));
+  const [a, setA] = useState<GenericProductAttributes>({
+    ean: existing.ean ?? '',
+    location: existing.location ?? '',
+    supplier: existing.supplier ?? '',
+  });
+  const [createdAt, setCreatedAt] = useState(() =>
+    toLocalDatetimeString(product?.createdAt ?? new Date()),
+  );
+
+  // Les services sont réalisés à la demande, comme les verres : pas de stock à gérer.
+  const managesStock = category !== ProductCategory.SERVICE;
+
+  const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
+  const { mut, error } = useSaveProduct({
+    product,
+    branchId,
+    stockRow,
+    category,
+    onClose,
+    applyStock: managesStock,
+    createdAt,
+  });
+
+  const set = (patch: Partial<BaseState>) => setBase((b) => ({ ...b, ...patch }));
+  const setAttr = (patch: Partial<GenericProductAttributes>) => setA((x) => ({ ...x, ...patch }));
+
+  const label = genericCategoryLabel(category);
+  const canSave = Boolean(base.name.trim()) && Number(base.sellPrice) >= 0;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={product ? `Modifier — ${label}` : `Nouveau — ${label}`}
+      size="lg"
+    >
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
+        {/* Saisie */}
+        <div className="space-y-4">
+          <PhotoUploader
+            photoUrl={base.photoUrl}
+            photos={base.photos}
+            onChange={({ photoUrl, photos }) => set({ photoUrl, photos })}
+          />
+
+          <Field label="Nom du produit">
+            <input
+              className="input"
+              value={base.name}
+              onChange={(e) => set({ name: e.target.value })}
+              placeholder={label}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Référence (SKU)">
+              <input
+                className="input"
+                value={base.sku}
+                onChange={(e) => set({ sku: e.target.value })}
+                placeholder="Générée si vide"
+              />
+            </Field>
+            <Field label="EAN / code-barres">
+              <input
+                className="input"
+                value={a.ean ?? ''}
+                onChange={(e) => setAttr({ ean: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Marque">
+              <input
+                className="input"
+                value={base.brand}
+                onChange={(e) => set({ brand: e.target.value })}
+              />
+            </Field>
+            <Field label="Emplacement en boutique">
+              <input
+                className="input"
+                value={a.location ?? ''}
+                onChange={(e) => setAttr({ location: e.target.value })}
+                placeholder="Vitrine A, étagère 2"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Fournisseur">
+              <input
+                className="input"
+                list="generic-suppliers"
+                value={a.supplier ?? ''}
+                onChange={(e) => setAttr({ supplier: e.target.value })}
+                placeholder="Nom du fournisseur"
+              />
+              <datalist id="generic-suppliers">
+                {suppliers?.map((s) => (
+                  <option key={s.id} value={s.name} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Date d'ajout">
+              <input
+                type="datetime-local"
+                className="input"
+                value={createdAt}
+                onChange={(e) => setCreatedAt(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Prix d'achat">
+              <input
+                type="number"
+                min={0}
+                className="input text-right"
+                value={base.buyPrice}
+                onChange={(e) => set({ buyPrice: e.target.value })}
+              />
+            </Field>
+            <Field label="Prix de vente">
+              <input
+                type="number"
+                min={0}
+                className="input text-right"
+                value={base.sellPrice}
+                onChange={(e) => set({ sellPrice: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          {managesStock ? (
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
+              <Field label="Quantité en stock">
+                <input
+                  type="number"
+                  min={0}
+                  className="input text-right"
+                  value={base.qty}
+                  onChange={(e) => set({ qty: Math.max(0, Number(e.target.value) || 0) })}
+                />
+              </Field>
+              <Field label="Seuil d'alerte">
+                <input
+                  type="number"
+                  min={0}
+                  className="input text-right"
+                  value={base.minAlert}
+                  onChange={(e) => set({ minAlert: Math.max(0, Number(e.target.value) || 0) })}
+                />
+              </Field>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-content-muted">
+              Prestation réalisée à la demande : aucun stock à gérer.
+            </p>
+          )}
+        </div>
+
+        {/* Aperçu : la carte telle qu'elle sortira au catalogue */}
+        <div className="lg:sticky lg:top-0 lg:self-start">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
+            Aperçu au catalogue
+          </p>
+          <GenericProductPreview
+            photoUrl={base.photoUrl}
+            name={base.name}
+            brand={base.brand}
+            sku={base.sku}
+            price={Number(base.sellPrice) || 0}
+            category={category}
+          />
+        </div>
+      </div>
+
+      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+      <div className="mt-4 flex justify-end gap-2 border-t pt-4">
+        <Button variant="ghost" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button
+          disabled={!canSave}
+          loading={mut.isPending}
+          onClick={() =>
+            mut.mutate({
+              base,
+              attributes: Object.fromEntries(Object.entries(a).filter(([, v]) => v !== '' && v != null)),
+            })
+          }
+        >
+          <Package className="h-4 w-4" /> {product ? 'Enregistrer' : 'Ajouter au catalogue'}
+        </Button>
       </div>
     </Modal>
   );

@@ -435,10 +435,20 @@
         "desc": "Set up initial stock and low-stock alerts.",
         "why": "Know in real time what's available in your store."
       },
-      "payments": {
-        "title": "Sales & payments",
-        "desc": "Set up your payment methods (cash, mobile money, card).",
-        "why": "Your customers need an easy way to pay."
+      "cashAndSales": {
+        "title": "Cash register & sales",
+        "desc": "Open the register and record your first sale, even a test one.",
+        "why": "Nothing checks that everything works better than a real sale."
+      },
+      "lensPricing": {
+        "title": "Lens pricing",
+        "desc": "Set your prices by index, material and treatment.",
+        "why": "Up-to-date pricing avoids quote and invoice mistakes."
+      },
+      "insurance": {
+        "title": "Insurance",
+        "desc": "Add your partner insurers and track amounts received each month.",
+        "why": "Clear reimbursement tracking avoids lost revenue."
       },
       "customers": {
         "title": "Customers",

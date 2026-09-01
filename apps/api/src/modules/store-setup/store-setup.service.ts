@@ -22,54 +22,88 @@ export interface StoreSetupProgressResult {
   isExistingTenant: boolean;
 }
 
-/** Sous-ensemble utile de Tenant.paymentConfig (voir payment.service.ts). */
-interface StoredPaymentConfigSlice {
-  provider?: string;
-  collectNumber?: string;
-}
-
 /** Permission requise pour marquer manuellement chaque étape (même permission que la vraie action). */
 export const STORE_SETUP_STEP_PERMISSIONS: Record<StoreSetupStepKey, string> = {
   store_information: 'settings.branches.update',
   team: 'rbac.users.create',
   products: 'optique.products.create',
   inventory: 'optique.stock.adjust',
-  payments: 'settings.payments.update',
+  cash_and_sales: 'optique.sales.create',
+  lens_pricing: 'settings.branches.update',
+  insurance: 'insurance.update',
   customers: 'optique.customers.create',
   documents: 'settings.branches.update',
 };
 
-async function computeStepStatuses(tenantId: string, overrides: Overrides): Promise<StoreSetupStepResult[]> {
-  const [tenant, userCount, productCount, stockItemCount, customerCount] = await Promise.all([
-    prisma.tenant.findUniqueOrThrow({
-      where: { id: tenantId },
-      select: { name: true, location: true, contactPhone: true, paymentConfig: true, invoiceSettings: true },
-    }),
-    prisma.user.count({ where: { tenantId } }),
-    prisma.product.count({ where: { tenantId } }),
-    prisma.stockItem.count({ where: { tenantId } }),
-    prisma.customer.count({ where: { tenantId } }),
-  ]);
+/** Signaux bruts (issus des vraies données) nécessaires pour dériver le statut de chaque étape. */
+interface RawSignals {
+  name: string;
+  location: string | null;
+  contactPhone: string | null;
+  lensPricing: unknown;
+  invoiceSettings: unknown;
+  userCount: number;
+  productCount: number;
+  stockItemCount: number;
+  saleCount: number;
+  insurerCount: number;
+  customerCount: number;
+}
 
-  const paymentConfig = (tenant.paymentConfig as StoredPaymentConfigSlice | null) ?? null;
-  const hasPaymentSetup = Boolean(paymentConfig?.collectNumber || paymentConfig?.provider);
-
-  const raw: Record<StoreSetupStepKey, StepStatus> = {
-    store_information:
-      tenant.location && tenant.contactPhone ? 'completed' : tenant.name ? 'in_progress' : 'not_started',
-    team: userCount > 1 ? 'completed' : 'not_started',
-    products: productCount > 0 ? 'completed' : 'not_started',
-    inventory: stockItemCount > 0 ? 'completed' : 'not_started',
-    payments: hasPaymentSetup ? 'completed' : 'not_started',
-    customers: customerCount > 0 ? 'completed' : 'not_started',
-    documents: tenant.invoiceSettings ? 'completed' : 'not_started',
+/** Dérive le statut « détecté automatiquement » de chaque étape à partir des signaux bruts. Pure, réutilisée pour le calcul par tenant ET le résumé en masse (console fondateur). */
+function deriveRawStatuses(s: RawSignals): Record<StoreSetupStepKey, StepStatus> {
+  return {
+    store_information: s.location && s.contactPhone ? 'completed' : s.name ? 'in_progress' : 'not_started',
+    team: s.userCount > 1 ? 'completed' : 'not_started',
+    products: s.productCount > 0 ? 'completed' : 'not_started',
+    inventory: s.stockItemCount > 0 ? 'completed' : 'not_started',
+    cash_and_sales: s.saleCount > 0 ? 'completed' : 'not_started',
+    lens_pricing: s.lensPricing ? 'completed' : 'not_started',
+    insurance: s.insurerCount > 0 ? 'completed' : 'not_started',
+    customers: s.customerCount > 0 ? 'completed' : 'not_started',
+    documents: s.invoiceSettings ? 'completed' : 'not_started',
   };
+}
 
+/** Applique les exceptions manuelles par-dessus les statuts détectés, dans l'ordre fixe des étapes. */
+function applyOverrides(raw: Record<StoreSetupStepKey, StepStatus>, overrides: Overrides): StoreSetupStepResult[] {
   return STORE_SETUP_STEPS.map((key) => {
     const override = overrides[key];
     if (override) return { key, status: 'completed' as StepStatus, overridden: true };
     return { key, status: raw[key], overridden: false };
   });
+}
+
+async function computeStepStatuses(tenantId: string, overrides: Overrides): Promise<StoreSetupStepResult[]> {
+  const [tenant, userCount, productCount, stockItemCount, saleCount, insurerCount, customerCount] =
+    await Promise.all([
+      prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { name: true, location: true, contactPhone: true, lensPricing: true, invoiceSettings: true },
+      }),
+      prisma.user.count({ where: { tenantId } }),
+      prisma.product.count({ where: { tenantId } }),
+      prisma.stockItem.count({ where: { tenantId } }),
+      prisma.sale.count({ where: { tenantId } }),
+      prisma.insurer.count({ where: { tenantId } }),
+      prisma.customer.count({ where: { tenantId } }),
+    ]);
+
+  const raw = deriveRawStatuses({
+    name: tenant.name,
+    location: tenant.location,
+    contactPhone: tenant.contactPhone,
+    lensPricing: tenant.lensPricing,
+    invoiceSettings: tenant.invoiceSettings,
+    userCount,
+    productCount,
+    stockItemCount,
+    saleCount,
+    insurerCount,
+    customerCount,
+  });
+
+  return applyOverrides(raw, overrides);
 }
 
 /**
@@ -139,4 +173,88 @@ export async function finishSetup(tenantId: string): Promise<StoreSetupProgressR
     update: { finishedAt: new Date() },
   });
   return getProgress(tenantId);
+}
+
+export interface StoreSetupTenantSummary {
+  tenantId: string;
+  tenantName: string;
+  completedCount: number;
+  totalSteps: number;
+  currentStep: StoreSetupStepKey | 'final_check';
+  finishedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Progression de TOUS les tenants (hors démo) en un minimum de requêtes
+ * (comptages groupés, pas une boucle par tenant) — pour la console fondateur.
+ * Lecture seule : ne crée jamais de ligne StoreSetupProgress (contrairement à
+ * getProgress), une simple consultation admin ne doit pas avoir d'effet de bord.
+ */
+export async function getAllTenantsSummary(): Promise<StoreSetupTenantSummary[]> {
+  const toCountMap = (rows: { tenantId: string; _count: number }[]) =>
+    new Map(rows.map((r) => [r.tenantId, r._count]));
+
+  const [tenants, progressRows, userRows, productRows, stockRows, saleRows, insurerRows, customerRows] =
+    await Promise.all([
+      prisma.tenant.findMany({
+        where: { isDemo: false },
+        select: {
+          id: true,
+          name: true,
+          location: true,
+          contactPhone: true,
+          lensPricing: true,
+          invoiceSettings: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.storeSetupProgress.findMany(),
+      prisma.user.groupBy({ by: ['tenantId'], _count: true }),
+      prisma.product.groupBy({ by: ['tenantId'], _count: true }),
+      prisma.stockItem.groupBy({ by: ['tenantId'], _count: true }),
+      prisma.sale.groupBy({ by: ['tenantId'], _count: true }),
+      prisma.insurer.groupBy({ by: ['tenantId'], _count: true }),
+      prisma.customer.groupBy({ by: ['tenantId'], _count: true }),
+    ]);
+
+  const progressByTenant = new Map(progressRows.map((r) => [r.tenantId, r]));
+  const userMap = toCountMap(userRows);
+  const productMap = toCountMap(productRows);
+  const stockMap = toCountMap(stockRows);
+  const saleMap = toCountMap(saleRows);
+  const insurerMap = toCountMap(insurerRows);
+  const customerMap = toCountMap(customerRows);
+
+  return tenants.map((tenant) => {
+    const progressRow = progressByTenant.get(tenant.id);
+    const overrides = (progressRow?.stepOverrides as Overrides | null) ?? {};
+    const raw = deriveRawStatuses({
+      name: tenant.name,
+      location: tenant.location,
+      contactPhone: tenant.contactPhone,
+      lensPricing: tenant.lensPricing,
+      invoiceSettings: tenant.invoiceSettings,
+      userCount: userMap.get(tenant.id) ?? 0,
+      productCount: productMap.get(tenant.id) ?? 0,
+      stockItemCount: stockMap.get(tenant.id) ?? 0,
+      saleCount: saleMap.get(tenant.id) ?? 0,
+      insurerCount: insurerMap.get(tenant.id) ?? 0,
+      customerCount: customerMap.get(tenant.id) ?? 0,
+    });
+    const steps = applyOverrides(raw, overrides);
+    const completedCount = steps.filter((s) => s.status === 'completed').length;
+    const firstIncomplete = steps.find((s) => s.status !== 'completed');
+
+    return {
+      tenantId: tenant.id,
+      tenantName: tenant.name,
+      completedCount,
+      totalSteps: STORE_SETUP_STEPS.length,
+      currentStep: firstIncomplete ? firstIncomplete.key : 'final_check',
+      finishedAt: progressRow?.finishedAt ? progressRow.finishedAt.toISOString() : null,
+      createdAt: tenant.createdAt.toISOString(),
+    };
+  });
 }

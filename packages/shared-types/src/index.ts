@@ -820,7 +820,9 @@ export const STORE_SETUP_STEPS = [
   'team',
   'products',
   'inventory',
-  'payments',
+  'cash_and_sales',
+  'lens_pricing',
+  'insurance',
   'customers',
   'documents',
 ] as const;
@@ -1107,6 +1109,20 @@ export function lensTags(attrs: LensAttributes | null | undefined): string[] {
     attrs.premium ? 'Premium' : null,
   ].filter((t): t is string => Boolean(t));
 }
+
+/* --------------------- PRODUITS GÉNÉRIQUES (5 familles) --------------------- */
+
+/**
+ * Attributs communs aux familles sans formulaire dédié : LENTILLE, ACCESSOIRE,
+ * ENTRETIEN, SERVICE, AUTRE. Même logique que FrameAttributes/LensAttributes :
+ * stockés dans `Product.attributes`, aucune migration nécessaire.
+ */
+export const genericProductAttributesSchema = z.object({
+  ean: z.string().max(40).optional().or(z.literal('')),
+  location: z.string().max(60).optional().or(z.literal('')),
+  supplier: z.string().max(80).optional().or(z.literal('')),
+});
+export type GenericProductAttributes = z.infer<typeof genericProductAttributesSchema>;
 
 export const productCreateSchema = z.object({
   // Référence facultative : générée côté serveur si absente (verres, accessoires…).

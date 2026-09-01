@@ -435,10 +435,20 @@
         "desc": "Configurez le stock initial et les seuils d'alerte.",
         "why": "Pour savoir en temps réel ce que vous avez disponible dans votre boutique."
       },
-      "payments": {
-        "title": "Ventes et paiements",
-        "desc": "Configurez vos moyens de paiement (espèces, Mobile Money, carte).",
-        "why": "Vos clients doivent pouvoir régler leurs achats facilement."
+      "cashAndSales": {
+        "title": "Caisse et ventes",
+        "desc": "Ouvrez la caisse et enregistrez votre première vente, même à titre d'essai.",
+        "why": "Rien de mieux qu'une vraie vente pour vérifier que tout fonctionne."
+      },
+      "lensPricing": {
+        "title": "Tarifs verres",
+        "desc": "Configurez vos prix par indice, matériau et traitement.",
+        "why": "Des tarifs à jour évitent les erreurs de devis et de facturation."
+      },
+      "insurance": {
+        "title": "Assurances",
+        "desc": "Ajoutez vos assureurs partenaires et suivez les montants reçus chaque mois.",
+        "why": "Un suivi clair des remboursements évite les pertes de revenus."
       },
       "customers": {
         "title": "Clients",

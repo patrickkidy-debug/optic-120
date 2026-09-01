@@ -66,9 +66,6 @@ function StepRow({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-        <Link to={meta.route} className="btn-outline h-9 rounded-lg px-3 text-xs">
-          {t('storeSetup.goTo')} <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
         {canAct && step.overridden && (
           <Button variant="ghost" className="h-9 px-2.5 text-xs" onClick={() => mut.mutate('reset')} loading={mut.isPending}>
             <Undo2 className="h-3.5 w-3.5" /> {t('storeSetup.undo')}
@@ -76,10 +73,10 @@ function StepRow({
         )}
         {canAct && !step.overridden && step.status !== 'completed' && (
           <>
-            <Button variant="outline" className="h-9 px-2.5 text-xs" onClick={() => mut.mutate('skipped')} loading={mut.isPending}>
+            <Button variant="ghost" className="h-9 px-2.5 text-xs text-content-faint" onClick={() => mut.mutate('skipped')} loading={mut.isPending}>
               {t('storeSetup.skip')}
             </Button>
-            <Button className="h-9 px-2.5 text-xs" onClick={() => mut.mutate('completed')} loading={mut.isPending}>
+            <Button variant="outline" className="h-9 px-2.5 text-xs" onClick={() => mut.mutate('completed')} loading={mut.isPending}>
               <Check className="h-3.5 w-3.5" /> {t('storeSetup.markDone')}
             </Button>
           </>
@@ -89,6 +86,11 @@ function StepRow({
             {t('storeSetup.noPermission')}
           </span>
         )}
+        {/* CTA principal, mis en avant en rouge : on encourage à VRAIMENT configurer
+            l'étape plutôt qu'à l'ignorer — "Ouvrir" doit être le bouton le plus visible. */}
+        <Link to={meta.route} className="btn-danger h-9 rounded-lg px-4 text-sm font-semibold shadow-sm">
+          {t('storeSetup.goTo')} <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </div>
   );

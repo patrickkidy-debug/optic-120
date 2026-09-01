@@ -1,4 +1,4 @@
-import { Store, Users, Package, Boxes, CreditCard, Contact, FileText, type LucideIcon } from 'lucide-react';
+import { Store, Users, Package, Boxes, ShoppingCart, Glasses, ShieldCheck, Contact, FileText, type LucideIcon } from 'lucide-react';
 import { STORE_SETUP_STEPS, type StoreSetupStepKey } from '@oculo/shared-types';
 
 export { STORE_SETUP_STEPS };
@@ -53,14 +53,32 @@ export const STORE_SETUP_STEP_META: Record<StoreSetupStepKey, StoreSetupStepMeta
     route: '/optique/stock',
     permission: 'optique.stock.adjust',
   },
-  payments: {
-    key: 'payments',
-    icon: CreditCard,
-    titleKey: 'storeSetup.steps.payments.title',
-    descKey: 'storeSetup.steps.payments.desc',
-    whyKey: 'storeSetup.steps.payments.why',
-    route: '/parametres/paiements',
-    permission: 'settings.payments.update',
+  cash_and_sales: {
+    key: 'cash_and_sales',
+    icon: ShoppingCart,
+    titleKey: 'storeSetup.steps.cashAndSales.title',
+    descKey: 'storeSetup.steps.cashAndSales.desc',
+    whyKey: 'storeSetup.steps.cashAndSales.why',
+    route: '/optique/caisse',
+    permission: 'optique.sales.create',
+  },
+  lens_pricing: {
+    key: 'lens_pricing',
+    icon: Glasses,
+    titleKey: 'storeSetup.steps.lensPricing.title',
+    descKey: 'storeSetup.steps.lensPricing.desc',
+    whyKey: 'storeSetup.steps.lensPricing.why',
+    route: '/parametres/profil?tab=documents',
+    permission: 'settings.branches.update',
+  },
+  insurance: {
+    key: 'insurance',
+    icon: ShieldCheck,
+    titleKey: 'storeSetup.steps.insurance.title',
+    descKey: 'storeSetup.steps.insurance.desc',
+    whyKey: 'storeSetup.steps.insurance.why',
+    route: '/gestion/assurances',
+    permission: 'insurance.update',
   },
   customers: {
     key: 'customers',

@@ -34,12 +34,12 @@ import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
-import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTime, toLocalDatetimeString } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { StockHistoryModal } from './StockPage';
 import { FrameCatalog, FrameDetail } from './FrameCatalog';
 import { LensCatalog } from './LensCatalog';
-import { FrameFormModal, LensFormModal } from './CatalogForms';
+import { FrameFormModal, LensFormModal, GenericProductFormModal } from './CatalogForms';
 import { usePosStore } from '../../store/pos';
 import { useNavigate } from 'react-router-dom';
 
@@ -53,17 +53,6 @@ const CATEGORIES = [
   { value: 'AUTRE', label: 'Autres' },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
-
-function toLocalDatetimeString(dateInput: string | Date): string {
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  if (isNaN(d.getTime())) return '';
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 export function ProductsPage() {
   const qc = useQueryClient();
@@ -83,6 +72,11 @@ export function ProductsPage() {
   // Formulaires dédiés du catalogue visuel (monture / verre) et fiche monture.
   const [frameForm, setFrameForm] = useState<{ product: Product | null } | null>(null);
   const [lensForm, setLensForm] = useState<{ product: Product | null } | null>(null);
+  // Formulaire générique (même architecture que la monture) pour les 5 autres
+  // familles : Lentilles, Accessoires, Entretien, Services, Autres.
+  const [genericForm, setGenericForm] = useState<{ product: Product | null; category: string } | null>(
+    null,
+  );
   const [frameDetail, setFrameDetail] = useState<Product | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [moveTo, setMoveTo] = useState('MONTURE');
@@ -192,9 +186,19 @@ export function ProductsPage() {
     setEditing(null);
     setModalOpen(true);
   }
+  /**
+   * Ouvre le formulaire adapté à la catégorie du produit : monture/verre
+   * gardent leur assistant dédié, les 5 autres familles partagent le même
+   * formulaire générique (même architecture, champs neutres).
+   */
+  function openProductForm(product: Product | null, cat: string) {
+    if (cat === 'MONTURE') setFrameForm({ product });
+    else if (cat === 'VERRE') setLensForm({ product });
+    else setGenericForm({ product, category: cat });
+  }
+
   function openEdit(p: Product) {
-    setEditing(p);
-    setModalOpen(true);
+    openProductForm(p, p.category);
   }
 
   /** Duplique un produit : même fiche, sans identifiant ni référence. */
@@ -211,12 +215,8 @@ export function ProductsPage() {
 
   const catalogActions = {
     onView: (p: Product) => setFrameDetail(p),
-    onEdit: (p: Product) =>
-      p.category === 'VERRE' ? setLensForm({ product: p }) : setFrameForm({ product: p }),
-    onDuplicate: (p: Product) =>
-      p.category === 'VERRE'
-        ? setLensForm({ product: duplicateOf(p) })
-        : setFrameForm({ product: duplicateOf(p) }),
+    onEdit: (p: Product) => openProductForm(p, p.category),
+    onDuplicate: (p: Product) => openProductForm(duplicateOf(p), p.category),
     onSell: sellProduct,
     onDelete: canDelete
       ? (p: Product) => {
@@ -262,11 +262,11 @@ export function ProductsPage() {
             {canCreate && (
               <Button
                 onClick={() => {
-                  // Le bouton suit la famille affichée : on ne saisit pas une
-                  // monture avec le formulaire générique.
-                  if (category === 'MONTURE') setFrameForm({ product: null });
-                  else if (category === 'VERRE') setLensForm({ product: null });
-                  else openCreate();
+                  // Le bouton suit la famille affichée. Sans filtre, on ne
+                  // sait pas encore quelle catégorie saisir : le formulaire
+                  // générique historique s'en charge (sélecteur de catégorie).
+                  if (!category) openCreate();
+                  else openProductForm(null, category);
                 }}
               >
                 <Plus className="h-4 w-4" />
@@ -274,7 +274,9 @@ export function ProductsPage() {
                   ? 'Ajouter une monture'
                   : category === 'VERRE'
                     ? 'Ajouter un verre'
-                    : 'Nouveau produit'}
+                    : category
+                      ? `Ajouter — ${catLabel(category)}`
+                      : 'Nouveau produit'}
               </Button>
             )}
           </div>
@@ -541,6 +543,15 @@ export function ProductsPage() {
           product={lensForm.product}
           branchId={branchId}
           onClose={() => setLensForm(null)}
+        />
+      )}
+      {genericForm && (
+        <GenericProductFormModal
+          product={genericForm.product}
+          branchId={branchId}
+          stockRow={genericForm.product?.id ? stockByProduct.get(genericForm.product.id) : undefined}
+          category={genericForm.category}
+          onClose={() => setGenericForm(null)}
         />
       )}
       {frameDetail && (

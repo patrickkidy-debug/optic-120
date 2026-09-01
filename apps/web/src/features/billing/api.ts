@@ -292,6 +292,22 @@ export async function listPlatformUsers(): Promise<PlatformUser[]> {
   return data.users;
 }
 
+/** Progression de l'assistant "Configuration boutique", pour un établissement (console fondateur). */
+export interface PlatformStoreSetupTenant {
+  tenantId: string;
+  tenantName: string;
+  completedCount: number;
+  totalSteps: number;
+  currentStep: string;
+  finishedAt: string | null;
+  createdAt: string;
+}
+
+export async function getStoreSetupSummary(): Promise<PlatformStoreSetupTenant[]> {
+  const { data } = await api.get<{ tenants: PlatformStoreSetupTenant[] }>('/platform/store-setup');
+  return data.tenants;
+}
+
 export interface PlatformPlan {
   id: string;
   code: string;

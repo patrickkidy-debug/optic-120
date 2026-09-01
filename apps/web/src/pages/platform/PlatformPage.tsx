@@ -46,6 +46,7 @@ import {
   Handshake,
   Percent,
   Ban,
+  ListChecks,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -71,9 +72,11 @@ import {
   markNotificationsRead,
   getTrialSettings,
   setTrialSettings,
+  getStoreSetupSummary,
   type PlatformPlan,
   type PlatformUser,
   type PlatformNotification,
+  type PlatformStoreSetupTenant,
 } from '../../features/billing/api';
 import { listSupportTickets, setSupportTicketStatus } from '../../features/support/api';
 import {
@@ -99,7 +102,7 @@ import {
 import { googleCalendarUrl, downloadIcs } from '../../lib/calendar';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
-import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal } from '../../components/ui';
+import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal, ProgressBar } from '../../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -228,7 +231,7 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners';
+type Tab = 'payments' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -308,6 +311,7 @@ export function PlatformPage() {
           { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
           { id: 'engagement' as Tab, label: 'Engagement', icon: Flame },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
+          { id: 'storeSetup' as Tab, label: 'Configuration boutique', icon: ListChecks },
           { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
           { id: 'plans' as Tab, label: 'Offres', icon: Layers },
           { id: 'partners' as Tab, label: 'Partenaires', icon: Handshake },
@@ -333,6 +337,7 @@ export function PlatformPage() {
         {tab === 'demos' && <DemosTab />}
         {tab === 'engagement' && <EngagementTab />}
         {tab === 'users' && <UsersTab />}
+        {tab === 'storeSetup' && <StoreSetupTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'plans' && <PlansTab />}
         {tab === 'partners' && <PartnersTab />}
@@ -831,6 +836,134 @@ function UsersTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+const STORE_SETUP_STEP_LABELS: Record<string, string> = {
+  store_information: 'Informations boutique',
+  team: 'Équipe',
+  products: 'Produits',
+  inventory: 'Stock',
+  cash_and_sales: 'Caisse et ventes',
+  lens_pricing: 'Tarifs verres',
+  insurance: 'Assurances',
+  customers: 'Clients',
+  documents: 'Documents',
+  final_check: 'Vérification finale',
+};
+
+/**
+ * Qui a configuré sa boutique (assistant "Configuration boutique"), et où il
+ * en est — pour repérer les établissements à relancer/accompagner.
+ */
+function StoreSetupTab() {
+  const { data, isLoading } = useQuery({ queryKey: ['platform-store-setup'], queryFn: getStoreSetupSummary });
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'all' | 'done' | 'in_progress' | 'not_started'>('all');
+
+  const rows = useMemo(() => {
+    const all = data ?? [];
+    const q = query.trim().toLowerCase();
+    return all
+      .filter((t) => {
+        if (status === 'done') return !!t.finishedAt;
+        if (status === 'not_started') return t.completedCount === 0;
+        if (status === 'in_progress') return !t.finishedAt && t.completedCount > 0;
+        return true;
+      })
+      .filter((t) => !q || t.tenantName.toLowerCase().includes(q));
+  }, [data, query, status]);
+
+  const counts = useMemo(() => {
+    const all = data ?? [];
+    return {
+      all: all.length,
+      done: all.filter((t) => t.finishedAt).length,
+      in_progress: all.filter((t) => !t.finishedAt && t.completedCount > 0).length,
+      not_started: all.filter((t) => t.completedCount === 0).length,
+    };
+  }, [data]);
+
+  if (isLoading) return <PageLoader />;
+  if (!data || data.length === 0) return <EmptyState icon={ListChecks} title="Aucun établissement" />;
+
+  const FILTERS = [
+    { key: 'all' as const, label: 'Tous', count: counts.all },
+    { key: 'done' as const, label: 'Configuration terminée', count: counts.done },
+    { key: 'in_progress' as const, label: 'En cours', count: counts.in_progress },
+    { key: 'not_started' as const, label: 'Pas commencé', count: counts.not_started },
+  ];
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setStatus(f.key)}
+            className={`badge px-3 py-1.5 text-xs ${
+              status === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
+            }`}
+          >
+            {f.label} ({f.count})
+          </button>
+        ))}
+      </div>
+
+      <div className="relative mb-3 max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher un établissement…"
+          className="input pl-9"
+        />
+      </div>
+
+      <div className="card max-h-[65vh] overflow-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-surface">
+            <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+              <th className="table-cell font-semibold">Établissement</th>
+              <th className="table-cell font-semibold">Progression</th>
+              <th className="table-cell font-semibold">Étape actuelle</th>
+              <th className="table-cell font-semibold">Statut</th>
+              <th className="table-cell font-semibold">Inscrit le</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="table-cell text-center text-sm text-content-muted">
+                  Aucun établissement ne correspond à ce filtre.
+                </td>
+              </tr>
+            )}
+            {rows.map((t) => (
+              <tr key={t.tenantId} className="border-b last:border-0 hover:bg-surface-2/50">
+                <td className="table-cell font-medium text-content">{t.tenantName}</td>
+                <td className="table-cell min-w-[180px]">
+                  <ProgressBar
+                    value={t.completedCount}
+                    max={t.totalSteps}
+                    sublabel={`${t.completedCount}/${t.totalSteps}`}
+                  />
+                </td>
+                <td className="table-cell text-content-muted">
+                  {STORE_SETUP_STEP_LABELS[t.currentStep] ?? t.currentStep}
+                </td>
+                <td className="table-cell">
+                  <Badge tone={t.finishedAt ? 'success' : t.completedCount > 0 ? 'warning' : 'neutral'}>
+                    {t.finishedAt ? 'Terminée' : t.completedCount > 0 ? 'En cours' : 'Pas commencé'}
+                  </Badge>
+                </td>
+                <td className="table-cell text-content-muted">{formatDate(t.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

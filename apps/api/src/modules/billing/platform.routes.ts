@@ -21,6 +21,7 @@ import * as partners from '../partners/partner.service.js';
 import * as support from '../support/support.service.js';
 import { getEngagementForFounder } from '../demo/demo-video.service.js';
 import { getOperatorEmails, isEnvOperator } from '../../lib/operators.js';
+import { getAllTenantsSummary } from '../store-setup/store-setup.service.js';
 
 /** Garde opérateur : réservé aux emails déclarés comme administrateurs plateforme. */
 async function requirePlatformOperator(req: FastifyRequest): Promise<void> {
@@ -38,6 +39,13 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.get('/stats', async (_req, reply) => {
     const stats = await billing.getPlatformStats();
     return reply.send({ stats });
+  });
+
+  // Progression de l'assistant "Configuration boutique" pour tous les tenants
+  // (hors démo) : qui a configuré sa boutique, à quelle étape / quel pourcentage.
+  app.get('/store-setup', async (_req, reply) => {
+    const tenants = await getAllTenantsSummary();
+    return reply.send({ tenants });
   });
 
   // Notifications de la console fondateur (ex. nouvel établissement).
