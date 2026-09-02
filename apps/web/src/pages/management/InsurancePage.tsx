@@ -24,15 +24,19 @@ export function InsurancePage() {
   const canUpdate = usePermission('insurance.update');
   const [editing, setEditing] = useState<Insurer | null>(null);
   const [open, setOpen] = useState(false);
+  const [paymentFor, setPaymentFor] = useState<{ insurerId: string; name: string; amount: number } | null>(null);
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const { data, isLoading } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers });
   const { data: upcoming } = useQuery({ queryKey: ['insurer-upcoming', month], queryFn: () => getInsurerUpcoming(month) });
   const pendingFor = (id: string) => upcoming?.items.find((x) => x.insurerId === id);
   const paymentMut = useMutation({
-    mutationFn: ({ insurerId, monthStart }: { insurerId: string; monthStart: string }) => markInsurancePaid(insurerId, monthStart),
+    mutationFn: ({ insurerId, monthStart, amount }: { insurerId: string; monthStart: string; amount?: number }) =>
+      markInsurancePaid(insurerId, monthStart, amount),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
       qc.invalidateQueries({ queryKey: ['insurance-summary'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      setPaymentFor(null);
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -48,10 +52,14 @@ export function InsurancePage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
         <div>
           <p className="text-sm font-semibold text-content">Remboursements assurance par mois</p>
-          <p className="text-xs text-content-muted">Validez un paiement dès sa réception.</p>
+          <p className="text-xs text-content-muted">Saisissez le montant réellement reçu dès réception.</p>
         </div>
         <input aria-label="Mois de remboursement" className="input h-9 w-auto" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-        {upcoming && <Badge tone="info">À recevoir : {formatCurrency(upcoming.total)} · échéance {formatDate(upcoming.dueDate)}</Badge>}
+        {upcoming && (
+          <Badge tone="info">
+            À recevoir : {formatCurrency(upcoming.total)} · reçu : {formatCurrency(upcoming.receivedTotal ?? 0)} · échéance {formatDate(upcoming.dueDate)}
+          </Badge>
+        )}
       </div>
 
       {isLoading ? (
@@ -82,21 +90,21 @@ export function InsurancePage() {
                 return p ? (
                   <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs">
                     <div>
-                      <span className="text-content-muted">En attente ce mois : </span>
-                      <span className="font-semibold text-content">{formatCurrency(p.amount)}</span>
+                      <span className="text-content-muted">Restant ce mois : </span>
+                      <span className="font-semibold text-content">{formatCurrency(p.remainingAmount ?? p.amount)}</span>
                       <span className="text-content-faint"> · {p.salesCount} vente(s)</span>
+                    </div>
+                    <div className="mt-1 text-content-faint">
+                      Attendu : {formatCurrency(p.expectedAmount ?? p.amount)}
+                      {(p.receivedAmount ?? 0) > 0 ? ` · Reçu : ${formatCurrency(p.receivedAmount)}` : ''}
                     </div>
                     {canUpdate && upcoming && (
                       <button
-                        onClick={() => {
-                          if (confirm(`Valider la réception de ${formatCurrency(p.amount)} pour ${i.name} ?`)) {
-                            paymentMut.mutate({ insurerId: i.id, monthStart: upcoming.monthStart });
-                          }
-                        }}
+                        onClick={() => setPaymentFor({ insurerId: i.id, name: i.name, amount: p.remainingAmount ?? p.amount })}
                         disabled={paymentMut.isPending}
                         className="btn-outline mt-2 h-7 w-full rounded-md text-xs text-success disabled:opacity-50"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Paiement reçu
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Saisir un montant reçu
                       </button>
                     )}
                   </div>
@@ -113,7 +121,72 @@ export function InsurancePage() {
       )}
 
       {open && <InsurerModal insurer={editing} onClose={() => setOpen(false)} />}
+      {paymentFor && upcoming && (
+        <InsurancePaymentModal
+          insurerName={paymentFor.name}
+          maxAmount={paymentFor.amount}
+          loading={paymentMut.isPending}
+          onClose={() => setPaymentFor(null)}
+          onSubmit={(amount) =>
+            paymentMut.mutate({ insurerId: paymentFor.insurerId, monthStart: upcoming.monthStart, amount })
+          }
+        />
+      )}
     </div>
+  );
+}
+
+function InsurancePaymentModal({
+  insurerName,
+  maxAmount,
+  loading,
+  onClose,
+  onSubmit,
+}: {
+  insurerName: string;
+  maxAmount: number;
+  loading: boolean;
+  onClose: () => void;
+  onSubmit: (amount: number) => void;
+}) {
+  const [amount, setAmount] = useState(() => String(Math.round(maxAmount)));
+  const parsed = Number(amount);
+  const invalid = !Number.isFinite(parsed) || parsed <= 0 || parsed > maxAmount;
+
+  return (
+    <Modal open onClose={onClose} title={`Paiement reçu — ${insurerName}`} size="sm">
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!invalid) onSubmit(parsed);
+        }}
+      >
+        <div className="rounded-xl bg-surface-2 p-3 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-content-muted">Restant à recevoir</span>
+            <span className="font-display font-bold text-content">{formatCurrency(maxAmount)}</span>
+          </div>
+        </div>
+        <Field label="Montant reçu">
+          <input
+            className="input"
+            type="number"
+            min="1"
+            max={maxAmount}
+            step="1"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            autoFocus
+          />
+          {invalid && <p className="mt-1 text-xs text-danger">Saisissez un montant entre 1 et {formatCurrency(maxAmount)}.</p>}
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button type="submit" loading={loading} disabled={invalid}>Enregistrer</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

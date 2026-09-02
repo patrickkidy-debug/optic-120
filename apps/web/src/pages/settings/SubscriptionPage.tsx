@@ -144,6 +144,12 @@ export function SubscriptionPage() {
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
   const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; cycle: BillingCycle } | null>(null);
+  // Prolongation anticipée : l'abonnement est encore valide, mais le client
+  // veut payer d'avance. Le serveur ajoute les mois réglés à l'échéance en
+  // cours (billing.service : base = currentPeriodEnd si elle est future),
+  // donc aucun jour n'est perdu.
+  const [showRenew, setShowRenew] = useState(false);
+  const renewRef = useRef<HTMLDivElement | null>(null);
 
   const { data: sub, isLoading } = useQuery({ queryKey: ['subscription'], queryFn: getSubscription });
   const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: getPlans });
@@ -297,6 +303,34 @@ export function SubscriptionPage() {
                 ? "Activez votre abonnement pour accéder à votre espace."
                 : `Période en cours jusqu'au ${formatDate(sub.currentPeriodEnd)}`}
             </p>
+            {/* Prolongation anticipée : tant que l'abonnement court encore, on
+                propose de payer d'avance plutôt que d'attendre la coupure. */}
+            {(() => {
+              const daysLeft = Math.ceil(
+                (new Date(sub.currentPeriodEnd).getTime() - Date.now()) / 86_400_000,
+              );
+              if (sub.status !== 'ACTIVE' || daysLeft <= 0 || !canManage) return null;
+              const soon = daysLeft <= 15;
+              return (
+                <div className="mt-3 border-t pt-3">
+                  <p className={`text-xs font-semibold ${soon ? 'text-warning' : 'text-content-muted'}`}>
+                    {daysLeft === 1 ? 'Dernier jour' : `${daysLeft} jours restants`}
+                  </p>
+                  <Button
+                    variant={soon ? undefined : 'outline'}
+                    className="mt-2 w-full"
+                    onClick={() => {
+                      setShowRenew(true);
+                      requestAnimationFrame(() =>
+                        renewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+                      );
+                    }}
+                  >
+                    Prolonger mon abonnement
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="card p-5 lg:col-span-2">
@@ -316,20 +350,28 @@ export function SubscriptionPage() {
       {(() => {
         const needsActivation =
           !!sub && (sub.status !== 'ACTIVE' || new Date(sub.currentPeriodEnd).getTime() <= Date.now());
-        if (!plans || plans.length === 0 || !needsActivation || !canManage) return null;
+        // Le bloc s'ouvre aussi à la demande, abonnement encore valide, quand
+        // le client veut prolonger avant l'échéance.
+        if (!plans || plans.length === 0 || (!needsActivation && !showRenew) || !canManage) return null;
         const expired = new Date(sub!.currentPeriodEnd).getTime() <= Date.now();
+        const renewing = !needsActivation;
         return (
-          <div className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow">
+          <div
+            ref={renewRef}
+            className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow"
+          >
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">
               <Sparkles className="h-3.5 w-3.5" /> Choisissez votre offre
             </span>
             <h3 className="mt-3 font-display text-2xl font-extrabold text-content">
-              {expired ? 'Réactivez votre espace' : 'Activez votre abonnement'}
+              {renewing ? 'Prolongez votre abonnement' : expired ? 'Réactivez votre espace' : 'Activez votre abonnement'}
             </h3>
             <p className="mt-1 max-w-2xl text-sm text-content-muted">
-              {expired
-                ? 'Votre période est terminée. Sélectionnez l’offre qui vous convient et réglez-la directement — vous retrouvez l’accès immédiatement.'
-                : 'Sélectionnez librement l’offre qui vous convient pour continuer sans interruption.'}
+              {renewing
+                ? `Vous ne perdez aucun jour : la durée réglée s’ajoute à votre échéance actuelle du ${formatDate(sub!.currentPeriodEnd)}.`
+                : expired
+                  ? 'Votre période est terminée. Sélectionnez l’offre qui vous convient et réglez-la directement — vous retrouvez l’accès immédiatement.'
+                  : 'Sélectionnez librement l’offre qui vous convient pour continuer sans interruption.'}
             </p>
 
             <div className="mt-4">
@@ -369,7 +411,7 @@ export function SubscriptionPage() {
                         })
                       }
                     >
-                      Payer {p.name}
+                      {renewing ? 'Prolonger avec' : 'Payer'} {p.name}
                     </Button>
                   </div>
                 );
@@ -506,9 +548,15 @@ function PlanCard({
       )}
       <div className="mt-5">
         {current ? (
-          <Button variant="outline" className="w-full" disabled>
-            Offre actuelle
-          </Button>
+          canManage ? (
+            <Button variant="outline" className="w-full" onClick={onSubscribe}>
+              Reconduire cette offre
+            </Button>
+          ) : (
+            <Button variant="outline" className="w-full" disabled>
+              Offre actuelle
+            </Button>
+          )
         ) : (
           canManage && (
             <Button variant={highlight ? 'accent' : 'primary'} className="w-full" onClick={onSubscribe}>

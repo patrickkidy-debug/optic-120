@@ -73,24 +73,24 @@
 }
 
 .light {
-  --bg: #f5f7fa;
-  --bg-rgb: 245 247 250;
-  --bg-subtle: #eef2f7;
-  --bg-subtle-rgb: 238 242 247;
+  --bg: #f8fafc;
+  --bg-rgb: 248 250 252;
+  --bg-subtle: #f1f5f9;
+  --bg-subtle-rgb: 241 245 249;
   --surface: #ffffff;
   --surface-rgb: 255 255 255;
   --surface-2: #ffffff;
   --surface-2-rgb: 255 255 255;
-  --surface-3: #f1f5fb;
-  --surface-3-rgb: 241 245 251;
-  --border: rgba(15, 23, 42, 0.09);
-  --border-strong: rgba(15, 23, 42, 0.16);
+  --surface-3: #f1f5f9;
+  --surface-3-rgb: 241 245 249;
+  --border: rgba(15, 23, 42, 0.05);
+  --border-strong: rgba(15, 23, 42, 0.09);
 
   --primary: #7c3aed;
   --primary-rgb: 124 58 237;
   --primary-hover: #6d28d9;
   --primary-hover-rgb: 109 40 217;
-  --primary-soft: rgba(124, 58, 237, 0.1);
+  --primary-soft: rgba(124, 58, 237, 0.08);
 
   --accent-cyan: #0aa2c0;
   --accent-cyan-rgb: 10 162 192;
@@ -99,12 +99,12 @@
   --accent-rgb: 249 115 22;
   --accent-hover: #ea580c;
   --accent-hover-rgb: 234 88 12;
-  --accent-soft: rgba(249, 115, 22, 0.12);
+  --accent-soft: rgba(249, 115, 22, 0.08);
 
   --text: #0f172a;
   --text-rgb: 15 23 42;
-  --text-muted: #64748b;
-  --text-muted-rgb: 100 116 139;
+  --text-muted: #475569;
+  --text-muted-rgb: 71 85 105;
   --text-faint: #94a3b8;
   --text-faint-rgb: 148 163 184;
 
@@ -115,12 +115,12 @@
   --danger: #dc2626;
   --danger-rgb: 220 38 38;
 
-  --ring: rgba(124, 58, 237, 0.4);
+  --ring: rgba(124, 58, 237, 0.3);
 
   /* Clair : ombres très basses, la hiérarchie vient surtout de la bordure. */
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
-  --shadow-card-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
-  --shadow-card-lg: 0 12px 28px rgba(15, 23, 42, 0.09), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.02), 0 1px 2px rgba(15, 23, 42, 0.01);
+  --shadow-card-md: 0 4px 12px rgba(15, 23, 42, 0.03), 0 1px 3px rgba(15, 23, 42, 0.02);
+  --shadow-card-lg: 0 12px 28px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
 
   --gradient-hero: linear-gradient(135deg, #f3ecff 0%, #ffffff 58%, #ffeede 100%);
   /* Dégradé de marque (identique à la page d'accueil) : violet → rose → orange */

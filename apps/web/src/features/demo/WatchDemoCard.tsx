@@ -10,8 +10,10 @@ import { DEMO_VIDEO_COUNT } from './videos';
  * à tout moment, y compris plusieurs jours après son inscription.
  *
  * `compact` : variante sobre pour les pages secondaires (Aide, Profil).
+ * `mini` : simple bouton, pour le tableau de bord où la configuration de la
+ * boutique doit rester l'élément mis en avant.
  */
-export function WatchDemoCard({ compact = false }: { compact?: boolean }) {
+export function WatchDemoCard({ compact = false, mini = false }: { compact?: boolean; mini?: boolean }) {
   const { data } = useQuery({ queryKey: ['demo-video-progress'], queryFn: getVideoProgress });
 
   const completed = (data ?? []).filter((p) => p.completedAt).length;
@@ -20,6 +22,21 @@ export function WatchDemoCard({ compact = false }: { compact?: boolean }) {
   const globalPercent = data?.length
     ? Math.round(data.reduce((sum, p) => sum + p.maxPercent, 0) / DEMO_VIDEO_COUNT)
     : 0;
+
+  // Bouton discret : reste accessible en permanence, même une fois les vidéos
+  // vues, sans jamais concurrencer la carte de configuration.
+  if (mini) {
+    return (
+      <Link to="/demo/videos" className="btn-outline h-9 rounded-xl px-3.5 text-sm">
+        <PlayCircle className="h-4 w-4" />
+        {allDone
+          ? 'Revoir la démonstration'
+          : started
+            ? `Démonstration — ${completed}/${DEMO_VIDEO_COUNT}`
+            : 'Voir la démonstration'}
+      </Link>
+    );
+  }
 
   if (compact) {
     return (

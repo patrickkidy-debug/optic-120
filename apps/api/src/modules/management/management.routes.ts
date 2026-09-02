@@ -11,6 +11,7 @@ import {
   SaleType,
   SaleStatus,
 } from '@oculo/shared-types';
+import { z } from 'zod';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { notFound, badRequest } from '../../lib/http-error.js';
@@ -27,6 +28,12 @@ function clean<T extends Record<string, unknown>>(obj: T): T {
 }
 /** Statuts comptant comme recette (une vente annulée ne rapporte rien). */
 const PAID_LIKE = [SaleStatus.PAID, SaleStatus.PARTIALLY_PAID, SaleStatus.CONFIRMED];
+
+const insurancePaymentSchema = z.object({
+  insurerId: z.string().uuid(),
+  monthStart: z.string().min(1),
+  amount: z.number().positive().optional(),
+});
 
 function startOfMonth(): Date {
   const d = new Date();
@@ -185,33 +192,48 @@ async function insurersRoutes(app: FastifyInstance) {
     const monthStart = new Date(parsedMonth.getFullYear(), parsedMonth.getMonth(), 1);
     const monthEnd = new Date(parsedMonth.getFullYear(), parsedMonth.getMonth() + 1, 1);
 
-    const groups = await req.db!.sale.groupBy({
-      by: ['insurerId'],
+    const sales = await req.db!.sale.findMany({
       where: {
         type: SaleType.SALE,
         status: { in: PAID_LIKE },
         insurerId: { not: null },
         insuranceAmount: { gt: 0 },
-        insurerPaidAt: null,
         createdAt: { gte: monthStart, lt: monthEnd },
       },
-      _sum: { insuranceAmount: true },
-      _count: { _all: true },
+      select: { insurerId: true, insuranceAmount: true, insurerPaidAmount: true },
     });
     const insurers = await req.db!.insurer.findMany({ select: { id: true, name: true } });
-    const items = groups
-      .map((g) => ({
-        insurerId: g.insurerId as string,
-        name: insurers.find((i) => i.id === g.insurerId)?.name ?? '—',
-        amount: Number(g._sum.insuranceAmount ?? 0),
-        salesCount: g._count._all,
+    const byInsurer = new Map<string, { expected: number; received: number; remaining: number; salesCount: number }>();
+    for (const sale of sales) {
+      if (!sale.insurerId) continue;
+      const expected = Number(sale.insuranceAmount);
+      const received = Math.min(expected, Number(sale.insurerPaidAmount ?? 0));
+      const remaining = Math.max(0, expected - received);
+      const current = byInsurer.get(sale.insurerId) ?? { expected: 0, received: 0, remaining: 0, salesCount: 0 };
+      current.expected += expected;
+      current.received += received;
+      current.remaining += remaining;
+      current.salesCount += 1;
+      byInsurer.set(sale.insurerId, current);
+    }
+    const items = [...byInsurer.entries()]
+      .map(([insurerId, amounts]) => ({
+        insurerId,
+        name: insurers.find((i) => i.id === insurerId)?.name ?? '—',
+        amount: amounts.remaining,
+        expectedAmount: amounts.expected,
+        receivedAmount: amounts.received,
+        remainingAmount: amounts.remaining,
+        salesCount: amounts.salesCount,
       }))
-      .filter((x) => x.amount > 0)
+      .filter((x) => x.remainingAmount > 0)
       .sort((a, b) => b.amount - a.amount);
 
     return reply.send({
       items,
-      total: items.reduce((s, x) => s + x.amount, 0),
+      total: items.reduce((s, x) => s + x.remainingAmount, 0),
+      expectedTotal: items.reduce((s, x) => s + x.expectedAmount, 0),
+      receivedTotal: items.reduce((s, x) => s + x.receivedAmount, 0),
       monthStart: monthStart.toISOString(),
       dueDate: monthEnd.toISOString(),
     });
@@ -257,7 +279,7 @@ async function insurersRoutes(app: FastifyInstance) {
         insuranceAmount: { gt: 0 },
         createdAt: { gte: since },
       },
-      select: { insuranceAmount: true, insurerPaidAt: true, createdAt: true },
+      select: { insuranceAmount: true, insurerPaidAmount: true, createdAt: true },
     });
 
     let paid = 0;
@@ -265,38 +287,73 @@ async function insurersRoutes(app: FastifyInstance) {
     let late = 0;
     for (const s of sales) {
       const amount = Number(s.insuranceAmount);
-      if (s.insurerPaidAt) {
-        paid += amount;
-        continue;
-      }
+      const received = Math.min(amount, Number(s.insurerPaidAmount ?? 0));
+      const remaining = Math.max(0, amount - received);
+      paid += received;
+      if (remaining <= 0) continue;
       const dueDate = new Date(s.createdAt.getFullYear(), s.createdAt.getMonth() + 1, 1);
-      if (dueDate < now) late += amount;
-      else pending += amount;
+      if (dueDate < now) late += remaining;
+      else pending += remaining;
     }
 
     return reply.send({ paid, pending, late, toCollect: pending + late });
   });
 
-  // Marque comme reçu le remboursement d'un assureur pour un mois donné.
+  // Enregistre un montant reçu de l'assureur pour un mois donné. Sans montant,
+  // le solde restant du mois est marqué comme reçu.
   app.post('/mark-paid', { preHandler: requirePermission('insurance.update') }, async (req, reply) => {
-    const { insurerId, monthStart } = req.body as { insurerId?: string; monthStart?: string };
-    if (!insurerId || !monthStart) throw badRequest('insurerId et monthStart requis');
+    const { insurerId, monthStart, amount } = insurancePaymentSchema.parse(req.body);
     const start = new Date(monthStart);
     if (Number.isNaN(start.getTime())) throw badRequest('Mois invalide');
     const end = new Date(start);
     end.setMonth(end.getMonth() + 1);
-    const res = await req.db!.sale.updateMany({
+    const sales = await req.db!.sale.findMany({
       where: {
         insurerId,
         type: SaleType.SALE,
         status: { in: PAID_LIKE },
         insuranceAmount: { gt: 0 },
-        insurerPaidAt: null,
         createdAt: { gte: start, lt: end },
       },
-      data: { insurerPaidAt: new Date() },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, insuranceAmount: true, insurerPaidAmount: true },
     });
-    return reply.send({ ok: true, count: res.count });
+    const totalRemaining = sales.reduce(
+      (sum, sale) => sum + Math.max(0, Number(sale.insuranceAmount) - Number(sale.insurerPaidAmount ?? 0)),
+      0,
+    );
+    let remainingToApply = amount == null ? totalRemaining : Math.min(amount, totalRemaining);
+    if (remainingToApply <= 0) return reply.send({ ok: true, count: 0, receivedAmount: 0, remainingAmount: totalRemaining });
+
+    const now = new Date();
+    let count = 0;
+    let receivedAmount = 0;
+    for (const sale of sales) {
+      const expected = Number(sale.insuranceAmount);
+      const alreadyReceived = Number(sale.insurerPaidAmount ?? 0);
+      const saleRemaining = Math.max(0, expected - alreadyReceived);
+      if (saleRemaining <= 0) continue;
+      const applied = Math.min(saleRemaining, remainingToApply);
+      const nextPaidAmount = alreadyReceived + applied;
+      await req.db!.sale.update({
+        where: { id: sale.id },
+        data: {
+          insurerPaidAmount: nextPaidAmount,
+          insurerPaidAt: nextPaidAmount >= expected ? now : null,
+        },
+      });
+      count += 1;
+      receivedAmount += applied;
+      remainingToApply -= applied;
+      if (remainingToApply <= 0) break;
+    }
+
+    return reply.send({
+      ok: true,
+      count,
+      receivedAmount,
+      remainingAmount: Math.max(0, totalRemaining - receivedAmount),
+    });
   });
 }
 

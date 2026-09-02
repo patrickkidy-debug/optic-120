@@ -45,6 +45,16 @@
     "support": "Help & support",
     "profile": "My profile",
     "settingsShortcut": "Settings",
+    "montures": "Frames",
+    "verres": "Lenses",
+    "group": {
+      "home": "Home",
+      "sales": "Sales",
+      "patients": "Patients",
+      "catalog": "Catalog",
+      "management": "Management",
+      "settings": "Administration"
+    },
     "storeSetup": "Store setup"
   },
   "common": {

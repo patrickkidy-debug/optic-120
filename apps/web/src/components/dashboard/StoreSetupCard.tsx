@@ -52,7 +52,7 @@ export function StoreSetupCard() {
   const isExisting = progress.isExistingTenant;
 
   return (
-    <div className="mb-6 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-accent/5 to-transparent p-5">
+    <div className="mb-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-r from-primary/10 via-accent/5 to-transparent p-5 shadow-card-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/15 text-primary">

@@ -75,7 +75,9 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
         const paid = Number(s.paidAmount);
         const balance = Math.max(0, total - paid);
         const insuranceAmount = Number(s.insuranceAmount);
-        const isInsuranceUnpaid = insuranceAmount > 0 && !s.insurerPaidAt;
+        const insurerPaidAmount = Math.min(insuranceAmount, Number(s.insurerPaidAmount ?? 0));
+        const insuranceRemaining = Math.max(0, insuranceAmount - insurerPaidAmount);
+        const isInsuranceUnpaid = insuranceRemaining > 0;
         return {
           id: s.id,
           number: s.number,
@@ -86,6 +88,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
           paid,
           balance,
           insuranceAmount,
+          insurerPaidAmount,
+          insuranceRemaining,
           insurerName: s.insurer?.name ?? null,
           insurerId: s.insurerId,
           insurerPaidAt: s.insurerPaidAt,
@@ -96,7 +100,7 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       .filter((s) => s.balance > 0 || s.isInsuranceUnpaid);
     const totalOutstanding = items.reduce((sum, s) => sum + s.balance, 0);
     const totalInsuranceOutstanding = items.reduce(
-      (sum, s) => sum + (s.isInsuranceUnpaid ? s.insuranceAmount : 0),
+      (sum, s) => sum + (s.isInsuranceUnpaid ? s.insuranceRemaining : 0),
       0,
     );
     return reply.send({

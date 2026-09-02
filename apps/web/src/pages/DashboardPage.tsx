@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { type ReactNode } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,7 +43,7 @@ import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard, listLensOrders } from '../features/optique/api';
-import { StatCard, EmptyState, Badge, Button } from '../components/ui';
+import { StatCard, EmptyState, Badge, CurrencyDisplay, Button } from '../components/ui';
 import { apiErrorMessage } from '../lib/api';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
@@ -245,7 +246,7 @@ function KpiCard({
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value: ReactNode;
   tone?: keyof typeof KPI_TONES;
   delta?: number | null;
   deltaLabel?: string;
@@ -285,7 +286,7 @@ function MiniStat({
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value: ReactNode;
   tone?: keyof typeof KPI_TONES;
 }) {
   return (
@@ -482,6 +483,7 @@ export function DashboardPage() {
             <Link to="/optique/clients" className="btn-outline h-9 rounded-xl px-3.5 text-sm">
               <UserPlus className="h-4 w-4" /> Nouveau client
             </Link>
+            <WatchDemoCard mini />
           </div>
         </div>
         <div className="flex max-w-lg items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent p-3.5 shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500">
@@ -497,22 +499,19 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Assistant de configuration boutique : disparaît une fois toutes les
-          étapes terminées ET la fin confirmée par l'utilisateur (finishedAt). */}
+      {/* Seul encart mis en avant du tableau de bord : la configuration de la
+          boutique (disparaît une fois toutes les étapes terminées ET la fin
+          confirmée). La démonstration vidéo n'est plus qu'un bouton discret
+          dans la barre d'actions ci-dessus, pour ne pas lui faire concurrence. */}
       <StoreSetupCard />
-
-      {/* Démonstration vidéo : disparaît une fois les 4 vidéos vues. La demande
-          de démonstration personnalisée WhatsApp vit désormais DANS cette page
-          vidéo, au moment où le prospect en a réellement besoin. */}
-      <WatchDemoCard />
 
       {/* KPI principaux */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard icon={Banknote} label={`${t('dashboard.todayRevenueFull')} net`} value={formatCurrency(data.todayRevenue)} tone="primary" />
+        <KpiCard icon={Banknote} label={`${t('dashboard.todayRevenueFull')} net`} value={<CurrencyDisplay amount={data.todayRevenue} />} tone="primary" />
         <KpiCard
           icon={TrendingUp}
           label={t('dashboard.monthRevenueFull')}
-          value={formatCurrency(data.monthRevenue)}
+          value={<CurrencyDisplay amount={data.monthRevenue} />}
           tone="success"
           delta={pctDelta(data.weekRevenue ?? 0, data.prevWeekRevenue ?? 0)}
           deltaLabel={t('dashboard.vsPrev7d')}
@@ -527,7 +526,7 @@ export function DashboardPage() {
           deltaLabel="vs moy. 6j"
           spark={salesByDay}
         />
-        <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={formatCurrency(data.avgBasket ?? 0)} tone="primary" />
+        <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={<CurrencyDisplay amount={data.avgBasket ?? 0} />} tone="primary" />
         {data.activeCustomers !== undefined && (
           <KpiCard
             icon={Users}

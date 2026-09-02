@@ -435,6 +435,8 @@ export interface Receivable {
   paid: number;
   balance: number;
   insuranceAmount?: number;
+  insurerPaidAmount?: number;
+  insuranceRemaining?: number;
   insurerName?: string | null;
   insurerId?: string | null;
   insurerPaidAt?: string | null;

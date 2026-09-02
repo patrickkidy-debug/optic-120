@@ -45,6 +45,16 @@
     "support": "Aide & support",
     "profile": "Mon profil",
     "settingsShortcut": "Réglages",
+    "montures": "Montures",
+    "verres": "Verres",
+    "group": {
+      "home": "Accueil",
+      "sales": "Ventes",
+      "patients": "Patients",
+      "catalog": "Catalogue",
+      "management": "Pilotage",
+      "settings": "Administration"
+    },
     "storeSetup": "Configuration boutique"
   },
   "common": {

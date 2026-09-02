@@ -41,7 +41,7 @@ import { FrameCatalog, FrameDetail } from './FrameCatalog';
 import { LensCatalog } from './LensCatalog';
 import { FrameFormModal, LensFormModal, GenericProductFormModal } from './CatalogForms';
 import { usePosStore } from '../../store/pos';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const CATEGORIES = [
   { value: 'MONTURE', label: 'Montures' },
@@ -63,8 +63,14 @@ export function ProductsPage() {
   const canSell = usePermission('optique.sales.create');
   const branchId = useUIStore((s) => s.activeBranchId);
 
+  const [searchParams] = useSearchParams();
+  const catParam = searchParams.get('category') || '';
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(catParam);
+
+  useEffect(() => {
+    setCategory(catParam);
+  }, [catParam]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [adjusting, setAdjusting] = useState<StockRow | null>(null);
@@ -186,6 +192,7 @@ export function ProductsPage() {
     setEditing(null);
     setModalOpen(true);
   }
+
   /**
    * Ouvre le formulaire adapté à la catégorie du produit : monture/verre
    * gardent leur assistant dédié, les 5 autres familles partagent le même

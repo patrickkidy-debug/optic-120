@@ -45,6 +45,16 @@
     "support": "Ajuda e suporte",
     "profile": "O meu perfil",
     "settingsShortcut": "Definições",
+    "montures": "Armações",
+    "verres": "Lentes",
+    "group": {
+      "home": "Início",
+      "sales": "Vendas",
+      "patients": "Pacientes",
+      "catalog": "Catálogo",
+      "management": "Gestão",
+      "settings": "Administração"
+    },
     "storeSetup": "Configuração da loja"
   },
   "common": {

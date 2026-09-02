@@ -1,12 +1,15 @@
 import {
   forwardRef,
   useState,
+  useEffect,
+  useRef,
   type ReactNode,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
 } from 'react';
-import { Loader2, X, Eye, EyeOff, type LucideIcon } from 'lucide-react';
+import { Loader2, X, Eye, EyeOff, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { formatCurrency } from '../lib/format';
 
 export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={clsx('h-4 w-4 animate-spin', className)} />;
@@ -212,6 +215,70 @@ export function Button({
   );
 }
 
+export interface DropdownItem {
+  label: string;
+  onClick: () => void;
+  icon?: LucideIcon;
+  variant?: 'danger' | 'default';
+}
+
+export function DropdownMenu({ items }: { items: DropdownItem[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="btn-ghost h-8 w-8 rounded-lg p-0 text-content-muted hover:text-content"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-30 mt-1 w-44 origin-top-right rounded-xl border bg-surface p-1 shadow-card-md focus:outline-none animate-fade-in">
+          {items.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  item.onClick();
+                  setOpen(false);
+                }}
+                className={clsx(
+                  'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition',
+                  item.variant === 'danger'
+                    ? 'text-danger hover:bg-[color:var(--danger)]/10'
+                    : 'text-content hover:bg-surface-2'
+                )}
+              >
+                {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProgressBar({
   value,
   max = 100,
@@ -239,5 +306,25 @@ export function ProgressBar({
         />
       </div>
     </div>
+  );
+}
+
+export function CurrencyDisplay({
+  amount,
+  currency,
+  className,
+}: {
+  amount: number;
+  currency?: string;
+  className?: string;
+}) {
+  const formatted = formatCurrency(amount, currency);
+  const parts = formatted.split(' ');
+  const symbol = parts.pop();
+  const value = parts.join(' ');
+  return (
+    <span className={className}>
+      {value} <span className="text-[0.65em] font-normal text-content-muted tracking-normal">{symbol}</span>
+    </span>
   );
 }

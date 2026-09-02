@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import { NAV } from './nav';
 import { Logo } from '../Logo';
@@ -15,15 +17,34 @@ export function Sidebar() {
   const activeBranchId = useUIStore((s) => s.activeBranchId);
   const setSidebar = useUIStore((s) => s.setSidebar);
 
+  // Mémorise les groupes repliés localement. Par défaut, tous sont ouverts (false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('oculo_sidebar_collapsed');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleGroup = (titleKey: string) => {
+    setCollapsedGroups((prev) => {
+      const next = { ...prev, [titleKey]: !prev[titleKey] };
+      localStorage.setItem('oculo_sidebar_collapsed', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const canSeeStock = user?.permissions.includes('optique.stock.view') ?? false;
   const canSeeSales = user?.permissions.includes('optique.sales.view') ?? false;
+  
   const { data: lowCount } = useQuery({
     queryKey: ['lowStock', activeBranchId],
     queryFn: () => lowStockCount(activeBranchId!),
     enabled: Boolean(activeBranchId) && canSeeStock,
     refetchInterval: 60_000,
   });
-  // Rappel : commandes de verres en retard de livraison.
+
   const { data: overdueCount } = useQuery({
     queryKey: ['lensOverdue'],
     queryFn: lensOverdueCount,
@@ -32,32 +53,48 @@ export function Sidebar() {
   });
 
   const isOperator = user?.isPlatformOperator ?? false;
-  // Le fondateur / opérateur voit toutes les sections (aucune restriction).
   const can = (perm?: string) => !perm || isOperator || (user?.permissions.includes(perm) ?? false);
 
   return (
-    <nav className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
+    <nav className="flex h-full flex-col gap-5 overflow-y-auto px-4 py-6">
       <div className="px-2">
         <Logo />
       </div>
 
-      <div className="flex-1 space-y-5">
+      <div className="flex-1 space-y-4">
         {NAV.map((group) => {
           const items = group.items.filter((it) =>
             it.operatorOnly ? isOperator : it.soon || can(it.permission),
           );
           if (items.length === 0) return null;
+          const isCollapsed = collapsedGroups[group.titleKey] ?? false;
+
           return (
-            <div key={group.titleKey}>
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-content-faint">
-                {t(group.titleKey)}
-              </p>
-              <div className="space-y-0.5">
+            <div key={group.titleKey} className="space-y-1">
+              <button
+                onClick={() => toggleGroup(group.titleKey)}
+                className="flex w-full items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-content-faint hover:text-content transition"
+              >
+                <span>{t(group.titleKey)}</span>
+                <ChevronDown
+                  className={clsx(
+                    'h-3.5 w-3.5 text-content-faint transition-transform duration-200',
+                    isCollapsed && '-rotate-90'
+                  )}
+                />
+              </button>
+              
+              <div
+                className={clsx(
+                  'space-y-0.5 transition-all duration-200 overflow-hidden',
+                  isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
+                )}
+              >
                 {items.map((it) =>
                   it.soon ? (
                     <div
                       key={it.to}
-                      className="nav-link cursor-not-allowed select-none opacity-45"
+                      className="nav-link cursor-not-allowed select-none opacity-45 py-2"
                       title={t('common.phase2')}
                     >
                       <it.icon className="h-[18px] w-[18px]" />
@@ -71,22 +108,24 @@ export function Sidebar() {
                       onClick={() => setSidebar(false)}
                       onMouseEnter={() => prefetchRoute(it.to)}
                       onFocus={() => prefetchRoute(it.to)}
-                      className={({ isActive }) => clsx('nav-link', isActive && 'nav-link-active')}
+                      className={({ isActive }) =>
+                        clsx('nav-link py-2 px-2.5 rounded-lg text-xs', isActive && 'nav-link-active')
+                      }
                     >
                       {({ isActive }) => (
                         <>
                           <it.icon
-                            className={clsx('h-[18px] w-[18px]', isActive && 'text-primary')}
+                            className={clsx('h-4 w-4 shrink-0 transition-colors', isActive ? 'text-primary' : 'text-content-muted')}
                           />
                           <span className="flex-1 truncate">{t(it.labelKey)}</span>
                           {it.badge === 'lowStock' && lowCount ? (
-                            <span className="badge bg-[color:var(--danger)]/15 text-danger">
+                            <span className="badge bg-[color:var(--danger)]/10 text-danger text-[10px] px-1.5">
                               {lowCount}
                             </span>
                           ) : null}
                           {it.badge === 'lensOverdue' && overdueCount ? (
                             <span
-                              className="badge bg-[color:var(--danger)]/15 text-danger"
+                              className="badge bg-[color:var(--danger)]/10 text-danger text-[10px] px-1.5"
                               title="Commandes de verres en retard de livraison"
                             >
                               {overdueCount}
@@ -103,8 +142,8 @@ export function Sidebar() {
         })}
       </div>
 
-      <div className="px-3 text-[11px] text-content-faint">
-        OculoSaaS · v1.0 — Phase 1
+      <div className="px-2 text-[10px] text-content-faint border-t pt-4">
+        OculoSaaS · v2.0 — Premium Dashboard
       </div>
     </nav>
   );

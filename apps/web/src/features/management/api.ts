@@ -107,8 +107,19 @@ export async function updateSupplier(id: string, input: SupplierUpdateInput) {
 
 // Insurers
 export interface InsurerUpcoming {
-  items: { insurerId: string; name: string; amount: number; salesCount: number }[];
+  items: {
+    insurerId: string;
+    name: string;
+    /** Solde restant à recevoir, conservé pour compatibilité d'affichage. */
+    amount: number;
+    expectedAmount: number;
+    receivedAmount: number;
+    remainingAmount: number;
+    salesCount: number;
+  }[];
   total: number;
+  expectedTotal: number;
+  receivedTotal: number;
   monthStart: string;
   dueDate: string;
 }
@@ -132,13 +143,18 @@ export async function getInsuranceSummary(): Promise<InsuranceSummary> {
   return data;
 }
 
-/** Marque comme reçu le remboursement d'un assureur pour le mois sélectionné. */
-export async function markInsurancePaid(insurerId: string, monthStart: string): Promise<number> {
-  const { data } = await api.post<{ ok: boolean; count: number }>('/insurance/mark-paid', {
+/** Enregistre un montant reçu de l'assureur pour le mois sélectionné. */
+export async function markInsurancePaid(
+  insurerId: string,
+  monthStart: string,
+  amount?: number,
+): Promise<{ count: number; receivedAmount: number; remainingAmount: number }> {
+  const { data } = await api.post<{ ok: boolean; count: number; receivedAmount: number; remainingAmount: number }>('/insurance/mark-paid', {
     insurerId,
     monthStart,
+    amount,
   });
-  return data.count;
+  return { count: data.count, receivedAmount: data.receivedAmount, remainingAmount: data.remainingAmount };
 }
 
 export async function listInsurers(): Promise<Insurer[]> {

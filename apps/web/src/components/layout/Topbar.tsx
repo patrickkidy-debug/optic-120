@@ -1,7 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Sun, Moon, Monitor, Store, ChevronDown, LogOut, UserCircle, Check } from 'lucide-react';
+import {
+  Menu,
+  Sun,
+  Moon,
+  Monitor,
+  Store,
+  ChevronDown,
+  LogOut,
+  UserCircle,
+  Check,
+  Search,
+  Command,
+  ShoppingCart,
+  UserPlus,
+  Boxes,
+  LayoutDashboard,
+  Wallet,
+  UserCog,
+  ShieldHalf,
+  HelpCircle,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useUIStore } from '../../store/ui';
 import { useAuthStore } from '../../store/auth';
@@ -194,8 +214,126 @@ function UserMenu() {
   );
 }
 
+function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+
+  const shortcuts = [
+    { category: 'Raccourcis rapides', label: 'Nouvelle vente / Caisse', to: '/optique/caisse', icon: ShoppingCart },
+    { category: 'Raccourcis rapides', label: 'Enregistrer un nouveau client', to: '/optique/clients', icon: UserPlus },
+    { category: 'Raccourcis rapides', label: 'Voir l\'état des stocks', to: '/optique/stock', icon: Boxes },
+    { category: 'Navigation', label: 'Tableau de bord principal', to: '/dashboard', icon: LayoutDashboard },
+    { category: 'Navigation', label: 'Suivi financier et dépenses', to: '/gestion/finance', icon: Wallet },
+    { category: 'Navigation', label: 'Gestion du personnel', to: '/gestion/personnel', icon: UserCog },
+    { category: 'Configuration', label: 'Magasins et succursales', to: '/parametres/magasins', icon: Store },
+    { category: 'Configuration', label: 'Rôles & Permissions', to: '/parametres/roles', icon: ShieldHalf },
+    { category: 'Assistance', label: 'Aide et support technique', to: '/aide', icon: HelpCircle },
+  ];
+
+  const filtered = query
+    ? shortcuts.filter((s) => s.label.toLowerCase().includes(query.toLowerCase()))
+    : shortcuts;
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (open) {
+      window.addEventListener('keydown', onKeyDown);
+    }
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[10vh] backdrop-blur-sm sm:items-start" onClick={onClose}>
+      <div 
+        className="card w-full max-w-xl p-0 shadow-card-lg border bg-surface overflow-hidden animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Search Input */}
+        <div className="flex items-center border-b px-4 py-3">
+          <Search className="h-5 w-5 text-content-faint mr-3" />
+          <input
+            autoFocus
+            type="text"
+            className="flex-1 bg-transparent text-sm text-content outline-none placeholder:text-content-faint"
+            placeholder="Rechercher une page, un raccourci ou une action..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button
+            onClick={onClose}
+            className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-surface-3 text-content-muted border"
+          >
+            ESC
+          </button>
+        </div>
+
+        {/* Results */}
+        <div className="max-h-[350px] overflow-y-auto p-2">
+          {filtered.length === 0 ? (
+            <div className="py-6 text-center text-sm text-content-muted">
+              Aucun résultat trouvé pour "{query}"
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Array.from(new Set(filtered.map((f) => f.category))).map((cat) => (
+                <div key={cat} className="space-y-1">
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-content-faint">
+                    {cat}
+                  </div>
+                  <div className="space-y-0.5">
+                    {filtered
+                      .filter((f) => f.category === cat)
+                      .map((item, idx) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              navigate(item.to);
+                              onClose();
+                            }}
+                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-content transition hover:bg-surface-2"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <span className="grid h-6 w-6 place-items-center rounded bg-surface-3 text-content-muted">
+                                <Icon className="h-3.5 w-3.5" />
+                              </span>
+                              <span>{item.label}</span>
+                            </div>
+                            <span className="text-[10px] text-content-faint font-medium">Aller à</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Topbar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <header
       className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-bg/80 px-4 backdrop-blur-md"
@@ -205,11 +343,28 @@ export function Topbar() {
         <Menu className="h-5 w-5" />
       </button>
       <BranchSelector />
+      
+      {/* Barre de recherche premium */}
+      <div className="hidden md:block">
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="flex items-center gap-2.5 rounded-xl border bg-surface-2 px-3 py-1.5 text-xs text-content-muted transition hover:bg-surface-3 hover:text-content select-none"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span>Rechercher...</span>
+          <span className="flex items-center gap-0.5 rounded bg-surface-3 px-1.5 py-0.5 text-[9px] font-bold border">
+            <Command className="h-2 w-2" />K
+          </span>
+        </button>
+      </div>
+
       <div className="flex-1" />
       <ThemeToggle />
       <LanguageToggle />
       <div className="mx-1 h-6 w-px bg-line" />
       <UserMenu />
+
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }

@@ -24,7 +24,7 @@ export function ReceivablesPage() {
 
   const filteredItems = items.filter((r) => {
     if (filterTab === 'CLIENT') return r.balance > 0;
-    if (filterTab === 'INSURANCE') return (r.insuranceAmount ?? 0) > 0 && !r.insurerPaidAt;
+    if (filterTab === 'INSURANCE') return (r.insuranceRemaining ?? r.insuranceAmount ?? 0) > 0;
     return true;
   });
 
@@ -94,7 +94,7 @@ export function ReceivablesPage() {
                   filterTab === 'INSURANCE' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
                 }`}
               >
-                Assurances ({items.filter((i) => (i.insuranceAmount ?? 0) > 0 && !i.insurerPaidAt).length})
+                Assurances ({items.filter((i) => (i.insuranceRemaining ?? i.insuranceAmount ?? 0) > 0).length})
               </button>
             </div>
           </div>
@@ -130,7 +130,11 @@ export function ReceivablesPage() {
                         <div className="flex flex-col">
                           <span className="font-semibold text-content">{r.insurerName}</span>
                           <span className={`text-[11px] font-medium ${r.insurerPaidAt ? 'text-success' : 'text-warning'}`}>
-                            {r.insurerPaidAt ? '✓ Réglé' : 'En attente de remboursement'}
+                            {r.insurerPaidAt
+                              ? '✓ Réglé'
+                              : (r.insurerPaidAmount ?? 0) > 0
+                                ? `Partiel : ${formatCurrency(r.insurerPaidAmount ?? 0)} reçu`
+                                : 'En attente de remboursement'}
                           </span>
                         </div>
                       ) : (
@@ -139,7 +143,16 @@ export function ReceivablesPage() {
                     </td>
                     <td className="table-cell text-right text-content">{formatCurrency(r.total)}</td>
                     <td className="table-cell text-right font-semibold text-warning">
-                      {(r.insuranceAmount ?? 0) > 0 ? formatCurrency(r.insuranceAmount!) : '—'}
+                      {(r.insuranceAmount ?? 0) > 0 ? (
+                        <span>
+                          {formatCurrency(r.insuranceRemaining ?? r.insuranceAmount!)}
+                          {(r.insurerPaidAmount ?? 0) > 0 && (
+                            <span className="block text-[11px] font-normal text-content-faint">
+                              sur {formatCurrency(r.insuranceAmount!)}
+                            </span>
+                          )}
+                        </span>
+                      ) : '—'}
                     </td>
                     <td className="table-cell text-right font-semibold text-danger">
                       {r.balance > 0 ? formatCurrency(r.balance) : '0 FCFA'}
