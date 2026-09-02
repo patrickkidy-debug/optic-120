@@ -447,7 +447,9 @@ export function LandingPage() {
                     {t('landing.heroBadge')}
                   </span>
                 </span>
-                <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
+                {/* text-balance : réparti les mots équitablement entre les
+                    lignes du titre, pour éviter une dernière ligne orpheline. */}
+                <h1 className="text-balance font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
                   {t('landing.heroTitleA')} <span className="text-gradient">{t('landing.heroTitleAccent')}</span>{' '}
                   {t('landing.heroTitleB')}
                 </h1>
