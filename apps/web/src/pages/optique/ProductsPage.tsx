@@ -98,9 +98,13 @@ export function ProductsPage() {
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
+  // Le filtre par famille part au serveur : la liste est plafonnée à 100
+  // produits (plus récents d'abord), donc filtrer côté navigateur cachait
+  // purement et simplement les familles anciennes au-delà de ce plafond.
   const { data, isLoading } = useQuery({
-    queryKey: ['products', search],
-    queryFn: () => listProducts({ search: search || undefined, pageSize: 100 }),
+    queryKey: ['products', search, category],
+    queryFn: () =>
+      listProducts({ search: search || undefined, category: category || undefined, pageSize: 100 }),
   });
 
   // Quantités du magasin actif, indexées par produit, pour ajuster sans quitter le catalogue.
@@ -121,34 +125,31 @@ export function ProductsPage() {
   }, [stock]);
 
   const categoryStats = useMemo(() => {
-    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
-      MONTURE: { count: 0, totalStock: 0, lastCreated: null },
-      VERRE: { count: 0, totalStock: 0, lastCreated: null },
-      LENTILLE: { count: 0, totalStock: 0, lastCreated: null },
-      ACCESSOIRE: { count: 0, totalStock: 0, lastCreated: null },
-      SERVICE: { count: 0, totalStock: 0, lastCreated: null },
-    };
+    // Dérivé de CATEGORIES : une famille absente d'ici n'aurait aucune
+    // statistique et sa carte afficherait 0 référence / 0 en stock alors que
+    // des produits existent — c'était le cas de l'entretien et des autres.
+    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> =
+      Object.fromEntries(
+        CATEGORIES.map((c) => [c.value, { count: 0, totalStock: 0, lastCreated: null }]),
+      );
 
-    // Stats sur les produits AFFICHÉS (la liste est déjà filtrée par la
-    // recherche côté serveur) : quand on cherche une monture, les cartes
-    // montrent le stock de cette recherche, pas le stock global du système.
-    const items = data?.items ?? [];
-    items.forEach((p) => {
-      const cat = p.category;
+    // Les cartes se calculent sur le STOCK du magasin, qui renvoie tous les
+    // produits actifs sans pagination — et non sur la liste affichée, plafonnée
+    // à 100 : sinon une famille entière peut afficher 0 alors qu'elle existe.
+    (stock ?? []).forEach((r) => {
+      const cat = r.category;
       if (stats[cat]) {
         stats[cat].count++;
-        const s = stockByProduct.get(p.id);
-        if (s && !s.unlimited) stats[cat].totalStock += s.quantity;
-        if (p.createdAt) {
-          if (!stats[cat].lastCreated || p.createdAt > stats[cat].lastCreated) {
-            stats[cat].lastCreated = p.createdAt;
-          }
+        if (!r.unlimited) stats[cat].totalStock += r.quantity;
+        const created = r.createdAt ?? null;
+        if (created && (!stats[cat].lastCreated || created > stats[cat].lastCreated!)) {
+          stats[cat].lastCreated = created;
         }
       }
     });
 
     return stats;
-  }, [data?.items, stockByProduct]);
+  }, [stock]);
 
   // Synthèse de la recherche : références trouvées + unités en stock cumulées.
   const searchSummary = useMemo(() => {
@@ -295,7 +296,7 @@ export function ProductsPage() {
       )}
 
       {/* Visual Category Dashboard Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 mb-6">
         {CATEGORIES.map((c) => {
           const stats = categoryStats[c.value] || { count: 0, totalStock: 0, lastCreated: null };
           const isActive = category === c.value;
@@ -402,6 +403,18 @@ export function ProductsPage() {
       )}
 
       {/* Résultat de la recherche : total de références et d'unités trouvées. */}
+      {/* La liste est plafonnée à 100 produits par le serveur : on le dit au
+          lieu de laisser croire que le reste n'existe pas. */}
+      {data && data.total > data.items.length && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 px-3 py-2 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+          <span className="text-content">
+            {data.items.length} produits affichés sur <b>{data.total}</b> — filtrez par famille ou
+            utilisez la recherche pour voir les autres.
+          </span>
+        </div>
+      )}
+
       {searchSummary && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
           <Search className="h-4 w-4 text-primary" />
