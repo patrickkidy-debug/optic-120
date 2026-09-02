@@ -16,6 +16,7 @@ import {
   type LensTreatmentKey,
 } from '@oculo/shared-types';
 import {
+  listAllProducts,
   listProducts,
   createProduct,
   updateProduct,
@@ -98,13 +99,11 @@ export function ProductsPage() {
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
-  // Le filtre par famille part au serveur : la liste est plafonnée à 100
-  // produits (plus récents d'abord), donc filtrer côté navigateur cachait
-  // purement et simplement les familles anciennes au-delà de ce plafond.
+  // listAllProducts enchaîne toutes les pages nécessaires côté client : plus
+  // aucune troncature silencieuse, quelle que soit la taille du catalogue.
   const { data, isLoading } = useQuery({
     queryKey: ['products', search, category],
-    queryFn: () =>
-      listProducts({ search: search || undefined, category: category || undefined, pageSize: 100 }),
+    queryFn: () => listAllProducts({ search: search || undefined, category: category || undefined }),
   });
 
   // Quantités du magasin actif, indexées par produit, pour ajuster sans quitter le catalogue.
@@ -402,15 +401,14 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* Résultat de la recherche : total de références et d'unités trouvées. */}
-      {/* La liste est plafonnée à 100 produits par le serveur : on le dit au
-          lieu de laisser croire que le reste n'existe pas. */}
+      {/* listAllProducts charge tout le catalogue ; ce bandeau ne peut plus
+          apparaître qu'au-delà de son garde-fou de sécurité (5000 produits). */}
       {data && data.total > data.items.length && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 px-3 py-2 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
           <span className="text-content">
-            {data.items.length} produits affichés sur <b>{data.total}</b> — filtrez par famille ou
-            utilisez la recherche pour voir les autres.
+            {data.items.length} produits affichés sur <b>{data.total}</b> — catalogue très volumineux,
+            filtrez par famille ou utilisez la recherche pour affiner.
           </span>
         </div>
       )}

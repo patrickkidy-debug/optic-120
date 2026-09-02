@@ -50,6 +50,33 @@ export async function listProducts(params: { search?: string; category?: string;
   return data;
 }
 
+/**
+ * Charge tout le catalogue correspondant aux filtres, quel que soit son
+ * volume. Le serveur plafonne /products à 100 résultats PAR APPEL — un
+ * garde-fou de charge, pas une limite de catalogue — donc un magasin de plus
+ * de 100 produits ne voyait que les 100 derniers ajoutés. Cette fonction
+ * enchaîne les pages nécessaires, en parallèle, pour que la liste affichée
+ * soit toujours complète sans jamais changer le comportement de l'API.
+ */
+export async function listAllProducts(params: { search?: string; category?: string } = {}): Promise<{
+  items: Product[];
+  total: number;
+}> {
+  const pageSize = 100;
+  const first = await listProducts({ ...params, page: 1, pageSize });
+  const totalPages = Math.ceil(first.total / pageSize);
+  // Garde-fou : au-delà de 50 pages (5000 produits), on s'arrête plutôt que de
+  // partir sur un nombre de requêtes déraisonnable — aucun magasin réel n'a un
+  // catalogue de cette taille aujourd'hui.
+  const cappedPages = Math.min(totalPages, 50);
+  if (cappedPages <= 1) return first;
+
+  const rest = await Promise.all(
+    Array.from({ length: cappedPages - 1 }, (_, i) => listProducts({ ...params, page: i + 2, pageSize })),
+  );
+  return { items: [first.items, ...rest.map((r) => r.items)].flat(), total: first.total };
+}
+
 export async function createProduct(input: ProductCreateInput) {
   const { data } = await api.post('/products', input);
   return data.product;
