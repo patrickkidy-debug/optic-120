@@ -866,15 +866,20 @@ export function GenericProductFormModal({
     toLocalDatetimeString(product?.createdAt ?? new Date()),
   );
 
+  // Famille modifiable : indispensable pour rattraper un produit rangé dans la
+  // mauvaise catégorie (import, saisie rapide) sans passer par un déplacement
+  // en masse de toute une famille.
+  const [cat, setCat] = useState(category);
+
   // Les services sont réalisés à la demande, comme les verres : pas de stock à gérer.
-  const managesStock = category !== ProductCategory.SERVICE;
+  const managesStock = cat !== ProductCategory.SERVICE;
 
   const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
   const { mut, error } = useSaveProduct({
     product,
     branchId,
     stockRow,
-    category,
+    category: cat,
     onClose,
     applyStock: managesStock,
     createdAt,
@@ -883,7 +888,7 @@ export function GenericProductFormModal({
   const set = (patch: Partial<BaseState>) => setBase((b) => ({ ...b, ...patch }));
   const setAttr = (patch: Partial<GenericProductAttributes>) => setA((x) => ({ ...x, ...patch }));
 
-  const label = genericCategoryLabel(category);
+  const label = genericCategoryLabel(cat);
   const canSave = Boolean(base.name.trim()) && Number(base.sellPrice) >= 0;
 
   return (
@@ -902,14 +907,27 @@ export function GenericProductFormModal({
             onChange={({ photoUrl, photos }) => set({ photoUrl, photos })}
           />
 
-          <Field label="Nom du produit">
-            <input
-              className="input"
-              value={base.name}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder={label}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nom du produit">
+              <input
+                className="input"
+                value={base.name}
+                onChange={(e) => set({ name: e.target.value })}
+                placeholder={label}
+              />
+            </Field>
+            <Field label="Famille">
+              <select className="input" value={cat} onChange={(e) => setCat(e.target.value)}>
+                {Object.entries(GENERIC_CATEGORY_LABELS).map(([value, text]) => (
+                  <option key={value} value={value}>
+                    {text}
+                  </option>
+                ))}
+                <option value={ProductCategory.MONTURE}>Montures</option>
+                <option value={ProductCategory.VERRE}>Verres</option>
+              </select>
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Référence (SKU)">
