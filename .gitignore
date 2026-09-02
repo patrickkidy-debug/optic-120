@@ -43,6 +43,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# Outillage local Claude Code (skills, worktrees, sessions) — plusieurs
+# centaines de Mo, propre à chaque poste : jamais versionné.
+.claude/
+
 # Misc
 .cache/
 tmp/
