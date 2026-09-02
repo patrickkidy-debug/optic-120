@@ -57,6 +57,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
       { to: '/configuration-boutique', labelKey: 'nav.storeSetup', icon: ListChecks, permission: 'dashboard.view' },
+      { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
       { to: '/demo/videos', labelKey: 'nav.demoVideos', icon: PlayCircle, permission: 'dashboard.view' },
     ],
   },
@@ -111,7 +112,6 @@ export const NAV: NavGroup[] = [
       { to: '/parametres/roles', labelKey: 'nav.roles', icon: ShieldHalf, permission: 'rbac.roles.view' },
       { to: '/parametres/magasins', labelKey: 'nav.branches', icon: Store, permission: 'settings.branches.view' },
       { to: '/parametres/paiements', labelKey: 'nav.payments', icon: CreditCard, permission: 'settings.payments.view' },
-      { to: '/parametres/abonnement', labelKey: 'nav.subscription', icon: Crown, permission: 'billing.view' },
       { to: '/parametres/journal', labelKey: 'nav.audit', icon: ScrollText, permission: 'audit.logs.view' },
       { to: '/parametres/profil', labelKey: 'nav.settingsShortcut', icon: Settings },
       { to: '/aide', labelKey: 'nav.support', icon: LifeBuoy },
