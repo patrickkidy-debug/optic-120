@@ -49,6 +49,43 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     });
     const expensesTotal = Number(expenses._sum.amount ?? 0);
 
+    // Ventes annulées pendant la session. L'annulation remet le stock mais ne
+    // supprime pas les encaissements déjà passés : le caissier doit voir à
+    // quelles ventes annulées correspond l'argent présent en caisse.
+    // Sale n'a pas de date d'annulation dédiée ; updatedAt en tient lieu (une
+    // vente annulée n'est plus modifiable ensuite).
+    const cancelledRows = await req.db!.sale.findMany({
+      where: {
+        branchId: register.branchId,
+        status: 'CANCELLED',
+        updatedAt: { gte: register.openedAt },
+      },
+      select: {
+        id: true,
+        number: true,
+        totalAmount: true,
+        updatedAt: true,
+        customer: { select: { firstName: true, lastName: true } },
+        payments: {
+          where: { status: 'SUCCESS', createdAt: { gte: register.openedAt } },
+          select: { amount: true, method: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const cancelled = cancelledRows.map((s) => ({
+      id: s.id,
+      number: s.number,
+      total: Number(s.totalAmount),
+      cancelledAt: s.updatedAt,
+      customerName: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : null,
+      // Encaissé sur cette vente pendant la session : ce montant est compté
+      // dans le total ci-dessus alors que la vente n'existe plus.
+      cashedAmount: s.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+      methods: [...new Set(s.payments.map((p) => p.method))],
+    }));
+    const cancelledCashedTotal = cancelled.reduce((sum, s) => sum + s.cashedAmount, 0);
+
     return reply.send({
       byMethod,
       cash,
@@ -56,6 +93,9 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       expensesTotal,
       expensesCount: expenses._count._all,
       netTotal: total - expensesTotal,
+      cancelled,
+      cancelledCount: cancelled.length,
+      cancelledCashedTotal,
       openingAmount: Number(register.openingAmount),
       expectedCash: Number(register.openingAmount) + cash - expensesTotal,
       openedAt: register.openedAt,

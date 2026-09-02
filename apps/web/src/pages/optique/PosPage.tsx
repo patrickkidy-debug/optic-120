@@ -14,7 +14,9 @@ import {
   Loader2,
   QrCode,
   FileText,
+  Lock,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { PaymentMethod } from '@oculo/shared-types';
 import {
   paymentMethodsForCountry,
@@ -41,6 +43,7 @@ import {
 } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
 import { getCollectInfo } from '../../features/settings/api';
+import { getCurrentRegister } from '../../features/cashregister/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
@@ -119,6 +122,16 @@ export function PosPage() {
     queryFn: () => getStock(branchId!),
     enabled: Boolean(branchId),
   });
+
+  // Session de caisse : le serveur refuse tout encaissement sans caisse
+  // ouverte. On le signale ici pour éviter de composer un panier entier avant
+  // de se heurter au refus.
+  const { data: register } = useQuery({
+    queryKey: ['cash-current', branchId],
+    queryFn: () => getCurrentRegister(branchId!),
+    enabled: Boolean(branchId),
+  });
+  const registerClosed = register === null;
   const pricing = user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
 
   // Taux effectif : celui choisi en caisse, sinon celui de l'établissement.
@@ -411,13 +424,23 @@ export function PosPage() {
               <Button
                 variant="accent"
                 className={canQuote ? '' : 'col-span-2'}
-                disabled={pos.lines.length === 0}
+                disabled={pos.lines.length === 0 || registerClosed}
                 loading={createMut.isPending && createMut.variables === 'SALE'}
                 onClick={() => createMut.mutate('SALE')}
+                title={registerClosed ? 'Ouvrez la caisse pour encaisser' : undefined}
               >
                 {t('pos.checkout')}
               </Button>
             </div>
+            {registerClosed && (
+              <Link
+                to="/optique/caisse-session"
+                className="mt-2 flex items-center gap-2 rounded-xl border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-3 py-2 text-xs font-medium text-warning transition hover:bg-[color:var(--warning)]/15"
+              >
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                Caisse fermée — ouvrez la session pour encaisser
+              </Link>
+            )}
           </div>
         </div>
       </div>

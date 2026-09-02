@@ -11,6 +11,18 @@ export interface CashRegister {
   status: 'OPEN' | 'CLOSED';
 }
 
+/** Vente annulée pendant la session de caisse (détail affiché à la fermeture). */
+export interface CancelledSaleSummary {
+  id: string;
+  number: string;
+  total: number;
+  cancelledAt: string;
+  customerName: string | null;
+  /** Encaissé sur cette vente pendant la session, toujours compté dans le total. */
+  cashedAmount: number;
+  methods: string[];
+}
+
 export interface RegisterSummary {
   byMethod: { method: string; amount: number; count: number }[];
   cash: number;
@@ -18,6 +30,9 @@ export interface RegisterSummary {
   expensesTotal: number;
   expensesCount: number;
   netTotal: number;
+  cancelled: CancelledSaleSummary[];
+  cancelledCount: number;
+  cancelledCashedTotal: number;
   openingAmount: number;
   expectedCash: number;
   openedAt: string;

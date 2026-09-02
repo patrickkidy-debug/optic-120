@@ -176,6 +176,57 @@ export function CashRegisterPage() {
                 )}
               </div>
 
+              {/* Ventes annulées de la session : leurs encaissements restent
+                  comptés ci-dessus, il faut donc pouvoir les justifier avant
+                  de fermer. */}
+              {summary && summary.cancelledCount > 0 && (
+                <div className="mt-4 rounded-xl border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/5 p-3">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-danger">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {summary.cancelledCount} vente(s) annulée(s) depuis l'ouverture
+                  </p>
+                  <div className="space-y-1.5">
+                    {summary.cancelled.map((s) => (
+                      <div key={s.id} className="flex items-start justify-between gap-3 text-sm">
+                        <span className="min-w-0">
+                          <span className="font-mono text-xs text-content-muted">{s.number}</span>
+                          {s.customerName && <span className="text-content-muted"> · {s.customerName}</span>}
+                          <span className="block text-xs text-content-faint">
+                            {formatDateTime(s.cancelledAt)}
+                            {s.methods.length > 0 &&
+                              ` · ${s.methods.map((m) => METHOD_LABELS[m] ?? m).join(', ')}`}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-medium text-content">{formatCurrency(s.total)}</span>
+                          {s.cashedAmount > 0 && (
+                            <span className="block text-xs font-semibold text-danger">
+                              encaissé : {formatCurrency(s.cashedAmount)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                    {summary.cancelledCashedTotal > 0 && (
+                      <div className="mt-1 flex items-center justify-between border-t border-[color:var(--danger)]/20 pt-1.5">
+                        <span className="text-sm font-semibold text-content">
+                          Encaissé sur ventes annulées
+                        </span>
+                        <span className="font-display font-bold text-danger">
+                          {formatCurrency(summary.cancelledCashedTotal)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {summary.cancelledCashedTotal > 0 && (
+                    <p className="mt-2 text-xs text-content-muted">
+                      Ce montant est inclus dans le total encaissé ci-dessus. S'il a été remboursé au
+                      client, retirez-le du montant compté.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {canClose ? (
                 <div className="mt-4 border-t pt-4">
                   {summary && (

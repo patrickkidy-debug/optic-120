@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
-import { forbidden, notFound } from '../../lib/http-error.js';
+import { forbidden, notFound, conflict } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as salesService from './sales.service.js';
 
@@ -242,6 +242,20 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
   app.post('/:id/payments', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = paymentCreateSchema.parse(req.body);
+
+    // Aucun encaissement sans session de caisse ouverte : sinon l'argent
+    // rentre en dehors de toute session et le fond de caisse ne peut plus
+    // être rapproché à la fermeture.
+    const sale = await req.db!.sale.findFirst({ where: { id }, select: { branchId: true } });
+    if (!sale) throw notFound('Vente introuvable');
+    const openRegister = await req.db!.cashRegister.findFirst({
+      where: { branchId: sale.branchId, status: 'OPEN' },
+      select: { id: true },
+    });
+    if (!openRegister) {
+      throw conflict("La caisse n'est pas ouverte. Ouvrez la caisse avant d'encaisser cette vente.");
+    }
+
     const result = await salesService.addPayment(req.auth!.tenantId, req.auth!.userId, id, input);
     return reply.status(201).send(result);
   });

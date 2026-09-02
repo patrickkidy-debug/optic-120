@@ -32,12 +32,17 @@ import { exportProductsExcel, exportProductsPdf } from '../../features/optique/i
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 
+// Toutes les familles du catalogue (ProductCategory) : une famille absente
+// d'ici n'aurait ni carte de synthèse ni filtre, et son stock passerait
+// inaperçu — c'était le cas des produits d'entretien et des autres.
 const CATEGORIES = [
   { value: 'MONTURE', label: 'Montures' },
   { value: 'VERRE', label: 'Verres' },
   { value: 'LENTILLE', label: 'Lentilles' },
   { value: 'ACCESSOIRE', label: 'Accessoires' },
+  { value: 'ENTRETIEN', label: "Produits d'entretien" },
   { value: 'SERVICE', label: 'Services' },
+  { value: 'AUTRE', label: 'Autres' },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -88,13 +93,11 @@ export function StockPage() {
   );
 
   const categoryStats = useMemo(() => {
-    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> = {
-      MONTURE: { count: 0, totalStock: 0, lastCreated: null },
-      VERRE: { count: 0, totalStock: 0, lastCreated: null },
-      LENTILLE: { count: 0, totalStock: 0, lastCreated: null },
-      ACCESSOIRE: { count: 0, totalStock: 0, lastCreated: null },
-      SERVICE: { count: 0, totalStock: 0, lastCreated: null },
-    };
+    // Dérivé de CATEGORIES : ajouter une famille là-haut suffit désormais.
+    const stats: Record<string, { count: number; totalStock: number; lastCreated: string | null }> =
+      Object.fromEntries(
+        CATEGORIES.map((c) => [c.value, { count: 0, totalStock: 0, lastCreated: null }]),
+      );
 
     searched.forEach((r) => {
       const cat = r.category;
@@ -210,7 +213,7 @@ export function StockPage() {
       )}
 
       {/* Visual Category Dashboard Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 mb-6">
         {CATEGORIES.map((c) => {
           const stats = categoryStats[c.value] || { count: 0, totalStock: 0, lastCreated: null };
           const isActive = category === c.value;
