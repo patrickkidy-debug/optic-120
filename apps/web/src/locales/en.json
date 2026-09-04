@@ -55,7 +55,8 @@
       "management": "Management",
       "settings": "Administration"
     },
-    "storeSetup": "Store setup"
+    "storeSetup": "Store setup",
+    "cashFlow": "Expenses / Transfers"
   },
   "common": {
     "save": "Save",

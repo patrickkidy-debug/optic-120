@@ -4,6 +4,7 @@ import type {
   EmployeeUpdateInput,
   ExpenseCreateInput,
   ExpenseUpdateInput,
+  CashTransferCreateInput,
   SupplierCreateInput,
   SupplierUpdateInput,
   InsurerCreateInput,
@@ -74,6 +75,37 @@ export async function updateEmployee(id: string, input: EmployeeUpdateInput) {
 export async function listExpenses(): Promise<Expense[]> {
   const { data } = await api.get<{ expenses: Expense[] }>('/expenses');
   return data.expenses;
+}
+
+/** Versement de caisse : apport (IN) ou retrait (OUT), hors ventes et charges. */
+export interface CashTransfer {
+  id: string;
+  direction: 'IN' | 'OUT';
+  label: string;
+  amount: string;
+  date: string;
+  branchId: string | null;
+  notes: string | null;
+}
+
+export async function listCashTransfers(branchId?: string): Promise<{
+  transfers: CashTransfer[];
+  totals: { in: number; out: number; net: number };
+}> {
+  const { data } = await api.get<{
+    transfers: CashTransfer[];
+    totals: { in: number; out: number; net: number };
+  }>('/cash-transfers', { params: branchId ? { branchId } : {} });
+  return data;
+}
+
+export async function createCashTransfer(input: CashTransferCreateInput): Promise<CashTransfer> {
+  const { data } = await api.post<{ transfer: CashTransfer }>('/cash-transfers', input);
+  return data.transfer;
+}
+
+export async function deleteCashTransfer(id: string): Promise<void> {
+  await api.delete(`/cash-transfers/${id}`);
 }
 export async function getFinanceSummary(): Promise<FinanceSummary> {
   const { data } = await api.get<FinanceSummary>('/expenses/summary');

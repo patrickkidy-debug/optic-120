@@ -55,7 +55,8 @@
       "management": "Gestão",
       "settings": "Administração"
     },
-    "storeSetup": "Configuração da loja"
+    "storeSetup": "Configuração da loja",
+    "cashFlow": "Despesas / Transferências"
   },
   "common": {
     "save": "Guardar",

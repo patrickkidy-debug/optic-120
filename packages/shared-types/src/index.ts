@@ -1728,6 +1728,26 @@ export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
 export const expenseUpdateSchema = expenseCreateSchema.partial();
 export type ExpenseUpdateInput = z.infer<typeof expenseUpdateSchema>;
 
+/* --- Versements de caisse (apports / retraits, hors ventes et charges) --- */
+
+export const TRANSFER_DIRECTIONS = ['IN', 'OUT'] as const;
+export type TransferDirection = (typeof TRANSFER_DIRECTIONS)[number];
+
+export const TRANSFER_DIRECTION_LABELS: Record<TransferDirection, string> = {
+  IN: 'Apport (entrée)',
+  OUT: 'Retrait (sortie)',
+};
+
+export const cashTransferCreateSchema = z.object({
+  direction: z.enum(TRANSFER_DIRECTIONS),
+  label: z.string().min(1).max(160),
+  amount: z.number().positive(),
+  date: z.string().optional().or(z.literal('')),
+  branchId: z.string().uuid().optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type CashTransferCreateInput = z.infer<typeof cashTransferCreateSchema>;
+
 export const supplierCreateSchema = z.object({
   name: z.string().min(1).max(160),
   type: z.enum([SupplierType.LOCAL, SupplierType.INTERNATIONAL]).default(SupplierType.LOCAL),

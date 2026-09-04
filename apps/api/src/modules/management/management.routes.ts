@@ -4,6 +4,7 @@ import {
   employeeUpdateSchema,
   expenseCreateSchema,
   expenseUpdateSchema,
+  cashTransferCreateSchema,
   supplierCreateSchema,
   supplierUpdateSchema,
   insurerCreateSchema,
@@ -141,6 +142,55 @@ async function expensesRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     const res = await req.db!.expense.deleteMany({ where: { id } });
     if (res.count === 0) throw notFound('Dépense introuvable');
+    return reply.send({ ok: true });
+  });
+}
+
+/**
+ * Versements de caisse : apports et retraits d'argent qui ne sont ni des
+ * ventes ni des charges d'exploitation. Réutilise les permissions Finance —
+ * qui gère les dépenses gère aussi les versements.
+ */
+async function cashTransfersRoutes(app: FastifyInstance) {
+  app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string };
+    const transfers = await req.db!.cashTransfer.findMany({
+      where: q.branchId ? { branchId: q.branchId } : {},
+      orderBy: { date: 'desc' },
+      take: 300,
+    });
+    const totals = transfers.reduce(
+      (acc, t) => {
+        if (t.direction === 'IN') acc.in += Number(t.amount);
+        else acc.out += Number(t.amount);
+        return acc;
+      },
+      { in: 0, out: 0 },
+    );
+    return reply.send({ transfers, totals: { ...totals, net: totals.in - totals.out } });
+  });
+
+  app.post('/', { preHandler: requirePermission('finance.expenses.create') }, async (req, reply) => {
+    const input = clean(cashTransferCreateSchema.parse(req.body));
+    const transfer = await req.db!.cashTransfer.create({
+      data: {
+        tenantId: req.auth!.tenantId,
+        direction: input.direction,
+        label: input.label,
+        amount: input.amount,
+        date: toDate(input.date) ?? new Date(),
+        branchId: input.branchId || null,
+        notes: input.notes ?? null,
+        createdById: req.auth!.userId,
+      },
+    });
+    return reply.status(201).send({ transfer });
+  });
+
+  app.delete('/:id', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const res = await req.db!.cashTransfer.deleteMany({ where: { id } });
+    if (res.count === 0) throw notFound('Versement introuvable');
     return reply.send({ ok: true });
   });
 }
@@ -361,6 +411,7 @@ export async function managementRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
   await app.register(employeesRoutes, { prefix: '/employees' });
   await app.register(expensesRoutes, { prefix: '/expenses' });
+  await app.register(cashTransfersRoutes, { prefix: '/cash-transfers' });
   await app.register(suppliersRoutes, { prefix: '/suppliers' });
   await app.register(insurersRoutes, { prefix: '/insurance' });
 }

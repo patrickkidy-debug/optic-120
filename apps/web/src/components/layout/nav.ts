@@ -32,6 +32,7 @@ import {
   Lock,
   BarChart3,
   ListChecks,
+  ArrowDownUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -94,6 +95,7 @@ export const NAV: NavGroup[] = [
       { to: '/gestion/rapports', labelKey: 'nav.reports', icon: BarChart3, permission: 'optique.sales.view' },
       { to: '/gestion/personnel', labelKey: 'nav.hr', icon: UserCog, permission: 'hr.employees.view' },
       { to: '/gestion/finance', labelKey: 'nav.finance', icon: Wallet, permission: 'finance.expenses.view' },
+      { to: '/gestion/depenses-versements', labelKey: 'nav.cashFlow', icon: ArrowDownUp, permission: 'finance.expenses.view' },
       { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, permission: 'suppliers.view' },
       { to: '/gestion/assurances', labelKey: 'nav.insurance', icon: ShieldCheck, permission: 'insurance.view' },
     ],

@@ -55,7 +55,8 @@
       "management": "Pilotage",
       "settings": "Administration"
     },
-    "storeSetup": "Configuration boutique"
+    "storeSetup": "Configuration boutique",
+    "cashFlow": "Dépenses / Versements"
   },
   "common": {
     "save": "Enregistrer",
