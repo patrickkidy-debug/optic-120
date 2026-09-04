@@ -181,9 +181,16 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/', async (req, reply) => {
     const input = saleCreateSchema.parse(req.body);
-    const needed =
-      input.type === SaleType.QUOTE ? 'optique.quotes.create' : 'optique.sales.create';
-    if (!req.auth!.permissions.has(needed)) throw forbidden(`Permission requise : ${needed}`);
+    // Un devis n'engage rien (ni stock ni encaissement) : savoir vendre suffit
+    // à savoir chiffrer. On accepte donc l'une ou l'autre permission, plutôt
+    // que de bloquer un caissier ou une secrétaire sur une simple estimation.
+    const allowed =
+      input.type === SaleType.QUOTE
+        ? ['optique.quotes.create', 'optique.sales.create']
+        : ['optique.sales.create'];
+    if (!allowed.some((p) => req.auth!.permissions.has(p))) {
+      throw forbidden(`Permission requise : ${allowed.join(' ou ')}`);
+    }
     assertBranchAccess(req, input.branchId);
 
     const sale = await salesService.createSale(req.auth!.tenantId, req.auth!.userId, input);

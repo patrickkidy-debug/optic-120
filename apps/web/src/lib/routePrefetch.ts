@@ -22,7 +22,6 @@ const loaders: Record<string, () => Promise<unknown>> = {
   '/parametres/roles': () => import('../pages/settings/RolesPage'),
   '/parametres/utilisateurs': () => import('../pages/settings/UsersPage'),
   '/parametres/magasins': () => import('../pages/settings/BranchesPage'),
-  '/parametres/paiements': () => import('../pages/settings/PaymentsPage'),
   '/parametres/journal': () => import('../pages/settings/AuditPage'),
   '/parametres/abonnement': () => import('../pages/settings/SubscriptionPage'),
   '/parametres/profil': () => import('../pages/settings/ProfilePage'),

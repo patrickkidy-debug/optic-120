@@ -41,7 +41,6 @@ const CashRegisterPage = lazy(() => named(import('./pages/optique/CashRegisterPa
 const RolesPage = lazy(() => named(import('./pages/settings/RolesPage'), 'RolesPage'));
 const UsersPage = lazy(() => named(import('./pages/settings/UsersPage'), 'UsersPage'));
 const BranchesPage = lazy(() => named(import('./pages/settings/BranchesPage'), 'BranchesPage'));
-const PaymentsPage = lazy(() => named(import('./pages/settings/PaymentsPage'), 'PaymentsPage'));
 const AuditPage = lazy(() => named(import('./pages/settings/AuditPage'), 'AuditPage'));
 const ProfilePage = lazy(() => named(import('./pages/settings/ProfilePage'), 'ProfilePage'));
 const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionPage'), 'SubscriptionPage'));
@@ -137,7 +136,6 @@ export const router = createBrowserRouter([
           { path: '/parametres/roles', element: perm('rbac.roles.view', <RolesPage />) },
           { path: '/parametres/utilisateurs', element: perm('rbac.users.view', <UsersPage />) },
           { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },
-          { path: '/parametres/paiements', element: perm('settings.payments.view', <PaymentsPage />) },
           { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
           { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
           { path: '/parametres/profil', element: <ProfilePage /> },

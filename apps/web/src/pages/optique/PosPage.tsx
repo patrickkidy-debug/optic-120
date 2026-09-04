@@ -12,7 +12,6 @@ import {
   CreditCard,
   CheckCircle2,
   Loader2,
-  QrCode,
   FileText,
   Lock,
 } from 'lucide-react';
@@ -42,7 +41,6 @@ import {
   WarrantySelect,
 } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
-import { getCollectInfo } from '../../features/settings/api';
 import { getCurrentRegister } from '../../features/cashregister/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
@@ -91,7 +89,10 @@ export function PosPage() {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const branchId = useUIStore((s) => s.activeBranchId);
-  const canQuote = usePermission('optique.quotes.create');
+  // Un devis n'engage à rien : il ne touche ni le stock ni la caisse. Toute
+  // personne autorisée à vendre peut donc en établir un, sans permission
+  // dédiée ni caisse ouverte.
+  const canQuote = usePermission('optique.quotes.create') || usePermission('optique.sales.create');
   const canSeeInsurers = usePermission('insurance.view');
   const pos = usePosStore();
   const [search, setSearch] = useState('');
@@ -510,14 +511,13 @@ export function PaymentModal({
   const [amount, setAmount] = useState<number>(sale.due);
   const [settled, setSettled] = useState(0);
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<'choose' | 'collect' | 'pending' | 'done'>('choose');
+  const [phase, setPhase] = useState<'choose' | 'pending' | 'done'>('choose');
   const [error, setError] = useState('');
   const [instruction, setInstruction] = useState<string | null>(null);
   // Compte à rebours avant de préparer automatiquement la vente suivante
   // (null = arrêté, ex. le caissier a choisi d'imprimer et prend son temps).
   const [autoNext, setAutoNext] = useState<number | null>(null);
   const autoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { data: collect } = useQuery({ queryKey: ['collect-info'], queryFn: getCollectInfo });
 
   // Dès que le paiement est confirmé, on lance le compte à rebours : à la fin,
   // la modale se referme et la page se réinitialise pour un nouvel encaissement,
@@ -656,52 +656,8 @@ export function PaymentModal({
               </button>
             ))}
           </div>
-          {/* Aide facultative : montrer au client où envoyer l'argent. */}
-          {(collect?.qr || collect?.number) && (
-            <button
-              onClick={() => setPhase('collect')}
-              disabled={payMut.isPending}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-2.5 text-xs font-medium text-content-muted transition hover:border-primary hover:text-primary"
-            >
-              <QrCode className="h-4 w-4" /> Afficher mes coordonnées de paiement
-            </button>
-          )}
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         </>
-      )}
-
-      {phase === 'collect' && (
-        <div className="text-center">
-          <p className="mb-3 text-sm text-content-muted">
-            Montrez ces coordonnées au client, puis choisissez le moyen de paiement.
-          </p>
-          {collect?.qr ? (
-            <img src={collect.qr} alt="QR de paiement" className="mx-auto h-44 w-44 rounded-xl border bg-white object-contain p-2" />
-          ) : (
-            <div className="mx-auto grid h-44 w-44 place-items-center rounded-xl border bg-surface-2 text-content-faint">
-              <QrCode className="h-10 w-10" />
-            </div>
-          )}
-          <div className="mx-auto mt-3 max-w-xs rounded-xl bg-surface-2 p-3 text-sm">
-            {collect?.number ? (
-              <>
-                <div className="flex justify-between"><span className="text-content-muted">Numéro</span><span className="font-bold text-content">{collect.number}</span></div>
-                {collect.name && <div className="flex justify-between"><span className="text-content-muted">Nom</span><span className="font-semibold text-content">{collect.name}</span></div>}
-                {collect.network && <div className="flex justify-between"><span className="text-content-muted">Réseau</span><span className="text-content">{collect.network}</span></div>}
-              </>
-            ) : (
-              <p className="text-xs text-content-muted">
-                Aucune coordonnée d'encaissement configurée. Renseignez-la dans Paramètres → Paiements.
-              </p>
-            )}
-          </div>
-          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-          <div className="mt-4">
-            <Button variant="outline" className="w-full" onClick={() => { setPhase('choose'); setMethod(null); }}>
-              Retour au choix du paiement
-            </Button>
-          </div>
-        </div>
       )}
 
       {phase === 'pending' && (
