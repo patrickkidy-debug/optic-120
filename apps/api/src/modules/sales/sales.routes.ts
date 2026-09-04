@@ -14,6 +14,7 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       branchId?: string;
       status?: string;
       type?: string;
+      search?: string;
       page?: string;
       pageSize?: string;
     };
@@ -23,6 +24,18 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     if (q.branchId) where.branchId = q.branchId;
     if (q.status) where.status = q.status;
     if (q.type) where.type = q.type;
+    // Recherche sur toute l'historique, sans restriction de période : numéro de
+    // pièce, nom du client ou téléphone. C'est le seul moyen de retrouver une
+    // vente ancienne, la liste étant paginée du plus récent au plus ancien.
+    const search = q.search?.trim();
+    if (search) {
+      where.OR = [
+        { number: { contains: search, mode: 'insensitive' } },
+        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
+        { customer: { lastName: { contains: search, mode: 'insensitive' } } },
+        { customer: { phone: { contains: search } } },
+      ];
+    }
 
     const [rows, total] = await Promise.all([
       req.db!.sale.findMany({

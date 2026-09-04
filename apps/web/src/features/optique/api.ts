@@ -338,7 +338,7 @@ export async function createSale(input: SaleCreateInput) {
 }
 
 export async function listSales(
-  params: { type?: string; branchId?: string; page?: number; pageSize?: number } = {},
+  params: { type?: string; branchId?: string; search?: string; page?: number; pageSize?: number } = {},
 ) {
   const { data } = await api.get('/sales', { params });
   return data as { items: SaleListItem[]; total: number; page: number; pageSize: number };

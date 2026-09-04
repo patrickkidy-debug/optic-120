@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   Printer,
   MessageCircle,
+  Search,
 } from 'lucide-react';
 import {
   listSales,
@@ -89,10 +90,25 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const [exporting, setExporting] = useState(false);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
+  // Recherche serveur (numéro, client, téléphone) : porte sur tout l'historique,
+  // pas seulement sur la page affichée. Sans elle, une vente ancienne est
+  // introuvable puisque la liste s'arrête aux 25 plus récentes.
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['sales', kind],
-    queryFn: () => listSales({ type: kind }),
+    queryKey: ['sales', kind, debouncedSearch, page],
+    queryFn: () => listSales({ type: kind, search: debouncedSearch || undefined, page, pageSize: 25 }),
   });
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   // Rafraîchit les vues impactées par un changement de vente (liste + tableau
   // de bord + créances).
@@ -323,13 +339,37 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
         }
       />
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+          <input
+            className="input pl-9"
+            placeholder="Rechercher (n° de pièce, client, téléphone)…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        {data && (
+          <span className="text-sm text-content-muted">
+            <b className="text-content">{data.total}</b>{' '}
+            {debouncedSearch ? 'résultat(s)' : isQuote ? 'devis' : 'vente(s)'} au total
+          </span>
+        )}
+      </div>
+
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={isQuote ? FileText : Receipt}
-          title={isQuote ? t('sales.noQuote') : t('sales.noSale')}
-          hint={isQuote ? t('sales.hintQuote') : t('sales.hintSale')}
+          title={debouncedSearch ? 'Aucun résultat' : isQuote ? t('sales.noQuote') : t('sales.noSale')}
+          hint={
+            debouncedSearch
+              ? `Aucune pièce ne correspond à « ${debouncedSearch} ».`
+              : isQuote
+                ? t('sales.hintQuote')
+                : t('sales.hintSale')
+          }
           action={
             isQuote && canQuote ? (
               <Button onClick={() => setQuoteOpen(true)}>
@@ -541,6 +581,23 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Historique paginé : une boutique accumule des milliers de pièces, on
+          ne les charge pas toutes — la recherche ci-dessus porte de toute
+          façon sur l'intégralité de l'historique. */}
+      {data && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            Précédent
+          </Button>
+          <span className="text-sm text-content-muted">
+            Page {page} / {totalPages}
+          </span>
+          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            Suivant
+          </Button>
         </div>
       )}
 
