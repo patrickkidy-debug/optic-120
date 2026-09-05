@@ -20,6 +20,9 @@ const AppShell = lazy(() => named(import('./components/layout/AppShell'), 'AppSh
 const LandingPage = lazy(() => named(import('./pages/LandingPage'), 'LandingPage'));
 const LoginPage = lazy(() => named(import('./pages/auth/LoginPage'), 'LoginPage'));
 const SignupPage = lazy(() => named(import('./pages/auth/SignupPage'), 'SignupPage'));
+const ActivateSubscriptionPage = lazy(() =>
+  named(import('./pages/auth/ActivateSubscriptionPage'), 'ActivateSubscriptionPage'),
+);
 const ForgotPasswordPage = lazy(() => named(import('./pages/auth/ForgotPasswordPage'), 'ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => named(import('./pages/auth/ResetPasswordPage'), 'ResetPasswordPage'));
 const VerifyEmailPage = lazy(() => named(import('./pages/auth/VerifyEmailPage'), 'VerifyEmailPage'));
@@ -109,6 +112,9 @@ export const router = createBrowserRouter([
   })),
   { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
   { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
+  // Lien d'activation partagé aux prospects (WhatsApp) : volontairement hors
+  // PublicOnly, il doit fonctionner aussi pour un client déjà connecté.
+  { path: '/activer', element: pub(<ActivateSubscriptionPage />) },
   { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
   { path: '/reset-password', element: pub(<ResetPasswordPage />) },
   { path: '/verifier-email', element: pub(<VerifyEmailPage />) },

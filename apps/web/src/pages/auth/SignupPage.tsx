@@ -201,7 +201,12 @@ export function SignupPage() {
 
       <p className="mt-6 text-center text-sm text-content-muted">
         {t('auth.haveAccount')}{' '}
-        <Link to="/login" className="font-semibold text-primary hover:underline">
+        {/* Reporte la destination : un prospect venu du lien d'activation qui a
+            déjà un compte doit arriver sur le paiement, pas sur le dashboard. */}
+        <Link
+          to={nextParam ? `/login?next=${encodeURIComponent(redirectTo)}` : '/login'}
+          className="font-semibold text-primary hover:underline"
+        >
           {t('auth.login')}
         </Link>
       </p>
