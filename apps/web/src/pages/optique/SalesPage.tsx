@@ -38,6 +38,7 @@ import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/
 import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
+import { useCustomerCoverage, decideCoverage } from '../../features/management/coverage';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
@@ -974,13 +975,20 @@ function QuoteModal({
   const taxAmount = Math.round(taxBase * (effectiveVat / 100));
   const total = taxBase + taxAmount;
 
-  // Prise en charge synchronisée avec l'assureur : suit le total en temps réel.
+  // Prise en charge synchronisée avec l'assureur : garanties du contrat du
+  // client si elles existent, sinon taux de l'assureur — même règle qu'en caisse.
   const selectedInsurer = insurers?.find((x) => x.id === insurerId);
+  const { data: coverage } = useCustomerCoverage(customerId || null, insurerId, canSeeInsurers);
+  const coverageLines = lines.map((l) => ({
+    category: (stock ?? []).find((p) => p.productId === l.productId)?.category ?? 'AUTRE',
+    lineTotal: l.unitPrice * l.quantity,
+  }));
+  const decision = decideCoverage(coverageLines, total, selectedInsurer, coverage);
   useEffect(() => {
     if (!selectedInsurer) return;
-    setInsurance(Math.round((total * selectedInsurer.coveragePercent) / 100));
+    setInsurance(decision.amount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, total]);
+  }, [selectedInsurer?.id, decision.amount]);
 
   const items = lines.map((l) => ({
     productId: l.productId,
@@ -1153,8 +1161,9 @@ function QuoteModal({
               </label>
             </div>
 
-            {/* Assurance : choisir un assureur enregistré applique automatiquement
-                son taux de prise en charge (montant restant modifiable). */}
+            {/* Assurance : choisir un assureur calcule la prise en charge — par
+                garanties si le client a un contrat, sinon au taux de l'assureur
+                (montant restant modifiable). */}
             {canSeeInsurers && insurers && insurers.length > 0 && (
               <label className="mt-2 block text-xs text-content-muted">
                 Assurance
@@ -1173,6 +1182,9 @@ function QuoteModal({
                     </option>
                   ))}
                 </select>
+                {insurerId && decision.rule && (
+                  <span className="mt-1 block text-[11px] text-content-faint">{decision.rule}</span>
+                )}
               </label>
             )}
 

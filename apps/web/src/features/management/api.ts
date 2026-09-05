@@ -9,6 +9,14 @@ import type {
   SupplierUpdateInput,
   InsurerCreateInput,
   InsurerUpdateInput,
+  InsuranceContractCreateInput,
+  InsuranceContractUpdateInput,
+  InsuranceGuaranteeCreateInput,
+  InsuranceGuaranteeUpdateInput,
+  InsuranceBeneficiaryCreateInput,
+  InsuranceClaimCreateInput,
+  InsuranceClaimUpdateInput,
+  InsuranceRefundCreateInput,
 } from '@oculo/shared-types';
 
 export interface Employee {
@@ -45,10 +53,16 @@ export interface Insurer {
   id: string;
   name: string;
   type: string;
+  /** Taux historique, désormais un repli quand aucun contrat ne s'applique. */
   coveragePercent: number;
   phone: string | null;
   email: string | null;
   notes: string | null;
+  contractCount?: number;
+  beneficiaryCount?: number;
+  claimCount?: number;
+  pendingAmount?: number;
+  refundedAmount?: number;
 }
 export interface FinanceSummary {
   monthRevenue: number;
@@ -154,6 +168,13 @@ export interface InsurerUpcoming {
   receivedTotal: number;
   monthStart: string;
   dueDate: string;
+  /** Remboursements réellement encaissés pendant le mois affiché. */
+  receivedThisMonth?: number;
+  /** Restant dû dont l'échéance n'est pas passée (tous mois confondus). */
+  pendingTotal?: number;
+  /** Restant dû dont l'échéance est dépassée. */
+  lateTotal?: number;
+  nextDueDate?: string | null;
 }
 
 /** Paiements assurance à recevoir pour un mois donné. */
@@ -175,20 +196,6 @@ export async function getInsuranceSummary(): Promise<InsuranceSummary> {
   return data;
 }
 
-/** Enregistre un montant reçu de l'assureur pour le mois sélectionné. */
-export async function markInsurancePaid(
-  insurerId: string,
-  monthStart: string,
-  amount?: number,
-): Promise<{ count: number; receivedAmount: number; remainingAmount: number }> {
-  const { data } = await api.post<{ ok: boolean; count: number; receivedAmount: number; remainingAmount: number }>('/insurance/mark-paid', {
-    insurerId,
-    monthStart,
-    amount,
-  });
-  return { count: data.count, receivedAmount: data.receivedAmount, remainingAmount: data.remainingAmount };
-}
-
 export async function listInsurers(): Promise<Insurer[]> {
   const { data } = await api.get<{ insurers: Insurer[] }>('/insurance');
   return data.insurers;
@@ -200,4 +207,241 @@ export async function createInsurer(input: InsurerCreateInput) {
 export async function updateInsurer(id: string, input: InsurerUpdateInput) {
   const { data } = await api.patch(`/insurance/${id}`, input);
   return data.insurer as Insurer;
+}
+
+/* ---------- Contrats, garanties, bénéficiaires ---------- */
+
+export interface InsuranceGuarantee {
+  id: string;
+  contractId: string;
+  category: string;
+  coveragePercent: number;
+  ceilingAmount: string | null;
+  maxAmount: string | null;
+  deductibleAmount: string | null;
+  conditions: string | null;
+}
+
+export interface InsuranceBeneficiary {
+  id: string;
+  contractId: string;
+  customerId: string;
+  membershipNumber: string | null;
+  notes: string | null;
+  customer?: { id: string; firstName: string; lastName: string; phone: string | null };
+}
+
+export interface InsuranceContract {
+  id: string;
+  insurerId: string;
+  name: string;
+  reference: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  status: string;
+  notes: string | null;
+  insurer?: { id: string; name: string; type: string };
+  guarantees: InsuranceGuarantee[];
+  beneficiaries?: InsuranceBeneficiary[];
+  _count?: { beneficiaries: number; claims: number };
+}
+
+export async function listInsuranceContracts(insurerId?: string): Promise<InsuranceContract[]> {
+  const { data } = await api.get<{ contracts: InsuranceContract[] }>('/insurance/contracts', {
+    params: insurerId ? { insurerId } : {},
+  });
+  return data.contracts;
+}
+
+export async function getInsuranceContract(id: string): Promise<InsuranceContract> {
+  const { data } = await api.get<{ contract: InsuranceContract }>(`/insurance/contracts/${id}`);
+  return data.contract;
+}
+
+export async function createInsuranceContract(input: InsuranceContractCreateInput) {
+  const { data } = await api.post('/insurance/contracts', input);
+  return data.contract as InsuranceContract;
+}
+
+export async function updateInsuranceContract(id: string, input: InsuranceContractUpdateInput) {
+  const { data } = await api.patch(`/insurance/contracts/${id}`, input);
+  return data.contract as InsuranceContract;
+}
+
+export async function createGuarantee(contractId: string, input: InsuranceGuaranteeCreateInput) {
+  const { data } = await api.post(`/insurance/contracts/${contractId}/guarantees`, input);
+  return data.guarantee as InsuranceGuarantee;
+}
+
+export async function updateGuarantee(id: string, input: InsuranceGuaranteeUpdateInput) {
+  const { data } = await api.patch(`/insurance/guarantees/${id}`, input);
+  return data.guarantee as InsuranceGuarantee;
+}
+
+export async function deleteGuarantee(id: string): Promise<void> {
+  await api.delete(`/insurance/guarantees/${id}`);
+}
+
+export async function addBeneficiary(contractId: string, input: InsuranceBeneficiaryCreateInput) {
+  const { data } = await api.post(`/insurance/contracts/${contractId}/beneficiaries`, input);
+  return data.beneficiary as InsuranceBeneficiary;
+}
+
+export async function removeBeneficiary(id: string): Promise<void> {
+  await api.delete(`/insurance/beneficiaries/${id}`);
+}
+
+/** Garanties applicables à un client — sinon `matched: false` (repli sur le taux). */
+export interface CustomerCoverage {
+  matched: boolean;
+  beneficiaryId?: string;
+  membershipNumber?: string | null;
+  contract?: {
+    id: string;
+    name: string;
+    reference: string | null;
+    insurer: { id: string; name: string; coveragePercent: number };
+  };
+  guarantees?: {
+    category: string;
+    coveragePercent: number;
+    ceilingAmount: number | null;
+    maxAmount: number | null;
+    deductibleAmount: number | null;
+    conditions: string | null;
+  }[];
+}
+
+export async function getCustomerCoverage(
+  customerId: string,
+  insurerId?: string,
+): Promise<CustomerCoverage> {
+  const { data } = await api.get<CustomerCoverage>('/insurance/coverage', {
+    params: { customerId, ...(insurerId ? { insurerId } : {}) },
+  });
+  return data;
+}
+
+/* ---------- Prises en charge et remboursements ---------- */
+
+export interface InsuranceRefund {
+  id: string;
+  claimId: string;
+  insurerId: string;
+  expectedAmount: string;
+  receivedAmount: string;
+  receivedAt: string;
+  reference: string | null;
+  method: string | null;
+  notes: string | null;
+  insurer?: { id: string; name: string };
+  claim?: { id: string; number: string; saleId: string | null };
+}
+
+export interface InsuranceClaim {
+  id: string;
+  number: string;
+  insurerId: string;
+  contractId: string | null;
+  beneficiaryId: string | null;
+  customerId: string | null;
+  saleId: string | null;
+  status: string;
+  totalAmount: string;
+  requestedAmount: string;
+  acceptedAmount: string;
+  patientAmount: string;
+  paidAmount: string;
+  requestedAt: string;
+  acceptedAt: string | null;
+  dueAt: string | null;
+  notes: string | null;
+  /** Ce que l'assureur doit réellement : demandé, puis accepté une fois arbitré. */
+  expectedAmount: number;
+  remainingAmount: number;
+  late?: boolean;
+  insurer?: { id: string; name: string; type: string };
+  contract?: { id: string; name: string; reference: string | null } | null;
+  customer?: { id: string; firstName: string; lastName: string; phone?: string | null } | null;
+  sale?: { id: string; number: string; createdAt?: string; totalAmount?: string } | null;
+  beneficiary?: { id: string; membershipNumber: string | null } | null;
+  refunds?: InsuranceRefund[];
+}
+
+export interface ClaimFilters {
+  insurerId?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  customerId?: string;
+}
+
+export async function listClaims(filters: ClaimFilters = {}): Promise<InsuranceClaim[]> {
+  const { data } = await api.get<{ claims: InsuranceClaim[] }>('/insurance/claims', { params: filters });
+  return data.claims;
+}
+
+export async function getClaim(id: string): Promise<InsuranceClaim> {
+  const { data } = await api.get<{ claim: InsuranceClaim }>(`/insurance/claims/${id}`);
+  return data.claim;
+}
+
+export async function createClaim(input: InsuranceClaimCreateInput) {
+  const { data } = await api.post('/insurance/claims', input);
+  return data.claim as InsuranceClaim;
+}
+
+export async function updateClaim(id: string, input: InsuranceClaimUpdateInput) {
+  const { data } = await api.patch(`/insurance/claims/${id}`, input);
+  return data.claim as InsuranceClaim;
+}
+
+export async function addRefund(claimId: string, input: InsuranceRefundCreateInput) {
+  const { data } = await api.post(`/insurance/claims/${claimId}/refunds`, input);
+  return data.claim as InsuranceClaim;
+}
+
+export async function listRefunds(filters: { insurerId?: string; from?: string; to?: string } = {}) {
+  const { data } = await api.get<{ refunds: InsuranceRefund[]; total: number }>('/insurance/refunds', {
+    params: filters,
+  });
+  return data;
+}
+
+export async function deleteRefund(id: string): Promise<void> {
+  await api.delete(`/insurance/refunds/${id}`);
+}
+
+/* ---------- Créances et pilotage ---------- */
+
+export interface InsuranceReceivables {
+  totals: { due: number; pending: number; late: number; partiallyPaid: number; paid: number };
+  items: InsuranceClaim[];
+}
+
+export async function getInsuranceReceivables(
+  filters: ClaimFilters & { minAmount?: number } = {},
+): Promise<InsuranceReceivables> {
+  const { data } = await api.get<InsuranceReceivables>('/insurance/receivables', { params: filters });
+  return data;
+}
+
+export interface InsuranceDashboard {
+  totals: {
+    requested: number;
+    accepted: number;
+    pending: number;
+    invoiced: number;
+    received: number;
+    remaining: number;
+    late: number;
+  };
+  months: { month: string; requested: number; received: number }[];
+  byStatus: { status: string; count: number; amount: number }[];
+  byInsurer: { insurerId: string; name: string; requested: number; received: number; remaining: number; claims: number }[];
+}
+
+export async function getInsuranceDashboard(): Promise<InsuranceDashboard> {
+  const { data } = await api.get<InsuranceDashboard>('/insurance/dashboard');
+  return data;
 }

@@ -2,191 +2,214 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ShieldCheck, Pencil, CheckCircle2 } from 'lucide-react';
+import { Plus, ShieldCheck, Pencil, FileText, Users, ClipboardList } from 'lucide-react';
 import { insurerCreateSchema, type InsurerCreateInput } from '@oculo/shared-types';
-import { listInsurers, createInsurer, updateInsurer, getInsurerUpcoming, markInsurancePaid, type Insurer } from '../../features/management/api';
+import {
+  listInsurers,
+  createInsurer,
+  updateInsurer,
+  getInsurerUpcoming,
+  type Insurer,
+  type InsuranceClaim,
+} from '../../features/management/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { INSURER_TYPES, insurerTypeLabel, TabBar } from './insurance/shared';
+import { OverviewTab } from './insurance/OverviewTab';
+import { ContractsTab } from './insurance/ContractsTab';
+import { ClaimsTab, ClaimDetailModal } from './insurance/ClaimsTab';
+import { RefundsTab } from './insurance/RefundsTab';
+import { ReceivablesTab } from './insurance/ReceivablesTab';
 
-const TYPES = [
-  { value: 'HEALTH_INSURANCE', label: 'Assurance maladie' },
-  { value: 'MUTUAL', label: 'Mutuelle' },
-  { value: 'PRIVATE', label: 'Assurance privée' },
-  { value: 'THIRD_PARTY', label: 'Tiers payant' },
+type Tab = 'overview' | 'insurers' | 'contracts' | 'claims' | 'refunds' | 'receivables';
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'overview', label: 'Tableau de bord' },
+  { value: 'insurers', label: 'Assureurs' },
+  { value: 'contracts', label: 'Contrats' },
+  { value: 'claims', label: 'Prises en charge' },
+  { value: 'refunds', label: 'Remboursements' },
+  { value: 'receivables', label: 'Créances' },
 ];
-const typeLabel = (v: string) => TYPES.find((t) => t.value === v)?.label ?? v;
 
 export function InsurancePage() {
-  const qc = useQueryClient();
   const canCreate = usePermission('insurance.create');
   const canUpdate = usePermission('insurance.update');
+  const [tab, setTab] = useState<Tab>('overview');
   const [editing, setEditing] = useState<Insurer | null>(null);
   const [open, setOpen] = useState(false);
-  const [paymentFor, setPaymentFor] = useState<{ insurerId: string; name: string; amount: number } | null>(null);
+  const [claim, setClaim] = useState<InsuranceClaim | null>(null);
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const { data, isLoading } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers });
-  const { data: upcoming } = useQuery({ queryKey: ['insurer-upcoming', month], queryFn: () => getInsurerUpcoming(month) });
-  const pendingFor = (id: string) => upcoming?.items.find((x) => x.insurerId === id);
-  const paymentMut = useMutation({
-    mutationFn: ({ insurerId, monthStart, amount }: { insurerId: string; monthStart: string; amount?: number }) =>
-      markInsurancePaid(insurerId, monthStart, amount),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
-      qc.invalidateQueries({ queryKey: ['insurance-summary'] });
-      qc.invalidateQueries({ queryKey: ['dashboard'] });
-      setPaymentFor(null);
-    },
-    onError: (e) => alert(apiErrorMessage(e)),
+  const { data: upcoming } = useQuery({
+    queryKey: ['insurer-upcoming', month],
+    queryFn: () => getInsurerUpcoming(month),
   });
 
   return (
     <div>
       <PageHeader
         title="Assurances"
-        subtitle="Mutuelles, tiers payant et prises en charge"
-        actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nouvelle assurance</Button>}
+        subtitle="Contrats, garanties, prises en charge et remboursements"
+        actions={
+          canCreate && (
+            <Button onClick={() => { setEditing(null); setOpen(true); }}>
+              <Plus className="h-4 w-4" /> Nouvelle assurance
+            </Button>
+          )
+        }
       />
 
+      {/* Bandeau mensuel : tout est calculé depuis les remboursements
+          réellement enregistrés, plus aucun montant ne se saisit ici. */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
         <div>
           <p className="text-sm font-semibold text-content">Remboursements assurance par mois</p>
-          <p className="text-xs text-content-muted">Saisissez le montant réellement reçu dès réception.</p>
+          <p className="text-xs text-content-muted">
+            Calculé à partir des versements enregistrés sur les dossiers.
+          </p>
         </div>
-        <input aria-label="Mois de remboursement" className="input h-9 w-auto" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        <input
+          aria-label="Mois de remboursement"
+          className="input h-9 w-auto"
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+        />
         {upcoming && (
-          <Badge tone="info">
-            À recevoir : {formatCurrency(upcoming.total)} · reçu : {formatCurrency(upcoming.receivedTotal ?? 0)} · échéance {formatDate(upcoming.dueDate)}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="success">Reçu ce mois : {formatCurrency(upcoming.receivedThisMonth ?? 0)}</Badge>
+            <Badge tone="info">En attente : {formatCurrency(upcoming.pendingTotal ?? 0)}</Badge>
+            <Badge tone="danger">En retard : {formatCurrency(upcoming.lateTotal ?? 0)}</Badge>
+            <Badge tone="neutral">
+              Prochaine échéance : {upcoming.nextDueDate ? formatDate(upcoming.nextDueDate) : '—'}
+            </Badge>
+          </div>
         )}
       </div>
 
+      <TabBar tabs={TABS} value={tab} onChange={setTab} />
+
       {isLoading ? (
         <PageLoader />
-      ) : !data || data.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="Aucune assurance" />
+      ) : tab === 'overview' ? (
+        <OverviewTab />
+      ) : tab === 'insurers' ? (
+        <InsurersTab
+          insurers={data ?? []}
+          canUpdate={canUpdate}
+          onEdit={(i) => { setEditing(i); setOpen(true); }}
+        />
+      ) : tab === 'contracts' ? (
+        <ContractsTab insurers={data ?? []} canUpdate={canUpdate} canCreate={canCreate} />
+      ) : tab === 'claims' ? (
+        <ClaimsTab insurers={data ?? []} canUpdate={canUpdate} canCreate={canCreate} />
+      ) : tab === 'refunds' ? (
+        <RefundsTab insurers={data ?? []} canUpdate={canUpdate} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((i) => (
-            <div key={i.id} className="card p-5">
-              <div className="flex items-start justify-between">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-[color:var(--success)]/15 text-success">
-                  <ShieldCheck className="h-5 w-5" />
-                </span>
-                <Badge tone="info">{typeLabel(i.type)}</Badge>
-              </div>
-              <h3 className="mt-3 font-display font-bold text-content">{i.name}</h3>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="font-display text-2xl font-bold text-success">{i.coveragePercent}%</span>
-                <span className="text-xs text-content-muted">de prise en charge</span>
-              </div>
-              <div className="mt-2 space-y-1 text-xs text-content-faint">
-                {i.phone && <p>{i.phone}</p>}
-                {i.email && <p>{i.email}</p>}
-              </div>
-              {(() => {
-                const p = pendingFor(i.id);
-                return p ? (
-                  <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs">
-                    <div>
-                      <span className="text-content-muted">Restant ce mois : </span>
-                      <span className="font-semibold text-content">{formatCurrency(p.remainingAmount ?? p.amount)}</span>
-                      <span className="text-content-faint"> · {p.salesCount} vente(s)</span>
-                    </div>
-                    <div className="mt-1 text-content-faint">
-                      Attendu : {formatCurrency(p.expectedAmount ?? p.amount)}
-                      {(p.receivedAmount ?? 0) > 0 ? ` · Reçu : ${formatCurrency(p.receivedAmount)}` : ''}
-                    </div>
-                    {canUpdate && upcoming && (
-                      <button
-                        onClick={() => setPaymentFor({ insurerId: i.id, name: i.name, amount: p.remainingAmount ?? p.amount })}
-                        disabled={paymentMut.isPending}
-                        className="btn-outline mt-2 h-7 w-full rounded-md text-xs text-success disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Saisir un montant reçu
-                      </button>
-                    )}
-                  </div>
-                ) : null;
-              })()}
-              {canUpdate && (
-                <button onClick={() => { setEditing(i); setOpen(true); }} className="btn-outline mt-3 h-8 w-full rounded-lg text-xs">
-                  <Pencil className="h-3.5 w-3.5" /> Modifier
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <ReceivablesTab insurers={data ?? []} onOpenClaim={setClaim} />
       )}
 
       {open && <InsurerModal insurer={editing} onClose={() => setOpen(false)} />}
-      {paymentFor && upcoming && (
-        <InsurancePaymentModal
-          insurerName={paymentFor.name}
-          maxAmount={paymentFor.amount}
-          loading={paymentMut.isPending}
-          onClose={() => setPaymentFor(null)}
-          onSubmit={(amount) =>
-            paymentMut.mutate({ insurerId: paymentFor.insurerId, monthStart: upcoming.monthStart, amount })
-          }
-        />
+      {claim && (
+        <ClaimDetailModal claim={claim} canUpdate={canUpdate} onClose={() => setClaim(null)} />
       )}
     </div>
   );
 }
 
-function InsurancePaymentModal({
-  insurerName,
-  maxAmount,
-  loading,
-  onClose,
-  onSubmit,
+/** Cartes assureurs : le design d'origine, enrichi des compteurs du module. */
+function InsurersTab({
+  insurers,
+  canUpdate,
+  onEdit,
 }: {
-  insurerName: string;
-  maxAmount: number;
-  loading: boolean;
-  onClose: () => void;
-  onSubmit: (amount: number) => void;
+  insurers: Insurer[];
+  canUpdate: boolean;
+  onEdit: (insurer: Insurer) => void;
 }) {
-  const [amount, setAmount] = useState(() => String(Math.round(maxAmount)));
-  const parsed = Number(amount);
-  const invalid = !Number.isFinite(parsed) || parsed <= 0 || parsed > maxAmount;
-
+  if (insurers.length === 0) {
+    return (
+      <EmptyState
+        icon={ShieldCheck}
+        title="Aucune assurance"
+        hint="Créez un assureur, puis son contrat et ses garanties."
+      />
+    );
+  }
   return (
-    <Modal open onClose={onClose} title={`Paiement reçu — ${insurerName}`} size="sm">
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!invalid) onSubmit(parsed);
-        }}
-      >
-        <div className="rounded-xl bg-surface-2 p-3 text-sm">
-          <div className="flex justify-between gap-3">
-            <span className="text-content-muted">Restant à recevoir</span>
-            <span className="font-display font-bold text-content">{formatCurrency(maxAmount)}</span>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {insurers.map((i) => (
+        <div key={i.id} className="card p-5">
+          <div className="flex items-start justify-between">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-[color:var(--success)]/15 text-success">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <Badge tone="info">{insurerTypeLabel(i.type)}</Badge>
           </div>
+          <h3 className="mt-3 font-display font-bold text-content">{i.name}</h3>
+
+          {/* Le taux n'est plus la règle : il ne sert qu'à défaut de contrat. */}
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="font-display text-2xl font-bold text-success">{i.coveragePercent}%</span>
+            <span className="text-xs text-content-muted">
+              {(i.contractCount ?? 0) > 0 ? 'taux par défaut' : 'de prise en charge'}
+            </span>
+          </div>
+
+          <div className="mt-2 space-y-1 text-xs text-content-faint">
+            {i.phone && <p>{i.phone}</p>}
+            {i.email && <p>{i.email}</p>}
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-surface-2 p-2.5 text-center text-xs">
+            <Counter icon={FileText} value={i.contractCount ?? 0} label="contrats" />
+            <Counter icon={Users} value={i.beneficiaryCount ?? 0} label="assurés" />
+            <Counter icon={ClipboardList} value={i.claimCount ?? 0} label="dossiers" />
+          </div>
+
+          <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs">
+            <div className="flex justify-between gap-2">
+              <span className="text-content-muted">En attente</span>
+              <span className="font-semibold text-warning">{formatCurrency(i.pendingAmount ?? 0)}</span>
+            </div>
+            <div className="mt-1 flex justify-between gap-2">
+              <span className="text-content-muted">Remboursé</span>
+              <span className="font-semibold text-success">{formatCurrency(i.refundedAmount ?? 0)}</span>
+            </div>
+          </div>
+
+          {canUpdate && (
+            <button
+              onClick={() => onEdit(i)}
+              className="btn-outline mt-3 h-8 w-full rounded-lg text-xs"
+            >
+              <Pencil className="h-3.5 w-3.5" /> Modifier
+            </button>
+          )}
         </div>
-        <Field label="Montant reçu">
-          <input
-            className="input"
-            type="number"
-            min="1"
-            max={maxAmount}
-            step="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            autoFocus
-          />
-          {invalid && <p className="mt-1 text-xs text-danger">Saisissez un montant entre 1 et {formatCurrency(maxAmount)}.</p>}
-        </Field>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={loading} disabled={invalid}>Enregistrer</Button>
-        </div>
-      </form>
-    </Modal>
+      ))}
+    </div>
+  );
+}
+
+function Counter({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: typeof FileText;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div>
+      <Icon className="mx-auto h-3.5 w-3.5 text-content-faint" />
+      <p className="mt-0.5 font-display font-bold text-content">{value}</p>
+      <p className="text-content-faint">{label}</p>
+    </div>
   );
 }
 
@@ -220,10 +243,10 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Type">
             <select className="input" {...register('type')}>
-              {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {INSURER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </Field>
-          <Field label="Prise en charge (%)">
+          <Field label="Prise en charge par défaut (%)">
             <select className="input" {...register('coveragePercent', { valueAsNumber: true })}>
               {Array.from({ length: 101 }, (_, i) => (
                 <option key={i} value={i}>
@@ -233,6 +256,10 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
             </select>
           </Field>
         </div>
+        <p className="rounded-lg bg-surface-2 p-2.5 text-xs text-content-muted">
+          Ce taux ne s'applique qu'aux clients sans contrat. Dès qu'un client est rattaché à un
+          contrat, ce sont ses garanties par catégorie qui décident.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>

@@ -83,6 +83,11 @@ model Tenant {
   cashTransfers     CashTransfer[]
   suppliers         Supplier[]
   insurers          Insurer[]
+  insuranceContracts    InsuranceContract[]
+  insuranceGuarantees   InsuranceGuarantee[]
+  insuranceBeneficiaries InsuranceBeneficiary[]
+  insuranceClaims       InsuranceClaim[]
+  insuranceRefunds      InsuranceRefund[]
   lensOrders        LensOrder[]
   repairs           Repair[]
   subscription      Subscription?
@@ -517,6 +522,8 @@ model Customer {
   lensOrders    LensOrder[]
   repairs       Repair[]
   patient       Patient?  @relation("CustomerPatient")
+  insuranceBeneficiaries InsuranceBeneficiary[]
+  insuranceClaims        InsuranceClaim[]
 
   @@index([tenantId])
 }
@@ -650,6 +657,8 @@ model Sale {
 
   items    SaleItem[]
   payments Payment[]
+  /// Dossier de prise en charge assurance rattaché à cette vente (au plus un).
+  insuranceClaim InsuranceClaim?
 
   @@unique([tenantId, number])
   @@index([tenantId, branchId])
@@ -1119,21 +1128,195 @@ model Supplier {
 }
 
 model Insurer {
-  id              String      @id @default(uuid())
-  tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name            String
-  type            InsurerType @default(HEALTH_INSURANCE)
-  coveragePercent Int         @default(0)
+  id       String      @id @default(uuid())
+  tenantId String
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+  type     InsurerType @default(HEALTH_INSURANCE)
+  /// Taux de prise en charge historique, appliqué à tout le panier. Conservé
+  /// comme REPLI : il ne sert plus que si l'assureur n'a aucun contrat actif
+  /// couvrant le client. La règle de référence est désormais la garantie
+  /// (InsuranceGuarantee), par catégorie de produit.
+  coveragePercent Int      @default(0)
   phone           String?
   email           String?
   notes           String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  sales Sale[]
+  sales     Sale[]
+  contracts InsuranceContract[]
+  claims    InsuranceClaim[]
+  refunds   InsuranceRefund[]
 
   @@index([tenantId])
+}
+
+/**
+ * ---------------- PRISES EN CHARGE ASSURANCE ----------------
+ * Chaîne métier : Assureur → Contrat → Garantie → Bénéficiaire →
+ * Prise en charge (dossier) → Remboursement.
+ */
+
+enum InsuranceContractStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum InsuranceClaimStatus {
+  DRAFT
+  PENDING
+  ACCEPTED
+  PARTIALLY_ACCEPTED
+  REJECTED
+  INVOICED
+  PARTIALLY_PAID
+  PAID
+}
+
+/// Convention passée avec un assureur : un assureur peut en avoir plusieurs
+/// (une par entreprise cliente, par exemple), chacune avec ses garanties.
+model InsuranceContract {
+  id         String                  @id @default(uuid())
+  tenantId   String
+  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  insurerId  String
+  insurer    Insurer                 @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  name       String
+  reference  String?
+  startsAt   DateTime?
+  endsAt     DateTime?
+  status     InsuranceContractStatus @default(ACTIVE)
+  notes      String?
+  createdById String?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  guarantees    InsuranceGuarantee[]
+  beneficiaries InsuranceBeneficiary[]
+  claims        InsuranceClaim[]
+
+  @@index([tenantId])
+  @@index([tenantId, insurerId])
+}
+
+/// Règle de prise en charge d'une catégorie de produits pour un contrat :
+/// « Montures 80 %, plafond 75 000 FCFA ». `category` vaut une valeur de
+/// ProductCategory, ou 'ALL' pour « toutes catégories ».
+model InsuranceGuarantee {
+  id         String            @id @default(uuid())
+  tenantId   String
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId String
+  contract   InsuranceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  category   String
+  coveragePercent Int          @default(0)
+  /// Plafond de prise en charge pour cette catégorie sur une même vente.
+  ceilingAmount    Decimal?     @db.Decimal(12, 2)
+  /// Montant maximum couvert sur la durée du contrat (information de suivi).
+  maxAmount        Decimal?     @db.Decimal(12, 2)
+  /// Franchise : reste systématiquement à la charge du client.
+  deductibleAmount Decimal?     @db.Decimal(12, 2)
+  conditions       String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([contractId, category])
+  @@index([tenantId])
+}
+
+/// Client de l'établissement rattaché à un contrat (assuré ou ayant droit).
+model InsuranceBeneficiary {
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId       String
+  contract         InsuranceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  customerId       String
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  /// Numéro d'assuré / de carte, tel qu'il figure sur la carte du client.
+  membershipNumber String?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  claims InsuranceClaim[]
+
+  @@unique([contractId, customerId])
+  @@index([tenantId])
+  @@index([tenantId, customerId])
+}
+
+/// Dossier de prise en charge : ce que l'établissement demande à l'assureur
+/// pour une vente donnée, puis ce que l'assureur accepte et paie. Une demande
+/// acceptée n'est JAMAIS un encaissement : seul un InsuranceRefund l'est.
+model InsuranceClaim {
+  id            String                @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number        String
+  insurerId     String
+  insurer       Insurer               @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  contractId    String?
+  contract      InsuranceContract?    @relation(fields: [contractId], references: [id])
+  beneficiaryId String?
+  beneficiary   InsuranceBeneficiary? @relation(fields: [beneficiaryId], references: [id])
+  customerId    String?
+  customer      Customer?             @relation(fields: [customerId], references: [id])
+  /// Vente couverte. Unique : un dossier au plus par vente, pour que la
+  /// reprise de l'historique et la création automatique restent idempotentes.
+  saleId        String?               @unique
+  sale          Sale?                 @relation(fields: [saleId], references: [id])
+  status        InsuranceClaimStatus  @default(PENDING)
+  /// Total de la vente, figé au moment de la demande.
+  totalAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  /// Montant demandé à l'assureur.
+  requestedAmount Decimal  @default(0) @db.Decimal(12, 2)
+  /// Montant que l'assureur a accepté de prendre en charge.
+  acceptedAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  /// Part restant à la charge du client.
+  patientAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  /// Somme des remboursements réellement reçus (jamais saisie à la main).
+  paidAmount      Decimal  @default(0) @db.Decimal(12, 2)
+  requestedAt   DateTime  @default(now())
+  acceptedAt    DateTime?
+  dueAt         DateTime?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  refunds InsuranceRefund[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, insurerId])
+  @@index([tenantId, dueAt])
+}
+
+/// Encaissement réel d'un dossier : ce que l'assureur a versé, quand et comment.
+model InsuranceRefund {
+  id             String         @id @default(uuid())
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  claimId        String
+  claim          InsuranceClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  insurerId      String
+  insurer        Insurer        @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  /// Montant attendu au moment du versement (photo du restant dû).
+  expectedAmount Decimal        @default(0) @db.Decimal(12, 2)
+  receivedAmount Decimal        @db.Decimal(12, 2)
+  receivedAt     DateTime       @default(now())
+  reference      String?
+  method         PaymentMethod?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime       @default(now())
+
+  @@index([tenantId, receivedAt])
+  @@index([tenantId, insurerId])
+  @@index([claimId])
 }
 
 /**

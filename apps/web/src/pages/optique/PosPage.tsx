@@ -41,6 +41,7 @@ import {
   WarrantySelect,
 } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
+import { useCustomerCoverage, decideCoverage } from '../../features/management/coverage';
 import { getCurrentRegister } from '../../features/cashregister/api';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { useUIStore } from '../../store/ui';
@@ -147,16 +148,27 @@ export function PosPage() {
     effectiveVat,
   );
 
-  // Prise en charge synchronisée avec l'assureur choisi : dès que le total change
-  // (ajout/retrait d'article, remise), la part assurance est recalculée à son
-  // taux. `total` ne dépend pas de la prise en charge, donc pas de boucle.
+  // Prise en charge synchronisée avec l'assureur choisi. Si le client est
+  // bénéficiaire d'un contrat actif, ce sont ses garanties — par catégorie de
+  // produit, avec plafonds et franchises — qui décident ; sinon on garde le
+  // taux de l'assureur. `total` ne dépend pas de la prise en charge, donc pas
+  // de boucle.
   const selectedInsurer = insurers?.find((x) => x.id === insurerId);
+  const { data: coverage } = useCustomerCoverage(pos.customerId, insurerId, canSeeInsurers);
+  // Les garanties raisonnent par famille de produit : la catégorie vient de la
+  // liste de stock déjà chargée, le panier n'a pas à la porter.
+  const categoryOf = (productId: string) =>
+    (stock ?? []).find((p) => p.productId === productId)?.category ?? 'AUTRE';
+  const coverageLines = pos.lines.map((l) => ({
+    category: categoryOf(l.productId),
+    lineTotal: l.unitPrice * l.quantity,
+  }));
+  const decision = decideCoverage(coverageLines, totals.total, selectedInsurer, coverage);
   useEffect(() => {
     if (!selectedInsurer) return;
-    const target = Math.round((totals.total * selectedInsurer.coveragePercent) / 100);
-    if (target !== pos.insuranceAmount) pos.setInsurance(target);
+    if (decision.amount !== pos.insuranceAmount) pos.setInsurance(decision.amount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInsurer?.id, selectedInsurer?.coveragePercent, totals.total]);
+  }, [selectedInsurer?.id, decision.amount]);
 
   const products = (stock ?? []).filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()),
@@ -346,8 +358,9 @@ export function PosPage() {
               </label>
             </div>
 
-            {/* Assurance : sélectionner un assureur applique son taux de prise en
-                charge sur le total (montant restant modifiable au-dessus). */}
+            {/* Assurance : choisir un assureur calcule la prise en charge —
+                par garanties si le client a un contrat, sinon au taux de
+                l'assureur (montant restant modifiable au-dessus). */}
             {canSeeInsurers && insurers && insurers.length > 0 && (
               <label className="text-xs text-content-muted">
                 Assurance
@@ -357,7 +370,7 @@ export function PosPage() {
                   onChange={(e) => {
                     setInsurerId(e.target.value);
                     // Choisir « Aucune » remet la prise en charge à zéro ; sinon
-                    // c'est l'effet ci-dessous qui la calcule et la garde à jour.
+                    // c'est l'effet ci-dessus qui la calcule et la garde à jour.
                     if (!e.target.value) pos.setInsurance(0);
                   }}
                 >
@@ -368,6 +381,9 @@ export function PosPage() {
                     </option>
                   ))}
                 </select>
+                {insurerId && decision.rule && (
+                  <span className="mt-1 block text-[11px] text-content-faint">{decision.rule}</span>
+                )}
               </label>
             )}
 

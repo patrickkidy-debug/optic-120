@@ -1780,6 +1780,220 @@ export type InsurerCreateInput = z.infer<typeof insurerCreateSchema>;
 export const insurerUpdateSchema = insurerCreateSchema.partial();
 export type InsurerUpdateInput = z.infer<typeof insurerUpdateSchema>;
 
+/* --- Prises en charge assurance : contrats, garanties, dossiers --- */
+
+export const InsuranceContractStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
+} as const;
+export type InsuranceContractStatus =
+  (typeof InsuranceContractStatus)[keyof typeof InsuranceContractStatus];
+
+/**
+ * Cycle de vie d'un dossier. Une demande ACCEPTÉE n'est pas un encaissement :
+ * seul un remboursement enregistré fait avancer vers PARTIALLY_PAID / PAID.
+ */
+export const InsuranceClaimStatus = {
+  DRAFT: 'DRAFT',
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  PARTIALLY_ACCEPTED: 'PARTIALLY_ACCEPTED',
+  REJECTED: 'REJECTED',
+  INVOICED: 'INVOICED',
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
+  PAID: 'PAID',
+} as const;
+export type InsuranceClaimStatus =
+  (typeof InsuranceClaimStatus)[keyof typeof InsuranceClaimStatus];
+
+export const INSURANCE_CLAIM_STATUSES = Object.values(InsuranceClaimStatus) as [
+  InsuranceClaimStatus,
+  ...InsuranceClaimStatus[],
+];
+
+/** Catégorie fourre-tout d'une garantie : s'applique à tout le panier. */
+export const GUARANTEE_ALL_CATEGORIES = 'ALL';
+
+/** Catégories couvrables par une garantie (familles produit + « toutes »). */
+export const GUARANTEE_CATEGORIES = [
+  GUARANTEE_ALL_CATEGORIES,
+  ...Object.values(ProductCategory),
+] as [string, ...string[]];
+
+export const insuranceContractCreateSchema = z.object({
+  insurerId: z.string().uuid(),
+  name: z.string().min(1).max(160),
+  reference: z.string().max(80).optional().or(z.literal('')),
+  startsAt: z.string().optional().or(z.literal('')),
+  endsAt: z.string().optional().or(z.literal('')),
+  status: z
+    .enum([
+      InsuranceContractStatus.ACTIVE,
+      InsuranceContractStatus.SUSPENDED,
+      InsuranceContractStatus.EXPIRED,
+    ])
+    .default(InsuranceContractStatus.ACTIVE),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type InsuranceContractCreateInput = z.infer<typeof insuranceContractCreateSchema>;
+export const insuranceContractUpdateSchema = insuranceContractCreateSchema.partial().omit({
+  insurerId: true,
+});
+export type InsuranceContractUpdateInput = z.infer<typeof insuranceContractUpdateSchema>;
+
+export const insuranceGuaranteeCreateSchema = z.object({
+  category: z.enum(GUARANTEE_CATEGORIES),
+  coveragePercent: z.number().int().min(0).max(100),
+  ceilingAmount: z.number().min(0).optional().nullable(),
+  maxAmount: z.number().min(0).optional().nullable(),
+  deductibleAmount: z.number().min(0).optional().nullable(),
+  conditions: z.string().max(1000).optional().or(z.literal('')),
+});
+export type InsuranceGuaranteeCreateInput = z.infer<typeof insuranceGuaranteeCreateSchema>;
+export const insuranceGuaranteeUpdateSchema = insuranceGuaranteeCreateSchema.partial();
+export type InsuranceGuaranteeUpdateInput = z.infer<typeof insuranceGuaranteeUpdateSchema>;
+
+export const insuranceBeneficiaryCreateSchema = z.object({
+  customerId: z.string().uuid(),
+  membershipNumber: z.string().max(80).optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type InsuranceBeneficiaryCreateInput = z.infer<typeof insuranceBeneficiaryCreateSchema>;
+
+export const insuranceClaimCreateSchema = z.object({
+  insurerId: z.string().uuid(),
+  saleId: z.string().uuid().optional().or(z.literal('')),
+  customerId: z.string().uuid().optional().or(z.literal('')),
+  contractId: z.string().uuid().optional().or(z.literal('')),
+  beneficiaryId: z.string().uuid().optional().or(z.literal('')),
+  totalAmount: z.number().min(0).default(0),
+  requestedAmount: z.number().min(0),
+  acceptedAmount: z.number().min(0).default(0),
+  status: z.enum(INSURANCE_CLAIM_STATUSES).default(InsuranceClaimStatus.PENDING),
+  requestedAt: z.string().optional().or(z.literal('')),
+  dueAt: z.string().optional().or(z.literal('')),
+  notes: z.string().max(2000).optional().or(z.literal('')),
+});
+export type InsuranceClaimCreateInput = z.infer<typeof insuranceClaimCreateSchema>;
+
+/** `paidAmount` est volontairement absent : il ne vient que des remboursements. */
+export const insuranceClaimUpdateSchema = insuranceClaimCreateSchema
+  .partial()
+  .omit({ insurerId: true, saleId: true });
+export type InsuranceClaimUpdateInput = z.infer<typeof insuranceClaimUpdateSchema>;
+
+export const insuranceRefundCreateSchema = z.object({
+  receivedAmount: z.number().positive(),
+  receivedAt: z.string().optional().or(z.literal('')),
+  reference: z.string().max(120).optional().or(z.literal('')),
+  method: paymentMethodEnum.optional(),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type InsuranceRefundCreateInput = z.infer<typeof insuranceRefundCreateSchema>;
+
+/* --- Calculs de prise en charge (partagés caisse ↔ serveur) --- */
+
+/** Montant d'un dossier tel qu'il compte dans les créances. */
+export interface ClaimAmounts {
+  status: InsuranceClaimStatus;
+  requestedAmount: number;
+  acceptedAmount: number;
+  paidAmount: number;
+}
+
+/**
+ * Montant que l'assureur doit réellement. Tant que la demande n'est pas
+ * arbitrée, c'est le montant demandé ; une fois arbitrée, c'est le montant
+ * accepté ; un refus ne doit rien.
+ */
+export function claimExpectedAmount(claim: ClaimAmounts): number {
+  if (claim.status === InsuranceClaimStatus.REJECTED) return 0;
+  const arbitrated: InsuranceClaimStatus[] = [
+    InsuranceClaimStatus.ACCEPTED,
+    InsuranceClaimStatus.PARTIALLY_ACCEPTED,
+    InsuranceClaimStatus.INVOICED,
+    InsuranceClaimStatus.PARTIALLY_PAID,
+    InsuranceClaimStatus.PAID,
+  ];
+  return arbitrated.includes(claim.status) ? claim.acceptedAmount : claim.requestedAmount;
+}
+
+/** Reste dû par l'assureur : jamais stocké, toujours recalculé. */
+export function claimRemainingAmount(claim: ClaimAmounts): number {
+  return Math.max(0, claimExpectedAmount(claim) - claim.paidAmount);
+}
+
+export interface CoverageCartLine {
+  category: string;
+  lineTotal: number;
+}
+
+export interface CoverageGuarantee {
+  category: string;
+  coveragePercent: number;
+  ceilingAmount?: number | null;
+  deductibleAmount?: number | null;
+}
+
+export interface CoverageBreakdownLine {
+  category: string;
+  base: number;
+  covered: number;
+  coveragePercent: number;
+  /** Vrai si le plafond de la garantie a rogné le montant couvert. */
+  capped: boolean;
+}
+
+export interface CoverageResult {
+  amount: number;
+  lines: CoverageBreakdownLine[];
+  /** Faux si aucune garantie ne couvre le panier : replier sur le taux assureur. */
+  matched: boolean;
+}
+
+/**
+ * Applique les garanties d'un contrat à un panier : pour chaque catégorie, la
+ * garantie de cette catégorie sinon celle « toutes catégories ». La franchise
+ * est retirée avant le pourcentage, le plafond s'applique après.
+ *
+ * Fonction pure : la caisse l'utilise pour proposer un montant, le serveur la
+ * rejoue pour créer le dossier.
+ */
+export function computeGuaranteeCoverage(
+  lines: CoverageCartLine[],
+  guarantees: CoverageGuarantee[],
+): CoverageResult {
+  const byCategory = new Map<string, number>();
+  for (const line of lines) {
+    byCategory.set(line.category, (byCategory.get(line.category) ?? 0) + line.lineTotal);
+  }
+  const fallback = guarantees.find((g) => g.category === GUARANTEE_ALL_CATEGORIES);
+  const out: CoverageBreakdownLine[] = [];
+  let amount = 0;
+  let matched = false;
+
+  for (const [category, base] of byCategory) {
+    const rule = guarantees.find((g) => g.category === category) ?? fallback;
+    if (!rule) continue;
+    matched = true;
+    const afterDeductible = Math.max(0, base - (rule.deductibleAmount ?? 0));
+    const raw = Math.round((afterDeductible * rule.coveragePercent) / 100);
+    const ceiling = rule.ceilingAmount ?? null;
+    const covered = ceiling != null ? Math.min(raw, ceiling) : raw;
+    amount += covered;
+    out.push({
+      category,
+      base,
+      covered,
+      coveragePercent: rule.coveragePercent,
+      capped: ceiling != null && raw > ceiling,
+    });
+  }
+
+  return { amount, lines: out, matched };
+}
+
 /* --- Abonnements --- */
 
 export const subscribeSchema = z.object({

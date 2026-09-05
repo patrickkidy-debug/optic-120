@@ -13,6 +13,11 @@ import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
+import {
+  createClaimForSale,
+  syncClaimForSale,
+  cancelClaimForSale,
+} from '../management/insurance.service.js';
 import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 
 type Tx = Prisma.TransactionClient;
@@ -188,6 +193,22 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
       include: { items: { include: { product: true } }, customer: true },
     });
 
+    // Prise en charge : ouvre le dossier assurance correspondant. La part
+    // assurance reste déduite de ce que doit le client (paidInit ci-dessus),
+    // mais elle n'est réputée encaissée qu'au remboursement de l'assureur.
+    if (isSale && input.insurerId && insurance > 0) {
+      await createClaimForSale(tx, {
+        tenantId,
+        userId,
+        saleId: sale.id,
+        insurerId: input.insurerId,
+        customerId: input.customerId ?? null,
+        totalAmount: total,
+        insuranceAmount: Math.min(insurance, total),
+        at: sale.createdAt,
+      });
+    }
+
     if (isSale) {
       for (const line of lines) {
         // Verres (fabriqués sur commande) : pas de gestion de stock, on ne bloque pas.
@@ -259,7 +280,7 @@ export async function updateSale(
   userId: string,
   input: SaleUpdateInput,
 ) {
-  return prisma.$transaction(async (tx) => {
+  return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findFirst({ where: { id: saleId, tenantId }, include: { items: true } });
     if (!sale) throw notFound('Vente introuvable');
     if (sale.type === SaleType.RETURN) throw conflict("Un retour ne peut pas être modifié");
@@ -440,7 +461,7 @@ export async function updateSale(
       await tx.saleItem.deleteMany({ where: { saleId: sale.id } });
     }
 
-    return tx.sale.update({
+    const updated = await tx.sale.update({
       where: { id: sale.id },
       data: {
         customerId: input.customerId === undefined ? undefined : input.customerId,
@@ -469,7 +490,24 @@ export async function updateSale(
       },
       include: { items: { include: { product: true } }, customer: true },
     });
-  });
+
+    // Le dossier de prise en charge suit la vente, sauf s'il est déjà arbitré
+    // ou remboursé — voir syncClaimForSale.
+    if (isSale) {
+      await syncClaimForSale(tx, {
+        tenantId,
+        userId,
+        saleId: sale.id,
+        insurerId: updated.insurerId,
+        customerId: updated.customerId,
+        totalAmount: total,
+        insuranceAmount: Math.min(insurance, total),
+        at: updated.createdAt,
+      });
+    }
+
+    return updated;
+  }));
 }
 
 /**
@@ -594,6 +632,10 @@ export async function cancelSale(tenantId: string, saleId: string, userId: strin
       }
     }
 
+    // La prise en charge d'une vente annulée n'a plus lieu d'être : on ferme
+    // le dossier, sauf s'il a déjà reçu un versement (à régulariser à la main).
+    await cancelClaimForSale(tx, tenantId, sale.id);
+
     return tx.sale.update({ where: { id: sale.id }, data: { status: SaleStatus.CANCELLED } });
   });
 }
@@ -638,10 +680,26 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
     const paidInit = Math.min(Number(quote.insuranceAmount), Number(quote.totalAmount));
     const status = paidInit >= Number(quote.totalAmount) ? SaleStatus.PAID : SaleStatus.CONFIRMED;
 
-    return tx.sale.update({
+    const sale = await tx.sale.update({
       where: { id: quote.id },
       data: { type: SaleType.SALE, number, status, paidAmount: paidInit },
     });
+
+    // Un devis ne crée pas de dossier ; la conversion en vente, si.
+    if (sale.insurerId && Number(sale.insuranceAmount) > 0) {
+      await syncClaimForSale(tx, {
+        tenantId,
+        userId,
+        saleId: sale.id,
+        insurerId: sale.insurerId,
+        customerId: sale.customerId,
+        totalAmount: Number(sale.totalAmount),
+        insuranceAmount: Math.min(Number(sale.insuranceAmount), Number(sale.totalAmount)),
+        at: new Date(),
+      });
+    }
+
+    return sale;
   }));
 }
 
