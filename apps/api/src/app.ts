@@ -18,6 +18,7 @@ import { stockRoutes } from './modules/stock/stock.routes.js';
 import { inventoryRoutes } from './modules/inventory/inventory.routes.js';
 import { customersRoutes } from './modules/customers/customers.routes.js';
 import { salesRoutes } from './modules/sales/sales.routes.js';
+import { anomaliesRoutes } from './modules/anomalies/anomalies.routes.js';
 import { optiqueRoutes } from './modules/optique/optique.routes.js';
 import { cashRegisterRoutes } from './modules/cashregister/cashregister.routes.js';
 import { paymentsRoutes, paymentWebhookRoutes } from './modules/payments/payments.routes.js';
@@ -135,6 +136,7 @@ export async function buildApp() {
   await app.register(inventoryRoutes, { prefix: '/inventory-counts' });
   await app.register(customersRoutes, { prefix: '/customers' });
   await app.register(salesRoutes, { prefix: '/sales' });
+  await app.register(anomaliesRoutes, { prefix: '/anomalies' });
   await app.register(optiqueRoutes, { prefix: '/optique' });
   await app.register(cashRegisterRoutes, { prefix: '/cashregister' });
   await app.register(paymentsRoutes, { prefix: '/payments' });

@@ -64,6 +64,7 @@ const SuppliersPage = lazy(() => named(import('./pages/management/SuppliersPage'
 const ReceivablesPage = lazy(() => named(import('./pages/management/ReceivablesPage'), 'ReceivablesPage'));
 const ReportsPage = lazy(() => named(import('./pages/management/ReportsPage'), 'ReportsPage'));
 const InsurancePage = lazy(() => named(import('./pages/management/InsurancePage'), 'InsurancePage'));
+const AnomaliesPage = lazy(() => named(import('./pages/anomalies/AnomaliesPage'), 'AnomaliesPage'));
 
 /** Enveloppe les pages publiques (hors AppShell) dans un Suspense. */
 function pub(el: ReactNode) {
@@ -162,6 +163,7 @@ export const router = createBrowserRouter([
           { path: '/gestion/depenses-versements', element: perm('finance.expenses.view', <CashFlowPage />) },
           { path: '/gestion/fournisseurs', element: perm('suppliers.view', <SuppliersPage />) },
           { path: '/gestion/assurances', element: perm('insurance.view', <InsurancePage />) },
+          { path: '/anomalies', element: perm('anomalies.view', <AnomaliesPage />) },
 
           { path: '*', element: <NotFound /> },
         ],

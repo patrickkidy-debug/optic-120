@@ -22,8 +22,21 @@ import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 
 type Tx = Prisma.TransactionClient;
 
+/**
+ * Préfixe par type : chacun le sien, pour que le compteur (qui filtre par
+ * `type`) ne puisse jamais retomber sur un numéro déjà pris par un autre
+ * type — un retour et une vente partageant "VEN" collisionnaient sinon dès
+ * le premier retour de l'année (le compteur de retours repart de 1 alors que
+ * "VEN-<année>-000001" existe déjà côté ventes).
+ */
+function numberPrefix(type: SaleType): string {
+  if (type === SaleType.QUOTE) return 'DEV';
+  if (type === SaleType.RETURN) return 'AVR';
+  return 'VEN';
+}
+
 async function nextNumber(tx: Tx, tenantId: string, type: SaleType): Promise<string> {
-  const prefix = type === SaleType.QUOTE ? 'DEV' : 'VEN';
+  const prefix = numberPrefix(type);
   const year = new Date().getFullYear();
   const count = await tx.sale.count({
     where: { tenantId, type, number: { startsWith: `${prefix}-${year}-` } },

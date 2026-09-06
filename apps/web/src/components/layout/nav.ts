@@ -33,6 +33,7 @@ import {
   BarChart3,
   ListChecks,
   ArrowDownUp,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -98,6 +99,12 @@ export const NAV: NavGroup[] = [
       { to: '/gestion/depenses-versements', labelKey: 'nav.cashFlow', icon: ArrowDownUp, permission: 'finance.expenses.view' },
       { to: '/gestion/fournisseurs', labelKey: 'nav.suppliers', icon: Truck, permission: 'suppliers.view' },
       { to: '/gestion/assurances', labelKey: 'nav.insurance', icon: ShieldCheck, permission: 'insurance.view' },
+    ],
+  },
+  {
+    titleKey: 'nav.anomaliesGroup',
+    items: [
+      { to: '/anomalies', labelKey: 'nav.anomalies', icon: AlertTriangle, permission: 'anomalies.view' },
     ],
   },
   {

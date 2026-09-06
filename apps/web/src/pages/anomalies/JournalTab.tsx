@@ -1,20 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollText } from 'lucide-react';
-import { getAuditLogs } from '../../features/settings/api';
+import { getAnomalyJournal } from '../../features/anomalies/api';
 import { formatDateTime } from '../../lib/format';
-import { PageHeader, Badge, PageLoader, EmptyState, Button } from '../../components/ui';
+import { PageLoader, EmptyState, Badge, Button } from '../../components/ui';
 
 const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
-  LOGIN_SUCCESS: 'success',
-  TENANT_SIGNUP: 'success',
-  SALE_CREATED: 'info',
-  LOGIN_FAILED: 'warning',
-  LOGIN_LOCKED: 'danger',
-  SALE_CANCELLED: 'danger',
-  USER_DEACTIVATED: 'danger',
-  SECURITY_REFRESH_REUSE_DETECTED: 'danger',
   ANOMALY_DECLARED: 'info',
+  ANOMALY_MODIFIED: 'neutral',
   ANOMALY_SUBMITTED: 'warning',
   ANOMALY_APPROVED: 'info',
   ANOMALY_REJECTED: 'danger',
@@ -22,19 +15,14 @@ const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'n
   ANOMALY_CANCELLED: 'danger',
 };
 
-export function AuditPage() {
+/** Journal d'activité du module : qui a fait quoi, quand — mêmes entrées que le journal général, filtrées sur les anomalies. */
+export function JournalTab() {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({
-    queryKey: ['audit', page],
-    queryFn: () => getAuditLogs(page),
-  });
-
+  const { data, isLoading } = useQuery({ queryKey: ['anomalies-journal', page], queryFn: () => getAnomalyJournal(page) });
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
     <div>
-      <PageHeader title="Journal d'activité" subtitle="Traçabilité des actions sensibles" />
-
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
@@ -47,8 +35,6 @@ export function AuditPage() {
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                   <th className="table-cell font-semibold">Action</th>
                   <th className="table-cell font-semibold">Utilisateur</th>
-                  <th className="table-cell font-semibold">Entité</th>
-                  <th className="table-cell font-semibold">IP</th>
                   <th className="table-cell text-right font-semibold">Date</th>
                 </tr>
               </thead>
@@ -57,12 +43,11 @@ export function AuditPage() {
                   <tr key={log.id} className="border-b last:border-0 hover:bg-surface-2/50">
                     <td className="table-cell">
                       <Badge tone={ACTION_TONE[log.action] ?? 'neutral'}>{log.action}</Badge>
+                      {log.metadata && (
+                        <p className="mt-0.5 text-xs text-content-faint">{JSON.stringify(log.metadata)}</p>
+                      )}
                     </td>
-                    <td className="table-cell text-content-muted">
-                      {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'Système'}
-                    </td>
-                    <td className="table-cell text-content-faint">{log.entity ?? '—'}</td>
-                    <td className="table-cell font-mono text-xs text-content-faint">{log.ipAddress ?? '—'}</td>
+                    <td className="table-cell text-content-muted">{log.user ? `${log.user.firstName} ${log.user.lastName}` : 'Système'}</td>
                     <td className="table-cell text-right text-content-muted">{formatDateTime(log.createdAt)}</td>
                   </tr>
                 ))}
@@ -75,7 +60,9 @@ export function AuditPage() {
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Précédent
               </Button>
-              <span>{page} / {totalPages}</span>
+              <span>
+                {page} / {totalPages}
+              </span>
               <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                 Suivant
               </Button>

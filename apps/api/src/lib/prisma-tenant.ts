@@ -36,6 +36,8 @@ const TENANT_MODELS = new Set<string>([
   'InsuranceBeneficiary',
   'InsuranceClaim',
   'InsuranceRefund',
+  'Anomaly',
+  'AnomalyCorrectionEntry',
   'LensOrder',
   'Repair',
   'Subscription',

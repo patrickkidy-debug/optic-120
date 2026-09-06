@@ -505,6 +505,22 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'insurance', action: 'create', label: 'Créer des assurances' },
   { module: 'insurance', action: 'update', label: 'Modifier des assurances' },
 
+  // Corrections sensibles rattachées au module Anomalies (aucune permission
+  // de domaine dédiée n'existait avant pour ces deux modules).
+  { module: 'optique.cashregister', action: 'correct', label: 'Corriger une session de caisse' },
+  { module: 'optique.payments', action: 'correct', label: 'Corriger un paiement' },
+  { module: 'optique.lensOrders', action: 'correct', label: 'Corriger une commande de verres' },
+  { module: 'optique.repairs', action: 'correct', label: 'Corriger une réparation (SAV)' },
+
+  { module: 'anomalies', action: 'view', label: 'Voir les anomalies' },
+  { module: 'anomalies', action: 'declare', label: 'Déclarer une anomalie' },
+  { module: 'anomalies', action: 'modify', label: 'Modifier une anomalie déclarée' },
+  { module: 'anomalies', action: 'approve', label: 'Approuver une correction' },
+  { module: 'anomalies', action: 'reject', label: 'Rejeter une correction' },
+  { module: 'anomalies', action: 'apply', label: 'Appliquer une correction' },
+  { module: 'anomalies', action: 'cancel', label: 'Annuler une anomalie' },
+  { module: 'anomalies', action: 'journal', label: "Voir le journal d'activité des anomalies" },
+
   { module: 'billing', action: 'view', label: "Voir l'abonnement et les factures" },
   { module: 'billing', action: 'manage', label: "Gérer l'abonnement (souscrire/payer)" },
   { module: 'platform', action: 'manage', label: 'Administrer la plateforme SaaS (opérateur)' },
@@ -546,6 +562,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'suppliers.view', 'suppliers.create', 'suppliers.update',
     'insurance.view', 'insurance.create', 'insurance.update',
     'billing.view',
+    'anomalies.view', 'anomalies.declare', 'anomalies.modify', 'anomalies.approve', 'anomalies.reject', 'anomalies.apply', 'anomalies.cancel', 'anomalies.journal',
+    'optique.cashregister.correct', 'optique.payments.correct', 'optique.lensOrders.correct', 'optique.repairs.correct',
   ],
 
   opticien: [
@@ -558,6 +576,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
     'optique.prescriptions.view', 'optique.prescriptions.create',
+    'anomalies.view', 'anomalies.declare', 'anomalies.modify', 'anomalies.approve', 'anomalies.reject', 'anomalies.apply', 'anomalies.cancel', 'anomalies.journal',
+    'optique.lensOrders.correct', 'optique.repairs.correct',
   ],
 
   ophtalmologue: [
@@ -599,6 +619,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.sales.view', 'optique.sales.create', 'optique.sales.cancel', 'optique.sales.refund',
     'optique.cashregister.view', 'optique.cashregister.open', 'optique.cashregister.close',
     'optique.customers.view',
+    'anomalies.view', 'anomalies.declare',
   ],
 
   responsable_stocks: [
@@ -607,6 +628,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
     'suppliers.view', 'suppliers.create', 'suppliers.update',
+    'anomalies.view', 'anomalies.declare', 'anomalies.modify', 'anomalies.approve', 'anomalies.reject', 'anomalies.apply', 'anomalies.cancel', 'anomalies.journal',
   ],
 
   comptable: [
@@ -618,6 +640,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'finance.expenses.view', 'finance.expenses.create', 'finance.expenses.update', 'finance.expenses.delete', 'finance.reports.view',
     'suppliers.view',
     'insurance.view',
+    'anomalies.view', 'anomalies.declare', 'anomalies.approve', 'anomalies.reject', 'anomalies.apply', 'anomalies.journal',
+    'optique.payments.correct', 'optique.cashregister.correct',
   ],
 
   commercial: [
@@ -629,6 +653,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'optique.sales.view', 'optique.sales.create', 'optique.sales.cancel', 'optique.sales.refund',
     'suppliers.view',
     'insurance.view',
+    'anomalies.view', 'anomalies.declare',
   ],
 };
 
@@ -1992,6 +2017,311 @@ export function computeGuaranteeCoverage(
   }
 
   return { amount, lines: out, matched };
+}
+
+/* --- Anomalies & corrections --- */
+
+export const AnomalyCategory = {
+  VENTE: 'VENTE',
+  DEVIS: 'DEVIS',
+  PRODUIT: 'PRODUIT',
+  STOCK: 'STOCK',
+  CAISSE: 'CAISSE',
+  PAIEMENT: 'PAIEMENT',
+  COMMANDE_VERRES: 'COMMANDE_VERRES',
+  CLIENT: 'CLIENT',
+  SAV: 'SAV',
+  ASSURANCE: 'ASSURANCE',
+} as const;
+export type AnomalyCategory = (typeof AnomalyCategory)[keyof typeof AnomalyCategory];
+export const ANOMALY_CATEGORIES = Object.values(AnomalyCategory) as [AnomalyCategory, ...AnomalyCategory[]];
+
+export const ANOMALY_CATEGORY_LABELS: Record<AnomalyCategory, string> = {
+  VENTE: 'Vente',
+  DEVIS: 'Devis',
+  PRODUIT: 'Produit',
+  STOCK: 'Stock',
+  CAISSE: 'Caisse',
+  PAIEMENT: 'Paiement',
+  COMMANDE_VERRES: 'Commande de verres',
+  CLIENT: 'Client',
+  SAV: 'SAV',
+  ASSURANCE: 'Assurance',
+};
+
+/**
+ * Cycle de vie d'une anomalie. DECLARED est un brouillon éditable (métadonnées
+ * seulement) tant que le déclarant ne l'a pas soumis. Une anomalie rejetée ne
+ * touche jamais la donnée d'origine : aucun appel de correction n'est fait
+ * avant APPROVED.
+ */
+export const AnomalyStatus = {
+  DECLARED: 'DECLARED',
+  PENDING_VALIDATION: 'PENDING_VALIDATION',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  CORRECTED: 'CORRECTED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type AnomalyStatus = (typeof AnomalyStatus)[keyof typeof AnomalyStatus];
+export const ANOMALY_STATUSES = Object.values(AnomalyStatus) as [AnomalyStatus, ...AnomalyStatus[]];
+
+export const ANOMALY_STATUS_LABELS: Record<AnomalyStatus, string> = {
+  DECLARED: 'Déclarée',
+  PENDING_VALIDATION: 'En attente de validation',
+  APPROVED: 'Approuvée',
+  REJECTED: 'Rejetée',
+  CORRECTED: 'Corrigée',
+  CANCELLED: 'Annulée',
+};
+
+/** Statuts pour lesquels l'anomalie est encore "ouverte" (non terminale). */
+export const ANOMALY_OPEN_STATUSES: AnomalyStatus[] = [
+  AnomalyStatus.DECLARED,
+  AnomalyStatus.PENDING_VALIDATION,
+  AnomalyStatus.APPROVED,
+];
+
+/** Nature technique de la correction : détermine la fonction appelée à l'application. */
+export const AnomalyCorrectionType = {
+  FIELD_CORRECTION: 'FIELD_CORRECTION',
+  STOCK_ADJUSTMENT: 'STOCK_ADJUSTMENT',
+  SALE_CANCELLATION: 'SALE_CANCELLATION',
+  PRODUCT_RETURN: 'PRODUCT_RETURN',
+  PAYMENT_REVERSAL: 'PAYMENT_REVERSAL',
+  REFUND_CORRECTION: 'REFUND_CORRECTION',
+} as const;
+export type AnomalyCorrectionType = (typeof AnomalyCorrectionType)[keyof typeof AnomalyCorrectionType];
+
+/** Motif codifié (filtrable), complété par reasonNote en texte libre. */
+export const AnomalyReasonCode = {
+  DATA_ENTRY_ERROR: 'DATA_ENTRY_ERROR',
+  PRICE_ERROR: 'PRICE_ERROR',
+  QUANTITY_ERROR: 'QUANTITY_ERROR',
+  WRONG_PRODUCT: 'WRONG_PRODUCT',
+  WRONG_CUSTOMER: 'WRONG_CUSTOMER',
+  PAYMENT_ERROR: 'PAYMENT_ERROR',
+  DUPLICATE: 'DUPLICATE',
+  OMISSION: 'OMISSION',
+  SUSPECTED_FRAUD: 'SUSPECTED_FRAUD',
+  SYSTEM_ERROR: 'SYSTEM_ERROR',
+  OTHER: 'OTHER',
+} as const;
+export type AnomalyReasonCode = (typeof AnomalyReasonCode)[keyof typeof AnomalyReasonCode];
+export const ANOMALY_REASON_CODES = Object.values(AnomalyReasonCode) as [AnomalyReasonCode, ...AnomalyReasonCode[]];
+
+export const ANOMALY_REASON_LABELS: Record<AnomalyReasonCode, string> = {
+  DATA_ENTRY_ERROR: 'Erreur de saisie',
+  PRICE_ERROR: 'Erreur de prix',
+  QUANTITY_ERROR: 'Erreur de quantité',
+  WRONG_PRODUCT: 'Mauvais produit',
+  WRONG_CUSTOMER: 'Mauvais client',
+  PAYMENT_ERROR: 'Erreur de paiement',
+  DUPLICATE: 'Doublon',
+  OMISSION: 'Omission',
+  SUSPECTED_FRAUD: 'Fraude suspectée',
+  SYSTEM_ERROR: 'Erreur système',
+  OTHER: 'Autre',
+};
+
+/** Modèle réellement touché par la correction — résolu côté serveur. */
+export const AnomalyTargetEntity = {
+  SALE: 'SALE',
+  PRODUCT: 'PRODUCT',
+  STOCK_ITEM: 'STOCK_ITEM',
+  CASH_REGISTER: 'CASH_REGISTER',
+  PAYMENT: 'PAYMENT',
+  LENS_ORDER: 'LENS_ORDER',
+  CUSTOMER: 'CUSTOMER',
+  REPAIR: 'REPAIR',
+  INSURANCE_CLAIM: 'INSURANCE_CLAIM',
+  INSURANCE_REFUND: 'INSURANCE_REFUND',
+} as const;
+export type AnomalyTargetEntity = (typeof AnomalyTargetEntity)[keyof typeof AnomalyTargetEntity];
+
+/**
+ * Permission de domaine requise pour APPLIQUER une correction, en plus de
+ * `anomalies.apply`. Table unique, importée identique par le frontend et le
+ * backend : jamais deux listes qui divergent. Réutilise les permissions
+ * existantes quand une fonction de service existante est réutilisée.
+ */
+export const ANOMALY_APPLY_PERMISSION_BY_CATEGORY: Record<AnomalyCategory, string> = {
+  VENTE: 'optique.sales.update',
+  DEVIS: 'optique.sales.update',
+  STOCK: 'optique.stock.adjust',
+  PRODUIT: 'optique.products.update',
+  CAISSE: 'optique.cashregister.correct',
+  PAIEMENT: 'optique.payments.correct',
+  COMMANDE_VERRES: 'optique.lensOrders.correct',
+  CLIENT: 'optique.customers.update',
+  SAV: 'optique.repairs.correct',
+  ASSURANCE: 'insurance.update',
+};
+
+/** Résout la permission de domaine réelle selon le type de correction. */
+export function anomalyApplyPermission(
+  category: AnomalyCategory,
+  correctionType: AnomalyCorrectionType,
+): string {
+  if (correctionType === AnomalyCorrectionType.SALE_CANCELLATION) return 'optique.sales.cancel';
+  if (correctionType === AnomalyCorrectionType.PRODUCT_RETURN) return 'optique.sales.refund';
+  return ANOMALY_APPLY_PERMISSION_BY_CATEGORY[category];
+}
+
+/**
+ * Registre des champs corrigeables par catégorie : pilote le formulaire de
+ * déclaration (quels champs proposer) et le helper générique de correction
+ * directe côté serveur (quels champs sont autorisés). `kind` indique le type
+ * de saisie ; `money`/`int` alimentent le calcul d'impact.
+ */
+export interface AnomalyFieldDef {
+  name: string;
+  label: string;
+  kind: 'money' | 'int' | 'text' | 'select' | 'date';
+}
+export const ANOMALY_FIELDS_BY_CATEGORY: Record<AnomalyCategory, AnomalyFieldDef[]> = {
+  VENTE: [
+    // Valeur JSON (tableau {productId,quantity,unitPrice,reference?}) : une
+    // correction de produit/quantité/prix remplace la liste des articles,
+    // recalculée entièrement côté serveur (voir sales.service.updateSale).
+    { name: 'items', label: 'Articles (produit, quantité, prix)', kind: 'text' },
+    { name: 'discountAmount', label: 'Remise', kind: 'money' },
+    { name: 'customerId', label: 'Client', kind: 'select' },
+    { name: 'vatRate', label: 'Taux de TVA', kind: 'int' },
+    { name: 'createdAt', label: 'Date de la vente', kind: 'date' },
+    { name: 'cashierId', label: 'Vendeur', kind: 'select' },
+  ],
+  DEVIS: [
+    { name: 'items', label: 'Articles (produit, quantité, prix)', kind: 'text' },
+    { name: 'discountAmount', label: 'Remise', kind: 'money' },
+    { name: 'customerId', label: 'Client', kind: 'select' },
+    { name: 'vatRate', label: 'Taux de TVA', kind: 'int' },
+  ],
+  PRODUIT: [
+    { name: 'sku', label: 'Référence', kind: 'text' },
+    { name: 'category', label: 'Catégorie', kind: 'select' },
+    { name: 'brand', label: 'Marque', kind: 'text' },
+    { name: 'name', label: 'Nom / modèle', kind: 'text' },
+    { name: 'buyPrice', label: "Prix d'achat", kind: 'money' },
+    { name: 'sellPrice', label: 'Prix de vente', kind: 'money' },
+  ],
+  STOCK: [{ name: 'quantity', label: 'Quantité réelle constatée', kind: 'int' }],
+  CAISSE: [
+    { name: 'openingAmount', label: 'Fond de caisse', kind: 'money' },
+    { name: 'closingAmount', label: 'Montant de clôture', kind: 'money' },
+  ],
+  PAIEMENT: [
+    { name: 'method', label: 'Moyen de paiement', kind: 'select' },
+    { name: 'amount', label: 'Montant', kind: 'money' },
+  ],
+  COMMANDE_VERRES: [
+    { name: 'supplierName', label: 'Fournisseur', kind: 'text' },
+    { name: 'description', label: 'Description', kind: 'text' },
+    { name: 'cost', label: 'Coût', kind: 'money' },
+    { name: 'notes', label: 'Notes', kind: 'text' },
+  ],
+  CLIENT: [
+    { name: 'firstName', label: 'Prénom', kind: 'text' },
+    { name: 'lastName', label: 'Nom', kind: 'text' },
+    { name: 'phone', label: 'Téléphone', kind: 'text' },
+    { name: 'email', label: 'Email', kind: 'text' },
+    { name: 'loyaltyPoints', label: 'Points de fidélité', kind: 'int' },
+  ],
+  SAV: [
+    { name: 'description', label: 'Description', kind: 'text' },
+    { name: 'cost', label: 'Coût', kind: 'money' },
+    { name: 'notes', label: 'Notes', kind: 'text' },
+  ],
+  ASSURANCE: [
+    { name: 'requestedAmount', label: 'Montant demandé', kind: 'money' },
+    { name: 'acceptedAmount', label: 'Montant accepté', kind: 'money' },
+    { name: 'receivedAmount', label: 'Montant reçu (remboursement)', kind: 'money' },
+  ],
+};
+
+export const anomalyChangeSchema = z.object({
+  fieldName: z.string().min(1).max(80),
+  oldValue: z.string().max(500).optional().or(z.literal('')),
+  newValue: z.string().max(500).optional().or(z.literal('')),
+});
+export type AnomalyChangeInput = z.infer<typeof anomalyChangeSchema>;
+
+/**
+ * Types de correction proposables par catégorie. VENTE peut viser une simple
+ * correction de champ, une annulation complète ou un retour produit ; les
+ * autres catégories n'ont qu'une seule option (résolue par défaut si omise).
+ */
+export const ANOMALY_CORRECTION_TYPES_BY_CATEGORY: Record<AnomalyCategory, AnomalyCorrectionType[]> = {
+  VENTE: [AnomalyCorrectionType.FIELD_CORRECTION, AnomalyCorrectionType.SALE_CANCELLATION, AnomalyCorrectionType.PRODUCT_RETURN],
+  DEVIS: [AnomalyCorrectionType.FIELD_CORRECTION],
+  PRODUIT: [AnomalyCorrectionType.FIELD_CORRECTION],
+  STOCK: [AnomalyCorrectionType.STOCK_ADJUSTMENT],
+  CAISSE: [AnomalyCorrectionType.FIELD_CORRECTION],
+  PAIEMENT: [AnomalyCorrectionType.PAYMENT_REVERSAL],
+  COMMANDE_VERRES: [AnomalyCorrectionType.FIELD_CORRECTION],
+  CLIENT: [AnomalyCorrectionType.FIELD_CORRECTION],
+  SAV: [AnomalyCorrectionType.FIELD_CORRECTION],
+  ASSURANCE: [AnomalyCorrectionType.FIELD_CORRECTION, AnomalyCorrectionType.REFUND_CORRECTION],
+};
+
+export const anomalyDeclareSchema = z.object({
+  category: z.enum(ANOMALY_CATEGORIES),
+  // Résolu côté serveur au premier type autorisé pour la catégorie si omis.
+  correctionType: z
+    .enum([
+      AnomalyCorrectionType.FIELD_CORRECTION,
+      AnomalyCorrectionType.STOCK_ADJUSTMENT,
+      AnomalyCorrectionType.SALE_CANCELLATION,
+      AnomalyCorrectionType.PRODUCT_RETURN,
+      AnomalyCorrectionType.PAYMENT_REVERSAL,
+      AnomalyCorrectionType.REFUND_CORRECTION,
+    ])
+    .optional(),
+  targetId: z.string().uuid(),
+  targetReference: z.string().min(1).max(160),
+  branchId: z.string().uuid().optional().or(z.literal('')),
+  description: z.string().min(1).max(500),
+  reasonCode: z.enum(ANOMALY_REASON_CODES),
+  reasonNote: z.string().max(1000).optional().or(z.literal('')),
+  comment: z.string().max(1000).optional().or(z.literal('')),
+  // Vide pour une annulation de vente ou un retour produit (l'action porte
+  // sur la vente entière, pas sur des champs) ; au moins une ligne sinon.
+  changes: z.array(anomalyChangeSchema).default([]),
+});
+export type AnomalyDeclareInput = z.infer<typeof anomalyDeclareSchema>;
+
+export const anomalyModifySchema = z.object({
+  description: z.string().min(1).max(500).optional(),
+  reasonCode: z.enum(ANOMALY_REASON_CODES).optional(),
+  reasonNote: z.string().max(1000).optional().or(z.literal('')),
+  comment: z.string().max(1000).optional().or(z.literal('')),
+});
+export type AnomalyModifyInput = z.infer<typeof anomalyModifySchema>;
+
+export const anomalyApproveSchema = z.object({
+  approvalNote: z.string().max(1000).optional().or(z.literal('')),
+});
+export type AnomalyApproveInput = z.infer<typeof anomalyApproveSchema>;
+
+export const anomalyRejectSchema = z.object({
+  rejectionReason: z.string().min(1).max(1000),
+});
+export type AnomalyRejectInput = z.infer<typeof anomalyRejectSchema>;
+
+export const anomalyCancelSchema = z.object({
+  cancellationReason: z.string().min(1).max(1000),
+});
+export type AnomalyCancelInput = z.infer<typeof anomalyCancelSchema>;
+
+export interface AnomalyListFilter {
+  category?: AnomalyCategory;
+  status?: AnomalyStatus;
+  declaredById?: string;
+  from?: string;
+  to?: string;
+  hasFinancialImpact?: boolean;
+  hasStockImpact?: boolean;
+  page?: number;
 }
 
 /* --- Abonnements --- */

@@ -88,6 +88,7 @@ model Tenant {
   insuranceBeneficiaries InsuranceBeneficiary[]
   insuranceClaims       InsuranceClaim[]
   insuranceRefunds      InsuranceRefund[]
+  anomalies             Anomaly[]
   lensOrders        LensOrder[]
   repairs           Repair[]
   subscription      Subscription?
@@ -153,6 +154,7 @@ model Branch {
   inventoryCounts InventoryCount[]
   transfersFrom   StockTransfer[]  @relation("TransfersFrom")
   transfersTo     StockTransfer[]  @relation("TransfersTo")
+  anomalies       Anomaly[]
 
   @@index([tenantId])
 }
@@ -200,6 +202,11 @@ model User {
   demoVideoProgress        DemoVideoProgress[]
   createdTransfers         StockTransfer[]      @relation("TransferCreatedBy")
   confirmedTransfers       StockTransfer[]      @relation("TransferConfirmedBy")
+  declaredAnomalies        Anomaly[]            @relation("AnomalyDeclaredBy")
+  approvedAnomalies        Anomaly[]            @relation("AnomalyApprovedBy")
+  rejectedAnomalies        Anomaly[]            @relation("AnomalyRejectedBy")
+  appliedAnomalies         Anomaly[]            @relation("AnomalyAppliedBy")
+  cancelledAnomalies       Anomaly[]            @relation("AnomalyCancelledBy")
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -1317,6 +1324,184 @@ model InsuranceRefund {
   @@index([tenantId, receivedAt])
   @@index([tenantId, insurerId])
   @@index([claimId])
+}
+
+/**
+ * ---------------- ANOMALIES & CORRECTIONS ----------------
+ * Module transverse de déclaration, validation et correction tracée des
+ * erreurs métier (ventes, stock, caisse, paiements, produits, clients,
+ * commandes de verres, SAV, assurances). Ne remplace aucun modèle existant :
+ * targetId référence, sans contrainte FK (même principe que
+ * StockMovement.saleId), la ligne du module d'origine désignée par
+ * targetEntity. Les valeurs avant/après de chaque champ corrigé vivent dans
+ * AnomalyCorrectionEntry, jamais réécrites sur les modèles d'origine.
+ */
+
+enum AnomalyCategory {
+  VENTE
+  DEVIS
+  PRODUIT
+  STOCK
+  CAISSE
+  PAIEMENT
+  COMMANDE_VERRES
+  CLIENT
+  SAV
+  ASSURANCE
+}
+
+/// Statuts du workflow, dans l'ordre chronologique attendu.
+enum AnomalyStatus {
+  DECLARED           /// Déclarée — brouillon éditable par son auteur
+  PENDING_VALIDATION /// En attente de validation
+  APPROVED           /// Approuvée — peut être appliquée
+  REJECTED           /// Rejetée — données d'origine jamais touchées
+  CORRECTED          /// Corrigée — correction appliquée
+  CANCELLED          /// Annulée par son auteur ou un responsable
+}
+
+/// Nature technique de la correction : détermine quelle fonction existante
+/// est appelée au moment d'appliquer.
+enum AnomalyCorrectionType {
+  FIELD_CORRECTION
+  STOCK_ADJUSTMENT
+  SALE_CANCELLATION
+  PRODUCT_RETURN
+  PAYMENT_REVERSAL
+  REFUND_CORRECTION
+}
+
+/// Motif codifié (filtrable), complété par reasonNote en texte libre — même
+/// principe que InventoryAdjustmentReason / INVENTORY_REASON_LABELS.
+enum AnomalyReasonCode {
+  DATA_ENTRY_ERROR
+  PRICE_ERROR
+  QUANTITY_ERROR
+  WRONG_PRODUCT
+  WRONG_CUSTOMER
+  PAYMENT_ERROR
+  DUPLICATE
+  OMISSION
+  SUSPECTED_FRAUD
+  SYSTEM_ERROR
+  OTHER
+}
+
+/// Modèle réellement touché par la correction (résolu côté serveur, jamais
+/// saisi par le client) — sert au lien "ouvrir la fiche d'origine".
+enum AnomalyTargetEntity {
+  SALE
+  PRODUCT
+  STOCK_ITEM
+  CASH_REGISTER
+  PAYMENT
+  LENS_ORDER
+  CUSTOMER
+  REPAIR
+  INSURANCE_CLAIM
+  INSURANCE_REFUND
+}
+
+model Anomaly {
+  id             String                @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number         String                // ANO-2026-000001
+
+  category       AnomalyCategory
+  correctionType AnomalyCorrectionType
+  targetEntity   AnomalyTargetEntity
+  targetId       String
+  // Libellé lisible figé à la déclaration (ex. "VTE-2026-000254") : reste
+  // affichable même si l'élément d'origine est ensuite renommé/désactivé.
+  targetReference String
+
+  // Dérivée automatiquement selon la catégorie (vente, stock, caisse...) ;
+  // absente pour ce qui n'a pas de notion de succursale (client, produit).
+  branchId       String?
+  branch         Branch?               @relation(fields: [branchId], references: [id])
+
+  description    String                @db.VarChar(500)
+  reasonCode     AnomalyReasonCode
+  reasonNote     String?               @db.VarChar(1000)
+  comment        String?               @db.VarChar(1000)
+
+  status         AnomalyStatus         @default(DECLARED)
+
+  // Calculé en aperçu à la déclaration, recalculé depuis l'état réel
+  // avant/après à l'application, puis figé (jamais retouché une fois
+  // appliedAt posé). Signe aligné sur StockMovement.quantity (+ = gain).
+  financialImpact Decimal              @default(0) @db.Decimal(12, 2)
+  stockImpact     Int                  @default(0)
+  cashImpact      Decimal              @default(0) @db.Decimal(12, 2)
+  insuranceImpact Decimal              @default(0) @db.Decimal(12, 2)
+
+  declaredById   String
+  declaredBy     User                  @relation("AnomalyDeclaredBy", fields: [declaredById], references: [id])
+  declaredAt     DateTime              @default(now())
+
+  submittedAt    DateTime?             // DECLARED -> PENDING_VALIDATION
+
+  approvedById   String?
+  approvedBy     User?                 @relation("AnomalyApprovedBy", fields: [approvedById], references: [id])
+  approvedAt     DateTime?
+  approvalNote   String?               @db.VarChar(1000)
+
+  rejectedById   String?
+  rejectedBy     User?                 @relation("AnomalyRejectedBy", fields: [rejectedById], references: [id])
+  rejectedAt     DateTime?
+  rejectionReason String?              @db.VarChar(1000)
+
+  appliedById    String?
+  appliedBy      User?                 @relation("AnomalyAppliedBy", fields: [appliedById], references: [id])
+  appliedAt      DateTime?
+
+  cancelledById      String?
+  cancelledBy        User?             @relation("AnomalyCancelledBy", fields: [cancelledById], references: [id])
+  cancelledAt        DateTime?
+  cancellationReason String?           @db.VarChar(1000)
+
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  entries        AnomalyCorrectionEntry[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@index([tenantId, targetEntity, targetId])
+  @@index([tenantId, declaredAt])
+  @@index([tenantId, declaredById])
+  @@index([branchId])
+}
+
+/// Trace immuable (ajoutée uniquement, jamais modifiée/supprimée) d'un champ
+/// corrigé. Une correction multi-champs (ex. prix ET quantité) crée une
+/// ligne par champ. Créées une seule fois, à la déclaration.
+model AnomalyCorrectionEntry {
+  id         String   @id @default(uuid())
+  tenantId   String
+  anomalyId  String
+  anomaly    Anomaly  @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+
+  // Nom technique (ex. "unitPrice", "quantity", "productId"). Le libellé FR
+  // vient du registre partagé côté code, jamais stocké ici.
+  fieldName  String
+  // Valeurs déjà résolues pour l'affichage (nom produit, libellé du moyen de
+  // paiement...), jamais du JSON brut.
+  oldValue   String?
+  newValue   String?
+
+  // Contribution informative de ce champ (affichage uniquement) : l'impact
+  // autoritaire reste celui figé sur Anomaly (avant/après réel), jamais la
+  // somme de ces colonnes.
+  amountImpact Decimal? @db.Decimal(12, 2)
+  stockImpact  Int?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, anomalyId])
 }
 
 /**

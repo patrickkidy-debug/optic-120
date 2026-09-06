@@ -164,6 +164,115 @@ async function syncClaim(db: TenantPrisma, claimId: string): Promise<void> {
   }
 }
 
+/**
+ * Fait avancer un dossier (statut, montants, rattachements). Extrait de la
+ * route `PATCH /claims/:id` pour être réutilisée telle quelle par le module
+ * Anomalies (catégorie ASSURANCE) — même validation, pas de logique dupliquée.
+ * Exporté (et non `insurance.service.ts`) car les helpers qu'elle utilise
+ * (`syncClaim`, `claimInclude`, `ARBITRATED`, `n`, `toDate`) sont privés à ce
+ * fichier.
+ */
+export async function updateClaimFields(
+  db: TenantPrisma,
+  id: string,
+  input: ReturnType<typeof insuranceClaimUpdateSchema.parse>,
+) {
+  const current = await db.insuranceClaim.findFirst({ where: { id } });
+  if (!current) throw notFound('Dossier introuvable');
+
+  const status = (input.status ?? current.status) as string;
+  const requested = input.requestedAmount ?? n(current.requestedAmount);
+  let accepted = input.acceptedAmount ?? n(current.acceptedAmount);
+
+  // Cohérence des montants selon le statut demandé.
+  if (status === InsuranceClaimStatus.REJECTED) {
+    // Un dossier déjà remboursé ne peut pas devenir un refus : l'argent est
+    // arrivé. Il faut d'abord retirer le versement.
+    if (n(current.paidAmount) > 0) {
+      throw badRequest('Ce dossier a déjà été remboursé : supprimez le versement avant de le refuser.');
+    }
+    accepted = 0;
+  }
+  if (status === InsuranceClaimStatus.ACCEPTED) accepted = accepted > 0 ? accepted : requested;
+  if (status === InsuranceClaimStatus.PARTIALLY_ACCEPTED && (accepted <= 0 || accepted >= requested)) {
+    throw badRequest('Une acceptation partielle doit être comprise entre 0 et le montant demandé');
+  }
+  if (accepted > requested) throw badRequest('Le montant accepté dépasse le montant demandé');
+
+  const total = input.totalAmount ?? n(current.totalAmount);
+  const expected = ARBITRATED.includes(status) ? accepted : requested;
+  const paid = n(current.paidAmount);
+  if (ARBITRATED.includes(status) && paid > accepted) {
+    throw badRequest(
+      `Déjà remboursé ${paid} : le montant accepté ne peut pas être inférieur.`,
+    );
+  }
+
+  const data: Record<string, unknown> = {
+    status: status as never,
+    requestedAmount: requested,
+    acceptedAmount: accepted,
+    totalAmount: total,
+    patientAmount: Math.max(0, total - expected),
+  };
+  if (input.contractId !== undefined) data.contractId = input.contractId;
+  if (input.beneficiaryId !== undefined) data.beneficiaryId = input.beneficiaryId;
+  if (input.customerId !== undefined) data.customerId = input.customerId;
+  if (input.notes !== undefined) data.notes = input.notes;
+  if (input.requestedAt !== undefined) data.requestedAt = toDate(input.requestedAt as string);
+  if (input.dueAt !== undefined) data.dueAt = toDate(input.dueAt as string);
+  // Horodate la décision de l'assureur la première fois qu'elle est connue.
+  if (ARBITRATED.includes(status) && !current.acceptedAt) data.acceptedAt = new Date();
+  if (status === InsuranceClaimStatus.REJECTED && !current.acceptedAt) data.acceptedAt = new Date();
+
+  await db.insuranceClaim.updateMany({ where: { id }, data });
+  await syncClaim(db, id);
+  return db.insuranceClaim.findFirst({ where: { id }, include: claimInclude });
+}
+
+/**
+ * Corrige un remboursement déjà enregistré : remplace la ligne (l'historique
+ * de la correction est porté par le module Anomalies, pas par cette table)
+ * puis resynchronise le dossier. Même opération que `DELETE /refunds/:id`
+ * suivi de `POST /claims/:id/refunds`, réunie pour que la correction reste
+ * atomique et réutilisable hors HTTP.
+ */
+export async function correctRefund(
+  db: TenantPrisma,
+  userId: string,
+  refundId: string,
+  patch: { receivedAmount?: number; reference?: string | null; method?: string | null; receivedAt?: Date },
+) {
+  const refund = await db.insuranceRefund.findFirst({ where: { id: refundId } });
+  if (!refund) throw notFound('Remboursement introuvable');
+  const claim = await db.insuranceClaim.findFirst({ where: { id: refund.claimId } });
+  if (!claim) throw notFound('Dossier introuvable');
+
+  const remainingWithoutThis = claimRemainingAmount(amountsOf(claim)) + n(refund.receivedAmount);
+  const nextAmount = patch.receivedAmount ?? n(refund.receivedAmount);
+  if (nextAmount > remainingWithoutThis) {
+    throw badRequest(`Le montant dépasse le restant dû (${remainingWithoutThis}).`);
+  }
+
+  await db.insuranceRefund.deleteMany({ where: { id: refundId } });
+  const created = await db.insuranceRefund.create({
+    data: {
+      tenantId: refund.tenantId,
+      claimId: claim.id,
+      insurerId: claim.insurerId,
+      expectedAmount: remainingWithoutThis,
+      receivedAmount: nextAmount,
+      receivedAt: patch.receivedAt ?? refund.receivedAt,
+      reference: patch.reference !== undefined ? patch.reference : refund.reference,
+      method: (patch.method !== undefined ? patch.method : refund.method) as never,
+      notes: refund.notes,
+      createdById: userId,
+    },
+  });
+  await syncClaim(db, claim.id);
+  return { oldRefund: refund, newRefund: created };
+}
+
 /* -------------------------------- assureurs ------------------------------- */
 
 async function insurersSection(app: FastifyInstance) {
@@ -554,58 +663,7 @@ async function claimsSection(app: FastifyInstance) {
   app.patch('/claims/:id', { preHandler: requirePermission('insurance.update') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = clean(insuranceClaimUpdateSchema.parse(req.body));
-    const db = req.db!;
-    const current = await db.insuranceClaim.findFirst({ where: { id } });
-    if (!current) throw notFound('Dossier introuvable');
-
-    const status = (input.status ?? current.status) as string;
-    const requested = input.requestedAmount ?? n(current.requestedAmount);
-    let accepted = input.acceptedAmount ?? n(current.acceptedAmount);
-
-    // Cohérence des montants selon le statut demandé.
-    if (status === InsuranceClaimStatus.REJECTED) {
-      // Un dossier déjà remboursé ne peut pas devenir un refus : l'argent est
-      // arrivé. Il faut d'abord retirer le versement.
-      if (n(current.paidAmount) > 0) {
-        throw badRequest('Ce dossier a déjà été remboursé : supprimez le versement avant de le refuser.');
-      }
-      accepted = 0;
-    }
-    if (status === InsuranceClaimStatus.ACCEPTED) accepted = accepted > 0 ? accepted : requested;
-    if (status === InsuranceClaimStatus.PARTIALLY_ACCEPTED && (accepted <= 0 || accepted >= requested)) {
-      throw badRequest('Une acceptation partielle doit être comprise entre 0 et le montant demandé');
-    }
-    if (accepted > requested) throw badRequest('Le montant accepté dépasse le montant demandé');
-
-    const total = input.totalAmount ?? n(current.totalAmount);
-    const expected = ARBITRATED.includes(status) ? accepted : requested;
-    const paid = n(current.paidAmount);
-    if (ARBITRATED.includes(status) && paid > accepted) {
-      throw badRequest(
-        `Déjà remboursé ${paid} : le montant accepté ne peut pas être inférieur.`,
-      );
-    }
-
-    const data: Record<string, unknown> = {
-      status: status as never,
-      requestedAmount: requested,
-      acceptedAmount: accepted,
-      totalAmount: total,
-      patientAmount: Math.max(0, total - expected),
-    };
-    if (input.contractId !== undefined) data.contractId = input.contractId;
-    if (input.beneficiaryId !== undefined) data.beneficiaryId = input.beneficiaryId;
-    if (input.customerId !== undefined) data.customerId = input.customerId;
-    if (input.notes !== undefined) data.notes = input.notes;
-    if (input.requestedAt !== undefined) data.requestedAt = toDate(input.requestedAt as string);
-    if (input.dueAt !== undefined) data.dueAt = toDate(input.dueAt as string);
-    // Horodate la décision de l'assureur la première fois qu'elle est connue.
-    if (ARBITRATED.includes(status) && !current.acceptedAt) data.acceptedAt = new Date();
-    if (status === InsuranceClaimStatus.REJECTED && !current.acceptedAt) data.acceptedAt = new Date();
-
-    await db.insuranceClaim.updateMany({ where: { id }, data });
-    await syncClaim(db, id);
-    const claim = await db.insuranceClaim.findFirst({ where: { id }, include: claimInclude });
+    const claim = await updateClaimFields(req.db!, id, input);
     return reply.send({
       claim: claim && {
         ...claim,
