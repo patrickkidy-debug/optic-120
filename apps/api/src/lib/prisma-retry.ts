@@ -10,6 +10,10 @@ function isDuplicateNumber(e: unknown): boolean {
   return false;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Rejoue `fn` quand la génération d'un numéro séquentiel (basée sur un `count()`)
  * entre en collision avec une opération concurrente sur la contrainte unique
@@ -20,13 +24,26 @@ function isDuplicateNumber(e: unknown): boolean {
  * La fonction fournie doit être ré-exécutable sans effet de bord partiel : en
  * pratique elle enveloppe un `prisma.$transaction(...)`, entièrement annulé en
  * cas d'erreur, donc rejouable sans risque.
+ *
+ * Un court délai aléatoire sépare les tentatives : sans lui, plusieurs requêtes
+ * parties au même instant se relancent toutes exactement en même temps,
+ * recalculent toutes le même compte encore périmé (aucune n'a encore commité)
+ * et se re-percutent — épuisant les tentatives même à concurrence modeste.
+ * Le délai désynchronise les essais pour qu'une commite avant que les autres
+ * ne relisent. (Pour la numérotation des ventes/devis/retours, la source
+ * définitive est un verrou Postgres — voir sales.service.ts::nextNumber —
+ * cette fonction reste le filet pour les numérotations qui n'ont pas de
+ * transaction propre à verrouiller : commandes de verres, réparations, etc.)
  */
-export async function retryOnDuplicateNumber<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+export async function retryOnDuplicateNumber<T>(fn: () => Promise<T>, attempts = 10): Promise<T> {
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (e) {
-      if (isDuplicateNumber(e) && i < attempts - 1) continue;
+      if (isDuplicateNumber(e) && i < attempts - 1) {
+        await sleep(20 + Math.random() * 60);
+        continue;
+      }
       throw e;
     }
   }

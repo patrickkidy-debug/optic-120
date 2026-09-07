@@ -38,6 +38,17 @@ function numberPrefix(type: SaleType): string {
 async function nextNumber(tx: Tx, tenantId: string, type: SaleType): Promise<string> {
   const prefix = numberPrefix(type);
   const year = new Date().getFullYear();
+  // Verrou consultatif Postgres, propre à la transaction : deux ventes créées
+  // au même instant (deux caissiers, ou un double-clic avant que le bouton ne
+  // se désactive) lisaient sinon le même COUNT() avant que l'une n'ait
+  // commité, produisaient le même numéro, et la seconde échouait — parfois
+  // même après plusieurs tentatives de retryOnDuplicateNumber, chaque nouvel
+  // essai retombant sur le même compte encore périmé. Le verrou sérialise les
+  // deux : la seconde attend que la première commite (et libère le verrou)
+  // avant de relire un compte à jour, donc plus jamais de collision, quelle
+  // que soit la concurrence. Portée par tenant+type : ne bloque ni les autres
+  // établissements ni, au sein d'un même établissement, un autre type de pièce.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`sale-number:${tenantId}:${type}`}))`;
   const count = await tx.sale.count({
     where: { tenantId, type, number: { startsWith: `${prefix}-${year}-` } },
   });

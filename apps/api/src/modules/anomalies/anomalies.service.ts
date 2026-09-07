@@ -10,6 +10,7 @@ import {
   type AnomalyListFilter,
 } from '@oculo/shared-types';
 import { forTenant, type TenantPrisma } from '../../lib/prisma-tenant.js';
+import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { getOpticalSettings } from '../../lib/optical-settings.js';
 import { previewImpact, appliedImpact, type ImpactContext } from './anomalies.impact.js';
@@ -148,7 +149,11 @@ export async function declareAnomaly(tenantId: string, userId: string, input: An
       newValue: c.newValue || null,
     })), ctx);
 
-    const anomaly = await db.anomaly.create({
+    // Le numéro est basé sur un COUNT() : deux déclarations au même instant
+    // peuvent le calculer identique. retryOnDuplicateNumber recalcule (le
+    // numéro est donc régénéré à CHAQUE tentative, pas figé avant) et
+    // réessaie, plutôt que de laisser filtrer une erreur SQL brute.
+    const anomaly = await retryOnDuplicateNumber(async () => db.anomaly.create({
       data: {
         tenantId,
         number: await nextAnomalyNumber(db, tenantId),
@@ -179,7 +184,7 @@ export async function declareAnomaly(tenantId: string, userId: string, input: An
         },
       },
       include: anomalyInclude,
-    });
+    }));
     return anomaly;
   });
 }

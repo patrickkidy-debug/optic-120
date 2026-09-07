@@ -3,9 +3,15 @@ import type { Prisma } from '@prisma/client';
 
 type Tx = Prisma.TransactionClient;
 
-/** Numéro de dossier : PEC-AAAA-00001, continu par établissement et par année. */
+/**
+ * Numéro de dossier : PEC-AAAA-00001, continu par établissement et par année.
+ * Verrou consultatif Postgres (portée transaction) : évite la collision
+ * classique du COUNT()-puis-insert quand deux ventes assurées sont créées au
+ * même instant — voir le même mécanisme dans sales.service.ts::nextNumber.
+ */
 async function nextClaimNumber(tx: Tx, tenantId: string, at: Date): Promise<string> {
   const year = at.getFullYear();
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`claim-number:${tenantId}`}))`;
   const count = await tx.insuranceClaim.count({
     where: { tenantId, number: { startsWith: `PEC-${year}-` } },
   });
