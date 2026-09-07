@@ -33,12 +33,28 @@ export function errorHandler(
   // Contraintes Prisma (ex : unique violation)
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
+      const target = error.meta?.target;
+      const targetStr = Array.isArray(target) ? target.join(',') : String(target ?? '');
+      // Toujours tracé côté serveur avec le détail Postgres/Prisma complet
+      // (contrainte, colonnes, requête) : un message utilisateur plus clair
+      // ne doit jamais faire disparaître la trace technique nécessaire pour
+      // diagnostiquer une VRAIE collision si elle se reproduit.
+      logger.warn(
+        { code: error.code, target, meta: error.meta, url: req.url, method: req.method },
+        'Contrainte unique violée (P2002)',
+      );
+      // Message utilisateur précis quand la colonne en cause est connue,
+      // au lieu du générique "Cette valeur existe déjà" pour les cas
+      // fréquents identifiés (numéro de pièce, référence produit) — la
+      // cause elle-même (numérotation non verrouillée) doit être corrigée
+      // à la source, ce message ne fait qu'expliquer un résidu éventuel.
+      const message = targetStr.includes('number')
+        ? "Impossible de créer le document : son numéro vient d'être attribué à un autre document. Réessayez."
+        : targetStr.includes('sku')
+          ? 'Cette référence produit est déjà utilisée par un autre produit.'
+          : 'Cette valeur existe déjà.';
       reply.status(409).send({
-        error: {
-          code: 'CONFLICT',
-          message: 'Cette valeur existe déjà',
-          details: { target: error.meta?.target },
-        },
+        error: { code: 'CONFLICT', message, details: { target } },
       });
       return;
     }
