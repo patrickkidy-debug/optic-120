@@ -96,8 +96,19 @@
   path = "/login"
   function = "localize"
 
-# Le HTML depend de la langue negociee : ne jamais le mettre en cache partage.
+# Le HTML sert de coquille à toute la SPA (et sa langue est negociee) : ne
+# jamais le mettre en cache — sur "/" (regle Netlify pour la racine) ET sur
+# "/index.html" (le fichier reellement servi par la reecriture SPA "/*" pour
+# CHAQUE route, /activer y compris). Sans cette seconde regle, un navigateur
+# ou un proxy intermediaire (WhatsApp in-app browser notamment) pouvait garder
+# une coquille en cache referencant les fichiers JS d'un deploiement precedent,
+# provoquant "Importing a module script failed." des la mise a jour suivante.
 [[headers]]
   for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"

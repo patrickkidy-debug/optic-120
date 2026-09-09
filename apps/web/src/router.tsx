@@ -5,6 +5,10 @@ import { RequireAuth, RequirePermission } from './components/RouteGuards';
 import { PageLoader } from './components/ui';
 import { useAuthStore } from './store/auth';
 import { named } from './lib/lazyChunk';
+// Import statique (jamais `lazy()`) : c'est le filet de secours d'un chunk qui
+// ne charge plus — s'il dépendait lui-même d'un import différé, il pourrait
+// échouer exactement de la même façon et ne resterait alors plus rien à afficher.
+import { RouteErrorPage } from './pages/RouteErrorPage';
 
 /**
  * Pages chargées à la demande (code-splitting) : seul le code de la page
@@ -104,68 +108,79 @@ function OperatorOnly({ children }: { children: ReactNode }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Home /> },
-  // URLs localisees : cibles canoniques du hreflang. Un lien /pt partage sur
-  // WhatsApp doit ouvrir la vitrine en portugais, quel que soit le visiteur.
-  ...LOCALES.map((l) => ({
-    path: `/${l.code}`,
-    element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly>,
-  })),
-  { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
-  { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
-  // Lien d'activation partagé aux prospects (WhatsApp) : volontairement hors
-  // PublicOnly, il doit fonctionner aussi pour un client déjà connecté.
-  { path: '/activer', element: pub(<ActivateSubscriptionPage />) },
-  { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
-  { path: '/reset-password', element: pub(<ResetPasswordPage />) },
-  { path: '/verifier-email', element: pub(<VerifyEmailPage />) },
   {
-    element: <RequireAuth />,
+    // Route-enveloppe sans chemin : React Router lui rend un <Outlet/>
+    // implicite (elle n'ajoute donc aucun habillage), mais son `errorElement`
+    // couvre TOUTES les routes ci-dessous. Sans lui, une erreur non rattrapée
+    // — notamment un chunk qui ne charge plus après déploiement une fois les
+    // tentatives de lib/lazyChunk.ts épuisées — retombait sur l'écran
+    // générique "Unexpected Application Error!" de React Router.
+    errorElement: <RouteErrorPage />,
     children: [
+      { path: '/', element: <Home /> },
+      // URLs localisees : cibles canoniques du hreflang. Un lien /pt partage sur
+      // WhatsApp doit ouvrir la vitrine en portugais, quel que soit le visiteur.
+      ...LOCALES.map((l) => ({
+        path: `/${l.code}`,
+        element: <PublicOnly>{pub(<LandingPage />)}</PublicOnly>,
+      })),
+      { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
+      { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
+      // Lien d'activation partagé aux prospects (WhatsApp) : volontairement hors
+      // PublicOnly, il doit fonctionner aussi pour un client déjà connecté.
+      { path: '/activer', element: pub(<ActivateSubscriptionPage />) },
+      { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
+      { path: '/reset-password', element: pub(<ResetPasswordPage />) },
+      { path: '/verifier-email', element: pub(<VerifyEmailPage />) },
       {
-        element: pub(<AppShell />),
+        element: <RequireAuth />,
         children: [
-          { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
-          { path: '/configuration-boutique', element: perm('dashboard.view', <StoreSetupPage />) },
-          { path: '/onboarding/complete', element: perm('dashboard.view', <DemoCompletePage />) },
-          { path: '/demo/videos', element: perm('dashboard.view', <DemoVideosPage />) },
-          { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },
-          { path: '/optique/stock', element: perm('optique.stock.view', <StockPage />) },
-          { path: '/optique/clients', element: perm('optique.customers.view', <ClientsPage />) },
-          { path: '/optique/caisse', element: perm('optique.sales.create', <PosPage />) },
-          { path: '/optique/ventes', element: perm('optique.sales.view', <SalesPage kind="SALE" />) },
-          { path: '/optique/devis', element: perm('optique.quotes.view', <SalesPage kind="QUOTE" />) },
-          { path: '/optique/commandes-verres', element: perm('optique.sales.view', <LensOrdersPage />) },
-          { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
-          { path: '/optique/renouvellements', element: perm('optique.customers.view', <RenewalsPage />) },
-          { path: '/optique/etiquettes', element: perm('optique.products.view', <LabelsPage />) },
-          { path: '/optique/caisse-session', element: perm('optique.cashregister.view', <CashRegisterPage />) },
-          { path: '/parametres/roles', element: perm('rbac.roles.view', <RolesPage />) },
-          { path: '/parametres/utilisateurs', element: perm('rbac.users.view', <UsersPage />) },
-          { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },
-          { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
-          { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
-          { path: '/parametres/profil', element: <ProfilePage /> },
-          { path: '/aide', element: <SupportPage /> },
-          { path: '/plateforme', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
-          { path: '/plateforme/crm', element: <OperatorOnly><CrmPage /></OperatorOnly> },
+          {
+            element: pub(<AppShell />),
+            children: [
+              { path: '/dashboard', element: perm('dashboard.view', <DashboardPage />) },
+              { path: '/configuration-boutique', element: perm('dashboard.view', <StoreSetupPage />) },
+              { path: '/onboarding/complete', element: perm('dashboard.view', <DemoCompletePage />) },
+              { path: '/demo/videos', element: perm('dashboard.view', <DemoVideosPage />) },
+              { path: '/optique/produits', element: perm('optique.products.view', <ProductsPage />) },
+              { path: '/optique/stock', element: perm('optique.stock.view', <StockPage />) },
+              { path: '/optique/clients', element: perm('optique.customers.view', <ClientsPage />) },
+              { path: '/optique/caisse', element: perm('optique.sales.create', <PosPage />) },
+              { path: '/optique/ventes', element: perm('optique.sales.view', <SalesPage kind="SALE" />) },
+              { path: '/optique/devis', element: perm('optique.quotes.view', <SalesPage kind="QUOTE" />) },
+              { path: '/optique/commandes-verres', element: perm('optique.sales.view', <LensOrdersPage />) },
+              { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
+              { path: '/optique/renouvellements', element: perm('optique.customers.view', <RenewalsPage />) },
+              { path: '/optique/etiquettes', element: perm('optique.products.view', <LabelsPage />) },
+              { path: '/optique/caisse-session', element: perm('optique.cashregister.view', <CashRegisterPage />) },
+              { path: '/parametres/roles', element: perm('rbac.roles.view', <RolesPage />) },
+              { path: '/parametres/utilisateurs', element: perm('rbac.users.view', <UsersPage />) },
+              { path: '/parametres/magasins', element: perm('settings.branches.view', <BranchesPage />) },
+              { path: '/parametres/journal', element: perm('audit.logs.view', <AuditPage />) },
+              { path: '/parametres/abonnement', element: perm('billing.view', <SubscriptionPage />) },
+              { path: '/parametres/profil', element: <ProfilePage /> },
+              { path: '/aide', element: <SupportPage /> },
+              { path: '/plateforme', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
+              { path: '/plateforme/crm', element: <OperatorOnly><CrmPage /></OperatorOnly> },
 
-          { path: '/clinique/dashboard', element: perm('clinic.patients.view', <ClinicDashboardPage />) },
-          { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },
-          { path: '/clinique/consultations', element: perm('clinic.consultations.view', <ConsultationsPage />) },
-          { path: '/clinique/rendez-vous', element: perm('clinic.appointments.view', <AppointmentsPage />) },
-          { path: '/clinique/chirurgies', element: perm('clinic.surgeries.view', <SurgeriesPage />) },
+              { path: '/clinique/dashboard', element: perm('clinic.patients.view', <ClinicDashboardPage />) },
+              { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },
+              { path: '/clinique/consultations', element: perm('clinic.consultations.view', <ConsultationsPage />) },
+              { path: '/clinique/rendez-vous', element: perm('clinic.appointments.view', <AppointmentsPage />) },
+              { path: '/clinique/chirurgies', element: perm('clinic.surgeries.view', <SurgeriesPage />) },
 
-          { path: '/gestion/personnel', element: perm('hr.employees.view', <EmployeesPage />) },
-          { path: '/gestion/creances', element: perm('optique.sales.view', <ReceivablesPage />) },
-          { path: '/gestion/rapports', element: perm('optique.sales.view', <ReportsPage />) },
-          { path: '/gestion/finance', element: perm('finance.expenses.view', <FinancePage />) },
-          { path: '/gestion/depenses-versements', element: perm('finance.expenses.view', <CashFlowPage />) },
-          { path: '/gestion/fournisseurs', element: perm('suppliers.view', <SuppliersPage />) },
-          { path: '/gestion/assurances', element: perm('insurance.view', <InsurancePage />) },
-          { path: '/anomalies', element: perm('anomalies.view', <AnomaliesPage />) },
+              { path: '/gestion/personnel', element: perm('hr.employees.view', <EmployeesPage />) },
+              { path: '/gestion/creances', element: perm('optique.sales.view', <ReceivablesPage />) },
+              { path: '/gestion/rapports', element: perm('optique.sales.view', <ReportsPage />) },
+              { path: '/gestion/finance', element: perm('finance.expenses.view', <FinancePage />) },
+              { path: '/gestion/depenses-versements', element: perm('finance.expenses.view', <CashFlowPage />) },
+              { path: '/gestion/fournisseurs', element: perm('suppliers.view', <SuppliersPage />) },
+              { path: '/gestion/assurances', element: perm('insurance.view', <InsurancePage />) },
+              { path: '/anomalies', element: perm('anomalies.view', <AnomaliesPage />) },
 
-          { path: '*', element: <NotFound /> },
+              { path: '*', element: <NotFound /> },
+            ],
+          },
         ],
       },
     ],
