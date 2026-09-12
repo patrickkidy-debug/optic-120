@@ -8,6 +8,7 @@ import { loginSchema, type LoginInput, type EstablishmentChoice } from '@oculo/s
 import { login, loginTwoFactor, loginSelectTenant } from '../../features/auth/api';
 import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
+import { safeRedirect } from '../../lib/safeRedirect';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
@@ -19,7 +20,7 @@ export function LoginPage() {
   // Retour sur la page demandee (lien de prospection) plutot que le dashboard.
   const [searchParams] = useSearchParams();
   const nextParam = searchParams.get('next');
-  const redirectTo = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
+  const redirectTo = safeRedirect(nextParam);
   const [serverError, setServerError] = useState('');
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');

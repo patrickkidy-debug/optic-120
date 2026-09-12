@@ -39,6 +39,16 @@ import { partnerRoutes } from './modules/partners/partner.routes.js';
 /** Horodatage de démarrage : distingue un redéploiement d'un simple réveil. */
 const startedAt = new Date();
 
+// Durcissement contre la pollution de prototype (ex. CVE non corrigée de la
+// dépendance `xlsx`, utilisée pour l'import Excel des produits — voir
+// products-import.service.ts) : gèle Object.prototype une fois pour toutes
+// au démarrage. Une bibliothèque vulnérable qui tente d'ajouter/modifier une
+// propriété sur le prototype global échoue silencieusement (mode non strict)
+// au lieu de corrompre tout le processus — partagé entre tous les tenants.
+// N'affecte aucun code de l'application : personne ici n'écrit sur
+// Object.prototype par ailleurs.
+Object.freeze(Object.prototype);
+
 export async function buildApp() {
   const app = Fastify({
     logger: false,

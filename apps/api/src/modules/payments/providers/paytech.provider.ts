@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { PaymentStatus } from '@oculo/shared-types';
 import { badRequest } from '../../../lib/http-error.js';
 import { logger } from '../../../lib/logger.js';
@@ -24,6 +24,14 @@ interface PayTechConfig {
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+/** Comparaison à temps constant : une simple `===` sur un secret fuit sa
+ * longueur de correspondance par le temps de réponse (timing attack). */
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
 /**
@@ -130,8 +138,8 @@ export class PayTechProvider implements PaymentProvider {
 
     // Authentification de l'IPN : PayTech renvoie sha256(clé API) et
     // sha256(clé secrète). On vérifie qu'ils correspondent à nos clés.
-    const keyOk = body.api_key_sha256 === sha256(this.config.apiKey);
-    const secretOk = body.api_secret_sha256 === sha256(this.config.apiSecret);
+    const keyOk = !!body.api_key_sha256 && safeEqual(body.api_key_sha256, sha256(this.config.apiKey));
+    const secretOk = !!body.api_secret_sha256 && safeEqual(body.api_secret_sha256, sha256(this.config.apiSecret));
     if (!keyOk || !secretOk) {
       logger.warn('PayTech : IPN avec signature (sha256) invalide');
       throw badRequest('IPN PayTech invalide');

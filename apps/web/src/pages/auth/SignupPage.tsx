@@ -9,6 +9,7 @@ import { useGoogleAuthFlow } from '../../features/auth/useGoogleAuthFlow';
 import { apiErrorMessage } from '../../lib/api';
 import { trackPixelEvent } from '../../lib/pixel';
 import { getStoredReferral } from '../../lib/partnerReferral';
+import { safeRedirect } from '../../lib/safeRedirect';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
@@ -36,7 +37,7 @@ export function SignupPage() {
   // Un prospect arrive souvent par un lien de prospection (vidéos de démo) :
   // apres inscription on le renvoie sur la page demandee, pas sur le dashboard.
   const nextParam = params.get('next');
-  const redirectTo = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
+  const redirectTo = safeRedirect(nextParam);
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
   const [branchName, setBranchName] = useState('Magasin principal');
