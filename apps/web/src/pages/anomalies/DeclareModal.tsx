@@ -87,9 +87,16 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
             if (newItems !== target.current.items) changes.push({ fieldName: 'items', oldValue: target.current.items, newValue: newItems });
             continue;
           }
-          const newVal = fieldValues[f.name] ?? '';
-          const oldVal = target.current[f.name] ?? '';
-          if (newVal !== oldVal) changes.push({ fieldName: f.name, oldValue: oldVal, newValue: newVal });
+          const newVal = (fieldValues[f.name] ?? '').trim();
+          const oldVal = (target.current[f.name] ?? '').trim();
+          if (newVal !== oldVal && (newVal !== '' || oldVal !== '')) {
+            if (f.kind === 'date') {
+              const d1 = new Date(newVal).getTime();
+              const d2 = new Date(oldVal).getTime();
+              if (isNaN(d1) || isNaN(d2) || d1 === d2) continue;
+            }
+            changes.push({ fieldName: f.name, oldValue: oldVal, newValue: newVal });
+          }
         }
       } else if (correctionType === AnomalyCorrectionType.PRODUCT_RETURN && cashRefund) {
         changes.push({ fieldName: 'cashRefund', oldValue: '', newValue: cashRefund });

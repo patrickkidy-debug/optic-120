@@ -128,6 +128,9 @@ const anomalyInclude = {
  * AnomalyCorrectionEntry). Refuse une seconde anomalie ouverte sur la même
  * cible.
  */
+/** Nombre maximum de corrections par anomalie autorisées pour une même vente. */
+export const MAX_SALE_ANOMALY_CORRECTIONS = 3;
+
 export async function declareAnomaly(tenantId: string, userId: string, input: AnomalyDeclareInput) {
   const hasRefundField = input.changes.some((c) => c.fieldName === 'receivedAmount');
   const correctionType = resolveCorrectionType(input.category, input.correctionType, hasRefundField);
@@ -140,6 +143,22 @@ export async function declareAnomaly(tenantId: string, userId: string, input: An
 
   return withTenant(tenantId, async (db) => {
     await assertNoOpenAnomaly(db, targetEntity, input.targetId);
+
+    // Règle : une vente peut faire l'objet de 3 modifications par anomalie au maximum, toutes sources confondues.
+    if (targetEntity === AnomalyTargetEntity.SALE) {
+      const correctedCount = await db.anomaly.count({
+        where: {
+          targetEntity: AnomalyTargetEntity.SALE,
+          targetId: input.targetId,
+          status: AnomalyStatus.CORRECTED,
+        },
+      });
+      if (correctedCount >= MAX_SALE_ANOMALY_CORRECTIONS) {
+        throw badRequest(
+          `Cette vente a déjà été corrigée ${correctedCount} fois par anomalie (limite maximale autorisée : ${MAX_SALE_ANOMALY_CORRECTIONS}).`,
+        );
+      }
+    }
     const branchId = await resolveBranchId(db, targetEntity, input.targetId, input.branchId || undefined);
 
     const ctx = await buildImpactContext(db, tenantId, input.category, targetEntity, input.targetId);

@@ -71,12 +71,20 @@ export async function handleSaleFieldCorrection(
   const input = saleUpdateSchema.parse(raw);
 
   // Champs administratifs, hors du périmètre de updateSale() : patch direct,
-  // sans recalcul financier (ils ne touchent ni le stock ni les montants).
+  // sans recalcul financier. La date de création d'origine de la vente est
+  // préservée afin que la vente reste comptabilisée sur son jour d'émission réel.
   const directData: Record<string, unknown> = {};
   const createdAt = map.get('createdAt');
-  if (createdAt) directData.createdAt = new Date(entryValue(createdAt) ?? '');
+  if (createdAt && entryValue(createdAt)) {
+    const parsedDate = new Date(entryValue(createdAt)!);
+    if (!isNaN(parsedDate.getTime()) && parsedDate.getTime() !== before.createdAt.getTime()) {
+      directData.createdAt = parsedDate;
+    }
+  }
   const cashierId = map.get('cashierId');
-  if (cashierId) directData.cashierId = entryValue(cashierId);
+  if (cashierId && entryValue(cashierId) && entryValue(cashierId) !== before.cashierId) {
+    directData.cashierId = entryValue(cashierId);
+  }
 
   let after = before;
   if (Object.keys(input).length > 0) {
