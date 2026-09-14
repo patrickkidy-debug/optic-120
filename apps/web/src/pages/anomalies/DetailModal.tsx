@@ -17,7 +17,15 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateAfterCorrection } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, PageLoader } from '../../components/ui';
-import { AnomalyStatusBadge, AnomalyCategoryBadge, ANOMALY_REASON_LABELS, CORRECTION_TYPE_LABELS, hasFinancialStake } from './shared';
+import {
+  AnomalyStatusBadge,
+  AnomalyCategoryBadge,
+  ANOMALY_REASON_LABELS,
+  CORRECTION_TYPE_LABELS,
+  ANOMALY_ACTION_LABELS,
+  ANOMALY_FIELD_LABEL_MAP,
+  hasFinancialStake,
+} from './shared';
 
 /**
  * Une transition d'anomalie ne change que l'anomalie… sauf l'application d'une
@@ -85,7 +93,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
             <Line label="Motif" value={`${ANOMALY_REASON_LABELS[anomaly.reasonCode]}${anomaly.reasonNote ? ` — ${anomaly.reasonNote}` : ''}`} />
             <Line label="Déclarée le" value={formatDateTime(anomaly.declaredAt)} />
           </div>
-          <p className="mt-2 text-content">{anomaly.description}</p>
+          {anomaly.description && <p className="mt-2 text-content">{anomaly.description}</p>}
           {anomaly.comment && <p className="mt-1 text-xs text-content-faint">{anomaly.comment}</p>}
         </div>
 
@@ -98,14 +106,24 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
 
         {anomaly.entries.length > 0 && (
           <div>
-            <h4 className="mb-1.5 text-sm font-semibold text-content">Valeurs corrigées</h4>
-            <div className="space-y-1">
+            <h4 className="mb-2 text-sm font-semibold text-content">Valeurs corrigées</h4>
+            <div className="space-y-2">
               {anomaly.entries.map((e) => (
-                <div key={e.id} className="flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-sm">
-                  <span className="text-content-muted">{e.fieldName}</span>
-                  <span className="font-medium text-content">
-                    {e.oldValue || '—'} → {e.newValue || '—'}
-                  </span>
+                <div key={e.id} className="rounded-xl border bg-surface p-3 text-sm">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-semibold text-content">{ANOMALY_FIELD_LABEL_MAP[e.fieldName] ?? e.fieldName}</span>
+                    <span className="text-xs text-content-faint">{e.fieldName}</span>
+                  </div>
+                  <div className={`grid ${e.fieldName === 'items' ? 'grid-cols-1 gap-2' : 'grid-cols-1 sm:grid-cols-2 gap-2.5'}`}>
+                    <div className="rounded-lg bg-surface-2/80 p-2.5 text-xs">
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-content-muted">Valeur initiale</p>
+                      <div className="text-content">{formatCorrectionValue(e.fieldName, e.oldValue)}</div>
+                    </div>
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs">
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">Valeur corrigée souhaitée</p>
+                      <div className="text-content font-medium">{formatCorrectionValue(e.fieldName, e.newValue)}</div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -220,14 +238,18 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
         </div>
 
         {timeline && timeline.length > 0 && (
-          <div>
-            <h4 className="mb-1.5 text-sm font-semibold text-content">Journal</h4>
-            <div className="space-y-1 text-xs text-content-muted">
+          <div className="rounded-xl border bg-surface p-3">
+            <h4 className="mb-2 text-sm font-semibold text-content">Journal</h4>
+            <div className="space-y-2 text-xs">
               {timeline.map((e) => (
-                <div key={e.id} className="flex justify-between gap-2">
-                  <span>
-                    {e.userName ?? 'Système'} — {e.action}
-                  </span>
+                <div key={e.id} className="flex items-center justify-between gap-2 border-b border-surface-2 pb-1.5 last:border-0 last:pb-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-content">{e.userName ?? 'Système'}</span>
+                    <span className="text-content-faint">—</span>
+                    <span className="rounded-md bg-surface-2 px-2 py-0.5 font-medium text-content-muted">
+                      {ANOMALY_ACTION_LABELS[e.action] ?? e.action}
+                    </span>
+                  </div>
                   <span className="shrink-0 text-content-faint">{formatDateTime(e.createdAt)}</span>
                 </div>
               ))}
@@ -237,6 +259,86 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
       </div>
     </Modal>
   );
+}
+
+function formatCorrectionValue(fieldName: string, rawVal: string | null | undefined): React.ReactNode {
+  if (rawVal == null || rawVal === '' || rawVal === '—') {
+    return <span className="text-content-faint italic">Non renseigné</span>;
+  }
+
+  // 1. Articles / Lignes de vente (JSON)
+  if (fieldName === 'items') {
+    try {
+      const parsed = JSON.parse(rawVal);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return (
+          <div className="space-y-1.5 pt-0.5">
+            {parsed.map((item: { productId?: string; productName?: string; reference?: string; quantity?: number; unitPrice?: number }, idx: number) => {
+              const qty = Number(item.quantity) || 1;
+              const unitPrice = Number(item.unitPrice) || 0;
+              const total = qty * unitPrice;
+              const name = item.productName || item.reference || (item.productId ? `Article #${idx + 1}` : 'Article');
+              return (
+                <div key={idx} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-xs shadow-xs">
+                  <span className="font-medium text-content">{name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-content-muted">{qty} × {formatCurrency(unitPrice)}</span>
+                    <span className="font-semibold text-content">{formatCurrency(total)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 2. Dates / Horodatages
+  if (fieldName === 'createdAt' || fieldName === 'date' || (typeof rawVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(rawVal))) {
+    const d = new Date(rawVal);
+    if (!isNaN(d.getTime())) {
+      return <span>{formatDateTime(d)}</span>;
+    }
+  }
+
+  // 3. Montants
+  if (
+    [
+      'discountAmount',
+      'buyPrice',
+      'sellPrice',
+      'openingAmount',
+      'closingAmount',
+      'amount',
+      'cost',
+      'requestedAmount',
+      'acceptedAmount',
+      'receivedAmount',
+      'cashRefund',
+      'totalAmount',
+    ].includes(fieldName)
+  ) {
+    const numVal = Number(rawVal);
+    if (!isNaN(numVal)) {
+      return <span className="font-semibold text-content">{formatCurrency(numVal)}</span>;
+    }
+  }
+
+  // 4. Taux TVA
+  if (fieldName === 'vatRate') {
+    const numVal = Number(rawVal);
+    return <span>{!isNaN(numVal) && numVal > 0 ? `${numVal} %` : '0 % (Exonéré)'}</span>;
+  }
+
+  // 5. Client / Vendeur non renseigné
+  if ((fieldName === 'customerId' || fieldName === 'cashierId') && (rawVal === '0' || rawVal === '')) {
+    return <span className="text-content-faint italic">Non assigné</span>;
+  }
+
+  return <span>{rawVal}</span>;
 }
 
 function Line({ label, value }: { label: string; value: string }) {

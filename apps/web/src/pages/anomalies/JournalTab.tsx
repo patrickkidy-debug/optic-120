@@ -5,6 +5,8 @@ import { getAnomalyJournal } from '../../features/anomalies/api';
 import { formatDateTime } from '../../lib/format';
 import { PageLoader, EmptyState, Badge, Button } from '../../components/ui';
 
+import { ANOMALY_ACTION_LABELS } from './shared';
+
 const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
   ANOMALY_DECLARED: 'info',
   ANOMALY_MODIFIED: 'neutral',
@@ -42,7 +44,7 @@ export function JournalTab() {
                 {data.items.map((log) => (
                   <tr key={log.id} className="border-b last:border-0 hover:bg-surface-2/50">
                     <td className="table-cell">
-                      <Badge tone={ACTION_TONE[log.action] ?? 'neutral'}>{log.action}</Badge>
+                      <Badge tone={ACTION_TONE[log.action] ?? 'neutral'}>{ANOMALY_ACTION_LABELS[log.action] ?? log.action}</Badge>
                       {log.metadata && (
                         <p className="mt-0.5 text-xs text-content-faint">{JSON.stringify(log.metadata)}</p>
                       )}

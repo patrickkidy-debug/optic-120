@@ -80,8 +80,33 @@ export function previewImpact(
     case AnomalyCorrectionType.FIELD_CORRECTION: {
       switch (category) {
         case AnomalyCategory.VENTE:
-        case AnomalyCategory.DEVIS:
-          return { ...ZERO, financialImpact: delta(changes, 'discountAmount') * -1 };
+        case AnomalyCategory.DEVIS: {
+          const totalDelta = delta(changes, 'totalAmount');
+          if (totalDelta !== 0) {
+            return { ...ZERO, financialImpact: totalDelta };
+          }
+          let itemsFinancialDelta = 0;
+          let stockImpact = 0;
+          const itemsChange = changes.find((c) => c.fieldName === 'items');
+          if (itemsChange) {
+            try {
+              const oldItems: Array<{ quantity?: number; unitPrice?: number }> = JSON.parse(itemsChange.oldValue ?? '[]');
+              const newItems: Array<{ quantity?: number; unitPrice?: number }> = JSON.parse(itemsChange.newValue ?? '[]');
+              const oldTotal = oldItems.reduce((acc, i) => acc + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
+              const newTotal = newItems.reduce((acc, i) => acc + (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0), 0);
+              itemsFinancialDelta = newTotal - oldTotal;
+
+              const oldQty = oldItems.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+              const newQty = newItems.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+              stockImpact = oldQty - newQty;
+            } catch {
+              // fallback
+            }
+          }
+          const discountDelta = delta(changes, 'discountAmount');
+          const financialImpact = itemsFinancialDelta - discountDelta;
+          return { ...ZERO, financialImpact, stockImpact };
+        }
         case AnomalyCategory.PRODUIT:
           return { ...ZERO, financialImpact: delta(changes, 'sellPrice') };
         case AnomalyCategory.CAISSE: {

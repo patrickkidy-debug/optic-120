@@ -399,6 +399,8 @@ export interface SaleDetail {
   currency: string;
   createdAt: string;
   customerId?: string | null;
+  cashierId?: string | null;
+  vatRate?: number | null;
   insurerId?: string | null;
   /** Assureur ayant pris en charge une part de la vente, le cas échéant. */
   insurerName?: string | null;

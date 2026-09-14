@@ -167,12 +167,19 @@ function SalePicker({
               branchId: null,
               saleItems: full.items,
               current: {
-                items: JSON.stringify(full.items.map((i) => ({ productId: i.productId, quantity: i.quantity, unitPrice: Number(i.unitPrice) }))),
+                items: JSON.stringify(
+                  full.items.map((i) => ({
+                    productId: i.productId,
+                    productName: i.product?.name ?? '',
+                    quantity: i.quantity,
+                    unitPrice: Number(i.unitPrice),
+                  })),
+                ),
                 discountAmount: money(full.discountAmount),
                 customerId: full.customerId ?? '',
-                vatRate: '',
-                createdAt: full.createdAt,
-                cashierId: '',
+                vatRate: full.vatRate != null ? String(full.vatRate) : '0',
+                createdAt: full.createdAt ? full.createdAt.slice(0, 16) : '',
+                cashierId: full.cashierId ?? '',
               },
             });
           }}

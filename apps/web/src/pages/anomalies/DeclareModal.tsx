@@ -76,7 +76,14 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
       if (!isWholeSaleAction) {
         for (const f of fields) {
           if (f.name === 'items') {
-            const newItems = JSON.stringify(saleLines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })));
+            const newItems = JSON.stringify(
+              saleLines.map((l) => ({
+                productId: l.productId,
+                productName: l.productName,
+                quantity: l.quantity,
+                unitPrice: l.unitPrice,
+              })),
+            );
             if (newItems !== target.current.items) changes.push({ fieldName: 'items', oldValue: target.current.items, newValue: newItems });
             continue;
           }

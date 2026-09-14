@@ -38,6 +38,49 @@ export const CORRECTION_TYPE_LABELS: Record<AnomalyCorrectionType, string> = {
   REFUND_CORRECTION: 'Correction de remboursement',
 };
 
+export const ANOMALY_ACTION_LABELS: Record<string, string> = {
+  ANOMALY_DECLARED: 'Déclaration',
+  ANOMALY_MODIFIED: 'Modification',
+  ANOMALY_SUBMITTED: 'Soumission pour validation',
+  ANOMALY_APPROVED: 'Approbation',
+  ANOMALY_REJECTED: 'Rejet',
+  ANOMALY_CORRECTION_APPLIED: 'Correction appliquée',
+  ANOMALY_CANCELLED: 'Annulation',
+};
+
+export const ANOMALY_FIELD_LABEL_MAP: Record<string, string> = {
+  items: 'Articles (produit, quantité, prix)',
+  discountAmount: 'Remise',
+  customerId: 'Client',
+  vatRate: 'Taux de TVA',
+  createdAt: 'Date de la vente',
+  cashierId: 'Vendeur',
+  sku: 'Référence / SKU',
+  category: 'Catégorie',
+  brand: 'Marque',
+  name: 'Nom / Modèle',
+  buyPrice: "Prix d'achat",
+  sellPrice: 'Prix de vente',
+  quantity: 'Quantité',
+  openingAmount: 'Fond de caisse',
+  closingAmount: 'Montant de clôture',
+  method: 'Moyen de paiement',
+  amount: 'Montant',
+  supplierName: 'Fournisseur',
+  description: 'Description',
+  cost: 'Coût',
+  notes: 'Notes',
+  firstName: 'Prénom',
+  lastName: 'Nom',
+  phone: 'Téléphone',
+  email: 'Email',
+  loyaltyPoints: 'Points de fidélité',
+  requestedAmount: 'Montant demandé',
+  acceptedAmount: 'Montant accepté',
+  receivedAmount: 'Montant reçu',
+  cashRefund: 'Remboursement espèces',
+};
+
 export { ANOMALY_STATUS_LABELS, ANOMALY_CATEGORY_LABELS, ANOMALY_REASON_LABELS, ANOMALY_FIELDS_BY_CATEGORY, ANOMALY_CORRECTION_TYPES_BY_CATEGORY };
 
 /** Vrai si un des impacts de l'anomalie touche l'argent (à afficher clairement avant approbation/application). */
