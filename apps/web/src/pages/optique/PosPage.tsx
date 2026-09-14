@@ -48,6 +48,7 @@ import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore, computeTotals } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { formatCurrency } from '../../lib/format';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
 
@@ -474,19 +475,7 @@ export function PosPage() {
             setLoyaltyPoints(0);
             setWarrantyMonths(null);
             setPaySale(null);
-            qc.invalidateQueries({ queryKey: ['dashboard'] });
-            qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
-            qc.invalidateQueries({ queryKey: ['receivables'] });
-            qc.invalidateQueries({ queryKey: ['sales'] });
-            qc.invalidateQueries({ queryKey: ['finance-summary'] });
-            qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
-            // Le stock a été décrémenté : rafraîchit stock, catalogue caisse et produits.
-            qc.invalidateQueries({ queryKey: ['stock'] });
-            qc.invalidateQueries({ queryKey: ['pos-stock'] });
-            // Résumé de la session de caisse (encaissements du jour).
-            qc.invalidateQueries({ queryKey: ['cash-summary'] });
-            qc.invalidateQueries({ queryKey: ['pos-stock'] });
-            qc.invalidateQueries({ queryKey: ['stock'] });
+            invalidateSalesViews(qc);
             qc.invalidateQueries({ queryKey: ['products'] });
             qc.invalidateQueries({ queryKey: ['cash-current'] });
           }}

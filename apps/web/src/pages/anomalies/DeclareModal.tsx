@@ -11,6 +11,7 @@ import {
 import { declareAnomaly, submitAnomaly } from '../../features/anomalies/api';
 import { listProducts } from '../../features/optique/api';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateAnomalyViews } from '../../lib/queryInvalidation';
 import { Modal, Field, Button } from '../../components/ui';
 import {
   ANOMALY_CATEGORY_LABELS,
@@ -105,8 +106,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
       return anomaly;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['anomalies'] });
-      qc.invalidateQueries({ queryKey: ['anomalies-dashboard'] });
+      invalidateAnomalyViews(qc);
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e, e instanceof Error ? e.message : undefined)),

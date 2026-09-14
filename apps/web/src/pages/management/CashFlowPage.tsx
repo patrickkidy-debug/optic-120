@@ -22,6 +22,7 @@ import { listBranches } from '../../features/optique/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
 
@@ -67,17 +68,16 @@ export function CashFlowPage() {
     queryFn: listExpenses,
   });
 
+  // Dépenses et versements pèsent sur les indicateurs du tableau de bord :
+  // on réactualise toutes les vues chiffrées, pas seulement la liste locale.
   const delTransfer = useMutation({
     mutationFn: deleteCashTransfer,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cash-transfers'] }),
+    onSuccess: () => invalidateFinancialViews(qc),
     onError: (e) => alert(apiErrorMessage(e)),
   });
   const delExpense = useMutation({
     mutationFn: deleteExpense,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
-    },
+    onSuccess: () => invalidateFinancialViews(qc),
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
@@ -279,7 +279,7 @@ function TransferModal({ onClose }: { onClose: () => void }) {
   const mut = useMutation({
     mutationFn: (v: CashTransferCreateInput) => createCashTransfer(v),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cash-transfers'] });
+      invalidateFinancialViews(qc);
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),
@@ -349,8 +349,7 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
   const mut = useMutation({
     mutationFn: (v: ExpenseCreateInput) => createExpense(v),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
+      invalidateFinancialViews(qc);
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),

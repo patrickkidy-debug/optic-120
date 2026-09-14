@@ -39,6 +39,7 @@ import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
 import { useCustomerCoverage, decideCoverage } from '../../features/management/coverage';
+import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
@@ -111,21 +112,11 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   });
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
-  // Rafraîchit les vues impactées par un changement de vente (liste + tableau
-  // de bord + créances).
+  // Rafraîchit les vues impactées par un changement de vente. La liste des
+  // clés vit dans lib/queryInvalidation.ts pour que TOUTES les mutations
+  // financières de l'application réactualisent exactement les mêmes vues.
   function refreshSalesViews() {
-    qc.invalidateQueries({ queryKey: ['sales'] });
-    qc.invalidateQueries({ queryKey: ['dashboard'] });
-    qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
-    qc.invalidateQueries({ queryKey: ['forecast'] });
-    qc.invalidateQueries({ queryKey: ['sales-report'] });
-    qc.invalidateQueries({ queryKey: ['receivables'] });
-    qc.invalidateQueries({ queryKey: ['finance-summary'] });
-    // Le stock bouge (conversion de devis, retour) : synchronise stock et caisse.
-    qc.invalidateQueries({ queryKey: ['stock'] });
-    qc.invalidateQueries({ queryKey: ['pos-stock'] });
-    qc.invalidateQueries({ queryKey: ['insurer-upcoming'] });
-    qc.invalidateQueries({ queryKey: ['cash-summary'] });
+    invalidateSalesViews(qc);
   }
 
   const cancelMut = useMutation({
@@ -607,7 +598,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           onClose={() => setQuoteOpen(false)}
           onCreated={(saleId) => {
             setQuoteOpen(false);
-            qc.invalidateQueries({ queryKey: ['sales'] });
+            refreshSalesViews();
             if (confirm('Devis créé. Télécharger le PDF ?')) handleDownload(saleId);
           }}
         />

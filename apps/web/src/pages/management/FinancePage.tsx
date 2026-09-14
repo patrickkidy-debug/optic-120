@@ -13,6 +13,7 @@ import {
 import { getBranding, updateBranding } from '../../features/settings/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
 
@@ -42,10 +43,7 @@ export function FinancePage() {
 
   const removeMut = useMutation({
     mutationFn: deleteExpense,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
-    },
+    onSuccess: () => invalidateFinancialViews(qc),
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
@@ -218,8 +216,7 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
   const mut = useMutation({
     mutationFn: (v: ExpenseCreateInput) => createExpense(v),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
+      invalidateFinancialViews(qc);
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),

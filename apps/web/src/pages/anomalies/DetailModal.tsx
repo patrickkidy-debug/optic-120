@@ -14,15 +14,20 @@ import {
 } from '../../features/anomalies/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateAfterCorrection } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, PageLoader } from '../../components/ui';
 import { AnomalyStatusBadge, AnomalyCategoryBadge, ANOMALY_REASON_LABELS, CORRECTION_TYPE_LABELS, hasFinancialStake } from './shared';
 
+/**
+ * Une transition d'anomalie ne change que l'anomalie… sauf l'application d'une
+ * correction, qui modifie une vraie donnée métier (vente, stock, paiement…).
+ * Comme cette modale sert les deux, elle réactualise dans le doute toutes les
+ * vues chiffrées : c'est précisément leur absence ici qui laissait la liste des
+ * ventes et le tableau de bord afficher l'ancien montant après une correction.
+ */
 function refresh(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ['anomalies'] });
-  qc.invalidateQueries({ queryKey: ['anomaly'] });
-  qc.invalidateQueries({ queryKey: ['anomalies-dashboard'] });
-  qc.invalidateQueries({ queryKey: ['anomalies-journal'] });
+  invalidateAfterCorrection(qc);
 }
 
 export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose: () => void }) {

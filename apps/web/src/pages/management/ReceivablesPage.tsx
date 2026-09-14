@@ -6,6 +6,7 @@ import { PaymentModal } from '../optique/PosPage';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { formatCurrency, formatDateTime } from '../../lib/format';
+import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { PageHeader, PageLoader, EmptyState, Button } from '../../components/ui';
 
 export function ReceivablesPage() {
@@ -186,8 +187,7 @@ export function ReceivablesPage() {
           onClose={() => setPaySale(null)}
           onPaid={() => {
             setPaySale(null);
-            qc.invalidateQueries({ queryKey: ['receivables'] });
-            qc.invalidateQueries({ queryKey: ['sales'] });
+            invalidateSalesViews(qc);
           }}
         />
       )}
