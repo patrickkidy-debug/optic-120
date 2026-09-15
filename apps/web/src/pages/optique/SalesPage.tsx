@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -1039,11 +1039,26 @@ function QuoteModal({
     lineTotal: l.unitPrice * l.quantity,
   }));
   const decision = decideCoverage(coverageLines, total, selectedInsurer, coverage);
+  // Le calcul automatique PROPOSE un montant, il ne le possède pas. Il écrasait
+  // toute saisie manuelle à chaque rendu : sur un assureur à 100 %, une vente de
+  // 230 000 prise en charge à 200 000 revenait aussitôt à 230 000, et
+  // « Enregistrer » semblait ne rien faire puisque la valeur envoyée était celle
+  // d'origine. La proposition s'applique donc au changement d'assureur, et tant
+  // que l'utilisateur n'a pas fixé le montant lui-même.
+  const autoInsurerRef = useRef<string | null>(editing?.insurerId ?? null);
+  const [insuranceOverridden, setInsuranceOverridden] = useState(false);
+  const [saveError, setSaveError] = useState('');
   useEffect(() => {
     if (!selectedInsurer) return;
-    setInsurance(decision.amount);
+    if (autoInsurerRef.current !== selectedInsurer.id) {
+      autoInsurerRef.current = selectedInsurer.id;
+      setInsuranceOverridden(false);
+      setInsurance(decision.amount);
+      return;
+    }
+    if (!insuranceOverridden) setInsurance(decision.amount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInsurer?.id, decision.amount]);
+  }, [selectedInsurer?.id, decision.amount, insuranceOverridden]);
 
   const items = lines.map((l) => ({
     productId: l.productId,
@@ -1078,8 +1093,15 @@ function QuoteModal({
             // Ordonnance jointe au document (facultative).
             prescriptionId: prescriptionId || undefined,
           }),
-    onSuccess: (sale) => onCreated(sale.id),
-    onError: (e) => alert(apiErrorMessage(e)),
+    onSuccess: (sale) => {
+      setSaveError('');
+      onCreated(sale.id);
+    },
+    // Affichage dans la modale, pas via alert() : un navigateur qui a bloqué
+    // les dialogues (« empêcher cette page de créer des dialogues », coché
+    // après quelques erreurs) rend l'échec totalement invisible — le bouton
+    // semble alors ne rien faire.
+    onError: (e) => setSaveError(apiErrorMessage(e)),
   });
 
   return (
@@ -1211,7 +1233,10 @@ function QuoteModal({
                   type="number"
                   className="input mt-1"
                   value={insurance || ''}
-                  onChange={(e) => setInsurance(Number(e.target.value) || 0)}
+                  onChange={(e) => {
+                    setInsuranceOverridden(true);
+                    setInsurance(Number(e.target.value) || 0);
+                  }}
                 />
               </label>
             </div>
@@ -1227,7 +1252,12 @@ function QuoteModal({
                   value={insurerId}
                   onChange={(e) => {
                     setInsurerId(e.target.value);
-                    if (!e.target.value) setInsurance(0);
+                    // Nouvel assureur : la proposition automatique reprend la main.
+                    setInsuranceOverridden(false);
+                    if (!e.target.value) {
+                      autoInsurerRef.current = null;
+                      setInsurance(0);
+                    }
                   }}
                 >
                   <option value="">Aucune (client paie tout)</option>
@@ -1321,6 +1351,12 @@ function QuoteModal({
               </div>
             </div>
 
+            {saveError && (
+              <p className="mt-3 rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
+                {saveError}
+              </p>
+            )}
+
             <div className="mt-3 flex justify-end gap-2">
               <Button variant="outline" onClick={onClose}>
                 Annuler
@@ -1328,7 +1364,10 @@ function QuoteModal({
               <Button
                 disabled={lines.length === 0}
                 loading={createMut.isPending}
-                onClick={() => createMut.mutate()}
+                onClick={() => {
+                  setSaveError('');
+                  createMut.mutate();
+                }}
               >
                 {isEdit ? 'Enregistrer les modifications' : 'Créer le devis'}
               </Button>
