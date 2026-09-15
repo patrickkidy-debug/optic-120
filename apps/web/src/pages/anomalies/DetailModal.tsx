@@ -230,7 +230,9 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
               Permission requise pour appliquer : {domainPermission}
             </p>
           )}
-          {['DECLARED', 'PENDING_VALIDATION'].includes(anomaly.status) && canCancel && !showCancel && (
+          {/* APPROVED inclus : sans issue de secours, une correction approuvée
+              mais inapplicable bloque pour toujours la vente concernée. */}
+          {['DECLARED', 'PENDING_VALIDATION', 'APPROVED'].includes(anomaly.status) && canCancel && !showCancel && (
             <Button variant="ghost" onClick={() => setShowCancel(true)}>
               <Ban className="h-4 w-4" /> Annuler l'anomalie
             </Button>

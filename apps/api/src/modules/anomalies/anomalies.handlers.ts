@@ -64,6 +64,14 @@ export async function handleSaleFieldCorrection(
   }
   const discount = map.get('discountAmount');
   if (discount) raw.discountAmount = Number(entryValue(discount) ?? 0);
+  // Part assurance et assureur : updateSale() recalcule paidAmount comme
+  // « paiements client + part assurance » et resynchronise le dossier de prise
+  // en charge (syncClaimForSale), donc corriger ces deux champs répare aussi
+  // la créance sur l'assureur, pas seulement l'affichage de la vente.
+  const insuranceAmount = map.get('insuranceAmount');
+  if (insuranceAmount) raw.insuranceAmount = Number(entryValue(insuranceAmount) ?? 0);
+  const insurer = map.get('insurerId');
+  if (insurer) raw.insurerId = entryValue(insurer) || null;
   const customer = map.get('customerId');
   if (customer) raw.customerId = entryValue(customer) || null;
   const vat = map.get('vatRate');
@@ -96,8 +104,8 @@ export async function handleSaleFieldCorrection(
   }
 
   return {
-    before: { totalAmount: n(before.totalAmount) },
-    after: { totalAmount: n(after.totalAmount) },
+    before: { totalAmount: n(before.totalAmount), insuranceAmount: n(before.insuranceAmount) },
+    after: { totalAmount: n(after.totalAmount), insuranceAmount: n(after.insuranceAmount) },
   };
 }
 

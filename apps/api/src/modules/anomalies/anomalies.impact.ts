@@ -83,7 +83,9 @@ export function previewImpact(
         case AnomalyCategory.DEVIS: {
           const totalDelta = delta(changes, 'totalAmount');
           if (totalDelta !== 0) {
-            return { ...ZERO, financialImpact: totalDelta };
+            // Une correction peut changer le total ET la répartition avec
+            // l'assureur : les deux impacts se cumulent, ils ne s'excluent pas.
+            return { ...ZERO, financialImpact: totalDelta, insuranceImpact: delta(changes, 'insuranceAmount') };
           }
           let itemsFinancialDelta = 0;
           let stockImpact = 0;
@@ -105,7 +107,11 @@ export function previewImpact(
           }
           const discountDelta = delta(changes, 'discountAmount');
           const financialImpact = itemsFinancialDelta - discountDelta;
-          return { ...ZERO, financialImpact, stockImpact };
+          // Déplacer la part assurance ne change pas la valeur de la vente :
+          // ça déplace la créance du client vers l'assureur (ou l'inverse).
+          // D'où un insuranceImpact non nul avec un financialImpact nul.
+          const insuranceImpact = delta(changes, 'insuranceAmount');
+          return { ...ZERO, financialImpact, stockImpact, insuranceImpact };
         }
         case AnomalyCategory.PRODUIT:
           return { ...ZERO, financialImpact: delta(changes, 'sellPrice') };

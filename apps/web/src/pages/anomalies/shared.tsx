@@ -51,6 +51,8 @@ export const ANOMALY_ACTION_LABELS: Record<string, string> = {
 export const ANOMALY_FIELD_LABEL_MAP: Record<string, string> = {
   items: 'Articles (produit, quantité, prix)',
   discountAmount: 'Remise',
+  insuranceAmount: 'Prise en charge assurance',
+  insurerId: 'Assureur',
   customerId: 'Client',
   vatRate: 'Taux de TVA',
   createdAt: 'Date de la vente',

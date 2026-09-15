@@ -176,6 +176,8 @@ function SalePicker({
                   })),
                 ),
                 discountAmount: money(full.discountAmount),
+                insuranceAmount: money(full.insuranceAmount),
+                insurerId: full.insurerId ?? '',
                 customerId: full.customerId ?? '',
                 vatRate: full.vatRate != null ? String(full.vatRate) : '0',
                 createdAt: full.createdAt ? full.createdAt.slice(0, 16) : '',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import {
   ANOMALY_CATEGORIES,
@@ -9,7 +9,11 @@ import {
   type AnomalyDeclareInput,
 } from '@oculo/shared-types';
 import { declareAnomaly, submitAnomaly } from '../../features/anomalies/api';
-import { listProducts } from '../../features/optique/api';
+import { listProducts, listCustomers } from '../../features/optique/api';
+import { CustomerSearch } from '../../features/optique/SaleTools';
+import { listUsers } from '../../features/rbac/api';
+import { listInsurers } from '../../features/management/api';
+import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateAnomalyViews } from '../../lib/queryInvalidation';
 import { Modal, Field, Button } from '../../components/ui';
@@ -43,6 +47,35 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
   const [reasonNote, setReasonNote] = useState('');
   const [comment, setComment] = useState('');
   const [submitNow, setSubmitNow] = useState(true);
+  // Assureurs : un `insurerId` brut est un UUID illisible et insaisissable à la
+  // main. On affiche donc un vrai choix, et le nom au lieu de l'identifiant.
+  const canSeeInsurers = usePermission('insurance.view');
+  const { data: insurers } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers, enabled: canSeeInsurers });
+  const insurerName = (id: string) => insurers?.find((i) => i.id === id)?.name ?? (id ? 'Assureur inconnu' : '');
+  // Même problème pour le vendeur : `cashierId` est un UUID. Le catalogue des
+  // utilisateurs demande `rbac.users.view`, que n'ont pas les profils de vente —
+  // d'où le repli sur une saisie libre plutôt qu'une liste vide et bloquante.
+  const canSeeUsers = usePermission('rbac.users.view');
+  const { data: users } = useQuery({ queryKey: ['users'], queryFn: listUsers, enabled: canSeeUsers });
+  const userName = (id: string) => {
+    const u = users?.find((x) => x.id === id);
+    return u ? `${u.firstName} ${u.lastName}` : id;
+  };
+  // Même clé de cache que CustomerSearch : aucune requête supplémentaire.
+  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const customerName = (id: string) => {
+    const c = customers?.find((x) => x.id === id);
+    return c ? `${c.firstName} ${c.lastName}` : id;
+  };
+
+  /** Valeur actuelle en clair : un UUID brut n'apprend rien à l'utilisateur. */
+  function currentLabel(field: string, value: string): string {
+    if (!value) return field === 'insurerId' ? 'Aucun' : '—';
+    if (field === 'insurerId') return insurerName(value);
+    if (field === 'cashierId') return userName(value);
+    if (field === 'customerId') return customerName(value);
+    return value;
+  }
 
   const correctionOptions = ANOMALY_CORRECTION_TYPES_BY_CATEGORY[category];
   const fields = ANOMALY_FIELDS_BY_CATEGORY[category];
@@ -193,15 +226,49 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
                   <div key={f.name} className="grid grid-cols-2 items-center gap-2 text-sm">
                     <div>
                       <p className="text-xs text-content-faint">{f.label}</p>
-                      <p className="rounded-md bg-surface-2 px-2 py-1 text-content-muted">{target.current[f.name] || '—'}</p>
+                      <p className="rounded-md bg-surface-2 px-2 py-1 text-content-muted">
+                        {currentLabel(f.name, target.current[f.name] ?? '')}
+                      </p>
                     </div>
-                    <input
-                      className="input"
-                      type={f.kind === 'money' || f.kind === 'int' ? 'number' : f.kind === 'date' ? 'datetime-local' : 'text'}
-                      value={fieldValues[f.name] ?? ''}
-                      onChange={(e) => setFieldValues((v) => ({ ...v, [f.name]: e.target.value }))}
-                      placeholder="Nouvelle valeur"
-                    />
+                    {f.name === 'insurerId' ? (
+                      <select
+                        className="input"
+                        value={fieldValues.insurerId ?? ''}
+                        onChange={(e) => setFieldValues((v) => ({ ...v, insurerId: e.target.value }))}
+                      >
+                        <option value="">Aucun (le client paie tout)</option>
+                        {(insurers ?? []).map((ins) => (
+                          <option key={ins.id} value={ins.id}>
+                            {ins.name} — {ins.coveragePercent}%
+                          </option>
+                        ))}
+                      </select>
+                    ) : f.name === 'customerId' ? (
+                      <CustomerSearch
+                        value={fieldValues.customerId || null}
+                        onChange={(id) => setFieldValues((v) => ({ ...v, customerId: id ?? '' }))}
+                      />
+                    ) : f.name === 'cashierId' && canSeeUsers ? (
+                      <select
+                        className="input"
+                        value={fieldValues.cashierId ?? ''}
+                        onChange={(e) => setFieldValues((v) => ({ ...v, cashierId: e.target.value }))}
+                      >
+                        {(users ?? []).map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.firstName} {u.lastName}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="input"
+                        type={f.kind === 'money' || f.kind === 'int' ? 'number' : f.kind === 'date' ? 'datetime-local' : 'text'}
+                        value={fieldValues[f.name] ?? ''}
+                        onChange={(e) => setFieldValues((v) => ({ ...v, [f.name]: e.target.value }))}
+                        placeholder="Nouvelle valeur"
+                      />
+                    )}
                   </div>
                 ),
               )}

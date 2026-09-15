@@ -2186,6 +2186,11 @@ export const ANOMALY_FIELDS_BY_CATEGORY: Record<AnomalyCategory, AnomalyFieldDef
     // recalculée entièrement côté serveur (voir sales.service.updateSale).
     { name: 'items', label: 'Articles (produit, quantité, prix)', kind: 'text' },
     { name: 'discountAmount', label: 'Remise', kind: 'money' },
+    // Répartition client / assureur. Une erreur ici ne change pas le total de
+    // la vente mais déplace la créance : une part encaissée à tort auprès du
+    // client est une part jamais réclamée à l'assureur (et inversement).
+    { name: 'insuranceAmount', label: 'Prise en charge assurance', kind: 'money' },
+    { name: 'insurerId', label: 'Assureur', kind: 'select' },
     { name: 'customerId', label: 'Client', kind: 'select' },
     { name: 'vatRate', label: 'Taux de TVA', kind: 'int' },
     { name: 'createdAt', label: 'Date de la vente', kind: 'date' },
@@ -2194,6 +2199,8 @@ export const ANOMALY_FIELDS_BY_CATEGORY: Record<AnomalyCategory, AnomalyFieldDef
   DEVIS: [
     { name: 'items', label: 'Articles (produit, quantité, prix)', kind: 'text' },
     { name: 'discountAmount', label: 'Remise', kind: 'money' },
+    { name: 'insuranceAmount', label: 'Prise en charge assurance', kind: 'money' },
+    { name: 'insurerId', label: 'Assureur', kind: 'select' },
     { name: 'customerId', label: 'Client', kind: 'select' },
     { name: 'vatRate', label: 'Taux de TVA', kind: 'int' },
   ],

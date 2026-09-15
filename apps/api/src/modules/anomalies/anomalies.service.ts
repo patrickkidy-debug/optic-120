@@ -5,6 +5,8 @@ import {
   AnomalyTargetEntity,
   ANOMALY_CORRECTION_TYPES_BY_CATEGORY,
   ANOMALY_REASON_LABELS,
+  ANOMALY_STATUS_LABELS,
+  ANOMALY_OPEN_STATUSES,
   type AnomalyDeclareInput,
   type AnomalyModifyInput,
   type AnomalyListFilter,
@@ -33,7 +35,17 @@ async function assertNoOpenAnomaly(db: TenantPrisma, targetEntity: AnomalyTarget
     where: { targetEntity, targetId, status: { in: ['DECLARED', 'PENDING_VALIDATION', 'APPROVED'] as never } },
   });
   if (existing) {
-    throw conflict(`Une anomalie (${existing.number}) est déjà ouverte sur cet élément.`);
+    // Message actionnable : sans le statut ni la marche à suivre, l'utilisateur
+    // est bloqué sans savoir que la sortie est dans l'onglet Anomalies.
+    const status = ANOMALY_STATUS_LABELS[existing.status as never] ?? existing.status;
+    const next =
+      existing.status === AnomalyStatus.APPROVED
+        ? 'Ouvrez-la dans Anomalies et appliquez la correction'
+        : 'Ouvrez-la dans Anomalies pour la traiter, ou annulez-la';
+    throw conflict(
+      `Une correction (${existing.number}) est déjà en cours sur cet élément — statut : ${status}. ` +
+        `${next}, puis redéclarez si nécessaire.`,
+    );
   }
 }
 
@@ -293,8 +305,14 @@ export async function rejectAnomaly(tenantId: string, userId: string, id: string
 
 export async function cancelAnomaly(tenantId: string, userId: string, id: string, cancellationReason: string) {
   const current = await requireAnomaly(tenantId, id);
-  if (![AnomalyStatus.DECLARED, AnomalyStatus.PENDING_VALIDATION].includes(current.status as never)) {
-    throw conflict('Seule une anomalie non encore approuvée peut être annulée');
+  // APPROVED est annulable : à ce stade `applyCorrection` n'a encore rien écrit
+  // dans la donnée métier — l'approbation n'est qu'un feu vert. L'exclure créait
+  // une impasse : une anomalie approuvée mais inapplicable (garde-fou
+  // anti-dérive, permission de domaine manquante) ne pouvait plus être ni
+  // appliquée ni annulée, et bloquait définitivement toute autre correction sur
+  // la même vente via assertNoOpenAnomaly.
+  if (!ANOMALY_OPEN_STATUSES.includes(current.status as never)) {
+    throw conflict('Une anomalie déjà appliquée, rejetée ou annulée ne peut plus être annulée');
   }
   return withTenant(tenantId, async (db) => {
     await db.anomaly.updateMany({
