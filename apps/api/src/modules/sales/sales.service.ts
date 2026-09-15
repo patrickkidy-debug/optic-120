@@ -773,3 +773,62 @@ export async function addPayment(
   await settlePayment(payment.id, PaymentStatus.SUCCESS, { manual: true, method: data.method });
   return { paymentId: payment.id, status: PaymentStatus.SUCCESS, providerRef: payment.id };
 }
+
+/**
+ * Annule un encaissement saisi à tort et recrédite la vente d'autant.
+ *
+ * Contrepartie directe de `addPayment` : un montant encaissé par erreur au
+ * comptoir ne pouvait jusqu'ici être retiré que par une correction d'anomalie,
+ * alors que l'erreur se constate depuis l'historique de la vente. La ligne de
+ * paiement n'est jamais supprimée — elle passe en CANCELLED et le motif est
+ * consigné dans `Transaction` — pour que la trace de l'erreur survive à la
+ * correction.
+ *
+ * La part assurance n'est pas un Payment : elle reste donc acquise à la vente,
+ * qui retombe en PARTIALLY_PAID et non en CONFIRMED.
+ */
+export async function cancelPayment(
+  tenantId: string,
+  userId: string,
+  saleId: string,
+  paymentId: string,
+  reason: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findFirst({
+      where: { id: paymentId, saleId, tenantId },
+      include: { sale: true },
+    });
+    if (!payment) throw notFound('Encaissement introuvable pour cette vente');
+    if (payment.status !== PaymentStatus.SUCCESS) {
+      throw conflict('Seul un encaissement réussi peut être annulé');
+    }
+    const sale = payment.sale;
+    if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente annulée');
+
+    const amount = Number(payment.amount);
+    const total = Number(sale.totalAmount);
+    // Plancher à 0 : un paidAmount négatif n'a aucun sens comptable et
+    // masquerait une incohérence antérieure au lieu de la laisser visible.
+    const newPaid = Math.max(0, Number(sale.paidAmount) - amount);
+
+    await tx.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.CANCELLED } });
+    await tx.transaction.create({
+      data: {
+        paymentId,
+        event: 'payment_cancelled',
+        status: PaymentStatus.CANCELLED,
+        payload: { reason, cancelledBy: userId, amount },
+      },
+    });
+    await tx.sale.update({
+      where: { id: sale.id },
+      data: { paidAmount: newPaid, status: saleSettlementStatus(newPaid, total) },
+    });
+
+    return tx.sale.findFirst({
+      where: { id: sale.id },
+      include: { items: { include: { product: true } }, customer: true, payments: true },
+    });
+  });
+}

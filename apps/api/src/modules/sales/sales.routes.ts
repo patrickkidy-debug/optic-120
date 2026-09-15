@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
@@ -279,4 +280,29 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     const result = await salesService.addPayment(req.auth!.tenantId, req.auth!.userId, id, input);
     return reply.status(201).send(result);
   });
+
+  // Annulation d'un encaissement saisi à tort, depuis l'historique de la vente.
+  // Permission dédiée (et non `optique.sales.create`) : retirer de l'argent
+  // déjà constaté n'est pas le même geste que l'encaisser.
+  app.post(
+    '/:id/payments/:paymentId/cancel',
+    { preHandler: requirePermission('optique.payments.correct') },
+    async (req, reply) => {
+      const { id, paymentId } = req.params as { id: string; paymentId: string };
+      const { reason } = z
+        .object({ reason: z.string().trim().min(1, 'Motif obligatoire').max(500) })
+        .parse(req.body);
+
+      const sale = await salesService.cancelPayment(req.auth!.tenantId, req.auth!.userId, id, paymentId, reason);
+      await recordAudit({
+        tenantId: req.auth!.tenantId,
+        userId: req.auth!.userId,
+        action: 'SALE_PAYMENT_CANCELLED',
+        entity: 'Payment',
+        entityId: paymentId,
+        ...requestMeta(req),
+      });
+      return reply.send({ sale });
+    },
+  );
 }

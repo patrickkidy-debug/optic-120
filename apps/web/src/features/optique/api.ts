@@ -435,6 +435,12 @@ export async function convertQuote(id: string) {
   return data.sale;
 }
 
+/** Annule un encaissement saisi à tort. Le motif est obligatoire et consigné. */
+export async function cancelPayment(saleId: string, paymentId: string, reason: string) {
+  const { data } = await api.post(`/sales/${saleId}/payments/${paymentId}/cancel`, { reason });
+  return data.sale as SaleDetail;
+}
+
 export async function addPayment(
   saleId: string,
   input: { method: PaymentMethod; amount: number; customerPhone?: string },

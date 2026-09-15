@@ -24,6 +24,7 @@ import {
 import {
   listSales,
   cancelSale,
+  cancelPayment,
   convertQuote,
   createSaleReturn,
   getSale,
@@ -686,9 +687,26 @@ function SaleDetailModal({
   onClose: () => void;
   onCollect?: () => void;
 }) {
+  const qc = useQueryClient();
   const due = Number(sale.totalAmount) - Number(sale.paidAmount);
   const payments = sale.payments ?? [];
   const insured = Number(sale.insuranceAmount ?? 0);
+  const canCorrectPayment = usePermission('optique.payments.correct');
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+
+  const cancelPaymentMut = useMutation({
+    mutationFn: ({ paymentId, reason }: { paymentId: string; reason: string }) =>
+      cancelPayment(sale.id, paymentId, reason),
+    onSuccess: () => {
+      invalidateSalesViews(qc);
+      setCancelling(null);
+      setCancelReason('');
+      onClose();
+    },
+    onError: (e) => setCancelError(apiErrorMessage(e)),
+  });
 
   return (
     <Modal open onClose={onClose} title={`Détail — ${sale.number}`} size="lg">
@@ -810,7 +828,51 @@ function SaleDetailModal({
                       <span className="font-display font-bold text-content">
                         {formatCurrency(Number(p.amount))}
                       </span>
+                      {canCorrectPayment && p.status === 'SUCCESS' && cancelling !== p.id && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCancelling(p.id);
+                            setCancelReason('');
+                            setCancelError('');
+                          }}
+                          className="btn-ghost h-8 rounded-lg px-2 text-xs text-danger"
+                        >
+                          Annuler l'encaissement
+                        </button>
+                      )}
                     </div>
+                    {cancelling === p.id && (
+                      <div className="w-full border-t pt-2">
+                        <p className="mb-2 text-xs text-danger">
+                          Annuler cet encaissement de {formatCurrency(Number(p.amount))} le retirera du
+                          total payé. La vente repassera à « Reste à payer » et l'opération sera
+                          conservée dans l'historique.
+                        </p>
+                        <textarea
+                          className="input min-h-[56px]"
+                          placeholder="Motif de l'annulation (obligatoire)"
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                        />
+                        {cancelError && <p className="mt-1 text-xs text-danger">{cancelError}</p>}
+                        <div className="mt-2 flex justify-end gap-2">
+                          <Button variant="ghost" onClick={() => setCancelling(null)}>
+                            Retour
+                          </Button>
+                          <Button
+                            variant="danger"
+                            loading={cancelPaymentMut.isPending}
+                            disabled={cancelReason.trim().length === 0}
+                            onClick={() =>
+                              cancelPaymentMut.mutate({ paymentId: p.id, reason: cancelReason.trim() })
+                            }
+                          >
+                            Confirmer l'annulation
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
