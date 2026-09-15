@@ -222,7 +222,19 @@ export async function handlePaymentCorrection(
     }
     const nextStatus = saleSettlementStatus(nextPaid, total);
 
-    await tx.payment.update({ where: { id: paymentId }, data: { method: nextMethod, amount: nextAmount } });
+    // Ramener un encaissement à 0, c'est l'annuler : le marquer CANCELLED
+    // plutôt que de laisser une ligne « Chèque — 0 FCFA » dans le détail de la
+    // vente et sur le reçu remis au client. La ligne reste en base, donc
+    // l'historique de l'erreur n'est pas effacé.
+    const cancelled = nextAmount === 0;
+    await tx.payment.update({
+      where: { id: paymentId },
+      data: {
+        method: nextMethod,
+        amount: nextAmount,
+        ...(cancelled ? { status: PaymentStatus.CANCELLED } : {}),
+      },
+    });
     await tx.transaction.create({
       data: { paymentId, event: 'anomaly_correction', status: PaymentStatus.SUCCESS, payload: { amountDelta } },
     });

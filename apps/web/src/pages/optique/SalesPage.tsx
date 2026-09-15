@@ -668,6 +668,8 @@ const PAYMENT_STATUS: Record<string, { label: string; tone: 'success' | 'warning
   SUCCESS: { label: 'Réussi', tone: 'success' },
   PENDING: { label: 'En attente', tone: 'warning' },
   FAILED: { label: 'Échoué', tone: 'danger' },
+  CANCELLED: { label: 'Annulé', tone: 'danger' },
+  REFUNDED: { label: 'Remboursé', tone: 'warning' },
 };
 
 /**
