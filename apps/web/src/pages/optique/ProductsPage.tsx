@@ -102,8 +102,13 @@ export function ProductsPage() {
   // listAllProducts enchaîne toutes les pages nécessaires côté client : plus
   // aucune troncature silencieuse, quelle que soit la taille du catalogue.
   const { data, isLoading } = useQuery({
-    queryKey: ['products', search, category],
-    queryFn: () => listAllProducts({ search: search || undefined, category: category || undefined }),
+    queryKey: ['products', branchId, search, category],
+    queryFn: () =>
+      listAllProducts({
+        search: search || undefined,
+        category: category || undefined,
+        branchId: branchId ?? undefined,
+      }),
   });
 
   // Quantités du magasin actif, indexées par produit, pour ajuster sans quitter le catalogue.
@@ -333,7 +338,8 @@ export function ProductsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-          <input            className="input pl-9"
+          <input
+            className="input pl-9"
             placeholder="Rechercher…"
             value={search}
             onChange={(e) => {
@@ -838,7 +844,9 @@ function ProductModal({
         createdAt: values.createdAt ? new Date(values.createdAt).toISOString() : undefined,
       };
 
-      const saved = product ? await updateProduct(product.id, payload) : await createProduct(payload);
+      const saved = product
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload, branchId ?? undefined);
       // Appliquer le stock du magasin actif si la quantité ou le seuil ont changé.
       // (Pas pour les verres : stock illimité.)
       if (branchId && !isLens) {

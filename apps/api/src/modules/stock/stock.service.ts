@@ -1,4 +1,5 @@
-import { StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
+import { StockMovementType, isMadeToOrderCategory, MADE_TO_ORDER_CATEGORIES } from '@oculo/shared-types';
+import type { ProductCategory } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound } from '../../lib/http-error.js';
 
@@ -415,8 +416,19 @@ export async function applyStockCount(
 
 /** Liste l'état du stock pour une succursale (tous les produits actifs). */
 export async function getStockForBranch(tenantId: string, branchId: string, lowStockOnly: boolean) {
+  // Même règle de visibilité que le catalogue : le magasin ne voit que les
+  // références dont il a une ligne de stock, plus les catégories fabriquées sur
+  // commande (verres), qui n'ont pas de stock physique. Sans ce filtre, l'écran
+  // Stock ressortait tout le catalogue de l'enseigne, ligne à 0 comprise.
   const products = await prisma.product.findMany({
-    where: { tenantId, isActive: true },
+    where: {
+      tenantId,
+      isActive: true,
+      OR: [
+        { category: { in: MADE_TO_ORDER_CATEGORIES as unknown as ProductCategory[] } },
+        { stockItems: { some: { branchId } } },
+      ],
+    },
     include: { stockItems: { where: { branchId } } },
     orderBy: { name: 'asc' },
   });

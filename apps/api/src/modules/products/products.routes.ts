@@ -11,29 +11,62 @@ import {
   lensLabel,
   lensBaseOptions,
   DEFAULT_LENS_PRICING,
+  MADE_TO_ORDER_CATEGORIES,
   type LensPricing,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission, requireAnyPermission } from '../../middlewares/rbac-guard.js';
+import { requirePermission, requireAnyPermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import type { FastifyRequest } from 'fastify';
 import { notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { generateSku } from './products-import.service.js';
+
+
+/**
+ * Visibilité du catalogue par magasin — présence, pas propriété.
+ *
+ * Le produit n'appartient à personne : `StockItem` porte déjà `branchId`, donc
+ * chaque magasin a ses propres quantités des mêmes références. Donner un
+ * propriétaire au produit rendrait incohérents le stock et les lignes de vente
+ * des autres magasins (voir `@@unique([productId, branchId])`). On filtre donc
+ * ce que le magasin voit, sans jamais toucher aux données.
+ *
+ * Règle : le magasin voit une référence dès qu'il en a une ligne de stock —
+ * créée à l'ajout du produit, à la réception, au transfert ou au premier
+ * ajustement. Les catégories fabriquées sur commande (verres) restent visibles
+ * partout : elles n'ont pas de stock physique.
+ */
+function productVisibilityScope(req: FastifyRequest, branchId?: string) {
+  if (!branchId) return {};
+  assertBranchAccess(req, branchId);
+  return {
+    OR: [
+      { category: { in: MADE_TO_ORDER_CATEGORIES as unknown as ProductCategory[] } },
+      { stockItems: { some: { branchId } } },
+    ],
+  };
+}
 
 export async function productsRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
   app.get('/', { preHandler: requirePermission('optique.products.view') }, async (req, reply) => {
-    const q = req.query as { search?: string; category?: string; page?: string; pageSize?: string };
+    const q = req.query as { search?: string; category?: string; page?: string; pageSize?: string; branchId?: string };
     const page = Math.max(1, parseInt(q.page ?? '1', 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(q.pageSize ?? '50', 10)));
 
-    const where: Record<string, unknown> = {};
+    // Visibilité et recherche utilisent toutes deux un OR : les combiner dans un
+    // AND explicite, sinon la recherche écraserait le filtre de magasin et
+    // ressortirait tout le catalogue de l'enseigne.
+    const where: Record<string, unknown> = { AND: [productVisibilityScope(req, q.branchId)] };
     if (q.category) where.category = q.category;
     if (q.search) {
-      where.OR = [
-        { name: { contains: q.search, mode: 'insensitive' } },
-        { sku: { contains: q.search, mode: 'insensitive' } },
-        { brand: { contains: q.search, mode: 'insensitive' } },
-      ];
+      (where.AND as unknown[]).push({
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' } },
+          { sku: { contains: q.search, mode: 'insensitive' } },
+          { brand: { contains: q.search, mode: 'insensitive' } },
+        ],
+      });
     }
 
     // `photos` (secondaires) est volontairement exclu : ces data URLs pèsent
@@ -94,8 +127,12 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    // Création du produit + une ligne de stock (qté 0) par magasin, pour qu'il apparaisse
-    // aussitôt dans Stock et soit ajustable partout.
+    // Ligne de stock à 0 pour le SEUL magasin créateur : il voit aussitôt sa
+    // nouvelle référence, les autres ne la voient pas tant qu'ils n'en ont ni
+    // reçu ni vendu. En posant une ligne dans chaque magasin, la création
+    // rendait toute nouvelle référence visible partout.
+    const createBranchId = (req.body as { branchId?: string }).branchId;
+    if (createBranchId) assertBranchAccess(req, createBranchId);
     const product = await req.db!.$transaction(async (tx) => {
       // Référence auto-générée si non saisie (verres, accessoires…).
       const sku = provided || (await generateSku(tx, input.category));
@@ -114,7 +151,12 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
           createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
         },
       });
-      const branches = await tx.branch.findMany({ where: { tenantId, isActive: true }, select: { id: true } });
+      // Sans magasin précisé (import, appel hors interface), on retombe sur
+      // l'ancien comportement : mieux vaut une référence visible partout qu'une
+      // référence orpheline que personne ne retrouve.
+      const branches = createBranchId
+        ? [{ id: createBranchId }]
+        : await tx.branch.findMany({ where: { tenantId, isActive: true }, select: { id: true } });
       if (branches.length > 0) {
         await tx.stockItem.createMany({
           data: branches.map((b) => ({ tenantId, productId: created.id, branchId: b.id, quantity: 0, minAlert: 0 })),

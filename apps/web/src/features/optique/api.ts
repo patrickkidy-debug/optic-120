@@ -45,7 +45,7 @@ export interface Product {
   createdAt?: string;
 }
 
-export async function listProducts(params: { search?: string; category?: string; page?: number; pageSize?: number } = {}) {
+export async function listProducts(params: { search?: string; category?: string; page?: number; pageSize?: number; branchId?: string } = {}) {
   const { data } = await api.get<{ items: Product[]; total: number }>('/products', { params });
   return data;
 }
@@ -58,7 +58,7 @@ export async function listProducts(params: { search?: string; category?: string;
  * enchaîne les pages nécessaires, en parallèle, pour que la liste affichée
  * soit toujours complète sans jamais changer le comportement de l'API.
  */
-export async function listAllProducts(params: { search?: string; category?: string } = {}): Promise<{
+export async function listAllProducts(params: { search?: string; category?: string; branchId?: string } = {}): Promise<{
   items: Product[];
   total: number;
 }> {
@@ -77,8 +77,13 @@ export async function listAllProducts(params: { search?: string; category?: stri
   return { items: [first.items, ...rest.map((r) => r.items)].flat(), total: first.total };
 }
 
-export async function createProduct(input: ProductCreateInput) {
-  const { data } = await api.post('/products', input);
+/**
+ * `branchId` : magasin qui voit la nouvelle référence. Sans lui, le serveur
+ * retombe sur l'ancien comportement (visible partout) plutôt que de créer une
+ * référence que personne ne retrouve.
+ */
+export async function createProduct(input: ProductCreateInput, branchId?: string) {
+  const { data } = await api.post('/products', { ...input, branchId: branchId || undefined });
   return data.product;
 }
 
