@@ -15,6 +15,7 @@ import {
   type LensPricing,
 } from '@oculo/shared-types';
 import { listCustomers, createCustomer, ensureLensProduct, type Customer } from './api';
+import { useUIStore } from '../../store/ui';
 import { Button, Modal, Field } from '../../components/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
@@ -107,9 +108,10 @@ export function LoyaltyRedeem({
   value: number;
   onChange: (points: number) => void;
 }) {
+  const branchId = useUIStore((st) => st.activeBranchId);
   const { data: customers } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => listCustomers(),
+    queryKey: ['customers', branchId],
+    queryFn: () => listCustomers(undefined, branchId ?? undefined),
     enabled: Boolean(customerId),
   });
   const customer = customers?.find((c) => c.id === customerId);
@@ -212,7 +214,13 @@ export function CustomerSearch({
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const branchId = useUIStore((st) => st.activeBranchId);
+  // La clé porte le magasin : sans lui, changer de magasin resservirait le
+  // fichier clients du précédent depuis le cache.
+  const { data: customers } = useQuery({
+    queryKey: ['customers', branchId],
+    queryFn: () => listCustomers(undefined, branchId ?? undefined),
+  });
   const selected = customers?.find((c) => c.id === value) ?? null;
 
   const filtered = (customers ?? [])
@@ -312,6 +320,7 @@ function NewCustomerModal({
   onCreated: (c: Customer) => void;
 }) {
   const [error, setError] = useState('');
+  const branchId = useUIStore((st) => st.activeBranchId);
   const {
     register,
     handleSubmit,
@@ -319,7 +328,10 @@ function NewCustomerModal({
   } = useForm<CustomerCreateInput>({ resolver: zodResolver(customerCreateSchema) });
 
   const mut = useMutation({
-    mutationFn: (v: CustomerCreateInput) => createCustomer(v),
+    mutationFn: (v: CustomerCreateInput) => {
+      if (!branchId) throw new Error('Sélectionnez un magasin avant de créer un client');
+      return createCustomer(v, branchId);
+    },
     onSuccess: (c) => onCreated(c),
     onError: (e) => setError(apiErrorMessage(e)),
   });

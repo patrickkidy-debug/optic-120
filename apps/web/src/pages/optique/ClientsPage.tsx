@@ -13,6 +13,7 @@ function waLink(phone?: string | null): string | null {
   return digits ? `https://wa.me/${digits}` : null;
 }
 import { customerCreateSchema, type CustomerCreateInput } from '@oculo/shared-types';
+import { useUIStore } from '../../store/ui';
 import {
   listCustomers,
   createCustomer,
@@ -48,9 +49,10 @@ export function ClientsPage() {
   const [dossierLoading, setDossierLoading] = useState<string | null>(null);
   const [clinicLoading, setClinicLoading] = useState<string | null>(null);
 
+  const branchId = useUIStore((st) => st.activeBranchId);
   const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers', search],
-    queryFn: () => listCustomers(search || undefined),
+    queryKey: ['customers', branchId, search],
+    queryFn: () => listCustomers(search || undefined, branchId ?? undefined),
   });
 
   // Pré-sélectionne le client en caisse et bascule sur la création de devis.
@@ -100,7 +102,8 @@ export function ClientsPage() {
   async function exportPdf() {
     setExporting(true);
     try {
-      const all = await listCustomers();
+      // L'export reste borné au magasin courant : c'est son fichier clients.
+      const all = await listCustomers(undefined, branchId ?? undefined);
       const esc = (v: unknown) =>
         String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const body = all
@@ -300,8 +303,13 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
       : {},
   });
 
+  const branchId = useUIStore((st) => st.activeBranchId);
   const mut = useMutation({
-    mutationFn: (v: CustomerCreateInput) => (customer ? updateCustomer(customer.id, v) : createCustomer(v)),
+    mutationFn: (v: CustomerCreateInput) => {
+      if (customer) return updateCustomer(customer.id, v);
+      if (!branchId) throw new Error('Sélectionnez un magasin avant de créer un client');
+      return createCustomer(v, branchId);
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['customers'] }); onClose(); },
     onError: (e) => setError(apiErrorMessage(e)),
   });

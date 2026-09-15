@@ -5,6 +5,7 @@ import { Plus, Wrench, Frame, Glasses, CircleDot, Sparkles, Tag, type LucideIcon
 import type { RepairCreateInput, RepairStatus, RepairCategory } from '@oculo/shared-types';
 import { REPAIR_STATUSES, REPAIR_CATEGORIES } from '@oculo/shared-types';
 import { listRepairs, createRepair, setRepairStatus, listCustomers } from '../../features/optique/api';
+import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { usePermission } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
@@ -141,7 +142,11 @@ function RepairModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const { register, handleSubmit } = useForm<RepairCreateInput>();
   const [category, setCategory] = useState<RepairCategory>('MONTURE');
   const [error, setError] = useState('');
-  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const customersBranchId = useUIStore((st) => st.activeBranchId);
+  const { data: customers } = useQuery({
+    queryKey: ['customers', customersBranchId],
+    queryFn: () => listCustomers(undefined, customersBranchId ?? undefined),
+  });
   const mut = useMutation({
     mutationFn: (v: RepairCreateInput) => createRepair(v),
     onSuccess: onCreated,

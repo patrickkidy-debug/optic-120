@@ -60,42 +60,42 @@ model Tenant {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  demoProgress      DemoProgress?
-  storeSetupProgress StoreSetupProgress?
-  branches          Branch[]
-  users             User[]
-  roles             Role[]
-  products          Product[]
-  stockItems        StockItem[]
-  stockMovements    StockMovement[]
-  customers         Customer[]
-  prescriptions     OpticalPrescription[]
-  sales             Sale[]
-  payments          Payment[]
-  cashRegisters     CashRegister[]
-  auditLogs         AuditLog[]
-  patients          Patient[]
-  consultations     Consultation[]
-  appointments      Appointment[]
-  surgeries         Surgery[]
-  employees         Employee[]
-  expenses          Expense[]
-  cashTransfers     CashTransfer[]
-  suppliers         Supplier[]
-  insurers          Insurer[]
-  insuranceContracts    InsuranceContract[]
-  insuranceGuarantees   InsuranceGuarantee[]
+  demoProgress           DemoProgress?
+  storeSetupProgress     StoreSetupProgress?
+  branches               Branch[]
+  users                  User[]
+  roles                  Role[]
+  products               Product[]
+  stockItems             StockItem[]
+  stockMovements         StockMovement[]
+  customers              Customer[]
+  prescriptions          OpticalPrescription[]
+  sales                  Sale[]
+  payments               Payment[]
+  cashRegisters          CashRegister[]
+  auditLogs              AuditLog[]
+  patients               Patient[]
+  consultations          Consultation[]
+  appointments           Appointment[]
+  surgeries              Surgery[]
+  employees              Employee[]
+  expenses               Expense[]
+  cashTransfers          CashTransfer[]
+  suppliers              Supplier[]
+  insurers               Insurer[]
+  insuranceContracts     InsuranceContract[]
+  insuranceGuarantees    InsuranceGuarantee[]
   insuranceBeneficiaries InsuranceBeneficiary[]
-  insuranceClaims       InsuranceClaim[]
-  insuranceRefunds      InsuranceRefund[]
-  anomalies             Anomaly[]
-  lensOrders        LensOrder[]
-  repairs           Repair[]
-  subscription      Subscription?
-  subInvoices       SubscriptionInvoice[]
-  inventoryCounts   InventoryCount[]
-  stockTransfers    StockTransfer[]
-  demoVideoProgress DemoVideoProgress[]
+  insuranceClaims        InsuranceClaim[]
+  insuranceRefunds       InsuranceRefund[]
+  anomalies              Anomaly[]
+  lensOrders             LensOrder[]
+  repairs                Repair[]
+  subscription           Subscription?
+  subInvoices            SubscriptionInvoice[]
+  inventoryCounts        InventoryCount[]
+  stockTransfers         StockTransfer[]
+  demoVideoProgress      DemoVideoProgress[]
 }
 
 /// Progression de la visite guidée démo (tenant isDemo). Persistée côté
@@ -155,6 +155,7 @@ model Branch {
   transfersFrom   StockTransfer[]  @relation("TransfersFrom")
   transfersTo     StockTransfer[]  @relation("TransfersTo")
   anomalies       Anomaly[]
+  customers       Customer[]
 
   @@index([tenantId])
 }
@@ -510,6 +511,12 @@ model Customer {
   id            String    @id @default(uuid())
   tenantId      String
   tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Magasin propriétaire de la fiche. Nullable : les clients antérieurs au
+  /// cloisonnement qui n'ont aucune vente ne peuvent être rattachés à rien, et
+  /// restent visibles partout jusqu'à leur première opération. Un magasin ne
+  /// voit que ses propres clients, plus ceux qui ne sont rattachés à aucun.
+  branchId      String?
+  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
   firstName     String
   lastName      String
   phone         String?
@@ -524,15 +531,16 @@ model Customer {
   loyaltyPoints Int       @default(0)
   createdAt     DateTime  @default(now())
 
-  sales         Sale[]
-  prescriptions OpticalPrescription[]
-  lensOrders    LensOrder[]
-  repairs       Repair[]
-  patient       Patient?  @relation("CustomerPatient")
+  sales                  Sale[]
+  prescriptions          OpticalPrescription[]
+  lensOrders             LensOrder[]
+  repairs                Repair[]
+  patient                Patient?               @relation("CustomerPatient")
   insuranceBeneficiaries InsuranceBeneficiary[]
   insuranceClaims        InsuranceClaim[]
 
   @@index([tenantId])
+  @@index([tenantId, branchId])
 }
 
 model OpticalPrescription {
@@ -662,8 +670,8 @@ model Sale {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 
-  items    SaleItem[]
-  payments Payment[]
+  items          SaleItem[]
+  payments       Payment[]
   /// Dossier de prise en charge assurance rattaché à cette vente (au plus un).
   insuranceClaim InsuranceClaim?
 
@@ -1135,21 +1143,21 @@ model Supplier {
 }
 
 model Insurer {
-  id       String      @id @default(uuid())
-  tenantId String
-  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name     String
-  type     InsurerType @default(HEALTH_INSURANCE)
+  id              String      @id @default(uuid())
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  type            InsurerType @default(HEALTH_INSURANCE)
   /// Taux de prise en charge historique, appliqué à tout le panier. Conservé
   /// comme REPLI : il ne sert plus que si l'assureur n'a aucun contrat actif
   /// couvrant le client. La règle de référence est désormais la garantie
   /// (InsuranceGuarantee), par catégorie de produit.
-  coveragePercent Int      @default(0)
+  coveragePercent Int         @default(0)
   phone           String?
   email           String?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   sales     Sale[]
   contracts InsuranceContract[]
@@ -1185,20 +1193,20 @@ enum InsuranceClaimStatus {
 /// Convention passée avec un assureur : un assureur peut en avoir plusieurs
 /// (une par entreprise cliente, par exemple), chacune avec ses garanties.
 model InsuranceContract {
-  id         String                  @id @default(uuid())
-  tenantId   String
-  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  insurerId  String
-  insurer    Insurer                 @relation(fields: [insurerId], references: [id], onDelete: Cascade)
-  name       String
-  reference  String?
-  startsAt   DateTime?
-  endsAt     DateTime?
-  status     InsuranceContractStatus @default(ACTIVE)
-  notes      String?
+  id          String                  @id @default(uuid())
+  tenantId    String
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  insurerId   String
+  insurer     Insurer                 @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  name        String
+  reference   String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  status      InsuranceContractStatus @default(ACTIVE)
+  notes       String?
   createdById String?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
 
   guarantees    InsuranceGuarantee[]
   beneficiaries InsuranceBeneficiary[]
@@ -1212,22 +1220,22 @@ model InsuranceContract {
 /// « Montures 80 %, plafond 75 000 FCFA ». `category` vaut une valeur de
 /// ProductCategory, ou 'ALL' pour « toutes catégories ».
 model InsuranceGuarantee {
-  id         String            @id @default(uuid())
-  tenantId   String
-  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  contractId String
-  contract   InsuranceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  category   String
-  coveragePercent Int          @default(0)
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId       String
+  contract         InsuranceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  category         String
+  coveragePercent  Int               @default(0)
   /// Plafond de prise en charge pour cette catégorie sur une même vente.
-  ceilingAmount    Decimal?     @db.Decimal(12, 2)
+  ceilingAmount    Decimal?          @db.Decimal(12, 2)
   /// Montant maximum couvert sur la durée du contrat (information de suivi).
-  maxAmount        Decimal?     @db.Decimal(12, 2)
+  maxAmount        Decimal?          @db.Decimal(12, 2)
   /// Franchise : reste systématiquement à la charge du client.
-  deductibleAmount Decimal?     @db.Decimal(12, 2)
+  deductibleAmount Decimal?          @db.Decimal(12, 2)
   conditions       String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@unique([contractId, category])
   @@index([tenantId])
@@ -1259,40 +1267,40 @@ model InsuranceBeneficiary {
 /// pour une vente donnée, puis ce que l'assureur accepte et paie. Une demande
 /// acceptée n'est JAMAIS un encaissement : seul un InsuranceRefund l'est.
 model InsuranceClaim {
-  id            String                @id @default(uuid())
-  tenantId      String
-  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  number        String
-  insurerId     String
-  insurer       Insurer               @relation(fields: [insurerId], references: [id], onDelete: Cascade)
-  contractId    String?
-  contract      InsuranceContract?    @relation(fields: [contractId], references: [id])
-  beneficiaryId String?
-  beneficiary   InsuranceBeneficiary? @relation(fields: [beneficiaryId], references: [id])
-  customerId    String?
-  customer      Customer?             @relation(fields: [customerId], references: [id])
+  id              String                @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number          String
+  insurerId       String
+  insurer         Insurer               @relation(fields: [insurerId], references: [id], onDelete: Cascade)
+  contractId      String?
+  contract        InsuranceContract?    @relation(fields: [contractId], references: [id])
+  beneficiaryId   String?
+  beneficiary     InsuranceBeneficiary? @relation(fields: [beneficiaryId], references: [id])
+  customerId      String?
+  customer        Customer?             @relation(fields: [customerId], references: [id])
   /// Vente couverte. Unique : un dossier au plus par vente, pour que la
   /// reprise de l'historique et la création automatique restent idempotentes.
-  saleId        String?               @unique
-  sale          Sale?                 @relation(fields: [saleId], references: [id])
-  status        InsuranceClaimStatus  @default(PENDING)
+  saleId          String?               @unique
+  sale            Sale?                 @relation(fields: [saleId], references: [id])
+  status          InsuranceClaimStatus  @default(PENDING)
   /// Total de la vente, figé au moment de la demande.
-  totalAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount     Decimal               @default(0) @db.Decimal(12, 2)
   /// Montant demandé à l'assureur.
-  requestedAmount Decimal  @default(0) @db.Decimal(12, 2)
+  requestedAmount Decimal               @default(0) @db.Decimal(12, 2)
   /// Montant que l'assureur a accepté de prendre en charge.
-  acceptedAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  acceptedAmount  Decimal               @default(0) @db.Decimal(12, 2)
   /// Part restant à la charge du client.
-  patientAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  patientAmount   Decimal               @default(0) @db.Decimal(12, 2)
   /// Somme des remboursements réellement reçus (jamais saisie à la main).
-  paidAmount      Decimal  @default(0) @db.Decimal(12, 2)
-  requestedAt   DateTime  @default(now())
-  acceptedAt    DateTime?
-  dueAt         DateTime?
-  notes         String?
-  createdById   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  paidAmount      Decimal               @default(0) @db.Decimal(12, 2)
+  requestedAt     DateTime              @default(now())
+  acceptedAt      DateTime?
+  dueAt           DateTime?
+  notes           String?
+  createdById     String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   refunds InsuranceRefund[]
 
@@ -1352,12 +1360,12 @@ enum AnomalyCategory {
 
 /// Statuts du workflow, dans l'ordre chronologique attendu.
 enum AnomalyStatus {
-  DECLARED           /// Déclarée — brouillon éditable par son auteur
+  DECLARED /// Déclarée — brouillon éditable par son auteur
   PENDING_VALIDATION /// En attente de validation
-  APPROVED           /// Approuvée — peut être appliquée
-  REJECTED           /// Rejetée — données d'origine jamais touchées
-  CORRECTED          /// Corrigée — correction appliquée
-  CANCELLED          /// Annulée par son auteur ou un responsable
+  APPROVED /// Approuvée — peut être appliquée
+  REJECTED /// Rejetée — données d'origine jamais touchées
+  CORRECTED /// Corrigée — correction appliquée
+  CANCELLED /// Annulée par son auteur ou un responsable
 }
 
 /// Nature technique de la correction : détermine quelle fonction existante
@@ -1403,68 +1411,68 @@ enum AnomalyTargetEntity {
 }
 
 model Anomaly {
-  id             String                @id @default(uuid())
-  tenantId       String
-  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  number         String                // ANO-2026-000001
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number   String // ANO-2026-000001
 
-  category       AnomalyCategory
-  correctionType AnomalyCorrectionType
-  targetEntity   AnomalyTargetEntity
-  targetId       String
+  category        AnomalyCategory
+  correctionType  AnomalyCorrectionType
+  targetEntity    AnomalyTargetEntity
+  targetId        String
   // Libellé lisible figé à la déclaration (ex. "VTE-2026-000254") : reste
   // affichable même si l'élément d'origine est ensuite renommé/désactivé.
   targetReference String
 
   // Dérivée automatiquement selon la catégorie (vente, stock, caisse...) ;
   // absente pour ce qui n'a pas de notion de succursale (client, produit).
-  branchId       String?
-  branch         Branch?               @relation(fields: [branchId], references: [id])
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id])
 
-  description    String                @db.VarChar(500)
-  reasonCode     AnomalyReasonCode
-  reasonNote     String?               @db.VarChar(1000)
-  comment        String?               @db.VarChar(1000)
+  description String            @db.VarChar(500)
+  reasonCode  AnomalyReasonCode
+  reasonNote  String?           @db.VarChar(1000)
+  comment     String?           @db.VarChar(1000)
 
-  status         AnomalyStatus         @default(DECLARED)
+  status AnomalyStatus @default(DECLARED)
 
   // Calculé en aperçu à la déclaration, recalculé depuis l'état réel
   // avant/après à l'application, puis figé (jamais retouché une fois
   // appliedAt posé). Signe aligné sur StockMovement.quantity (+ = gain).
-  financialImpact Decimal              @default(0) @db.Decimal(12, 2)
-  stockImpact     Int                  @default(0)
-  cashImpact      Decimal              @default(0) @db.Decimal(12, 2)
-  insuranceImpact Decimal              @default(0) @db.Decimal(12, 2)
+  financialImpact Decimal @default(0) @db.Decimal(12, 2)
+  stockImpact     Int     @default(0)
+  cashImpact      Decimal @default(0) @db.Decimal(12, 2)
+  insuranceImpact Decimal @default(0) @db.Decimal(12, 2)
 
-  declaredById   String
-  declaredBy     User                  @relation("AnomalyDeclaredBy", fields: [declaredById], references: [id])
-  declaredAt     DateTime              @default(now())
+  declaredById String
+  declaredBy   User     @relation("AnomalyDeclaredBy", fields: [declaredById], references: [id])
+  declaredAt   DateTime @default(now())
 
-  submittedAt    DateTime?             // DECLARED -> PENDING_VALIDATION
+  submittedAt DateTime? // DECLARED -> PENDING_VALIDATION
 
-  approvedById   String?
-  approvedBy     User?                 @relation("AnomalyApprovedBy", fields: [approvedById], references: [id])
-  approvedAt     DateTime?
-  approvalNote   String?               @db.VarChar(1000)
+  approvedById String?
+  approvedBy   User?     @relation("AnomalyApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+  approvalNote String?   @db.VarChar(1000)
 
-  rejectedById   String?
-  rejectedBy     User?                 @relation("AnomalyRejectedBy", fields: [rejectedById], references: [id])
-  rejectedAt     DateTime?
-  rejectionReason String?              @db.VarChar(1000)
+  rejectedById    String?
+  rejectedBy      User?     @relation("AnomalyRejectedBy", fields: [rejectedById], references: [id])
+  rejectedAt      DateTime?
+  rejectionReason String?   @db.VarChar(1000)
 
-  appliedById    String?
-  appliedBy      User?                 @relation("AnomalyAppliedBy", fields: [appliedById], references: [id])
-  appliedAt      DateTime?
+  appliedById String?
+  appliedBy   User?     @relation("AnomalyAppliedBy", fields: [appliedById], references: [id])
+  appliedAt   DateTime?
 
   cancelledById      String?
-  cancelledBy        User?             @relation("AnomalyCancelledBy", fields: [cancelledById], references: [id])
+  cancelledBy        User?     @relation("AnomalyCancelledBy", fields: [cancelledById], references: [id])
   cancelledAt        DateTime?
-  cancellationReason String?           @db.VarChar(1000)
+  cancellationReason String?   @db.VarChar(1000)
 
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  entries        AnomalyCorrectionEntry[]
+  entries AnomalyCorrectionEntry[]
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
@@ -1479,18 +1487,18 @@ model Anomaly {
 /// corrigé. Une correction multi-champs (ex. prix ET quantité) crée une
 /// ligne par champ. Créées une seule fois, à la déclaration.
 model AnomalyCorrectionEntry {
-  id         String   @id @default(uuid())
-  tenantId   String
-  anomalyId  String
-  anomaly    Anomaly  @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  tenantId  String
+  anomalyId String
+  anomaly   Anomaly @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
 
   // Nom technique (ex. "unitPrice", "quantity", "productId"). Le libellé FR
   // vient du registre partagé côté code, jamais stocké ici.
-  fieldName  String
+  fieldName String
   // Valeurs déjà résolues pour l'affichage (nom produit, libellé du moyen de
   // paiement...), jamais du JSON brut.
-  oldValue   String?
-  newValue   String?
+  oldValue  String?
+  newValue  String?
 
   // Contribution informative de ce champ (affichage uniquement) : l'impact
   // autoritaire reste celui figé sur Anomaly (avant/après réel), jamais la
@@ -1878,7 +1886,6 @@ model CrmSettings {
 
 /**
  * ---------------- OCULO PARTNERS ----------------
- *
  * Ces modèles sont globaux : un partenaire n'est pas un utilisateur d'un
  * magasin et ne doit jamais être soumis au client Prisma tenant-scopé.
  */
@@ -1915,24 +1922,24 @@ enum PartnerCommissionStatus {
 }
 
 model Partner {
-  id              String            @id @default(uuid())
+  id              String          @id @default(uuid())
   firstName       String
   lastName        String
-  email           String            @unique
-  whatsapp        String            @unique
+  email           String          @unique
+  whatsapp        String          @unique
   countryCode     String?
   city            String?
   passwordHash    String
-  referralCode    String            @unique
-  status          PartnerStatus     @default(PENDING)
-  tier            PartnerTierCode   @default(AMBASSADOR)
+  referralCode    String          @unique
+  status          PartnerStatus   @default(PENDING)
+  tier            PartnerTierCode @default(AMBASSADOR)
   payoutMethod    String?
   payoutDetails   Json?
   termsAcceptedAt DateTime
   approvedAt      DateTime?
   suspendedAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   sessions     PartnerSession[]
   attributions PartnerAttribution[]
@@ -1942,34 +1949,34 @@ model Partner {
 }
 
 model PartnerSession {
-  id         String   @id @default(uuid())
-  partnerId  String
-  partner    Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  userAgent  String?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(uuid())
+  partnerId String
+  partner   Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
 
   @@index([partnerId])
 }
 
 /// Attribution durable : un tenant ne peut appartenir qu'à un partenaire.
 model PartnerAttribution {
-  id          String   @id @default(uuid())
-  partnerId   String
-  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  id           String    @id @default(uuid())
+  partnerId    String
+  partner      Partner   @relation(fields: [partnerId], references: [id], onDelete: Restrict)
   referralCode String
-  visitorId   String?
-  tenantId    String?  @unique
-  emailHash   String?
-  firstSeenAt DateTime @default(now())
-  expiresAt   DateTime
-  linkedAt    DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  visitorId    String?
+  tenantId     String?   @unique
+  emailHash    String?
+  firstSeenAt  DateTime  @default(now())
+  expiresAt    DateTime
+  linkedAt     DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([partnerId, expiresAt])
   @@index([referralCode])
@@ -2037,12 +2044,12 @@ model PartnerCommission {
 }
 
 model PartnerEvent {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   type           String
-  idempotencyKey String   @unique
+  idempotencyKey String    @unique
   payload        Json
   processedAt    DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([type, createdAt])
 }

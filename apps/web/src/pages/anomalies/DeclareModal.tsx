@@ -10,6 +10,7 @@ import {
 } from '@oculo/shared-types';
 import { declareAnomaly, submitAnomaly } from '../../features/anomalies/api';
 import { listProducts, listCustomers } from '../../features/optique/api';
+import { useUIStore } from '../../store/ui';
 import { CustomerSearch } from '../../features/optique/SaleTools';
 import { listUsers } from '../../features/rbac/api';
 import { listInsurers } from '../../features/management/api';
@@ -62,7 +63,11 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
     return u ? `${u.firstName} ${u.lastName}` : id;
   };
   // Même clé de cache que CustomerSearch : aucune requête supplémentaire.
-  const { data: customers } = useQuery({ queryKey: ['customers'], queryFn: () => listCustomers() });
+  const customersBranchId = useUIStore((st) => st.activeBranchId);
+  const { data: customers } = useQuery({
+    queryKey: ['customers', customersBranchId],
+    queryFn: () => listCustomers(undefined, customersBranchId ?? undefined),
+  });
   const customerName = (id: string) => {
     const c = customers?.find((x) => x.id === id);
     return c ? `${c.firstName} ${c.lastName}` : id;

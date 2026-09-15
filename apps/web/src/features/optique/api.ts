@@ -218,13 +218,19 @@ export async function applyStockCount(input: {
   return data;
 }
 
-export async function listCustomers(search?: string): Promise<Customer[]> {
-  const { data } = await api.get<{ customers: Customer[] }>('/customers', { params: { search } });
+/**
+ * Clients du magasin demandé. Le serveur filtre de toute façon sur les magasins
+ * de l'utilisateur : omettre `branchId` ne donne pas accès à ceux des autres.
+ */
+export async function listCustomers(search?: string, branchId?: string): Promise<Customer[]> {
+  const { data } = await api.get<{ customers: Customer[] }>('/customers', {
+    params: { search, branchId: branchId || undefined },
+  });
   return data.customers;
 }
 
-export async function createCustomer(input: CustomerCreateInput) {
-  const { data } = await api.post('/customers', input);
+export async function createCustomer(input: CustomerCreateInput, branchId: string) {
+  const { data } = await api.post('/customers', { ...input, branchId });
   return data.customer;
 }
 

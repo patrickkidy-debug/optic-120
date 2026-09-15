@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { customerCreateSchema, prescriptionCreateSchema, type Gender } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
-import { notFound } from '../../lib/http-error.js';
+import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import { notFound, badRequest, forbidden } from '../../lib/http-error.js';
+import type { FastifyRequest } from 'fastify';
 import { getOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 
 function toDate(v?: string | null): Date | null {
@@ -16,12 +17,44 @@ function clean<T extends Record<string, unknown>>(obj: T): T {
   return out;
 }
 
+
+/**
+ * Portée client d'une requête : le magasin demandé, plus les fiches qui ne
+ * sont rattachées à aucun magasin (clients antérieurs au cloisonnement, sans
+ * vente). Le filtre est posé côté serveur et non dans l'interface : un
+ * `branchId` fourni par le client est d'abord vérifié contre les droits de
+ * l'utilisateur, sinon n'importe qui lirait le fichier d'un autre magasin en
+ * changeant un paramètre d'URL.
+ *
+ * Sans `branchId` demandé, on retombe sur les magasins de l'utilisateur —
+ * aucune portée implicite « tout l'établissement » pour un vendeur rattaché à
+ * un seul magasin.
+ */
+function customerScope(req: FastifyRequest, branchId?: string) {
+  if (branchId) {
+    assertBranchAccess(req, branchId);
+    return { OR: [{ branchId }, { branchId: null }] };
+  }
+  if (req.auth!.allBranches) return {};
+  const ids = req.auth!.branchIds ?? [];
+  return { OR: [{ branchId: { in: ids } }, { branchId: null }] };
+}
+
+/** Refuse la lecture d'une fiche appartenant à un magasin non autorisé. */
+function assertCustomerVisible(req: FastifyRequest, customerBranchId: string | null): void {
+  if (customerBranchId === null) return;
+  if (req.auth!.allBranches) return;
+  if (!(req.auth!.branchIds ?? []).includes(customerBranchId)) {
+    throw forbidden("Ce client appartient à un autre magasin");
+  }
+}
+
 export async function customersRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
   app.get('/', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
-    const q = req.query as { search?: string };
-    const where = q.search
+    const q = req.query as { search?: string; branchId?: string };
+    const search = q.search
       ? {
           OR: [
             { firstName: { contains: q.search, mode: 'insensitive' as const } },
@@ -30,6 +63,7 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
           ],
         }
       : {};
+    const where = { AND: [search, customerScope(req, q.branchId)] };
     const customers = await req.db!.customer.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -40,9 +74,16 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/', { preHandler: requirePermission('optique.customers.create') }, async (req, reply) => {
     const input = customerCreateSchema.parse(req.body);
+    // Le magasin propriétaire est obligatoire à la création : une fiche créée
+    // sans rattachement serait visible par tous les magasins, exactement ce que
+    // le cloisonnement doit empêcher.
+    const branchId = (req.body as { branchId?: string }).branchId;
+    if (!branchId) throw badRequest('Magasin requis pour créer un client');
+    assertBranchAccess(req, branchId);
     const customer = await req.db!.customer.create({
       data: {
         tenantId: req.auth!.tenantId,
+        branchId,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,
@@ -60,6 +101,11 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/:id', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = customerCreateSchema.partial().parse(req.body);
+    // Modifier suppose de pouvoir voir : sans ce contrôle, un magasin éditerait
+    // la fiche d'un autre en connaissant seulement son identifiant.
+    const existing = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!existing) throw notFound('Client introuvable');
+    assertCustomerVisible(req, existing.branchId);
     // `clean` remplace les chaînes vides par null (champ effacé) ; la date de
     // naissance et le genre demandent une conversion explicite.
     const { dateOfBirth, gender, ...rest } = clean(input);
@@ -113,6 +159,7 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     if (!customer) throw notFound('Client introuvable');
+    assertCustomerVisible(req, customer.branchId);
     return reply.send({ customer });
   });
 
