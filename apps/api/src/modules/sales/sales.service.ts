@@ -23,6 +23,22 @@ import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 type Tx = Prisma.TransactionClient;
 
 /**
+ * Statut de règlement d'une vente, seule définition du barème.
+ *
+ * `paid` inclut la prise en charge assurance, déduite de ce que doit le client
+ * dès la création. Une vente de 230 000 couverte à 200 000 est donc
+ * PARTIALLY_PAID : il reste 30 000 à encaisser. Les trois chemins d'écriture
+ * (création, conversion de devis, mise à jour) divergeaient — création et
+ * conversion n'émettaient jamais PARTIALLY_PAID et retombaient sur CONFIRMED,
+ * qui se lit « confirmée » et non « partiellement réglée ».
+ */
+export function saleSettlementStatus(paid: number, total: number): SaleStatus {
+  if (paid >= total) return SaleStatus.PAID;
+  if (paid > 0) return SaleStatus.PARTIALLY_PAID;
+  return SaleStatus.CONFIRMED;
+}
+
+/**
  * Préfixe par type : chacun le sien, pour que le compteur (qui filtre par
  * `type`) ne puisse jamais retomber sur un numéro déjà pris par un autre
  * type — un retour et une vente partageant "VEN" collisionnaient sinon dès
@@ -169,11 +185,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
 
     const number = await nextNumber(tx, tenantId, input.type);
     const paidInit = isSale ? Math.min(insurance, total) : 0;
-    const status = !isSale
-      ? SaleStatus.DRAFT
-      : paidInit >= total
-        ? SaleStatus.PAID
-        : SaleStatus.CONFIRMED;
+    const status = !isSale ? SaleStatus.DRAFT : saleSettlementStatus(paidInit, total);
 
     const sale = await tx.sale.create({
       data: {
@@ -399,13 +411,7 @@ export async function updateSale(
       );
     }
     const newPaid = isSale ? Math.min(total, paidByPayments + Math.min(insurance, total)) : 0;
-    const status = !isSale
-      ? SaleStatus.DRAFT
-      : newPaid >= total
-        ? SaleStatus.PAID
-        : newPaid > 0
-          ? SaleStatus.PARTIALLY_PAID
-          : SaleStatus.CONFIRMED;
+    const status = !isSale ? SaleStatus.DRAFT : saleSettlementStatus(newPaid, total);
 
     // Réajustement du stock sur la différence, uniquement si la vente avait
     // déjà bougé le stock (un devis n'en consomme pas).
@@ -702,7 +708,7 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
 
     const number = await nextNumber(tx, tenantId, SaleType.SALE);
     const paidInit = Math.min(Number(quote.insuranceAmount), Number(quote.totalAmount));
-    const status = paidInit >= Number(quote.totalAmount) ? SaleStatus.PAID : SaleStatus.CONFIRMED;
+    const status = saleSettlementStatus(paidInit, Number(quote.totalAmount));
 
     const sale = await tx.sale.update({
       where: { id: quote.id },

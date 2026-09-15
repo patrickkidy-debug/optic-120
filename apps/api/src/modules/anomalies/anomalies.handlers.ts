@@ -12,7 +12,7 @@ import type { AnomalyCorrectionEntry } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import type { TenantPrisma } from '../../lib/prisma-tenant.js';
 import { badRequest, notFound } from '../../lib/http-error.js';
-import { updateSale, cancelSale, createReturn } from '../sales/sales.service.js';
+import { updateSale, cancelSale, createReturn, saleSettlementStatus } from '../sales/sales.service.js';
 import { adjustStock } from '../stock/stock.service.js';
 import { updateClaimFields, correctRefund } from '../management/insurance.routes.js';
 import { applyDirectFieldCorrection, type DirectFieldTarget } from './anomalies.fields.js';
@@ -220,7 +220,7 @@ export async function handlePaymentCorrection(
         `Le montant corrigé ferait sortir l'encaissement de la vente de [0, ${total}] (actuel : ${nextPaid}).`,
       );
     }
-    const nextStatus = nextPaid >= total ? SaleStatus.PAID : nextPaid > 0 ? SaleStatus.PARTIALLY_PAID : SaleStatus.CONFIRMED;
+    const nextStatus = saleSettlementStatus(nextPaid, total);
 
     await tx.payment.update({ where: { id: paymentId }, data: { method: nextMethod, amount: nextAmount } });
     await tx.transaction.create({
