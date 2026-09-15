@@ -32,6 +32,7 @@ const FINANCIAL_KEYS = [
   ['finance-summary'],
   ['forecast'],
   ['cash-summary'],
+  ['cash-current'],
   ['expenses'],
   ['cash-transfers'],
   ['insurer-upcoming'],

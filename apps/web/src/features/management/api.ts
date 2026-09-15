@@ -86,8 +86,10 @@ export async function updateEmployee(id: string, input: EmployeeUpdateInput) {
 }
 
 // Expenses
-export async function listExpenses(): Promise<Expense[]> {
-  const { data } = await api.get<{ expenses: Expense[] }>('/expenses');
+export async function listExpenses(branchId?: string): Promise<Expense[]> {
+  const { data } = await api.get<{ expenses: Expense[] }>('/expenses', {
+    params: { branchId: branchId || undefined },
+  });
   return data.expenses;
 }
 

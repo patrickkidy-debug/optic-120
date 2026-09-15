@@ -74,7 +74,12 @@ async function employeesRoutes(app: FastifyInstance) {
 
 async function expensesRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
-    const expenses = await req.db!.expense.findMany({ orderBy: { date: 'desc' }, take: 300 });
+    const q = req.query as { branchId?: string };
+    const expenses = await req.db!.expense.findMany({
+      where: q.branchId ? { branchId: q.branchId } : {},
+      orderBy: { date: 'desc' },
+      take: 300,
+    });
     return reply.send({ expenses });
   });
 

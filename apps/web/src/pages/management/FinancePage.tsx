@@ -39,7 +39,7 @@ export function FinancePage() {
   const [open, setOpen] = useState(false);
 
   const { data: summary } = useQuery({ queryKey: ['finance-summary'], queryFn: getFinanceSummary });
-  const { data: expenses, isLoading } = useQuery({ queryKey: ['expenses'], queryFn: listExpenses });
+  const { data: expenses, isLoading } = useQuery({ queryKey: ['expenses'], queryFn: () => listExpenses() });
 
   const removeMut = useMutation({
     mutationFn: deleteExpense,

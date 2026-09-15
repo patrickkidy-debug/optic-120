@@ -64,8 +64,8 @@ export function CashFlowPage() {
     queryFn: () => listCashTransfers(branchId ?? undefined),
   });
   const { data: expenses, isLoading: loadingExpenses } = useQuery({
-    queryKey: ['expenses'],
-    queryFn: listExpenses,
+    queryKey: ['expenses', branchId],
+    queryFn: () => listExpenses(branchId ?? undefined),
   });
 
   // Dépenses et versements pèsent sur les indicateurs du tableau de bord :
@@ -81,7 +81,11 @@ export function CashFlowPage() {
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
+  const transfersIn = cash?.totals.in ?? 0;
+  const transfersOut = cash?.totals.out ?? 0;
   const expensesTotal = (expenses ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalOutflows = transfersOut + expensesTotal;
+  const netCashflow = transfersIn - totalOutflows;
 
   return (
     <div>
@@ -106,26 +110,26 @@ export function CashFlowPage() {
         <StatCard
           icon={ArrowDownCircle}
           label="Apports (entrées)"
-          value={formatCurrency(cash?.totals.in ?? 0)}
+          value={formatCurrency(transfersIn)}
           tone="success"
         />
         <StatCard
           icon={ArrowUpCircle}
-          label="Retraits (sorties)"
-          value={formatCurrency(cash?.totals.out ?? 0)}
+          label="Sorties totales (dépenses + retraits)"
+          value={formatCurrency(totalOutflows)}
+          tone="danger"
+        />
+        <StatCard
+          icon={TrendingDown}
+          label="Dépenses d'exploitation"
+          value={formatCurrency(expensesTotal)}
           tone="danger"
         />
         <StatCard
           icon={Wallet}
-          label="Solde des versements"
-          value={formatCurrency(cash?.totals.net ?? 0)}
-          tone={(cash?.totals.net ?? 0) >= 0 ? 'primary' : 'danger'}
-        />
-        <StatCard
-          icon={TrendingDown}
-          label="Dépenses enregistrées"
-          value={formatCurrency(expensesTotal)}
-          tone="danger"
+          label="Solde net de trésorerie"
+          value={formatCurrency(netCashflow)}
+          tone={netCashflow >= 0 ? 'primary' : 'danger'}
         />
       </div>
 
@@ -257,13 +261,13 @@ export function CashFlowPage() {
         </div>
       )}
 
-      {transferOpen && <TransferModal onClose={() => setTransferOpen(false)} />}
-      {expenseOpen && <ExpenseModal onClose={() => setExpenseOpen(false)} />}
+      {transferOpen && <TransferModal onClose={() => setTransferOpen(false)} defaultBranchId={branchId} />}
+      {expenseOpen && <ExpenseModal onClose={() => setExpenseOpen(false)} defaultBranchId={branchId} />}
     </div>
   );
 }
 
-function TransferModal({ onClose }: { onClose: () => void }) {
+function TransferModal({ onClose, defaultBranchId }: { onClose: () => void; defaultBranchId?: string | null }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
   const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
@@ -273,11 +277,11 @@ function TransferModal({ onClose }: { onClose: () => void }) {
     formState: { errors },
   } = useForm<CashTransferCreateInput>({
     resolver: zodResolver(cashTransferCreateSchema),
-    defaultValues: { direction: 'IN' },
+    defaultValues: { direction: 'IN', branchId: defaultBranchId || '' },
   });
 
   const mut = useMutation({
-    mutationFn: (v: CashTransferCreateInput) => createCashTransfer(v),
+    mutationFn: (v: CashTransferCreateInput) => createCashTransfer({ ...v, branchId: v.branchId || undefined }),
     onSuccess: () => {
       invalidateFinancialViews(qc);
       onClose();
@@ -334,20 +338,21 @@ function TransferModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ExpenseModal({ onClose }: { onClose: () => void }) {
+function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defaultBranchId?: string | null }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
+  const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ExpenseCreateInput>({
     resolver: zodResolver(expenseCreateSchema),
-    defaultValues: { category: 'RENT' },
+    defaultValues: { category: 'RENT', branchId: defaultBranchId || '' },
   });
 
   const mut = useMutation({
-    mutationFn: (v: ExpenseCreateInput) => createExpense(v),
+    mutationFn: (v: ExpenseCreateInput) => createExpense({ ...v, branchId: v.branchId || undefined }),
     onSuccess: () => {
       invalidateFinancialViews(qc);
       onClose();
@@ -380,6 +385,16 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
             <input className="input" type="date" {...register('date')} />
           </Field>
         </div>
+        <Field label="Boutique">
+          <select className="input" {...register('branchId')}>
+            <option value="">— Toutes / non précisé —</option>
+            {branches?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Note">
           <input className="input" {...register('notes')} />
         </Field>
