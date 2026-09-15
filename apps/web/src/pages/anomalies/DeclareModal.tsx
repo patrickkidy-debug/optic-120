@@ -102,10 +102,14 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const mut = useMutation({
-    mutationFn: async () => {
-      if (!target) throw new Error('Sélectionnez un élément');
+  /**
+   * Différences entre valeurs actuelles et valeurs saisies. Calculé hors de la
+   * mutation pour que l'écran puisse prévenir AVANT l'envoi qu'une déclaration
+   * sans aucun champ modifié sera un simple signalement, non applicable.
+   */
+  function computeChanges(): AnomalyDeclareInput['changes'] {
       const changes: AnomalyDeclareInput['changes'] = [];
+      if (!target) return changes;
       if (!isWholeSaleAction) {
         for (const f of fields) {
           if (f.name === 'items') {
@@ -134,9 +138,16 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
       } else if (correctionType === AnomalyCorrectionType.PRODUCT_RETURN && cashRefund) {
         changes.push({ fieldName: 'cashRefund', oldValue: '', newValue: cashRefund });
       }
-      if (!isWholeSaleAction && changes.length === 0) {
-        throw new Error('Modifiez au moins une valeur avant de déclarer l’anomalie');
-      }
+      return changes;
+  }
+
+  const pendingChanges = target ? computeChanges() : [];
+  const isReportOnly = !isWholeSaleAction && pendingChanges.length === 0;
+
+  const mut = useMutation({
+    mutationFn: async () => {
+      if (!target) throw new Error('Sélectionnez un élément');
+      const changes = computeChanges();
       const anomaly = await declareAnomaly({
         category,
         correctionType,
@@ -159,7 +170,10 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
     onError: (e) => setError(apiErrorMessage(e, e instanceof Error ? e.message : undefined)),
   });
 
-  const canSubmit = target && description.trim().length > 0 && (isWholeSaleAction || Object.keys(fieldValues).length > 0);
+  // Une cible et une description suffisent : sans champ modifié, l'anomalie est
+  // enregistrée comme signalement (traçable, non applicable), au lieu d'être
+  // refusée. L'écran le dit explicitement avant l'envoi.
+  const canSubmit = Boolean(target) && description.trim().length > 0;
 
   return (
     <Modal open onClose={onClose} title="Déclarer une anomalie" size="lg">
@@ -306,6 +320,14 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
         {financiallySensitive && (
           <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm font-medium text-danger">
             Cette action modifiera les données financières.
+          </p>
+        )}
+
+        {target && isReportOnly && (
+          <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+            Aucune valeur n'a été modifiée : cette anomalie sera enregistrée comme{' '}
+            <strong>signalement</strong>. Elle est traçable et peut être validée, mais il n'y a rien à
+            appliquer — aucune donnée ne sera changée automatiquement.
           </p>
         )}
 

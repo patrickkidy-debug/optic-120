@@ -148,10 +148,12 @@ export async function declareAnomaly(tenantId: string, userId: string, input: An
   const correctionType = resolveCorrectionType(input.category, input.correctionType, hasRefundField);
   const targetEntity = resolveTargetEntity(input.category, hasRefundField);
 
-  const needsChanges = correctionType !== AnomalyCorrectionType.SALE_CANCELLATION && correctionType !== AnomalyCorrectionType.PRODUCT_RETURN;
-  if (needsChanges && input.changes.length === 0) {
-    throw badRequest('Au moins une valeur actuelle/souhaitée est requise');
-  }
+  // Une déclaration sans champ modifié est acceptée : elle vaut signalement,
+  // pour tracer une anomalie constatée dont la correction se fera ailleurs (ou
+  // reste à décider). Ce qui reste interdit, c'est de l'APPLIQUER — voir
+  // applyCorrection : une anomalie sans valeur à écrire ne peut pas passer
+  // « Corrigée », sinon l'écran annoncerait un succès pour une opération qui
+  // n'a rien fait.
 
   return withTenant(tenantId, async (db) => {
     await assertNoOpenAnomaly(db, targetEntity, input.targetId);
@@ -332,6 +334,19 @@ export async function applyCorrection(tenantId: string, userId: string, id: stri
   const current = await requireAnomaly(tenantId, id);
   if (current.status !== AnomalyStatus.APPROVED) {
     throw conflict('Seule une anomalie approuvée peut être appliquée');
+  }
+
+  // Un signalement (déclaré sans valeur à corriger) n'a rien à écrire :
+  // l'appliquer le ferait passer « Corrigée » sans qu'aucune donnée ne bouge.
+  // Les actions qui portent sur la pièce entière n'ont, elles, pas d'entrées.
+  const actsOnWholeRecord =
+    current.correctionType === AnomalyCorrectionType.SALE_CANCELLATION ||
+    current.correctionType === AnomalyCorrectionType.PRODUCT_RETURN;
+  if (!actsOnWholeRecord && current.entries.length === 0) {
+    throw conflict(
+      "Cette anomalie est un signalement : elle ne contient aucune valeur à corriger, il n'y a donc " +
+        'rien à appliquer. Annulez-la, ou déclarez une correction en modifiant au moins un champ.',
+    );
   }
 
   return withTenant(tenantId, async (db) => {

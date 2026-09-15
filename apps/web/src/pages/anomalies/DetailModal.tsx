@@ -76,6 +76,11 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
   }
 
   const financiallySensitive = hasFinancialStake(anomaly);
+  // Signalement : déclaré sans valeur à corriger, donc rien à appliquer. On
+  // masque le bouton plutôt que de le laisser mener à une erreur.
+  const actsOnWholeRecord =
+    anomaly.correctionType === 'SALE_CANCELLATION' || anomaly.correctionType === 'PRODUCT_RETURN';
+  const isReportOnly = !actsOnWholeRecord && anomaly.entries.length === 0;
 
   return (
     <Modal open onClose={onClose} title={`Anomalie ${anomaly.number}`} size="lg">
@@ -220,12 +225,17 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
               <CheckCircle2 className="h-4 w-4" /> Approuver
             </Button>
           )}
-          {anomaly.status === 'APPROVED' && canApply && canApplyHere && (
+          {anomaly.status === 'APPROVED' && isReportOnly && (
+            <p className="text-xs text-content-faint">
+              Signalement : aucune valeur à corriger, rien à appliquer.
+            </p>
+          )}
+          {anomaly.status === 'APPROVED' && !isReportOnly && canApply && canApplyHere && (
             <Button loading={run.isPending} onClick={() => run.mutate(() => applyAnomalyCorrection(anomaly.id))}>
               <PlayCircle className="h-4 w-4" /> Appliquer la correction
             </Button>
           )}
-          {anomaly.status === 'APPROVED' && canApply && !canApplyHere && (
+          {anomaly.status === 'APPROVED' && !isReportOnly && canApply && !canApplyHere && (
             <p className="text-xs text-content-faint">
               Permission requise pour appliquer : {domainPermission}
             </p>
