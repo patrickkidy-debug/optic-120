@@ -1,5 +1,6 @@
 import { InsuranceClaimStatus, InsuranceContractStatus } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -12,10 +13,13 @@ type Tx = Prisma.TransactionClient;
 async function nextClaimNumber(tx: Tx, tenantId: string, at: Date): Promise<string> {
   const year = at.getFullYear();
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`claim-number:${tenantId}`}))`;
-  const count = await tx.insuranceClaim.count({
-    where: { tenantId, number: { startsWith: `PEC-${year}-` } },
+  const [last] = await tx.insuranceClaim.findMany({
+    where: { tenantId, number: { startsWith: numberSeriesPrefix('PEC', year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
   });
-  return `PEC-${year}-${String(count + 1).padStart(5, '0')}`;
+  return nextSeriesNumber('PEC', year, last?.number, 5);
 }
 
 /** Contrat actif de cet assureur dont le client est bénéficiaire, s'il y en a un. */

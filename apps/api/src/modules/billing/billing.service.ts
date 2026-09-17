@@ -11,6 +11,7 @@ import {
 } from '@oculo/shared-types';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
@@ -219,10 +220,13 @@ export async function assertWithinLimit(tenantId: string, resource: LimitResourc
 
 async function nextInvoiceNumber(tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.subscriptionInvoice.count({
-    where: { tenantId, number: { startsWith: `ABN-${year}-` } },
+  const [last] = await prisma.subscriptionInvoice.findMany({
+    where: { tenantId, number: { startsWith: numberSeriesPrefix('ABN', year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
   });
-  return `ABN-${year}-${String(count + 1).padStart(5, '0')}`;
+  return nextSeriesNumber('ABN', year, last?.number, 5);
 }
 
 /** Crée une facture pour une offre et lance le paiement plateforme. */

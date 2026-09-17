@@ -13,6 +13,7 @@ import {
 } from '@oculo/shared-types';
 import { forTenant, type TenantPrisma } from '../../lib/prisma-tenant.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { getOpticalSettings } from '../../lib/optical-settings.js';
 import { previewImpact, appliedImpact, type ImpactContext } from './anomalies.impact.js';
@@ -121,8 +122,13 @@ async function resolveBranchId(
 
 async function nextAnomalyNumber(db: TenantPrisma, tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await db.anomaly.count({ where: { tenantId, number: { startsWith: `ANO-${year}-` } } });
-  return `ANO-${year}-${String(count + 1).padStart(6, '0')}`;
+  const [last] = await db.anomaly.findMany({
+    where: { tenantId, number: { startsWith: numberSeriesPrefix('ANO', year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
+  });
+  return nextSeriesNumber('ANO', year, last?.number);
 }
 
 const anomalyInclude = {

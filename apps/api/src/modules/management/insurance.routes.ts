@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 import {
   insurerCreateSchema,
   insurerUpdateSchema,
@@ -73,10 +74,13 @@ function amountsOf(c: {
 /** Numéro de dossier : PEC-AAAA-00001, continu par établissement et par année. */
 async function nextClaimNumber(db: TenantPrisma, tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await db.insuranceClaim.count({
-    where: { tenantId, number: { startsWith: `PEC-${year}-` } },
+  const [last] = await db.insuranceClaim.findMany({
+    where: { tenantId, number: { startsWith: numberSeriesPrefix('PEC', year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
   });
-  return `PEC-${year}-${String(count + 1).padStart(5, '0')}`;
+  return nextSeriesNumber('PEC', year, last?.number, 5);
 }
 
 /** Échéance par défaut : le 1er du mois suivant la demande. */

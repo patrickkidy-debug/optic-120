@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 import {
   lensOrderCreateSchema,
   lensOrderStatusSchema,
@@ -25,8 +26,20 @@ async function nextNumber(
   prefix: string,
 ): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await (db[model] as { count: (a?: unknown) => Promise<number> }).count();
-  return `${prefix}-${year}-${String(count + 1).padStart(5, '0')}`;
+  // L'ancien calcul comptait TOUTES les lignes du modèle, sans même filtrer sur
+  // l'année : le premier document de janvier repartait du total cumulé, et la
+  // suppression d'une ligne suffisait à faire retomber le compteur sur un
+  // numéro déjà pris. On repart du plus grand numéro de la série en cours.
+  const delegate = db[model] as {
+    findMany: (a: unknown) => Promise<{ number: string }[]>;
+  };
+  const [last] = await delegate.findMany({
+    where: { number: { startsWith: numberSeriesPrefix(prefix, year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
+  });
+  return nextSeriesNumber(prefix, year, last?.number, 5);
 }
 
 /**

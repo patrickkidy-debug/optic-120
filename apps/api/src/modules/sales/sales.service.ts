@@ -10,6 +10,7 @@ import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/sha
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
+import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
@@ -54,21 +55,24 @@ function numberPrefix(type: SaleType): string {
 async function nextNumber(tx: Tx, tenantId: string, type: SaleType): Promise<string> {
   const prefix = numberPrefix(type);
   const year = new Date().getFullYear();
-  // Verrou consultatif Postgres, propre à la transaction : deux ventes créées
+  // Verrou consultatif Postgres, propre à la transaction : deux pièces créées
   // au même instant (deux caissiers, ou un double-clic avant que le bouton ne
-  // se désactive) lisaient sinon le même COUNT() avant que l'une n'ait
-  // commité, produisaient le même numéro, et la seconde échouait — parfois
-  // même après plusieurs tentatives de retryOnDuplicateNumber, chaque nouvel
-  // essai retombant sur le même compte encore périmé. Le verrou sérialise les
-  // deux : la seconde attend que la première commite (et libère le verrou)
-  // avant de relire un compte à jour, donc plus jamais de collision, quelle
-  // que soit la concurrence. Portée par tenant+type : ne bloque ni les autres
-  // établissements ni, au sein d'un même établissement, un autre type de pièce.
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`sale-number:${tenantId}:${type}`}))`;
-  const count = await tx.sale.count({
-    where: { tenantId, type, number: { startsWith: `${prefix}-${year}-` } },
+  // se désactive) liraient sinon le même état avant que l'une n'ait commité.
+  // Le verrou sérialise les deux : la seconde attend que la première commite
+  // avant de relire. Portée par tenant+préfixe : ne bloque ni les autres
+  // établissements, ni un autre type de pièce du même établissement.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`sale-number:${tenantId}:${prefix}`}))`;
+
+  // Voir lib/document-number.ts : le numéro suit le plus grand déjà émis, et la
+  // recherche porte sur le PRÉFIXE et non sur le type — c'est le numéro qui
+  // doit être unique, quel que soit le type que la ligne porte aujourd'hui.
+  const [last] = await tx.sale.findMany({
+    where: { tenantId, number: { startsWith: numberSeriesPrefix(prefix, year) } },
+    orderBy: { number: 'desc' },
+    take: 1,
+    select: { number: true },
   });
-  return `${prefix}-${year}-${String(count + 1).padStart(6, '0')}`;
+  return nextSeriesNumber(prefix, year, last?.number);
 }
 
 interface ComputedLine {
