@@ -211,6 +211,10 @@ export async function seedSampleBusinessData(
     data: customers.map((c) => ({
       id: c.id,
       tenantId,
+      // Le fichier clients est cloisonné par magasin : rattacher les clients de
+      // démonstration au magasin de démonstration, sinon ils apparaîtraient
+      // comme « non rattachés » et visibles depuis n'importe quel magasin.
+      branchId,
       firstName: c.firstName,
       lastName: c.lastName,
       phone: c.phone,
