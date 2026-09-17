@@ -89,6 +89,7 @@ model Tenant {
   insuranceClaims        InsuranceClaim[]
   insuranceRefunds       InsuranceRefund[]
   anomalies              Anomaly[]
+  documentCounters       DocumentCounter[]
   lensOrders             LensOrder[]
   repairs                Repair[]
   subscription           Subscription?
@@ -816,6 +817,29 @@ model Payment {
 
   @@index([tenantId, saleId])
   @@index([provider, providerRef])
+}
+
+/// Compteur de numérotation, une ligne par établissement et par série annuelle
+/// (« DEV-2026 », « VEN-2026 »…).
+///
+/// Déduire le prochain numéro des documents existants — par COUNT() puis par
+/// MAX() — reste une lecture suivie d'une écriture : si la lecture ne reflète
+/// pas la réalité (suite trouée par une conversion de devis, largeurs de
+/// padding hétérogènes, numéro illisible), la collision devient PERMANENTE,
+/// chaque nouvelle tentative relisant la même chose. Un compteur qui ne fait
+/// qu'avancer ne peut pas rendre deux fois la même valeur : une éventuelle
+/// collision résiduelle est alors résolue par la tentative suivante.
+model DocumentCounter {
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Série annuelle, ex. « DEV-2026 ».
+  series    String
+  /// Dernier numéro attribué. Ne décroît jamais.
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([tenantId, series])
+  @@index([tenantId])
 }
 
 model Transaction {

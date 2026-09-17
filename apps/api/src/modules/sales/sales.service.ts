@@ -10,7 +10,7 @@ import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/sha
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
-import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
+import { numberSeriesPrefix, nextCounterNumber } from '../../lib/document-number.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { settlePayment } from '../payments/payment.service.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
@@ -52,27 +52,32 @@ function numberPrefix(type: SaleType): string {
   return 'VEN';
 }
 
-async function nextNumber(tx: Tx, tenantId: string, type: SaleType): Promise<string> {
+/**
+ * Numéro de pièce, alloué par le compteur persistant.
+ *
+ * Prend volontairement `prisma` et NON le `tx` de la transaction appelante :
+ * l'incrément doit survivre à l'annulation de cette transaction. Dans le cas
+ * contraire, une création qui échoue annule aussi l'incrément, la tentative
+ * suivante réobtient le même numéro, et l'utilisateur reste bloqué
+ * indéfiniment — c'est exactement le symptôme signalé.
+ *
+ * Aucun verrou consultatif ici : `increment` est un UPDATE atomique, Postgres
+ * sérialise déjà l'accès à la ligne du compteur.
+ */
+async function nextNumber(tenantId: string, type: SaleType): Promise<string> {
   const prefix = numberPrefix(type);
   const year = new Date().getFullYear();
-  // Verrou consultatif Postgres, propre à la transaction : deux pièces créées
-  // au même instant (deux caissiers, ou un double-clic avant que le bouton ne
-  // se désactive) liraient sinon le même état avant que l'une n'ait commité.
-  // Le verrou sérialise les deux : la seconde attend que la première commite
-  // avant de relire. Portée par tenant+préfixe : ne bloque ni les autres
-  // établissements, ni un autre type de pièce du même établissement.
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`sale-number:${tenantId}:${prefix}`}))`;
 
-  // Voir lib/document-number.ts : le numéro suit le plus grand déjà émis, et la
-  // recherche porte sur le PRÉFIXE et non sur le type — c'est le numéro qui
-  // doit être unique, quel que soit le type que la ligne porte aujourd'hui.
-  const [last] = await tx.sale.findMany({
-    where: { tenantId, number: { startsWith: numberSeriesPrefix(prefix, year) } },
-    orderBy: { number: 'desc' },
-    take: 1,
-    select: { number: true },
+  // La lecture d'amorçage porte sur le PRÉFIXE et non sur le type : c'est le
+  // numéro qui doit être unique, quel que soit le type porté aujourd'hui par la
+  // ligne (un devis converti garde sa place dans la série VEN).
+  return nextCounterNumber(prisma, tenantId, prefix, year, async () => {
+    const rows = await prisma.sale.findMany({
+      where: { tenantId, number: { startsWith: numberSeriesPrefix(prefix, year) } },
+      select: { number: true },
+    });
+    return rows.map((r) => r.number);
   });
-  return nextSeriesNumber(prefix, year, last?.number);
 }
 
 interface ComputedLine {
@@ -187,7 +192,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
     const total = taxBase + taxAmount;
     const isSale = input.type === SaleType.SALE;
 
-    const number = await nextNumber(tx, tenantId, input.type);
+    const number = await nextNumber(tenantId, input.type);
     const paidInit = isSale ? Math.min(insurance, total) : 0;
     const status = !isSale ? SaleStatus.DRAFT : saleSettlementStatus(paidInit, total);
 
@@ -560,7 +565,7 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
     const already = await tx.sale.count({ where: { tenantId, originalSaleId: sale.id } });
     if (already > 0) throw conflict('Un retour existe déjà pour cette vente');
 
-    const number = await nextNumber(tx, tenantId, SaleType.RETURN);
+    const number = await nextNumber(tenantId, SaleType.RETURN);
     const ret = await tx.sale.create({
       data: {
         tenantId,
@@ -710,7 +715,7 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
       });
     }
 
-    const number = await nextNumber(tx, tenantId, SaleType.SALE);
+    const number = await nextNumber(tenantId, SaleType.SALE);
     const paidInit = Math.min(Number(quote.insuranceAmount), Number(quote.totalAmount));
     const status = saleSettlementStatus(paidInit, Number(quote.totalAmount));
 
