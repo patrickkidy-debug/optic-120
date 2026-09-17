@@ -547,11 +547,43 @@ export async function listReceivables(branchId?: string): Promise<ReceivablesDat
 }
 
 export interface SalesReportRow {
+  id: string;
   number: string;
   date: string;
   customer: string;
+  customerPhone: string | null;
   branch: string;
+  cashier: string;
   status: string;
+  /** Moyens réellement encaissés ; « INSURANCE » pour la part prise en charge. */
+  methods: string[];
+  total: number;
+  paid: number;
+  balance: number;
+}
+
+export interface ReportTotals {
+  /** Chiffre d'affaires facturé. */
+  revenue: number;
+  /** Encaissements réels, part assurance comprise. */
+  collected: number;
+  outstanding: number;
+  count: number;
+  avgBasket: number;
+  collectionRate: number;
+  unpaidCount: number;
+}
+
+export interface ReportSeriesPoint {
+  bucket: string;
+  revenue: number;
+  collected: number;
+  count: number;
+}
+
+export interface ReportStatusBucket {
+  status: string;
+  count: number;
   total: number;
   paid: number;
   balance: number;
@@ -560,17 +592,51 @@ export interface SalesReportRow {
 export interface SalesReport {
   from: string;
   to: string;
-  summary: { revenue: number; count: number; avgBasket: number };
+  granularity: 'day' | 'week' | 'month';
+  previousPeriod: { from: string; to: string };
+  summary: ReportTotals;
+  previousSummary: ReportTotals;
+  series: ReportSeriesPoint[];
+  statusBreakdown: ReportStatusBucket[];
   rows: SalesReportRow[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
-export async function getSalesReport(params: {
+export interface SalesReportParams {
   from: string;
   to: string;
   branchId?: string;
-}): Promise<SalesReport> {
+  /** Statuts séparés par virgule ; vide = tous sauf annulées. */
+  status?: string;
+  cashierId?: string;
+  customerId?: string;
+  method?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'date' | 'total' | 'paid' | 'balance' | 'customer' | 'number';
+  sortDir?: 'asc' | 'desc';
+}
+
+export async function getSalesReport(params: SalesReportParams): Promise<SalesReport> {
   const { data } = await api.get<SalesReport>('/sales/report', { params });
   return data;
+}
+
+export interface ReportPaymentRow {
+  date: string;
+  saleNumber: string;
+  customer: string;
+  method: string;
+  amount: number;
+}
+
+/** Encaissements de la période, pour l'export « Paiements ». */
+export async function getReportPayments(params: SalesReportParams): Promise<ReportPaymentRow[]> {
+  const { data } = await api.get<{ payments: ReportPaymentRow[] }>('/sales/report/payments', { params });
+  return data.payments;
 }
 
 export async function simulatePayment(paymentId: string, status: 'SUCCESS' | 'FAILED' = 'SUCCESS') {

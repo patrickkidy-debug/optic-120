@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
-import { forbidden, notFound, conflict } from '../../lib/http-error.js';
+import { forbidden, notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as salesService from './sales.service.js';
+import * as reportService from './sales-report.service.js';
 
 export async function salesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -125,38 +126,101 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // Rapport de ventes sur une période (résumé + lignes) pour l'export CSV.
+  /**
+   * Rapport commercial : indicateurs, comparaison à la période précédente,
+   * série temporelle, répartition par statut et lignes paginées — tout issu du
+   * MÊME filtre, pour qu'un chiffre affiché en haut de page corresponde
+   * toujours au tableau du bas.
+   *
+   * Bornes de journée calées en UTC et non sur l'heure locale du serveur : une
+   * vente du 14 à 23h30 doit être comptée le 14 quel que soit l'hébergeur.
+   */
   app.get('/report', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
-    const q = req.query as { from?: string; to?: string; branchId?: string };
-    const from = q.from ? new Date(q.from) : new Date(Date.now() - 30 * 24 * 3600 * 1000);
-    const to = q.to ? new Date(q.to) : new Date();
-    from.setHours(0, 0, 0, 0);
-    to.setHours(23, 59, 59, 999);
-    const where: Record<string, unknown> = {
-      type: SaleType.SALE,
-      createdAt: { gte: from, lte: to },
+    const q = req.query as Record<string, string | undefined>;
+
+    const dayStart = (v: string | undefined, fallback: Date): Date =>
+      v ? new Date(`${v.slice(0, 10)}T00:00:00.000Z`) : fallback;
+    const dayEnd = (v: string | undefined, fallback: Date): Date =>
+      v ? new Date(`${v.slice(0, 10)}T23:59:59.999Z`) : fallback;
+
+    const defaultFrom = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    const from = dayStart(q.from, new Date(`${defaultFrom.toISOString().slice(0, 10)}T00:00:00.000Z`));
+    const to = dayEnd(q.to, new Date(`${new Date().toISOString().slice(0, 10)}T23:59:59.999Z`));
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw badRequest('Période invalide');
+    if (from > to) throw badRequest('La date de début doit précéder la date de fin');
+
+    if (q.branchId) assertBranchAccess(req, q.branchId);
+
+    const filter: reportService.ReportFilter = {
+      from,
+      to,
+      branchId: q.branchId || undefined,
+      statuses: q.status ? q.status.split(',').filter(Boolean) : undefined,
+      cashierId: q.cashierId || undefined,
+      customerId: q.customerId || undefined,
+      method: q.method || undefined,
+      search: q.search || undefined,
     };
-    if (q.branchId) where.branchId = q.branchId;
-    const sales = await req.db!.sale.findMany({
-      where,
-      orderBy: { createdAt: 'asc' },
-      include: { customer: true, branch: true },
+
+    const paging: reportService.ReportPaging = {
+      page: Math.max(1, Number.parseInt(q.page ?? '1', 10) || 1),
+      // Plafond à 1000 : c'est le mode « export », qui doit couvrir toutes les
+      // lignes du filtre et pas seulement la page affichée.
+      pageSize: Math.min(1000, Math.max(1, Number.parseInt(q.pageSize ?? '20', 10) || 20)),
+      sortBy: (['date', 'total', 'paid', 'balance', 'customer', 'number'] as const).includes(
+        q.sortBy as never,
+      )
+        ? (q.sortBy as reportService.ReportPaging['sortBy'])
+        : 'date',
+      sortDir: q.sortDir === 'asc' ? 'asc' : 'desc',
+    };
+
+    const previous = reportService.previousPeriod(from, to);
+    const granularity = reportService.pickGranularity(from, to);
+
+    const [summary, previousSummary, series, statusBreakdown, page] = await Promise.all([
+      reportService.getTotals(req.db!, filter),
+      reportService.getTotals(req.db!, { ...filter, from: previous.from, to: previous.to }),
+      reportService.getSeries(req.db!, filter, granularity),
+      reportService.getStatusBreakdown(req.db!, filter),
+      reportService.getRows(req.db!, filter, paging),
+    ]);
+
+    return reply.send({
+      from,
+      to,
+      granularity,
+      previousPeriod: previous,
+      summary,
+      previousSummary,
+      series,
+      statusBreakdown,
+      rows: page.rows,
+      total: page.total,
+      page: paging.page,
+      pageSize: paging.pageSize,
     });
-    const rows = sales.map((s) => ({
-      number: s.number,
-      date: s.createdAt,
-      customer: s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '',
-      branch: s.branch.name,
-      status: s.status,
-      total: Number(s.totalAmount),
-      paid: Number(s.paidAmount),
-      balance: Number(s.totalAmount) - Number(s.paidAmount),
-    }));
-    const active = rows.filter((r) => r.status !== 'CANCELLED');
-    const revenue = active.reduce((sum, r) => sum + r.paid, 0);
-    const count = active.length;
-    const avgBasket = count > 0 ? Math.round(revenue / count) : 0;
-    return reply.send({ from, to, summary: { revenue, count, avgBasket }, rows });
+  });
+
+  /** Encaissements de la période, pour l'export « Paiements ». */
+  app.get('/report/payments', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    const from = new Date(`${(q.from ?? '').slice(0, 10)}T00:00:00.000Z`);
+    const to = new Date(`${(q.to ?? '').slice(0, 10)}T23:59:59.999Z`);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw badRequest('Période invalide');
+    if (q.branchId) assertBranchAccess(req, q.branchId);
+
+    const payments = await reportService.getPayments(req.db!, {
+      from,
+      to,
+      branchId: q.branchId || undefined,
+      statuses: q.status ? q.status.split(',').filter(Boolean) : undefined,
+      cashierId: q.cashierId || undefined,
+      customerId: q.customerId || undefined,
+      method: q.method || undefined,
+      search: q.search || undefined,
+    });
+    return reply.send({ payments });
   });
 
   app.get('/:id', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
