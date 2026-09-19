@@ -4,6 +4,7 @@ import type { RenewalRow } from '../../features/billing/api';
 import {
   describeDelay,
   describeLastReminder,
+  matchesRenewal,
   remindedToday,
   renderRenewalMessage,
   urgencyOf,
@@ -79,6 +80,49 @@ describe('remindedToday / describeLastReminder', () => {
     expect(describeLastReminder(null, now)).toBe('Jamais relancé');
     expect(describeLastReminder('2026-09-17T15:00:00', now)).toBe('Il y a 2 jours');
     expect(describeLastReminder('2026-09-19T08:05:00', now)).toMatch(/^Aujourd'hui à 08:05$/);
+  });
+});
+
+describe('matchesRenewal', () => {
+  const r = row();
+
+  it('laisse tout passer quand la recherche est vide', () => {
+    expect(matchesRenewal(r, '')).toBe(true);
+    expect(matchesRenewal(r, '   ')).toBe(true);
+  });
+
+  it('trouve par nom d’établissement, sans tenir compte de la casse', () => {
+    expect(matchesRenewal(r, 'OPTIQUE')).toBe(true);
+    expect(matchesRenewal(r, 'inconnu')).toBe(false);
+  });
+
+  /** Personne ne tape les accents dans une barre de recherche. */
+  it('ignore les accents', () => {
+    expect(matchesRenewal(r, 'lumiere')).toBe(true);
+    expect(matchesRenewal(row({ tenantName: 'Optique Lumiere' }), 'Lumière')).toBe(true);
+  });
+
+  it('trouve par offre', () => {
+    expect(matchesRenewal(r, 'standard')).toBe(true);
+  });
+
+  /**
+   * Le numéro est saisi dans des formats variés à l'inscription (espaces,
+   * tirets, indicatif). Seuls les chiffres doivent compter.
+   */
+  it('trouve par numéro quel que soit le format tapé', () => {
+    expect(matchesRenewal(r, '07 00 00')).toBe(true);
+    expect(matchesRenewal(r, '+225 07')).toBe(true);
+    expect(matchesRenewal(r, '0799')).toBe(false);
+  });
+
+  it('ne compare pas un texte sans chiffre au numéro', () => {
+    // « abc » n'a aucun chiffre : sans garde, "" serait contenu dans tout numéro.
+    expect(matchesRenewal(r, 'abc')).toBe(false);
+  });
+
+  it('gère un établissement sans numéro', () => {
+    expect(matchesRenewal(row({ whatsapp: null }), '0700')).toBe(false);
   });
 });
 

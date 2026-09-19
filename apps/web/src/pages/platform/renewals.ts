@@ -73,6 +73,25 @@ export function describeLastReminder(lastReminderAt: string | null, now = new Da
   return `Il y a ${plural(days, 'jour', 'jours')}`;
 }
 
+/** Minuscules, sans accents : « Lumière » doit se trouver en tapant « lumiere ». */
+function normalize(v: string): string {
+  return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/**
+ * Recherche sur le nom de l'établissement, son numéro WhatsApp et l'offre.
+ * Pour le numéro, seuls les chiffres comptent : « 07 00 00 » doit trouver
+ * « +2250700000000 », quel que soit le format saisi à l'inscription.
+ */
+export function matchesRenewal(row: RenewalRow, query: string): boolean {
+  const q = query.trim();
+  if (!q) return true;
+  const text = normalize(q);
+  if (normalize(row.tenantName).includes(text) || normalize(row.planName).includes(text)) return true;
+  const digits = q.replace(/\D/g, '');
+  return digits.length > 0 && (row.whatsapp ?? '').replace(/\D/g, '').includes(digits);
+}
+
 /** Variables du message pour un établissement donné. */
 export function renewalVars(row: RenewalRow, activationUrl: string): Record<string, string> {
   return {

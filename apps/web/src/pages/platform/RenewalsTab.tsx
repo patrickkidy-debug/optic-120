@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CalendarClock, CheckCircle2, MessageCircle, PhoneOff, RotateCcw, Save } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CheckCircle2, MessageCircle, PhoneOff, RotateCcw, Save, Search, X } from 'lucide-react';
 import { RENEWAL_TEMPLATE_MAX, RENEWAL_TEMPLATE_VARIABLES } from '@oculo/shared-types';
 import {
   getRenewalTemplate,
@@ -18,6 +18,7 @@ import {
   URGENCY_TONE,
   describeDelay,
   describeLastReminder,
+  matchesRenewal,
   remindedToday,
   renderRenewalMessage,
   urgencyOf,
@@ -39,6 +40,7 @@ export function RenewalsTab() {
   const [within, setWithin] = useState<number>(7);
   const [includeExpired, setIncludeExpired] = useState(true);
   const [hideDone, setHideDone] = useState(false);
+  const [search, setSearch] = useState('');
   const [trackError, setTrackError] = useState('');
 
   const activationUrl = `${window.location.origin}/activer`;
@@ -82,7 +84,11 @@ export function RenewalsTab() {
   }
 
   const all = rows ?? [];
-  const visible = hideDone ? all.filter((r) => !remindedToday(r.lastReminderAt)) : all;
+  // Filtrage local : la liste est déjà bornée par la fenêtre d'échéance, une
+  // requête par frappe n'apporterait rien.
+  const visible = all.filter(
+    (r) => (!hideDone || !remindedToday(r.lastReminderAt)) && matchesRenewal(r, search),
+  );
   const stats = useMemo(
     () => ({
       total: all.length,
@@ -104,6 +110,31 @@ export function RenewalsTab() {
               ouvre WhatsApp avec le message déjà rédigé : il vous reste à appuyer sur Envoyer.
             </p>
           </div>
+        </div>
+
+        <div className="relative mt-3 max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            className="input pl-9 pr-9"
+            placeholder="Rechercher un établissement, un numéro ou une offre…"
+            aria-label="Rechercher un établissement, un numéro ou une offre"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-content-faint hover:bg-surface-2 hover:text-content"
+              aria-label="Effacer la recherche"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -171,13 +202,31 @@ export function RenewalsTab() {
       ) : isLoading ? (
         <PageLoader />
       ) : visible.length === 0 ? (
+        // Trois vides différents, trois messages : confondre « aucun résultat
+        // pour cette recherche » avec « tout le monde a été relancé » ferait
+        // croire au fondateur que son travail du jour est terminé.
         <EmptyState
-          icon={CalendarClock}
-          title={all.length === 0 ? 'Aucune échéance proche' : 'Tout le monde a été relancé aujourd’hui'}
+          icon={all.length > 0 && search.trim() ? Search : CalendarClock}
+          title={
+            all.length === 0
+              ? 'Aucune échéance proche'
+              : search.trim()
+                ? `Aucun résultat pour « ${search.trim()} »`
+                : 'Tout le monde a été relancé aujourd’hui'
+          }
           hint={
             all.length === 0
               ? `Aucun abonnement n'arrive à échéance dans les ${within} prochains jours.`
-              : 'Décochez « Masquer ceux relancés aujourd’hui » pour les revoir.'
+              : search.trim()
+                ? 'Vérifiez l’orthographe, ou élargissez la fenêtre d’échéance.'
+                : 'Décochez « Masquer ceux relancés aujourd’hui » pour les revoir.'
+          }
+          action={
+            all.length > 0 && search.trim() ? (
+              <Button variant="outline" onClick={() => setSearch('')}>
+                Effacer la recherche
+              </Button>
+            ) : undefined
           }
         />
       ) : (
