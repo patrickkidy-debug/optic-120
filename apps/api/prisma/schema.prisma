@@ -1700,6 +1700,9 @@ model PlatformNotification {
 model PlatformSettings {
   id                   String   @id @default("default")
   trialDurationMinutes Int      @default(120)
+  /// Message de relance WhatsApp des abonnements arrivant à échéance, partagé
+  /// entre tous les opérateurs. Null = modèle par défaut (DEFAULT_RENEWAL_TEMPLATE).
+  renewalReminderTemplate String?
   updatedAt            DateTime @updatedAt
 }
 

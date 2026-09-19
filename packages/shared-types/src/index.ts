@@ -2634,6 +2634,41 @@ export const whatsappTemplatesSchema = z
 export type WhatsappTemplates = z.infer<typeof whatsappTemplatesSchema>;
 
 /** Remplace les variables {xxx} d'un modèle par leurs valeurs (vides si absentes). */
+/* ---------------- Relances de renouvellement (console fondateur) ---------------- */
+
+/**
+ * Variables disponibles dans le message de relance. Même syntaxe `{variable}`
+ * que les modèles WhatsApp de vente, remplies par `fillWaTemplate`.
+ */
+export const RENEWAL_TEMPLATE_VARIABLES = [
+  { key: 'etablissement', label: "Nom de l'établissement" },
+  { key: 'offre', label: "Nom de l'offre" },
+  { key: 'echeance', label: "Date d'échéance" },
+  { key: 'delai', label: 'Délai (« dans 3 jours », « dépassée depuis 2 jours »)' },
+  { key: 'montant', label: "Prix de l'offre" },
+  { key: 'lien', label: 'Lien de renouvellement' },
+] as const;
+
+export const DEFAULT_RENEWAL_TEMPLATE = [
+  'Bonjour, ici l’équipe OculoSaaS 👋',
+  '',
+  // « échéance {delai} » se lit juste dans les deux sens : « échéance dans
+  // 3 jours » comme « échéance dépassée depuis 2 jours ». « Arrive à échéance
+  // {delai} » aurait donné « arrive à échéance il y a 2 jours ».
+  'Abonnement *{offre}* de *{etablissement}* : échéance {delai} ({echeance}).',
+  '',
+  'Pour continuer à utiliser OculoSaaS sans interruption, vous pouvez le renouveler ici : {lien}',
+  '',
+  'Montant : {montant}. Une question ? Répondez simplement à ce message.',
+].join('\n');
+
+/** Plafond du message : au-delà, le lien wa.me devient trop long pour certains navigateurs. */
+export const RENEWAL_TEMPLATE_MAX = 1000;
+
+export const renewalTemplateSchema = z.object({
+  template: z.string().trim().min(1, 'Le message ne peut pas être vide').max(RENEWAL_TEMPLATE_MAX),
+});
+
 export function fillWaTemplate(tpl: string, vars: Record<string, string | number>): string {
   return tpl.replace(/\{(\w+)\}/g, (_, k: string) => (vars[k] != null ? String(vars[k]) : ''));
 }

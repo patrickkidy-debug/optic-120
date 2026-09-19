@@ -190,6 +190,53 @@ export async function listAllSubscriptions(): Promise<PlatformSub[]> {
   const { data } = await api.get<{ subscriptions: PlatformSub[] }>('/platform/subscriptions');
   return data.subscriptions;
 }
+
+/* ------------------------- Relances de renouvellement ------------------------- */
+
+export interface RenewalRow {
+  tenantId: string;
+  tenantName: string;
+  whatsapp: string | null;
+  status: string;
+  planName: string;
+  planPrice: number;
+  currency: string;
+  currentPeriodEnd: string;
+  /** Négatif quand l'échéance est dépassée. */
+  msLeft: number;
+  autoRenew: boolean;
+  lastReminderAt: string | null;
+  reminderCount: number;
+}
+
+export async function listRenewals(within: number, expired: number): Promise<RenewalRow[]> {
+  const { data } = await api.get<{ renewals: RenewalRow[] }>('/platform/renewals', {
+    params: { within, expired },
+  });
+  return data.renewals;
+}
+
+/** Consigne qu'une relance a été lancée (ouverture de WhatsApp). */
+export async function recordRenewalReminder(tenantId: string, msLeft: number): Promise<void> {
+  await api.post(`/platform/renewals/${tenantId}/reminder`, { msLeft });
+}
+
+export async function getRenewalTemplate(): Promise<{ template: string; isDefault: boolean }> {
+  const { data } = await api.get<{ template: string; isDefault: boolean }>(
+    '/platform/settings/renewal-template',
+  );
+  return data;
+}
+
+export async function saveRenewalTemplate(template: string): Promise<{ template: string; isDefault: boolean }> {
+  const { data } = await api.put('/platform/settings/renewal-template', { template });
+  return data;
+}
+
+export async function resetRenewalTemplate(): Promise<{ template: string; isDefault: boolean }> {
+  const { data } = await api.put('/platform/settings/renewal-template', { reset: true });
+  return data;
+}
 export async function platformSuspend(tenantId: string) {
   await api.post(`/platform/subscriptions/${tenantId}/suspend`);
 }

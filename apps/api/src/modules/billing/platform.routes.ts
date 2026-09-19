@@ -10,6 +10,7 @@ import {
   partnerUpdateTierSchema,
   partnerCommissionRuleUpsertSchema,
   partnerCommissionActionSchema,
+  renewalTemplateSchema,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { forbidden, notFound, badRequest } from '../../lib/http-error.js';
@@ -17,6 +18,7 @@ import { prisma } from '../../lib/prisma.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
+import * as renewalsService from './renewals.service.js';
 import * as partners from '../partners/partner.service.js';
 import * as support from '../support/support.service.js';
 import { getEngagementForFounder } from '../demo/demo-video.service.js';
@@ -146,6 +148,65 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.get('/subscriptions', async (_req, reply) => {
     const subscriptions = await billing.listAllSubscriptions();
     return reply.send({ subscriptions });
+  });
+
+  /* ------------------------- Relances de renouvellement ------------------------- */
+
+  // Abonnements arrivant à échéance (et, sur demande, récemment échus).
+  app.get('/renewals', async (req, reply) => {
+    const q = req.query as { within?: string; expired?: string };
+    // Bornes serrées : une fenêtre démesurée transformerait l'écran de relance
+    // en liste de tous les clients, et le fondateur relancerait des gens dont
+    // l'abonnement court encore pour des mois.
+    const within = Math.min(90, Math.max(0, Number.parseInt(q.within ?? '7', 10) || 0));
+    const expired = Math.min(90, Math.max(0, Number.parseInt(q.expired ?? '0', 10) || 0));
+    const renewals = await renewalsService.listRenewals(within, expired);
+    return reply.send({ renewals, within, expired });
+  });
+
+  /**
+   * Consigne qu'une relance a été lancée. Appelé quand le fondateur ouvre
+   * WhatsApp : c'est la seule chose que l'on sait, l'envoi final restant un
+   * geste manuel dans WhatsApp. Sert à afficher « relancé il y a 2 jours » et à
+   * éviter de relancer deux fois le même établissement dans la journée.
+   */
+  app.post('/renewals/:tenantId/reminder', async (req, reply) => {
+    const { tenantId } = req.params as { tenantId: string };
+    const body = (req.body ?? {}) as { msLeft?: number };
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
+    if (!tenant) throw notFound('Établissement introuvable');
+
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: renewalsService.RENEWAL_REMINDER_ACTION,
+      entity: 'Subscription',
+      metadata: {
+        channel: 'whatsapp',
+        daysLeft: typeof body.msLeft === 'number' ? Math.round(body.msLeft / 86_400_000) : null,
+      },
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true, remindedAt: new Date() });
+  });
+
+  app.get('/settings/renewal-template', async (_req, reply) => {
+    return reply.send(await renewalsService.getRenewalTemplate());
+  });
+
+  app.put('/settings/renewal-template', async (req, reply) => {
+    const body = (req.body ?? {}) as { template?: string | null; reset?: boolean };
+    const result = body.reset
+      ? await renewalsService.setRenewalTemplate(null)
+      : await renewalsService.setRenewalTemplate(renewalTemplateSchema.parse(body).template);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_RENEWAL_TEMPLATE_UPDATED',
+      metadata: { reset: Boolean(body.reset) },
+      ...requestMeta(req),
+    });
+    return reply.send(result);
   });
 
   app.post('/subscriptions/:tenantId/suspend', async (req, reply) => {
