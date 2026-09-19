@@ -49,6 +49,7 @@ import {
   ListChecks,
   type LucideIcon,
   BellRing,
+  Megaphone,
 } from 'lucide-react';
 import {
   platformSuspend,
@@ -105,6 +106,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal, ProgressBar } from '../../components/ui';
 import { RenewalsTab } from './RenewalsTab';
+import { AnnouncementsTab } from './AnnouncementsTab';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -233,7 +235,7 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'payments' | 'renewals' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
+type Tab = 'payments' | 'renewals' | 'announcements' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -311,6 +313,7 @@ export function PlatformPage() {
           { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'renewals' as Tab, label: 'Renouvellements', icon: BellRing },
+          { id: 'announcements' as Tab, label: 'Nouveautés', icon: Megaphone },
           { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
           { id: 'engagement' as Tab, label: 'Engagement', icon: Flame },
           { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
@@ -338,6 +341,7 @@ export function PlatformPage() {
         {tab === 'finance' && <FinanceTab />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'renewals' && <RenewalsTab />}
+        {tab === 'announcements' && <AnnouncementsTab />}
         {tab === 'demos' && <DemosTab />}
         {tab === 'engagement' && <EngagementTab />}
         {tab === 'users' && <UsersTab />}

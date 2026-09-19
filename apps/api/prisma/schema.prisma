@@ -197,6 +197,7 @@ model User {
   branches                 UserBranch[]
   refreshTokens            RefreshToken[]
   auditLogs                AuditLog[]
+  announcementReads        AnnouncementRead[]
   sales                    Sale[]
   startedInventoryCounts   InventoryCount[]     @relation("InventoryCountStartedBy")
   completedInventoryCounts InventoryCount[]     @relation("InventoryCountCompletedBy")
@@ -1697,13 +1698,51 @@ model PlatformNotification {
 /// Réglages globaux de la plateforme (ligne unique, id fixe "default"). Pour
 /// l'instant : durée de l'essai gratuit offert à l'inscription, ajustable
 /// depuis la console fondateur sans redéploiement.
+/// Annonce produit (nouveauté, amélioration, correctif) rédigée en console
+/// fondateur. Globale à la plateforme : elle ne dépend d'aucun établissement,
+/// d'où l'absence de tenantId.
+model Announcement {
+  id              String    @id @default(uuid())
+  kind            String    @default("FEATURE") // FEATURE | IMPROVEMENT | FIX
+  title           String
+  body            String
+  /// URLs publiques (Supabase Storage). La première sert d'illustration
+  /// principale pour l'aperçu WhatsApp et le post LinkedIn.
+  images          Json?
+  /// Textes de diffusion, modifiables indépendamment du corps de l'annonce :
+  /// un post LinkedIn ne se rédige pas comme une note in-app.
+  whatsappMessage String?
+  linkedinPost    String?
+  /// Null tant que l'annonce est un brouillon : seules les annonces publiées
+  /// sont visibles des utilisateurs.
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  reads AnnouncementRead[]
+
+  @@index([publishedAt])
+}
+
+/// Accusé de lecture par utilisateur, pour la pastille « non lu ».
+model AnnouncementRead {
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@id([announcementId, userId])
+  @@index([userId])
+}
+
 model PlatformSettings {
-  id                   String   @id @default("default")
-  trialDurationMinutes Int      @default(120)
+  id                      String   @id @default("default")
+  trialDurationMinutes    Int      @default(120)
   /// Message de relance WhatsApp des abonnements arrivant à échéance, partagé
   /// entre tous les opérateurs. Null = modèle par défaut (DEFAULT_RENEWAL_TEMPLATE).
   renewalReminderTemplate String?
-  updatedAt            DateTime @updatedAt
+  updatedAt               DateTime @updatedAt
 }
 
 /**

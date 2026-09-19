@@ -2669,6 +2669,75 @@ export const renewalTemplateSchema = z.object({
   template: z.string().trim().min(1, 'Le message ne peut pas être vide').max(RENEWAL_TEMPLATE_MAX),
 });
 
+/* ---------------- Annonces produit (nouveautés) ---------------- */
+
+export const AnnouncementKind = {
+  FEATURE: 'FEATURE',
+  IMPROVEMENT: 'IMPROVEMENT',
+  FIX: 'FIX',
+} as const;
+export type AnnouncementKind = (typeof AnnouncementKind)[keyof typeof AnnouncementKind];
+
+export const ANNOUNCEMENT_KINDS = Object.values(AnnouncementKind) as [
+  AnnouncementKind,
+  ...AnnouncementKind[],
+];
+
+export const ANNOUNCEMENT_KIND_LABELS: Record<AnnouncementKind, string> = {
+  FEATURE: 'Nouveauté',
+  IMPROVEMENT: 'Amélioration',
+  FIX: 'Correctif',
+};
+
+/** Au plus 6 visuels : au-delà, personne ne les regarde et la fiche devient lourde. */
+export const ANNOUNCEMENT_MAX_IMAGES = 6;
+
+export const announcementUpsertSchema = z.object({
+  kind: z.enum(ANNOUNCEMENT_KINDS).default('FEATURE'),
+  title: z.string().trim().min(3, 'Titre trop court').max(160),
+  body: z.string().trim().min(10, 'Décrivez la nouveauté en quelques lignes').max(4000),
+  images: z.array(z.string().max(2_000_000)).max(ANNOUNCEMENT_MAX_IMAGES).default([]),
+  whatsappMessage: z.string().max(1500).optional().or(z.literal('')),
+  linkedinPost: z.string().max(3000).optional().or(z.literal('')),
+});
+export type AnnouncementUpsertInput = z.infer<typeof announcementUpsertSchema>;
+
+/**
+ * Texte WhatsApp par défaut d'une annonce.
+ *
+ * Un lien wa.me ne transporte que du texte : l'image ne peut pas être jointe,
+ * elle est donc donnée en lien, que WhatsApp transforme en aperçu.
+ */
+export function defaultAnnouncementWhatsapp(
+  kind: AnnouncementKind,
+  title: string,
+  body: string,
+  imageUrl?: string | null,
+): string {
+  const badge = kind === 'FIX' ? '🛠️' : kind === 'IMPROVEMENT' ? '✨' : '🚀';
+  return [
+    `${badge} *${ANNOUNCEMENT_KIND_LABELS[kind]} OculoSaaS — ${title}*`,
+    '',
+    body.trim(),
+    ...(imageUrl ? ['', `Aperçu : ${imageUrl}`] : []),
+  ].join('\n');
+}
+
+/** Texte LinkedIn par défaut. Pas de gras : LinkedIn n'interprète aucun balisage. */
+export function defaultAnnouncementLinkedin(
+  kind: AnnouncementKind,
+  title: string,
+  body: string,
+): string {
+  return [
+    `${ANNOUNCEMENT_KIND_LABELS[kind]} OculoSaaS : ${title}`,
+    '',
+    body.trim(),
+    '',
+    '#optique #opticien #SaaS #OculoSaaS',
+  ].join('\n');
+}
+
 export function fillWaTemplate(tpl: string, vars: Record<string, string | number>): string {
   return tpl.replace(/\{(\w+)\}/g, (_, k: string) => (vars[k] != null ? String(vars[k]) : ''));
 }

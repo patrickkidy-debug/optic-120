@@ -11,6 +11,7 @@ import {
   partnerCommissionRuleUpsertSchema,
   partnerCommissionActionSchema,
   renewalTemplateSchema,
+  announcementUpsertSchema,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { forbidden, notFound, badRequest } from '../../lib/http-error.js';
@@ -19,6 +20,7 @@ import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
 import * as renewalsService from './renewals.service.js';
+import * as announcements from '../announcements/announcements.service.js';
 import * as partners from '../partners/partner.service.js';
 import * as support from '../support/support.service.js';
 import { getEngagementForFounder } from '../demo/demo-video.service.js';
@@ -32,6 +34,9 @@ async function requirePlatformOperator(req: FastifyRequest): Promise<void> {
     throw forbidden('Réservé aux opérateurs de la plateforme');
   }
 }
+
+/** Action d'audit tracant la diffusion WhatsApp d'une annonce a un etablissement. */
+const ANNOUNCEMENT_NOTIFIED_ACTION = 'PLATFORM_ANNOUNCEMENT_NOTIFIED';
 
 export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -188,6 +193,95 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       ...requestMeta(req),
     });
     return reply.send({ ok: true, remindedAt: new Date() });
+  });
+
+  /* ----------------------- Annonces produit (nouveautés) ----------------------- */
+
+  // Brouillons compris : c'est l'écran de rédaction.
+  app.get('/announcements', async (_req, reply) => {
+    return reply.send({ announcements: await announcements.listAll() });
+  });
+
+  app.post('/announcements', async (req, reply) => {
+    const input = announcementUpsertSchema.parse(req.body);
+    const announcement = await announcements.create(input);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_ANNOUNCEMENT_CREATED',
+      entity: 'Announcement',
+      entityId: announcement.id,
+      ...requestMeta(req),
+    });
+    return reply.status(201).send({ announcement });
+  });
+
+  app.patch('/announcements/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = announcementUpsertSchema.parse(req.body);
+    return reply.send({ announcement: await announcements.update(id, input) });
+  });
+
+  app.post('/announcements/:id/publish', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { published } = (req.body ?? {}) as { published?: boolean };
+    const announcement = await announcements.setPublished(id, published !== false);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: published === false ? 'PLATFORM_ANNOUNCEMENT_UNPUBLISHED' : 'PLATFORM_ANNOUNCEMENT_PUBLISHED',
+      entity: 'Announcement',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ announcement });
+  });
+
+  app.delete('/announcements/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    await announcements.remove(id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_ANNOUNCEMENT_DELETED',
+      entity: 'Announcement',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
+  });
+
+  /**
+   * Consigne qu'un établissement a été prévenu d'une annonce sur WhatsApp.
+   * Même principe que les relances : on sait que la conversation a été
+   * ouverte, pas que le message a été lu. Permet de reprendre une diffusion
+   * interrompue sans redemander deux fois aux mêmes.
+   */
+  app.post('/announcements/:id/notified/:tenantId', async (req, reply) => {
+    const { id, tenantId } = req.params as { id: string; tenantId: string };
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
+    if (!tenant) throw notFound('Établissement introuvable');
+    await recordAudit({
+      tenantId,
+      userId: req.auth!.userId,
+      action: ANNOUNCEMENT_NOTIFIED_ACTION,
+      entity: 'Announcement',
+      entityId: id,
+      metadata: { channel: 'whatsapp' },
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
+  });
+
+  /** Établissements déjà prévenus pour cette annonce. */
+  app.get('/announcements/:id/notified', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const rows = await prisma.auditLog.findMany({
+      where: { action: ANNOUNCEMENT_NOTIFIED_ACTION, entityId: id },
+      select: { tenantId: true },
+      distinct: ['tenantId'],
+    });
+    return reply.send({ tenantIds: rows.map((r) => r.tenantId) });
   });
 
   app.get('/settings/renewal-template', async (_req, reply) => {
