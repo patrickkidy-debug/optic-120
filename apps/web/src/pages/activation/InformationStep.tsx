@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import {
   SUPPORTED_COUNTRIES,
@@ -41,6 +41,15 @@ export function InformationStep({
   const [wantsStockImport, setWantsStockImport] = useState<boolean | null>(null);
   const [hasExistingData, setHasExistingData] = useState<boolean | null>(null);
   const [localError, setLocalError] = useState('');
+
+  // L'indicatif est obligatoire : on le prerempli des que le pays est choisi,
+  // plutot que de laisser l'utilisateur echouer a la validation puis deviner
+  // le format attendu. La saisie deja commencee n'est jamais ecrasee.
+  const dial = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.dial ?? '';
+  useEffect(() => {
+    if (!dial) return;
+    setWhatsapp((v) => (v.trim() === '' || /^\+\d{1,4}\s?$/.test(v.trim()) ? `${dial} ` : v));
+  }, [dial]);
 
   function submit() {
     const parsed = activationInformationSchema.safeParse({
@@ -96,9 +105,14 @@ export function InformationStep({
               className="input"
               type="tel"
               inputMode="tel"
+              placeholder={dial ? `${dial} 77 123 45 67` : '+225 07 12 34 56'}
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
             />
+            <p className="mt-1 text-xs text-content-faint">
+              Indicatif du pays obligatoire{dial ? ` (${dial})` : ''} : c'est par ce numéro que nous
+              vous rappellerons.
+            </p>
           </Field>
         </div>
 

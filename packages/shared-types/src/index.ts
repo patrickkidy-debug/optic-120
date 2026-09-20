@@ -3189,7 +3189,11 @@ export const activationInformationSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   establishmentName: z.string().trim().min(2).max(160),
   phone: z.string().trim().min(6).max(30),
-  whatsapp: z.string().trim().min(6).max(30),
+  // Indicatif international OBLIGATOIRE : c'est par ce numero que l'equipe
+  // rappelle le client pour configurer son espace, et un numero sans indicatif
+  // est injoignable depuis un autre pays — donc inutilisable. Meme regle qu'a
+  // l'inscription classique, une seule definition pour les deux parcours.
+  whatsapp: whatsappSchema,
   email: z.string().email(),
   country: z.string().min(2).max(2),
   city: z.string().trim().max(80).optional().or(z.literal('')),
