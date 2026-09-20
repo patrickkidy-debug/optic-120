@@ -228,6 +228,48 @@ export function AnnouncementsTab() {
   );
 }
 
+
+/* ----------------------------- Brouillon local ----------------------------- */
+
+interface Draft {
+  kind: AnnouncementKind;
+  title: string;
+  body: string;
+  images: string[];
+  whatsappMessage: string;
+  linkedinPost: string;
+}
+
+/**
+ * Le stockage de session peut être refusé (navigation privée, réglages) et les
+ * visuels y occupent de la place : toute lecture et toute écriture doivent
+ * pouvoir échouer sans empêcher de rédiger.
+ */
+function readDraft(key: string): Draft | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Draft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, draft: Draft): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(draft));
+  } catch {
+    /* Quota atteint ou stockage refusé : la rédaction continue sans filet. */
+  }
+}
+
+function clearDraft(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* Sans conséquence. */
+  }
+}
+
 /* --------------------------------- Rédaction --------------------------------- */
 
 function Editor({
@@ -240,12 +282,23 @@ function Editor({
   onSaved?: (a: Announcement) => void;
 }) {
   const qc = useQueryClient();
-  const [kind, setKind] = useState<AnnouncementKind>(existing?.kind ?? 'FEATURE');
-  const [title, setTitle] = useState(existing?.title ?? '');
-  const [body, setBody] = useState(existing?.body ?? '');
-  const [images, setImages] = useState<string[]>(existing?.images ?? []);
-  const [whatsappMessage, setWhatsappMessage] = useState(existing?.whatsappMessage ?? '');
-  const [linkedinPost, setLinkedinPost] = useState(existing?.linkedinPost ?? '');
+  // Brouillon conservé le temps de la session : si l'écran est remonté pour
+  // une raison quelconque — retour depuis le sélecteur de photos d'un
+  // téléphone, rechargement de l'onglet, mise à jour de l'application — la
+  // saisie et les visuels déjà ajoutés sont restaurés au lieu d'être perdus.
+  const draftKey = `oculo_annonce_brouillon_${existing?.id ?? 'nouvelle'}`;
+  const draft = readDraft(draftKey);
+
+  const [kind, setKind] = useState<AnnouncementKind>(draft?.kind ?? existing?.kind ?? 'FEATURE');
+  const [title, setTitle] = useState(draft?.title ?? existing?.title ?? '');
+  const [body, setBody] = useState(draft?.body ?? existing?.body ?? '');
+  const [images, setImages] = useState<string[]>(draft?.images ?? existing?.images ?? []);
+  const [whatsappMessage, setWhatsappMessage] = useState(
+    draft?.whatsappMessage ?? existing?.whatsappMessage ?? '',
+  );
+  const [linkedinPost, setLinkedinPost] = useState(
+    draft?.linkedinPost ?? existing?.linkedinPost ?? '',
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -255,6 +308,11 @@ function Editor({
   // message WhatsApp obsolète, que personne ne penserait à relire.
   const autoWhatsapp = defaultAnnouncementWhatsapp(kind, title || '…', body || '…', images[0]);
   const autoLinkedin = defaultAnnouncementLinkedin(kind, title || '…', body || '…');
+
+  // Sauvegarde continue du brouillon.
+  useEffect(() => {
+    writeDraft(draftKey, { kind, title, body, images, whatsappMessage, linkedinPost });
+  }, [draftKey, kind, title, body, images, whatsappMessage, linkedinPost]);
 
   const payload = {
     kind,
@@ -271,24 +329,36 @@ function Editor({
     onSuccess: (a) => {
       setError('');
       setSaved(true);
+      // Enregistré : le brouillon n'a plus de raison d'être, et le garder
+      // ferait réapparaître l'ancienne saisie à la prochaine ouverture.
+      clearDraft(draftKey);
       qc.invalidateQueries({ queryKey: ['platform-announcements'] });
       onSaved?.(a);
     },
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
-  async function addImages(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function addImages(files: File[]) {
+    if (files.length === 0) return;
     setUploading(true);
     setError('');
     try {
       const room = ANNOUNCEMENT_MAX_IMAGES - images.length;
-      const picked = [...files].slice(0, Math.max(0, room));
-      const urls = await Promise.all(picked.map((f) => uploadImageToSupabase(f, 'announcements', 1400)));
+      if (room <= 0) throw new Error(`Maximum ${ANNOUNCEMENT_MAX_IMAGES} visuels par annonce.`);
+      const picked = files.slice(0, room);
+      // Budget plus large que le défaut (600 Ko) : une capture d'écran de
+      // logiciel est riche en détails et ne tient pas dans ce budget, ce qui
+      // faisait échouer l'ajout sans que la cause soit évidente.
+      const urls = await Promise.all(
+        picked.map((f) => uploadImageToSupabase(f, 'announcements', 1600, 1_200_000)),
+      );
       setImages((prev) => [...prev, ...urls]);
       setSaved(false);
     } catch (e) {
-      setError(apiErrorMessage(e));
+      // `apiErrorMessage` cible les erreurs HTTP ; ici l'échec vient du
+      // navigateur (format refusé, image trop lourde). Sans ce repli, le
+      // message utile était remplacé par un libellé générique.
+      setError(e instanceof Error ? e.message : apiErrorMessage(e));
     } finally {
       setUploading(false);
     }
@@ -381,16 +451,34 @@ function Editor({
                   )}
                   <input
                     type="file"
-                    accept="image/*"
+                    // Formats réellement acceptés par le redimensionnement : un
+                    // « image/* » laissait choisir une photo HEIC d'iPhone,
+                    // refusée ensuite sans que le champ le laisse deviner.
+                    accept="image/png,image/jpeg,image/webp,image/gif"
                     multiple
                     className="hidden"
-                    onChange={(e) => void addImages(e.target.files)}
+                    onChange={(e) => {
+                      // Copier AVANT de vider le champ : `e.target.files` est une
+                      // liste vivante, que la remise à zéro de `value` vide aussi.
+                      const picked = Array.from(e.target.files ?? []);
+                      // Vider le champ : sans cela, re-choisir LE MÊME fichier
+                      // après un échec ne déclenche aucun évènement, et l'ajout
+                      // paraît définitivement cassé.
+                      e.target.value = '';
+                      void addImages(picked);
+                    }}
                   />
                 </label>
               )}
             </div>
+            {error && (
+              <p className="mt-2 rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            )}
             <p className="mt-1 text-xs text-content-faint">
-              Le premier visuel illustre l'aperçu WhatsApp et le post LinkedIn.
+              PNG, JPEG, WebP ou GIF, 10 Mo maximum. Le premier visuel illustre l'aperçu WhatsApp et
+              le post LinkedIn.
             </p>
           </div>
         </div>
