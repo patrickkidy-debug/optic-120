@@ -4,6 +4,7 @@ import {
   announcementUpsertSchema,
   defaultAnnouncementLinkedin,
   defaultAnnouncementWhatsapp,
+  isShareableImageUrl,
 } from '@oculo/shared-types';
 
 describe('announcementUpsertSchema', () => {
@@ -62,6 +63,34 @@ describe('defaultAnnouncementWhatsapp', () => {
 
   it('n’ajoute pas de ligne vide quand il n’y a pas de visuel', () => {
     expect(defaultAnnouncementWhatsapp('FEATURE', 'T', 'Corps.')).not.toContain('Aperçu');
+  });
+
+  /**
+   * Quand l'hébergement d'images n'est pas disponible, le visuel est encodé
+   * dans l'annonce. Le mettre en « lien » produirait une chaîne de plusieurs
+   * centaines de milliers de caractères, illisible dans WhatsApp et bien
+   * au-delà de ce qu'un lien wa.me peut transporter.
+   */
+  it('n’insère jamais un visuel encodé dans l’annonce', () => {
+    const dataUrl = 'data:image/png;base64,' + 'A'.repeat(5000);
+    const text = defaultAnnouncementWhatsapp('FEATURE', 'T', 'Corps.', dataUrl);
+    expect(text).not.toContain('Aperçu');
+    expect(text).not.toContain('data:image');
+    expect(text.length).toBeLessThan(200);
+  });
+});
+
+describe('isShareableImageUrl', () => {
+  it('accepte une adresse publique', () => {
+    expect(isShareableImageUrl('https://cdn.exemple/x.png')).toBe(true);
+    expect(isShareableImageUrl('http://cdn.exemple/x.png')).toBe(true);
+  });
+
+  it('refuse une image encodée ou une valeur absente', () => {
+    expect(isShareableImageUrl('data:image/png;base64,AAAA')).toBe(false);
+    expect(isShareableImageUrl('')).toBe(false);
+    expect(isShareableImageUrl(null)).toBe(false);
+    expect(isShareableImageUrl(undefined)).toBe(false);
   });
 });
 

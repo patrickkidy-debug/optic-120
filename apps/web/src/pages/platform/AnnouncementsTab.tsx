@@ -20,6 +20,7 @@ import {
   ANNOUNCEMENT_KINDS,
   defaultAnnouncementLinkedin,
   defaultAnnouncementWhatsapp,
+  isShareableImageUrl,
   type AnnouncementKind,
 } from '@oculo/shared-types';
 import {
@@ -476,6 +477,13 @@ function Editor({
                 {error}
               </p>
             )}
+            {images.length > 0 && !isShareableImageUrl(images[0]) && (
+              <p className="mt-2 rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+                Ce visuel est enregistré dans l'annonce, faute d'hébergement d'images disponible. Il
+                s'affichera dans l'application, mais ne pourra pas être partagé en lien sur WhatsApp
+                ni sur LinkedIn : joignez-le manuellement à vos publications.
+              </p>
+            )}
             <p className="mt-1 text-xs text-content-faint">
               PNG, JPEG, WebP ou GIF, 10 Mo maximum. Le premier visuel illustre l'aperçu WhatsApp et
               le post LinkedIn.
@@ -604,7 +612,7 @@ function Distribution({ announcement }: { announcement: Announcement }) {
               {copied === 'li' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               {copied === 'li' ? 'Copié' : 'Copier le post'}
             </Button>
-            {announcement.images[0] && (
+            {isShareableImageUrl(announcement.images[0]) && (
               <Button
                 variant="outline"
                 onClick={() => window.open(announcement.images[0], '_blank', 'noopener,noreferrer')}

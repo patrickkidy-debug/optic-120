@@ -2708,6 +2708,14 @@ export type AnnouncementUpsertInput = z.infer<typeof announcementUpsertSchema>;
  * Un lien wa.me ne transporte que du texte : l'image ne peut pas être jointe,
  * elle est donc donnée en lien, que WhatsApp transforme en aperçu.
  */
+/**
+ * Vrai si le visuel est une adresse publique, donc partageable hors de
+ * l'application. Faux pour une image encodée dans l'annonce elle-même.
+ */
+export function isShareableImageUrl(url?: string | null): boolean {
+  return typeof url === 'string' && /^https?:\/\//i.test(url);
+}
+
 export function defaultAnnouncementWhatsapp(
   kind: AnnouncementKind,
   title: string,
@@ -2719,7 +2727,12 @@ export function defaultAnnouncementWhatsapp(
     `${badge} *${ANNOUNCEMENT_KIND_LABELS[kind]} OculoSaaS — ${title}*`,
     '',
     body.trim(),
-    ...(imageUrl ? ['', `Aperçu : ${imageUrl}`] : []),
+    // Seule une adresse http(s) est partageable. Un visuel encodé dans
+    // l'annonce — une data URL, produite quand le stockage d'images n'est pas
+    // disponible — donnerait un « lien » de plusieurs centaines de milliers de
+    // caractères : illisible dans WhatsApp, et bien au-delà de ce qu'un lien
+    // wa.me peut transporter.
+    ...(isShareableImageUrl(imageUrl) ? ['', `Aperçu : ${imageUrl}`] : []),
   ].join('\n');
 }
 
