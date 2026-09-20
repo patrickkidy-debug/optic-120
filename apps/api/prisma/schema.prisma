@@ -90,6 +90,7 @@ model Tenant {
   insuranceRefunds       InsuranceRefund[]
   anomalies              Anomaly[]
   documentCounters       DocumentCounter[]
+  activationSessions     ActivationSession[]
   lensOrders             LensOrder[]
   repairs                Repair[]
   subscription           Subscription?
@@ -1698,6 +1699,108 @@ model PlatformNotification {
 /// Réglages globaux de la plateforme (ligne unique, id fixe "default"). Pour
 /// l'instant : durée de l'essai gratuit offert à l'inscription, ajustable
 /// depuis la console fondateur sans redéploiement.
+/// Parcours d'activation d'un prospect, de la première question au paiement.
+///
+/// Vit HORS de tout établissement : le tunnel commence avant qu'un compte
+/// n'existe. Le `token` est l'identifiant remis au navigateur — un simple
+/// identifiant opaque, jamais l'id de la ligne, pour qu'une URL devinée ne
+/// donne accès à aucun autre parcours.
+///
+/// La ligne survit à l'abandon : c'est elle qui alimente « prospects à
+/// relancer » et le taux de conversion par étape.
+model ActivationSession {
+  id    String @id @default(uuid())
+  token String @unique
+
+  step ActivationStepDb @default(ACTIVITY)
+
+  /// Étape 1
+  structureType String?
+  branchCount   String?
+  country       String?
+  /// Étape 2 — liste de besoins.
+  needs         Json?
+  /// Étape 3
+  planCode      String?
+  billingCycle  String?
+
+  /// Étape 4 — coordonnées. Conservées même en cas d'abandon : sans elles,
+  /// impossible de rappeler qui que ce soit.
+  fullName          String?
+  establishmentName String?
+  phone             String?
+  whatsapp          String?
+  email             String?
+  city              String?
+  wantsStockImport  Boolean @default(false)
+  hasExistingData   Boolean @default(false)
+
+  /// Établissement créé à l'étape 4, sans période d'accès. Reste lié pour que
+  /// la confirmation de paiement sache quoi activer.
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  /// Facture d'abonnement émise à l'étape 5.
+  invoiceId String?
+
+  paidAt      DateTime?
+  abandoned   Boolean   @default(false)
+  /// Origine publicitaire, pour mesurer le rendement des campagnes.
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  events ActivationEvent[]
+
+  @@index([step])
+  @@index([createdAt])
+  @@index([tenantId])
+}
+
+/// Miroir Prisma de ActivationStep (shared-types). DONE = paiement confirmé.
+enum ActivationStepDb {
+  ACTIVITY
+  NEEDS
+  PLAN
+  INFORMATION
+  PAYMENT
+  DONE
+}
+
+/// Événement du tunnel : une ligne par franchissement d'étape, pour mesurer
+/// les abandons là où ils se produisent réellement.
+model ActivationEvent {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   ActivationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name      String
+  payload   Json?
+  createdAt DateTime          @default(now())
+
+  @@index([sessionId])
+  @@index([name, createdAt])
+}
+
+/// Demande de rappel déposée depuis le tunnel. Séparée de DemoRequest, qui
+/// porte une date précise : ici le prospect indique seulement un moment.
+model CallbackRequest {
+  id        String    @id @default(uuid())
+  name      String
+  phone     String
+  moment    String
+  sessionId String?
+  status    String    @default("PENDING")
+  handledAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 /// Annonce produit (nouveauté, amélioration, correctif) rédigée en console
 /// fondateur. Globale à la plateforme : elle ne dépend d'aucun établissement,
 /// d'où l'absence de tenantId.

@@ -3015,3 +3015,222 @@ export interface PartnerDashboardStats {
   commissionTotal: number;
   currency: string;
 }
+
+/* ============================================================
+ * TUNNEL D'ACTIVATION — qualification, offre, paiement, onboarding
+ * ============================================================ */
+
+/**
+ * Parcours commercial obligatoire : plus aucune création de compte libre.
+ *
+ * L'établissement est créé à l'étape « informations », mais SANS période
+ * d'accès : le garde d'abonnement refuse déjà tout accès dès que
+ * `currentPeriodEnd` est dépassé (voir auth-guard). Seule la confirmation du
+ * paiement ouvre l'espace. Le tunnel ne crée donc jamais d'accès gratuit, même
+ * transitoire.
+ */
+
+export const ActivationStep = {
+  ACTIVITY: 'ACTIVITY',
+  NEEDS: 'NEEDS',
+  PLAN: 'PLAN',
+  INFORMATION: 'INFORMATION',
+  PAYMENT: 'PAYMENT',
+  DONE: 'DONE',
+} as const;
+export type ActivationStep = (typeof ActivationStep)[keyof typeof ActivationStep];
+
+export const ACTIVATION_STEP_ORDER: ActivationStep[] = [
+  ActivationStep.ACTIVITY,
+  ActivationStep.NEEDS,
+  ActivationStep.PLAN,
+  ActivationStep.INFORMATION,
+  ActivationStep.PAYMENT,
+];
+
+export const ACTIVATION_STEP_LABELS: Record<ActivationStep, string> = {
+  ACTIVITY: 'Votre activité',
+  NEEDS: 'Vos besoins',
+  PLAN: 'Votre formule',
+  INFORMATION: 'Vos informations',
+  PAYMENT: 'Paiement',
+  DONE: 'Terminé',
+};
+
+export const ACTIVATION_STEP_COUNT = ACTIVATION_STEP_ORDER.length;
+
+/** Numéro d'étape affiché (« Étape 2 sur 5 »). 0 quand le tunnel est terminé. */
+export function activationStepNumber(step: ActivationStep): number {
+  return ACTIVATION_STEP_ORDER.indexOf(step) + 1;
+}
+
+/* ------------------------------ Étape 1 ------------------------------ */
+
+export const STRUCTURE_TYPES = [
+  { value: 'INDEPENDENT', label: 'Opticien indépendant' },
+  { value: 'SHOP', label: "Boutique d'optique" },
+  { value: 'MULTI_SHOP', label: 'Plusieurs boutiques' },
+  { value: 'CENTER', label: 'Centre / structure spécialisée' },
+  { value: 'OTHER', label: 'Autre' },
+] as const;
+export type StructureType = (typeof STRUCTURE_TYPES)[number]['value'];
+
+/** Tranches de taille. `minBranches` sert au calcul de l'offre recommandée. */
+export const BRANCH_COUNTS = [
+  { value: 'ONE', label: '1', minBranches: 1 },
+  { value: 'TWO', label: '2', minBranches: 2 },
+  { value: 'THREE_FIVE', label: '3-5', minBranches: 3 },
+  { value: 'SIX_TEN', label: '6-10', minBranches: 6 },
+  { value: 'TEN_PLUS', label: '+10', minBranches: 11 },
+] as const;
+export type BranchCount = (typeof BRANCH_COUNTS)[number]['value'];
+
+/* ------------------------------ Étape 2 ------------------------------ */
+
+export const ACTIVATION_NEEDS = [
+  { value: 'STOCK', label: 'Gestion du stock' },
+  { value: 'SALES', label: 'Gestion des ventes' },
+  { value: 'CUSTOMERS', label: 'Gestion des clients' },
+  { value: 'LENS_ORDERS', label: 'Commandes de verres' },
+  { value: 'PAYMENTS', label: 'Encaissements' },
+  { value: 'REPORTS', label: 'Rapports & analyses' },
+  { value: 'EMPLOYEES', label: 'Gestion des employés' },
+  { value: 'MULTI_SHOP', label: 'Gestion multi-boutiques' },
+  { value: 'MONITORING', label: "Suivi de l'activité" },
+] as const;
+export type ActivationNeed = (typeof ACTIVATION_NEEDS)[number]['value'];
+
+/* --------------------------- Offre recommandée --------------------------- */
+
+export interface PlanRecommendation {
+  planCode: PlanDef['code'];
+  /** Phrase expliquant le choix : une recommandation muette n'inspire rien. */
+  reason: string;
+}
+
+/**
+ * Offre conseillée d'après les réponses.
+ *
+ * Le nombre de magasins tranche en premier : c'est la seule limite DURE du
+ * catalogue (2 pour Starter, 5 pour Standard). Recommander une offre qu'un
+ * magasin dépasserait dès le premier jour serait une promesse intenable. Les
+ * besoins ne peuvent ensuite que monter d'un cran, jamais redescendre.
+ */
+export function recommendPlan(
+  branches: BranchCount | null,
+  needs: ActivationNeed[],
+  structure?: StructureType | null,
+): PlanRecommendation {
+  const min = BRANCH_COUNTS.find((b) => b.value === branches)?.minBranches ?? 1;
+
+  if (min > 5) {
+    return {
+      planCode: 'GROWTH',
+      reason: "Au-delà de 5 magasins, seule l'offre Growth couvre un réseau sans limite.",
+    };
+  }
+  if (min > 2) {
+    return {
+      planCode: 'STANDARD',
+      reason: "Standard couvre jusqu'à 5 magasins, ce qui correspond à votre organisation.",
+    };
+  }
+
+  // Ces besoins supposent plusieurs points de vente ou une équipe structurée.
+  const advanced = needs.some((n) => n === 'MULTI_SHOP' || n === 'EMPLOYEES' || n === 'MONITORING');
+  if (advanced || structure === 'MULTI_SHOP' || structure === 'CENTER') {
+    return {
+      planCode: 'STANDARD',
+      reason: 'Vos besoins dépassent un point de vente unique : Standard les couvre tous.',
+    };
+  }
+  return {
+    planCode: 'STARTER',
+    reason: "Starter suffit à votre activité : tout l'essentiel, jusqu'à 2 magasins.",
+  };
+}
+
+/* ------------------------------ Schémas ------------------------------ */
+
+export const activationActivitySchema = z.object({
+  structureType: z.enum(['INDEPENDENT', 'SHOP', 'MULTI_SHOP', 'CENTER', 'OTHER']),
+  branchCount: z.enum(['ONE', 'TWO', 'THREE_FIVE', 'SIX_TEN', 'TEN_PLUS']),
+  country: z.string().min(2).max(2),
+});
+export type ActivationActivityInput = z.infer<typeof activationActivitySchema>;
+
+export const activationNeedsSchema = z.object({
+  needs: z
+    .array(
+      z.enum([
+        'STOCK',
+        'SALES',
+        'CUSTOMERS',
+        'LENS_ORDERS',
+        'PAYMENTS',
+        'REPORTS',
+        'EMPLOYEES',
+        'MULTI_SHOP',
+        'MONITORING',
+      ]),
+    )
+    .min(1, 'Choisissez au moins un besoin'),
+});
+export type ActivationNeedsInput = z.infer<typeof activationNeedsSchema>;
+
+export const activationPlanSchema = z.object({
+  planCode: z.enum(['STARTER', 'STANDARD', 'GROWTH']),
+  billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']).default('MONTHLY'),
+});
+export type ActivationPlanInput = z.infer<typeof activationPlanSchema>;
+
+export const activationInformationSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  establishmentName: z.string().trim().min(2).max(160),
+  phone: z.string().trim().min(6).max(30),
+  whatsapp: z.string().trim().min(6).max(30),
+  email: z.string().email(),
+  country: z.string().min(2).max(2),
+  city: z.string().trim().max(80).optional().or(z.literal('')),
+  password: passwordSchema,
+  wantsStockImport: z.boolean().default(false),
+  hasExistingData: z.boolean().default(false),
+});
+export type ActivationInformationInput = z.infer<typeof activationInformationSchema>;
+
+/* ------------------------------ Rappel ------------------------------ */
+
+/** Demande de rappel : volontairement minimale, pour ne pas décourager. */
+export const CALLBACK_MOMENTS = [
+  { value: 'MORNING', label: 'Matin' },
+  { value: 'AFTERNOON', label: 'Après-midi' },
+  { value: 'EVENING', label: 'Soir' },
+] as const;
+export type CallbackMoment = (typeof CALLBACK_MOMENTS)[number]['value'];
+
+export const callbackRequestSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().min(6).max(30),
+  moment: z.enum(['MORNING', 'AFTERNOON', 'EVENING']),
+});
+export type CallbackRequestInput = z.infer<typeof callbackRequestSchema>;
+
+/* ---------------------------- Suivi marketing ---------------------------- */
+
+/** Événements du tunnel, nommés comme attendu par les outils publicitaires. */
+export const ACTIVATION_EVENTS = [
+  'activation_started',
+  'activity_completed',
+  'needs_completed',
+  'plan_selected',
+  'information_completed',
+  'payment_started',
+  'payment_success',
+  'payment_failed',
+  'booking_started',
+  'booking_completed',
+  'whatsapp_clicked',
+  'callback_requested',
+  'activation_completed',
+] as const;
+export type ActivationEventName = (typeof ACTIVATION_EVENTS)[number];
