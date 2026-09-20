@@ -20,6 +20,7 @@ import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
 import * as renewalsService from './renewals.service.js';
+import { getPaymentProviderStatus } from './platform-provider.js';
 import * as announcements from '../announcements/announcements.service.js';
 import * as partners from '../partners/partner.service.js';
 import * as support from '../support/support.service.js';
@@ -147,6 +148,11 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     const next = status === 'CLOSED' ? 'CLOSED' : 'OPEN';
     const ticket = await support.setTicketStatus(id, next);
     return reply.send({ ticket });
+  });
+
+  /** Etat de la passerelle d'encaissement des abonnements. Aucun secret renvoye. */
+  app.get('/payment-provider', async (_req, reply) => {
+    return reply.send(getPaymentProviderStatus());
   });
 
   // Liste de tous les abonnements (cross-tenant).

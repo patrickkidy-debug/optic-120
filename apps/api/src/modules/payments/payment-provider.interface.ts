@@ -10,6 +10,13 @@ export interface InitiatePaymentInput {
   /** Email du client — requis par certaines passerelles (Moneroo). */
   customerEmail?: string;
   saleNumber: string;
+  /**
+   * Ou renvoyer le payeur apres le checkout. Remplace l'URL de retour par
+   * defaut du fournisseur : un paiement declenche depuis le tunnel
+   * d'activation doit revenir dans le tunnel, pas dans un ecran de
+   * l'application auquel le prospect n'a pas encore acces.
+   */
+  returnUrl?: string;
 }
 
 export interface InitiatePaymentResult {

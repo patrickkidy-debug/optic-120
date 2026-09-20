@@ -1,81 +1,88 @@
 import { env, appOrigin, isProd } from '../../config/env.js';
 import type { PaymentProvider } from '../payments/payment-provider.interface.js';
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
-import { PayTechProvider } from '../payments/providers/paytech.provider.js';
 import { MonerooProvider } from '../payments/providers/moneroo.provider.js';
-import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
 
 /**
- * Fournisseur de paiement de la PLATEFORME (l'éditeur SaaS encaisse les
- * abonnements). Ordre de priorité : Moneroo → GeniusPay (23 pays) → PayTech
- * (Sénégal) → simulation. Distinct du provider des ventes, qui encaisse pour le
- * compte du tenant.
+ * Fournisseur de paiement de la PLATEFORME : l'editeur encaisse les
+ * abonnements. Distinct du fournisseur des ventes, qui encaisse pour le compte
+ * d'un magasin.
  *
- * Moneroo repasse en tête le 2026-08-25 : GeniusPay tombait en panne côté
- * clients (paiements bloqués). L'ordre reste une simple cascade — retirer les
- * clés Moneroo fait automatiquement redescendre sur GeniusPay sans changement
- * de code. Remettre GeniusPay en tête (Maghreb/Afrique de l'Est, hors
- * couverture Moneroo) une fois l'incident résolu côté GeniusPay.
+ * MONEROO UNIQUEMENT, par decision produit. La cascade precedente (Moneroo,
+ * puis GeniusPay, puis PayTech) faisait qu'une cle Moneroo absente ou invalide
+ * basculait silencieusement sur une autre passerelle : les paiements
+ * partaient ailleurs sans que personne ne le remarque. Une seule passerelle
+ * rend la configuration verifiable.
+ *
+ * Les fournisseurs GeniusPay et PayTech restent dans le code : ils servent
+ * encore aux encaissements des magasins, qui ne passent pas par ici.
  */
 export function resolvePlatformProvider(): PaymentProvider {
-  // 1) Moneroo (orchestrateur multi-passerelles) — un seul lien, toutes les méthodes.
   if (env.MONEROO_SECRET_KEY) {
     return new MonerooProvider({
       secretKey: env.MONEROO_SECRET_KEY,
       baseUrl: env.MONEROO_BASE_URL,
+      // Retour par defaut. Le tunnel d'activation impose le sien, paiement par
+      // paiement (voir InitiatePaymentInput.returnUrl).
       returnUrl: `${appOrigin}/parametres/abonnement`,
       webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
     });
   }
 
-  // 2) GeniusPay (orchestrateur multi-passerelles, couverture continentale).
-  // Pas d'URL de webhook ici : chez GeniusPay elle s'enregistre une fois pour
-  // toutes via POST /webhooks, pas à chaque paiement comme l'IPN PayTech.
-  if (env.GENIUSPAY_API_KEY && env.GENIUSPAY_API_SECRET) {
-    return new GeniusPayProvider({
-      apiKey: env.GENIUSPAY_API_KEY,
-      apiSecret: env.GENIUSPAY_API_SECRET,
-      baseUrl: env.GENIUSPAY_BASE_URL,
-      webhookSecret: env.GENIUSPAY_WEBHOOK_SECRET || undefined,
-      successUrl: `${appOrigin}/parametres/abonnement`,
-      errorUrl: `${appOrigin}/parametres/abonnement`,
-      // L'écran d'abonnement n'offre aucun choix de moyen de paiement : il
-      // envoie « WAVE » en dur, valeur héritée de Moneroo qui l'ignorait. On
-      // laisse donc GeniusPay présenter sa page, seule à connaître les
-      // opérateurs réellement disponibles dans le pays du client.
-      forceHostedCheckout: true,
-    });
-  }
-  // 3) PayTech (passerelle directe Sénégal/XOF).
-  if (env.PAYTECH_API_KEY && env.PAYTECH_API_SECRET) {
-    const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
-    return new PayTechProvider({
-      apiKey: env.PAYTECH_API_KEY,
-      apiSecret: env.PAYTECH_API_SECRET,
-      env: env.PAYTECH_ENV,
-      baseUrl: env.PAYTECH_BASE_URL,
-      ipnUrl: apiBase ? `${apiBase}/webhooks/paytech-subscription` : undefined,
-      successUrl: `${appOrigin}/parametres/abonnement`,
-      cancelUrl: `${appOrigin}/parametres/abonnement`,
-    });
-  }
-  // 4) Aucun fournisseur réel configuré. En PRODUCTION, on échoue volontairement
-  //    (fail-closed) : sans paiement réel, un abonnement ne doit JAMAIS pouvoir
-  //    être activé. La simulation reste réservée au développement/tests.
+  // Aucune cle Moneroo. En PRODUCTION on echoue volontairement (fail-closed) :
+  // sans paiement reel, un abonnement ne doit JAMAIS pouvoir etre active.
   if (isProd) {
     throw new Error(
-      'Aucun fournisseur de paiement configuré : définissez GENIUSPAY_API_KEY/SECRET, MONEROO_SECRET_KEY ou PayTech en production.',
+      "Aucune passerelle de paiement configuree : definissez MONEROO_SECRET_KEY. " +
+        "L'activation d'un abonnement exige un paiement reel.",
     );
   }
+  // Developpement uniquement : permet de derouler le parcours sans encaisser.
   return new SimulatedPaymentProvider();
 }
 
+/**
+ * Etat de la passerelle d'encaissement des abonnements, pour la console
+ * fondateur.
+ *
+ * Sans cet etat, poser une cle revient a configurer a l'aveugle : rien
+ * n'indique si la passerelle est reellement retenue, ni si l'adresse de
+ * notification est joignable. Ne renvoie JAMAIS de secret — uniquement des
+ * booleens et des URLs publiques.
+ */
+export interface PaymentProviderStatus {
+  /** Passerelle retenue : « moneroo » ou « simulation ». */
+  active: string;
+  /** Vrai quand aucune cle Moneroo n'est posee (developpement seulement). */
+  simulation: boolean;
+  monerooConfigured: boolean;
+  /** Secret de signature du webhook Moneroo renseigne. */
+  monerooWebhookSecret: boolean;
+  /**
+   * URLs a declarer chez Moneroo. Vides si PUBLIC_API_URL n'est pas defini :
+   * dans ce cas la passerelle n'a aucune adresse ou notifier le paiement, et
+   * les abonnements resteraient bloques « en attente » malgre un reglement
+   * reussi.
+   */
+  subscriptionWebhookUrl: string;
+  salesWebhookUrl: string;
+}
+
+export function getPaymentProviderStatus(): PaymentProviderStatus {
+  const monerooConfigured = Boolean(env.MONEROO_SECRET_KEY);
+  const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
+  return {
+    active: monerooConfigured ? 'moneroo' : 'simulation',
+    simulation: isPlatformSimulation(),
+    monerooConfigured,
+    monerooWebhookSecret: Boolean(env.MONEROO_WEBHOOK_SECRET),
+    subscriptionWebhookUrl: apiBase ? `${apiBase}/webhooks/moneroo-subscription` : '',
+    salesWebhookUrl: apiBase ? `${apiBase}/webhooks/moneroo` : '',
+  };
+}
+
 export function isPlatformSimulation(): boolean {
-  // Jamais de simulation en production : seul un paiement réel active un abonnement.
+  // Jamais de simulation en production : seul un paiement reel active un abonnement.
   if (isProd) return false;
-  return (
-    !(env.GENIUSPAY_API_KEY && env.GENIUSPAY_API_SECRET) &&
-    !env.MONEROO_SECRET_KEY &&
-    !(env.PAYTECH_API_KEY && env.PAYTECH_API_SECRET)
-  );
+  return !env.MONEROO_SECRET_KEY;
 }

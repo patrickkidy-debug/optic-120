@@ -526,3 +526,20 @@ export async function getDemoEngagement(): Promise<DemoEngagementRow[]> {
   const { data } = await api.get<{ rows: DemoEngagementRow[] }>('/platform/demo-engagement');
   return data.rows;
 }
+
+/* --------------------- Passerelle de paiement (console) --------------------- */
+
+export interface PaymentProviderStatus {
+  active: string;
+  simulation: boolean;
+  monerooConfigured: boolean;
+  monerooWebhookSecret: boolean;
+  subscriptionWebhookUrl: string;
+  salesWebhookUrl: string;
+}
+
+/** Aucun secret n'est renvoye : uniquement des booleens et des URLs publiques. */
+export async function getPaymentProviderStatus(): Promise<PaymentProviderStatus> {
+  const { data } = await api.get<PaymentProviderStatus>('/platform/payment-provider');
+  return data;
+}

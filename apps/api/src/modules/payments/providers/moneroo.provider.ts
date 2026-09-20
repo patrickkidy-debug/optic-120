@@ -91,7 +91,8 @@ export class MonerooProvider implements PaymentProvider {
             last_name: last,
             phone: input.customerPhone || undefined,
           },
-          return_url: this.config.returnUrl,
+          // L'appelant peut imposer son propre retour (tunnel d'activation).
+          return_url: input.returnUrl ?? this.config.returnUrl,
           metadata: { payment_id: input.paymentId, sale_number: input.saleNumber },
         }),
       });

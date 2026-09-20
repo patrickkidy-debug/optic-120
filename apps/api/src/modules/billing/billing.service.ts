@@ -272,8 +272,9 @@ export async function payInvoice(
   method: PaymentMethod,
   customerPhone: string | undefined,
   capiContext?: CapiContext,
+  returnUrl?: string,
 ) {
-  return initiateInvoicePayment(tenantId, invoiceId, method, customerPhone, capiContext);
+  return initiateInvoicePayment(tenantId, invoiceId, method, customerPhone, capiContext, returnUrl);
 }
 
 /**
@@ -373,6 +374,12 @@ async function initiateInvoicePayment(
   method: PaymentMethod,
   customerPhone: string | undefined,
   capiContext?: CapiContext,
+  /**
+   * Retour impose par l'appelant. Le tunnel d'activation s'en sert pour
+   * ramener le prospect DANS le tunnel : l'ecran d'abonnement par defaut lui
+   * est inaccessible, son compte n'etant pas encore actif.
+   */
+  returnUrl?: string,
 ) {
   const invoice = await prisma.subscriptionInvoice.findFirst({
     where: { id: invoiceId, tenantId },
@@ -414,6 +421,7 @@ async function initiateInvoicePayment(
     customerPhone,
     customerEmail: owner?.email ?? undefined,
     saleNumber: invoice.number,
+    returnUrl,
   });
 
   await prisma.subscriptionPayment.update({

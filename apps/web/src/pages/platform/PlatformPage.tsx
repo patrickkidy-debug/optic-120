@@ -107,6 +107,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal, ProgressBar } from '../../components/ui';
 import { RenewalsTab } from './RenewalsTab';
 import { AnnouncementsTab } from './AnnouncementsTab';
+import { PaymentProviderCard } from './PaymentProviderCard';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -1168,6 +1169,7 @@ function FinanceTab() {
 
   return (
     <div>
+      <PaymentProviderCard />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard icon={Wallet} tone="success" label="Revenu total encaissé" value={summary ? formatCurrency(summary.totalRevenue) : '—'} />
         <KpiCard icon={TrendingUp} tone="primary" label="Panier moyen (ARPU)" value={summary ? formatCurrency(summary.arpu) : '—'} />
