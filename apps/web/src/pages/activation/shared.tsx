@@ -5,9 +5,14 @@ import { ACTIVATION_STEP_COUNT, ACTIVATION_STEP_ORDER, type ActivationStep } fro
 /**
  * Briques communes du tunnel d'activation.
  *
- * Pensé mobile d'abord : la majorité des prospects arrivent d'une publicité
- * Facebook ou Instagram, donc sur un téléphone. Une question à la fois, des
- * cibles tactiles larges, aucun écran à faire défiler longuement.
+ * Mobile d'abord : les prospects arrivent d'une publicité Facebook ou
+ * Instagram, donc sur un téléphone. Une question à la fois, cibles tactiles
+ * larges, et rien d'essentiel hors de portée du pouce.
+ *
+ * Le tunnel est FORCÉ en clair via la classe `.light`, appliquée au conteneur
+ * et non au document : une page de conversion doit avoir le même rendu pour
+ * tout le monde, sans dépendre du thème sombre par défaut de l'application, et
+ * sans modifier la préférence du visiteur.
  */
 
 export function ActivationShell({
@@ -16,39 +21,47 @@ export function ActivationShell({
   subtitle,
   children,
   footer,
+  wide,
 }: {
   step?: ActivationStep;
-  title: string;
+  title?: string;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-surface-2">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-10">
-        <div className="mb-6 flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white">
-            O
-          </span>
-          <span className="font-display text-lg font-extrabold text-content">OculoSaaS</span>
-        </div>
-
+    <div className="light min-h-screen bg-surface-2 text-content">
+      <div className={`mx-auto w-full px-4 py-6 sm:py-10 ${wide ? 'max-w-3xl' : 'max-w-2xl'}`}>
+        <Brand />
         {step && <StepBar current={step} />}
 
-        <h1 className="font-display text-2xl font-extrabold leading-tight text-content sm:text-3xl">
-          {title}
-        </h1>
+        {title && (
+          <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight text-content sm:text-3xl">
+            {title}
+          </h1>
+        )}
         {subtitle && <p className="mt-2 text-sm text-content-muted sm:text-base">{subtitle}</p>}
 
-        <div className="mt-6">{children}</div>
-
+        <div className={title ? 'mt-6' : ''}>{children}</div>
         {footer && <div className="mt-6">{footer}</div>}
       </div>
     </div>
   );
 }
 
-/** « Étape 2 sur 5 » + points de progression : le prospect doit se situer. */
+export function Brand() {
+  return (
+    <div className="mb-6 flex items-center gap-2">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-sm">
+        O
+      </span>
+      <span className="font-display text-lg font-extrabold tracking-tight text-content">OculoSaaS</span>
+    </div>
+  );
+}
+
+/** « Étape 2 sur 5 » + jauge : le prospect doit toujours savoir où il en est. */
 export function StepBar({ current }: { current: ActivationStep }) {
   const index = ACTIVATION_STEP_ORDER.indexOf(current);
   return (
@@ -58,7 +71,7 @@ export function StepBar({ current }: { current: ActivationStep }) {
           <span
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              i <= index ? 'bg-primary' : 'bg-surface-3'
+              i <= index ? 'bg-gradient-to-r from-primary to-accent' : 'bg-surface-3'
             }`}
           />
         ))}
@@ -67,6 +80,29 @@ export function StepBar({ current }: { current: ActivationStep }) {
         Étape {index + 1} sur {ACTIVATION_STEP_COUNT}
       </p>
     </div>
+  );
+}
+
+/** Pastille d'accroche avec point animé : signale une page vivante. */
+export function Pill({ children }: { children: ReactNode }) {
+  return (
+    <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 shadow-sm ring-1 ring-line">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+      </span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-primary">{children}</span>
+    </span>
+  );
+}
+
+/** Fond lumineux diffus derrière le hero. Purement décoratif. */
+export function Glow() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-gradient-to-tr from-primary/20 via-accent/15 to-transparent blur-3xl"
+    />
   );
 }
 
@@ -90,10 +126,10 @@ export function ChoiceCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`flex w-full items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all ${
+      className={`flex w-full items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
         selected
           ? 'border-primary bg-primary-soft shadow-sm'
-          : 'border-line bg-surface hover:border-primary/40 hover:bg-surface-2'
+          : 'border-line bg-surface hover:border-primary/40 hover:shadow-sm'
       }`}
     >
       <span className="min-w-0">
@@ -113,7 +149,7 @@ export function ChoiceCard({
   );
 }
 
-/** Choix multiple : même gabarit, case carrée pour distinguer du choix unique. */
+/** Choix multiple : case carrée, pour distinguer du choix unique. */
 export function MultiChoiceCard({
   label,
   selected,
@@ -128,10 +164,10 @@ export function MultiChoiceCard({
       type="button"
       onClick={onToggle}
       aria-pressed={selected}
-      className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+      className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all active:scale-[0.99] ${
         selected
           ? 'border-primary bg-primary-soft shadow-sm'
-          : 'border-line bg-surface hover:border-primary/40 hover:bg-surface-2'
+          : 'border-line bg-surface hover:border-primary/40 hover:shadow-sm'
       }`}
     >
       <span
@@ -147,12 +183,39 @@ export function MultiChoiceCard({
 }
 
 /**
- * Barre d'action collée en bas sur mobile : le bouton « Continuer » reste
- * atteignable sans faire défiler jusqu'au bout de la liste de choix.
+ * Action principale : dégradé et halo, pour qu'aucun doute ne subsiste sur
+ * l'endroit où appuyer.
+ */
+export function PrimaryAction({
+  children,
+  onClick,
+  disabled,
+  type = 'button',
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  type?: 'button' | 'submit';
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-3.5 font-display font-bold text-white shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Barre d'action collée en bas sur mobile : « Continuer » reste atteignable
+ * sans faire défiler toute la liste de choix.
  */
 export function ActionBar({ children }: { children: ReactNode }) {
   return (
-    <div className="sticky bottom-0 -mx-4 mt-6 border-t bg-surface-2/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+    <div className="sticky bottom-0 -mx-4 mt-6 border-t border-line bg-surface-2/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
       {children}
     </div>
   );

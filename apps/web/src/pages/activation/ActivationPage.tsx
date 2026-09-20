@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, BadgeCheck, Headphones, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
 import {
   ACTIVATION_NEEDS,
   BRANCH_COUNTS,
@@ -15,7 +15,8 @@ import {
   type StructureType,
 } from '@oculo/shared-types';
 import { Button } from '../../components/ui';
-import { ActionBar, ActivationShell, ChoiceCard, MultiChoiceCard } from './shared';
+import { ActionBar, ActivationShell, ChoiceCard, MultiChoiceCard, PrimaryAction } from './shared';
+import { Intro } from './Intro';
 
 /**
  * Tunnel d'activation — parcours commercial obligatoire.
@@ -98,9 +99,9 @@ export function ActivationPage() {
         </Question>
 
         <ActionBar>
-          <Button className="w-full justify-center" disabled={!ready} onClick={() => setScreen('NEEDS')}>
+          <PrimaryAction disabled={!ready} onClick={() => setScreen('NEEDS')}>
             Continuer <ArrowRight className="h-4 w-4" />
-          </Button>
+          </PrimaryAction>
         </ActionBar>
       </ActivationShell>
     );
@@ -133,16 +134,17 @@ export function ActivationPage() {
             <Button variant="outline" onClick={() => setScreen('ACTIVITY')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <Button
-              className="flex-1 justify-center"
-              disabled={needs.length === 0}
-              onClick={() => {
-                setPlanCode(recommendation.planCode);
-                setScreen('PLAN');
-              }}
-            >
-              Continuer <ArrowRight className="h-4 w-4" />
-            </Button>
+            <div className="flex-1">
+              <PrimaryAction
+                disabled={needs.length === 0}
+                onClick={() => {
+                  setPlanCode(recommendation.planCode);
+                  setScreen('PLAN');
+                }}
+              >
+                Continuer <ArrowRight className="h-4 w-4" />
+              </PrimaryAction>
+            </div>
           </div>
         </ActionBar>
       </ActivationShell>
@@ -218,9 +220,11 @@ export function ActivationPage() {
           <Button variant="outline" onClick={() => setScreen('NEEDS')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Button className="flex-1 justify-center" disabled={!planCode} onClick={() => navigate('/activation')}>
-            Continuer <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex-1">
+            <PrimaryAction disabled={!planCode} onClick={() => navigate('/activation')}>
+              Continuer <ArrowRight className="h-4 w-4" />
+            </PrimaryAction>
+          </div>
         </div>
         <p className="mt-2 text-center text-xs text-content-faint">
           Les étapes « Vos informations » et « Paiement » arrivent dans la prochaine livraison.
@@ -236,41 +240,5 @@ function Question({ label, children }: { label: string; children: React.ReactNod
       <p className="mb-2.5 font-medium text-content">{label}</p>
       <div className="space-y-2">{children}</div>
     </div>
-  );
-}
-
-/** Accueil du tunnel : aucune mention de gratuité, conformément au parcours payant. */
-function Intro({ onStart }: { onStart: () => void }) {
-  const arguments_ = [
-    { icon: Headphones, label: 'Configuration accompagnée' },
-    { icon: ShieldCheck, label: 'Paiement sécurisé' },
-    { icon: MessageCircle, label: 'Assistance disponible' },
-    { icon: BadgeCheck, label: 'Accès après activation' },
-  ];
-  return (
-    <ActivationShell
-      title="Activez OculoSaaS pour votre magasin"
-      subtitle="Répondez à quelques questions, choisissez votre formule et activez votre espace. Notre équipe vous accompagne ensuite dans la configuration."
-    >
-      <ul className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {arguments_.map((a) => (
-          <li
-            key={a.label}
-            className="flex items-center gap-2.5 rounded-xl border bg-surface p-3 text-sm text-content"
-          >
-            <a.icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-            {a.label}
-          </li>
-        ))}
-      </ul>
-
-      {/* Une seule action ici, volontairement. Proposer « parler à un
-          conseiller » dès l'accueil offre une sortie avant même la première
-          question : l'accompagnement est présenté APRÈS l'activation, une fois
-          le client acquis. */}
-      <Button className="w-full justify-center" onClick={onStart}>
-        Commencer mon activation <ArrowRight className="h-4 w-4" />
-      </Button>
-    </ActivationShell>
   );
 }
