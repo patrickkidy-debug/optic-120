@@ -34,7 +34,7 @@ import {
   type Announcement,
 } from '../../features/announcements/api';
 import { listAllSubscriptions } from '../../features/billing/api';
-import { uploadImageToSupabase } from '../../lib/image';
+import { describeUploadFallback, uploadImageToSupabase, type UploadFallbackReason } from '../../lib/image';
 import { waLink } from '../../lib/whatsapp';
 import { apiErrorMessage } from '../../lib/api';
 import { Badge, Button, EmptyState, Field, PageLoader } from '../../components/ui';
@@ -301,6 +301,7 @@ function Editor({
     draft?.linkedinPost ?? existing?.linkedinPost ?? '',
   );
   const [uploading, setUploading] = useState(false);
+  const [hostingIssue, setHostingIssue] = useState('');
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -350,9 +351,17 @@ function Editor({
       // Budget plus large que le défaut (600 Ko) : une capture d'écran de
       // logiciel est riche en détails et ne tient pas dans ce budget, ce qui
       // faisait échouer l'ajout sans que la cause soit évidente.
+      // La cause d'un repli est remontée telle quelle : sans elle, l'image
+      // paraît ajoutée alors qu'elle n'est hébergée nulle part.
+      let fallback: UploadFallbackReason | null = null;
       const urls = await Promise.all(
-        picked.map((f) => uploadImageToSupabase(f, 'announcements', 1600, 1_200_000)),
+        picked.map((f) =>
+          uploadImageToSupabase(f, 'announcements', 1600, 1_200_000, (r) => {
+            fallback = r;
+          }),
+        ),
       );
+      setHostingIssue(fallback ? describeUploadFallback(fallback) : '');
       setImages((prev) => [...prev, ...urls]);
       setSaved(false);
     } catch (e) {
@@ -478,11 +487,14 @@ function Editor({
               </p>
             )}
             {images.length > 0 && !isShareableImageUrl(images[0]) && (
-              <p className="mt-2 rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
-                Ce visuel est enregistré dans l'annonce, faute d'hébergement d'images disponible. Il
-                s'affichera dans l'application, mais ne pourra pas être partagé en lien sur WhatsApp
-                ni sur LinkedIn : joignez-le manuellement à vos publications.
-              </p>
+              <div className="mt-2 rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+                <p>
+                  Ce visuel est enregistré dans l'annonce, faute d'hébergement d'images. Il
+                  s'affichera dans l'application, mais ne pourra pas être partagé en lien sur
+                  WhatsApp ni sur LinkedIn : joignez-le manuellement à vos publications.
+                </p>
+                {hostingIssue && <p className="mt-1.5 text-xs opacity-90">{hostingIssue}</p>}
+              </div>
             )}
             <p className="mt-1 text-xs text-content-faint">
               PNG, JPEG, WebP ou GIF, 10 Mo maximum. Le premier visuel illustre l'aperçu WhatsApp et

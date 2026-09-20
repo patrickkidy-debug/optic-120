@@ -124,14 +124,45 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 /**
- * Envoie une image sur Supabase Storage (bucket "OCL 4") et renvoie son URL publique.
- * Si Supabase n'est pas configuré ou en cas d'erreur de réseau, bascule sur la Data URL locale.
+ * Raison pour laquelle l'hébergement a été contourné. L'image reste utilisable
+ * (repli sur une data URL encodée dans la donnée), mais elle n'a alors aucune
+ * adresse publique : impossible de la partager en lien, et son poids part en
+ * base de données. Exposer la cause évite d'avoir à ouvrir la console du
+ * navigateur pour diagnostiquer.
+ */
+export type UploadFallbackReason =
+  | { kind: 'not-configured' }
+  | { kind: 'upload-refused'; message: string }
+  | { kind: 'no-public-url' }
+  | { kind: 'unexpected'; message: string };
+
+/** Phrase prête à afficher, avec le geste correctif. */
+export function describeUploadFallback(r: UploadFallbackReason): string {
+  switch (r.kind) {
+    case 'not-configured':
+      return "L'hébergement d'images n'est pas configuré sur ce site : les variables VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY manquent. Elles sont figées à la construction du site — après les avoir ajoutées, il faut relancer un déploiement.";
+    case 'upload-refused':
+      return `L'hébergement d'images a refusé l'envoi : ${r.message}. Vérifiez que le bucket existe, qu'il est public, et qu'il autorise l'envoi.`;
+    case 'no-public-url':
+      return "L'image a été envoyée mais aucune adresse publique n'a été renvoyée : le bucket n'est probablement pas public.";
+    default:
+      return `L'hébergement d'images est injoignable : ${r.message}.`;
+  }
+}
+
+/**
+ * Envoie une image sur Supabase Storage et renvoie son URL publique.
+ *
+ * En cas d'échec, renvoie la data URL locale pour ne jamais bloquer la saisie,
+ * et signale la cause via `onFallback` — sans quoi l'échec est invisible et
+ * l'image finit stockée dans la donnée sans que personne ne le sache.
  */
 export async function uploadImageToSupabase(
   file: File,
   folder = 'uploads',
   maxSize = 800,
   maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
+  onFallback?: (reason: UploadFallbackReason) => void,
 ): Promise<string> {
   const localDataUrl = await fileToResizedDataUrl(file, maxSize, maxOutputBytes);
 
@@ -139,6 +170,7 @@ export async function uploadImageToSupabase(
     const { supabase, SUPABASE_STORAGE_BUCKET, isSupabaseConfigured } = await import('./supabase');
 
     if (!isSupabaseConfigured()) {
+      onFallback?.({ kind: 'not-configured' });
       return localDataUrl;
     }
 
@@ -156,6 +188,7 @@ export async function uploadImageToSupabase(
 
     if (error) {
       console.warn(`Supabase Storage upload error (${error.message}), fallback data URL`, error);
+      onFallback?.({ kind: 'upload-refused', message: error.message });
       return localDataUrl;
     }
 
@@ -163,9 +196,17 @@ export async function uploadImageToSupabase(
       .from(SUPABASE_STORAGE_BUCKET)
       .getPublicUrl(data.path);
 
-    return publicUrlData.publicUrl || localDataUrl;
+    if (!publicUrlData.publicUrl) {
+      onFallback?.({ kind: 'no-public-url' });
+      return localDataUrl;
+    }
+    return publicUrlData.publicUrl;
   } catch (err) {
-    console.warn('Erreur lors de l\'envoi vers Supabase Storage, fallback Data URL', err);
+    console.warn("Erreur lors de l'envoi vers Supabase Storage, fallback Data URL", err);
+    onFallback?.({
+      kind: 'unexpected',
+      message: err instanceof Error ? err.message : String(err),
+    });
     return localDataUrl;
   }
 }
