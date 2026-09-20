@@ -143,7 +143,7 @@ export async function resendVerification(userId: string): Promise<void> {
   }
 }
 
-async function issueSession(
+export async function issueSession(
   user: { id: string; tenantId: string; roleId: string },
   meta: RequestMeta,
   family?: string,
@@ -200,7 +200,7 @@ export type LoginOrSelect =
   | LoginResult
   | { chooseEstablishment: EstablishmentChoice[]; selectionToken: string };
 
-interface NewTenantAdmin {
+export interface NewTenantAdmin {
   tenantName: string;
   branchName: string;
   email: string;
@@ -294,7 +294,7 @@ export async function createTenantSkeleton(
   return { tenantId: tenant.id, branchId: branch.id, adminRoleId };
 }
 
-async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
+export async function createTenantWithAdmin(opts: NewTenantAdmin): Promise<string> {
   const result = await prisma.$transaction(
     async (tx) => {
       const skeleton = await createTenantSkeleton(tx, {

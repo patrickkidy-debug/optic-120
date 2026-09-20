@@ -2,6 +2,7 @@ import { LOCALES } from './lib/locale-resolve';
 import { Outlet } from 'react-router-dom';
 import { PwaControls } from './components/PwaControls';
 import { ActivationPage } from './pages/activation/ActivationPage';
+import { ActivationReturnPage } from './pages/activation/ActivationReturnPage';
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
@@ -150,6 +151,8 @@ export const router = createBrowserRouter([
       { path: '/activer', element: pub(<ActivateSubscriptionPage />) },
       // Tunnel commercial : accessible sans compte, c'est son point de depart.
       { path: '/activation', element: pub(<ActivationPage />) },
+      // Retour du paiement : c'est le serveur qui tranche l'activation.
+      { path: '/activation/retour', element: pub(<ActivationReturnPage />) },
       { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
       { path: '/reset-password', element: pub(<ResetPasswordPage />) },
       { path: '/verifier-email', element: pub(<VerifyEmailPage />) },

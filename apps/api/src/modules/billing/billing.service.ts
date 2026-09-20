@@ -237,6 +237,8 @@ export async function subscribe(
   customerPhone: string | undefined,
   capiContext?: CapiContext,
   cycle: BillingCycleType = BillingCycle.MONTHLY,
+  /** Retour impose par l'appelant — voir initiateInvoicePayment. */
+  returnUrl?: string,
 ) {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub) throw notFound('Abonnement introuvable');
@@ -263,7 +265,7 @@ export async function subscribe(
     }),
   );
 
-  return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone, capiContext);
+  return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone, capiContext, returnUrl);
 }
 
 export async function payInvoice(

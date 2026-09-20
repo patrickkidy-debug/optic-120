@@ -29,6 +29,7 @@ import { managementRoutes } from './modules/management/management.routes.js';
 import { billingRoutes, billingWebhookRoutes } from './modules/billing/billing.routes.js';
 import { platformRoutes } from './modules/billing/platform.routes.js';
 import { announcementsRoutes } from './modules/announcements/announcements.routes.js';
+import { activationRoutes } from './modules/activation/activation.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { storeSetupRoutes } from './modules/store-setup/store-setup.routes.js';
 import { supportRoutes } from './modules/support/support.routes.js';
@@ -159,6 +160,8 @@ export async function buildApp() {
   await app.register(billingRoutes, { prefix: '/billing' });
   await app.register(billingWebhookRoutes, { prefix: '/webhooks' });
   await app.register(announcementsRoutes, { prefix: '/announcements' });
+  // Tunnel commercial : public, aucun compte requis pour le parcourir.
+  await app.register(activationRoutes, { prefix: '/activation' });
   await app.register(platformRoutes, { prefix: '/platform' });
   await app.register(settingsRoutes, { prefix: '/settings' });
   await app.register(storeSetupRoutes, { prefix: '/store-setup' });
