@@ -3180,7 +3180,8 @@ export type ActivationNeedsInput = z.infer<typeof activationNeedsSchema>;
 
 export const activationPlanSchema = z.object({
   planCode: z.enum(['STARTER', 'STANDARD', 'GROWTH']),
-  billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']).default('MONTHLY'),
+  // Aligne sur BillingCycle : pas de cycle annuel dans le catalogue.
+  billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL']).default('MONTHLY'),
 });
 export type ActivationPlanInput = z.infer<typeof activationPlanSchema>;
 

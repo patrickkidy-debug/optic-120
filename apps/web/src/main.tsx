@@ -12,7 +12,6 @@ import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
 import { trackPixelPageView } from './lib/pixel';
 import { captureReferralFromUrl } from './lib/partnerReferral';
-import { PwaControls } from './components/PwaControls';
 
 applyTheme(getStoredTheme());
 
@@ -42,12 +41,10 @@ function Root() {
   // sur un serveur endormi, peut prendre plusieurs secondes). Seules les routes
   // protégées patientent derrière le splash (voir RequireAuth).
   return (
-    <>
-      <RouterProvider router={router} />
-      {/* Invite d'installation PWA (Android/desktop + guide iOS) + bandeau hors ligne,
-          disponible partout : landing, connexion et application. */}
-      <PwaControls />
-    </>
+    // Les bandeaux PWA sont rendus par l'enveloppe racine du routeur (voir
+    // router.tsx) : ils ont ainsi acces a l'URL courante, ce qui permet de
+    // retirer l'invite d'installation du tunnel d'activation.
+    <RouterProvider router={router} />
   );
 }
 

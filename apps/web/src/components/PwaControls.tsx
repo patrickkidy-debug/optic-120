@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download, WifiOff, X, Share } from 'lucide-react';
 import { Button } from './ui';
 
@@ -32,6 +33,10 @@ type WinWithPrompt = Window & { __oculoInstallPrompt?: InstallPromptEvent | null
  * Rien à configurer : le service worker et le manifest sont déjà en place.
  */
 export function PwaControls() {
+  // Le tunnel d'activation est une page de conversion : une invite qui recouvre
+  // le bas de l'ecran mobile detourne du bouton principal. Le bandeau « Hors
+  // ligne » reste affiche partout, lui : il previent d'une vraie panne.
+  const onFunnel = useLocation().pathname.startsWith('/activation');
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
   const [offline, setOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
   const [dismissed, setDismissed] = useState(false);
@@ -97,7 +102,7 @@ export function PwaControls() {
         </div>
       )}
 
-      {deferred && !dismissed && (
+      {deferred && !dismissed && !onFunnel && (
         <div className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border bg-surface px-4 py-3 shadow-card-lg">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
             <Download className="h-5 w-5" />
@@ -118,7 +123,7 @@ export function PwaControls() {
       )}
 
       {/* iOS : Safari n'a pas d'invite automatique → guide « Sur l'écran d'accueil ». */}
-      {iosHint && (
+      {iosHint && !onFunnel && (
         <div className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-start gap-3 rounded-2xl border bg-surface px-4 py-3 shadow-card-lg">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
             <Share className="h-5 w-5" />

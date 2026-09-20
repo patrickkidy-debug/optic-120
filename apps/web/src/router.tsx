@@ -1,4 +1,7 @@
 import { LOCALES } from './lib/locale-resolve';
+import { Outlet } from 'react-router-dom';
+import { PwaControls } from './components/PwaControls';
+import { ActivationPage } from './pages/activation/ActivationPage';
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
@@ -107,8 +110,24 @@ function OperatorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Enveloppe racine : rend les routes et, par-dessus, les bandeaux PWA.
+ *
+ * Ils vivaient hors du routeur, donc sans acces a l'URL courante — impossible
+ * d'y masquer l'invite d'installation sur une page precise.
+ */
+function RootLayout() {
+  return (
+    <>
+      <Outlet />
+      <PwaControls />
+    </>
+  );
+}
+
 export const router = createBrowserRouter([
   {
+    element: <RootLayout />,
     // Route-enveloppe sans chemin : React Router lui rend un <Outlet/>
     // implicite (elle n'ajoute donc aucun habillage), mais son `errorElement`
     // couvre TOUTES les routes ci-dessous. Sans lui, une erreur non rattrapée
@@ -129,6 +148,8 @@ export const router = createBrowserRouter([
       // Lien d'activation partagé aux prospects (WhatsApp) : volontairement hors
       // PublicOnly, il doit fonctionner aussi pour un client déjà connecté.
       { path: '/activer', element: pub(<ActivateSubscriptionPage />) },
+      // Tunnel commercial : accessible sans compte, c'est son point de depart.
+      { path: '/activation', element: pub(<ActivationPage />) },
       { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
       { path: '/reset-password', element: pub(<ResetPasswordPage />) },
       { path: '/verifier-email', element: pub(<VerifyEmailPage />) },
