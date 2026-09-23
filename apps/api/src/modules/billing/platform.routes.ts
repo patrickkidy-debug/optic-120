@@ -19,6 +19,7 @@ import { prisma } from '../../lib/prisma.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
+import { invoicingRoutes } from './invoicing.routes.js';
 import * as renewalsService from './renewals.service.js';
 import { getPaymentProviderStatus } from './platform-provider.js';
 import * as announcements from '../announcements/announcements.service.js';
@@ -42,6 +43,10 @@ const ANNOUNCEMENT_NOTIFIED_ACTION = 'PLATFORM_ANNOUNCEMENT_NOTIFIED';
 export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
   app.addHook('preHandler', requirePlatformOperator);
+
+  // Facturation (§3). Greffon ENFANT : il herite des deux gardes ci-dessus,
+  // donc aucune de ses routes n'est accessible hors console fondateur.
+  await app.register(invoicingRoutes, { prefix: '/billing' });
 
   // Indicateurs clés (console fondateur).
   app.get('/stats', async (_req, reply) => {

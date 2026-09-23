@@ -9,9 +9,11 @@ import {
   BILLING_CYCLE_DISCOUNT,
   type BillingCycle as BillingCycleType,
 } from '@oculo/shared-types';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
-import { numberSeriesPrefix, nextSeriesNumber } from '../../lib/document-number.js';
+import { logger } from '../../lib/logger.js';
+import { INVOICE_PREFIX, nextPlatformNumber } from '../../lib/platform-number.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
@@ -218,15 +220,90 @@ export async function assertWithinLimit(tenantId: string, resource: LimitResourc
 
 /* --------------------- Facturation & paiement --------------------- */
 
-async function nextInvoiceNumber(tenantId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const [last] = await prisma.subscriptionInvoice.findMany({
-    where: { tenantId, number: { startsWith: numberSeriesPrefix('ABN', year) } },
-    orderBy: { number: 'desc' },
-    take: 1,
-    select: { number: true },
-  });
-  return nextSeriesNumber('ABN', year, last?.number, 5);
+/**
+ * Numero de facture. Serie GLOBALE « FAC-AAAA-NNNNNN », adossee a un compteur
+ * persistant (voir platform-number.ts).
+ *
+ * Remplace un `ORDER BY number DESC` par etablissement, qui cumulait deux
+ * faiblesses : un tri lexicographique (« ABN-2026-100000 » se classait avant
+ * « ABN-2026-99999 » des que la largeur changeait) et une lecture suivie d'une
+ * ecriture, donc une collision potentiellement permanente.
+ *
+ * Les factures deja emises en serie « ABN- » gardent leurs numeros : aucune
+ * piece n'est renumerotee, les deux series coexistent dans l'historique.
+ */
+async function nextInvoiceNumber(): Promise<string> {
+  return nextPlatformNumber(INVOICE_PREFIX);
+}
+
+/**
+ * Complete une facture d'abonnement fraichement creee pour qu'elle soit
+ * imprimable et envoyable comme une facture manuelle : decomposition du
+ * montant, coordonnees de facturation figees, ligne de detail, entree de
+ * journal.
+ *
+ * Volontairement HORS de la transaction metier et sans jamais faire echouer
+ * l'appelant : un paiement confirme ne doit pas etre refuse parce qu'une ligne
+ * de presentation n'a pas pu s'ecrire. L'echec est journalise, pas masque.
+ */
+async function enrichAutoInvoice(invoiceId: string, planName: string): Promise<void> {
+  try {
+    const invoice = await prisma.subscriptionInvoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        tenant: {
+          select: {
+            name: true,
+            whatsappPhone: true,
+            contactPhone: true,
+            contactEmail: true,
+            location: true,
+            countryCode: true,
+          },
+        },
+      },
+    });
+    if (!invoice) return;
+
+    const fr = (d: Date) =>
+      new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+
+    await prisma.subscriptionInvoice.update({
+      where: { id: invoiceId },
+      data: {
+        subtotal: invoice.amount,
+        billingName: invoice.billingName ?? invoice.tenant.name,
+        billingWhatsapp:
+          invoice.billingWhatsapp ?? invoice.tenant.whatsappPhone ?? invoice.tenant.contactPhone,
+        billingEmail: invoice.billingEmail ?? invoice.tenant.contactEmail,
+        billingAddress: invoice.billingAddress ?? invoice.tenant.location,
+        billingCountry: invoice.billingCountry ?? invoice.tenant.countryCode,
+      },
+    });
+
+    const hasItem = await prisma.subscriptionInvoiceItem.count({ where: { invoiceId } });
+    if (hasItem === 0) {
+      await prisma.subscriptionInvoiceItem.create({
+        data: {
+          invoiceId,
+          description: 'Abonnement OculoSaaS — ' + planName,
+          periodLabel: fr(invoice.periodStart) + ' → ' + fr(invoice.periodEnd),
+          quantity: new Prisma.Decimal(1),
+          unitPrice: invoice.amount,
+          total: invoice.amount,
+        },
+      });
+    }
+
+    const hasCreated = await prisma.invoiceEvent.count({ where: { invoiceId, type: 'CREATED' } });
+    if (hasCreated === 0) {
+      await prisma.invoiceEvent.create({
+        data: { invoiceId, type: 'CREATED', message: 'Facture emise automatiquement' },
+      });
+    }
+  } catch (err) {
+    logger.error({ err, invoiceId }, "Echec d'enrichissement de la facture d'abonnement");
+  }
 }
 
 /** Crée une facture pour une offre et lance le paiement plateforme. */
@@ -253,7 +330,7 @@ export async function subscribe(
         tenantId,
         subscriptionId: sub.id,
         planId: plan.id,
-        number: await nextInvoiceNumber(tenantId),
+        number: await nextInvoiceNumber(),
         amount: cycleAmount(plan.priceMonthly, cycle),
         currency: plan.currency,
         status: SubInvoiceStatus.PENDING,
@@ -265,6 +342,7 @@ export async function subscribe(
     }),
   );
 
+  await enrichAutoInvoice(invoice.id, plan.name);
   return initiateInvoicePayment(tenantId, invoice.id, method, customerPhone, capiContext, returnUrl);
 }
 
@@ -305,7 +383,7 @@ export async function subscribeManual(
         tenantId,
         subscriptionId: sub.id,
         planId: plan.id,
-        number: await nextInvoiceNumber(tenantId),
+        number: await nextInvoiceNumber(),
         amount: cycleAmount(plan.priceMonthly, cycle),
         currency: plan.currency,
         status: SubInvoiceStatus.PENDING,
@@ -329,6 +407,7 @@ export async function subscribeManual(
       channel,
     },
   });
+  await enrichAutoInvoice(invoice.id, plan.name);
   return {
     paymentId: payment.id,
     invoiceId: invoice.id,
@@ -480,16 +559,31 @@ export async function settleSubscriptionPayment(
     const alreadyPaid = payment.invoice.status === SubInvoiceStatus.PAID;
     const justPaid = status === PaymentStatus.SUCCESS && !alreadyPaid;
 
+    const now = new Date();
     await tx.subscriptionPayment.update({
       where: { id: paymentId },
-      data: { status, rawPayload: (raw ?? undefined) as object | undefined },
+      data: {
+        status,
+        rawPayload: (raw ?? undefined) as object | undefined,
+        // Date reelle d'encaissement : c'est elle que le tableau de bord
+        // facturation additionne, pas la date de creation de l'intention.
+        paidAt:
+          status === PaymentStatus.SUCCESS ? (payment.paidAt ?? now) : payment.paidAt,
+      },
     });
 
     if (justPaid) {
-      const now = new Date();
       await tx.subscriptionInvoice.update({
         where: { id: payment.invoiceId },
-        data: { status: SubInvoiceStatus.PAID, paidAt: now },
+        data: {
+          status: SubInvoiceStatus.PAID,
+          paidAt: now,
+          // Une facture reglee par la passerelle l'est en totalite : il n'y a
+          // pas d'acompte possible sur ce chemin. `amountPaid` doit le dire,
+          // sinon le solde derive (amount - amountPaid) affiche la facture
+          // comme impayee alors que l'argent est arrive.
+          amountPaid: payment.invoice.amount,
+        },
       });
       const sub = await tx.subscription.findFirst({
         where: { id: payment.invoice.subscriptionId },
@@ -523,6 +617,20 @@ export async function settleSubscriptionPayment(
   // confirmation manuelle) — réutilise le contexte capturé à l'initiation.
   if (result?.justPaid) {
     const { payment } = result;
+    // Journal de la facture (§19). Hors transaction, non bloquant : un echec
+    // d'ecriture du journal ne doit pas annuler un paiement confirme.
+    void prisma.invoiceEvent
+      .create({
+        data: {
+          invoiceId: payment.invoiceId,
+          type: 'PAID',
+          message: 'Paiement confirme',
+          reference: payment.providerRef,
+        },
+      })
+      .catch((err: unknown) =>
+        logger.error({ err, invoiceId: payment.invoiceId }, "Echec d'ecriture du journal de facture"),
+      );
     const [owner, plan] = await Promise.all([
       prisma.user.findFirst({
         where: { tenantId: payment.tenantId },
@@ -759,18 +867,21 @@ export async function activateSubscriptionManually(
   end.setMonth(end.getMonth() + m);
   const amount = Number(plan.priceMonthly) * m;
 
-  await prisma.$transaction(async (tx) => {
+  const invoiceId = await prisma.$transaction(async (tx) => {
     const invoice = await tx.subscriptionInvoice.create({
       data: {
         tenantId,
         subscriptionId: sub.id,
         planId,
-        number: await nextInvoiceNumber(tenantId),
+        number: await nextInvoiceNumber(),
         amount,
         currency: plan.currency,
         status: SubInvoiceStatus.PAID,
+        subtotal: amount,
+        amountPaid: amount,
         periodStart: now,
         periodEnd: end,
+        periodMonths: m,
         dueDate: now,
         paidAt: now,
       },
@@ -798,8 +909,10 @@ export async function activateSubscriptionManually(
         cancelledAt: null,
       },
     });
+    return invoice.id;
   });
 
+  await enrichAutoInvoice(invoiceId, plan.name);
   return getSubscription(tenantId);
 }
 

@@ -91,6 +91,10 @@ export const PaymentMethod = {
   MULTICAIXA: 'MULTICAIXA', // Angola (Multicaixa Express)
   UNITEL_MONEY: 'UNITEL_MONEY', // Angola
   VINTI4: 'VINTI4', // Cap-Vert
+  // Facturation de l'editeur (console fondateur) : volontairement absents de
+  // PAYMENT_METHODS_BY_COUNTRY, la caisse des opticiens ne les propose pas.
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  OTHER: 'OTHER',
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 
@@ -223,8 +227,14 @@ export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof Subscr
 
 export const SubInvoiceStatus = {
   PENDING: 'PENDING',
+  /** Un acompte a ete encaisse, le solde reste du. */
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
   PAID: 'PAID',
   FAILED: 'FAILED',
+  /** Annulee sans suppression : une facture emise garde son historique. */
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+  PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
   VOID: 'VOID',
 } as const;
 export type SubInvoiceStatus = (typeof SubInvoiceStatus)[keyof typeof SubInvoiceStatus];
@@ -3239,3 +3249,333 @@ export const ACTIVATION_EVENTS = [
   'activation_completed',
 ] as const;
 export type ActivationEventName = (typeof ACTIVATION_EVENTS)[number];
+
+/* ==========================================================================
+ * FACTURATION DE L'ÉDITEUR (console fondateur)
+ *
+ * Vocabulaire tenu dans tout le module, parce que trois montants différents se
+ * ressemblent et qu'un seul mot pour les trois rend les écrans faux :
+ *   - total      : ce que le client doit  (subtotal - discount + tax)
+ *   - amountPaid : ce qui a été encaissé
+ *   - balance    : total - amountPaid, TOUJOURS dérivé, jamais stocké
+ * ========================================================================== */
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: 'Espèces',
+  WAVE: 'Wave',
+  ORANGE_MONEY: 'Orange Money',
+  MTN_MOMO: 'MTN Mobile Money',
+  MOOV_MONEY: 'Moov Money',
+  FREE_MONEY: 'Free Money',
+  CARD: 'Carte bancaire',
+  CHEQUE: 'Chèque',
+  MPESA: 'M-Pesa',
+  EMOLA: 'e-Mola',
+  MKESH: 'mKesh',
+  MULTICAIXA: 'Multicaixa Express',
+  UNITEL_MONEY: 'Unitel Money',
+  VINTI4: 'Vinti4',
+  BANK_TRANSFER: 'Virement bancaire',
+  OTHER: 'Autre',
+};
+
+/** Moyens de règlement proposés pour une facture d'abonnement (§6). */
+export const PLATFORM_PAYMENT_METHODS: PaymentMethod[] = [
+  PaymentMethod.WAVE,
+  PaymentMethod.ORANGE_MONEY,
+  PaymentMethod.MTN_MOMO,
+  PaymentMethod.MOOV_MONEY,
+  PaymentMethod.CARD,
+  PaymentMethod.BANK_TRANSFER,
+  PaymentMethod.CASH,
+  PaymentMethod.OTHER,
+];
+
+export const SubInvoiceKind = {
+  INVOICE: 'INVOICE',
+  CREDIT_NOTE: 'CREDIT_NOTE',
+} as const;
+export type SubInvoiceKind = (typeof SubInvoiceKind)[keyof typeof SubInvoiceKind];
+
+export type InvoiceTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
+export const SUB_INVOICE_STATUS_META: Record<
+  SubInvoiceStatus,
+  { label: string; tone: InvoiceTone }
+> = {
+  PENDING: { label: 'En attente', tone: 'warning' },
+  PARTIALLY_PAID: { label: 'Partiellement payée', tone: 'info' },
+  PAID: { label: 'Payée', tone: 'success' },
+  FAILED: { label: 'Échouée', tone: 'danger' },
+  CANCELLED: { label: 'Annulée', tone: 'neutral' },
+  REFUNDED: { label: 'Remboursée', tone: 'neutral' },
+  PARTIALLY_REFUNDED: { label: 'Partiellement remboursée', tone: 'info' },
+  VOID: { label: 'Annulée', tone: 'neutral' },
+};
+
+/**
+ * « En retard » n'est PAS un statut stocké : c'est une facture encore due dont
+ * l'échéance est passée. Le déduire évite une tâche de fond qui ferait vieillir
+ * les lignes en base, et garantit que l'affichage ne peut pas être périmé.
+ */
+export const INVOICE_FILTERS = [
+  'all',
+  'PENDING',
+  'PARTIALLY_PAID',
+  'PAID',
+  'overdue',
+  'CANCELLED',
+  'REFUNDED',
+] as const;
+export type InvoiceFilter = (typeof INVOICE_FILTERS)[number];
+
+export const INVOICE_FILTER_LABELS: Record<InvoiceFilter, string> = {
+  all: 'Toutes',
+  PENDING: 'En attente',
+  PARTIALLY_PAID: 'Partielles',
+  PAID: 'Payées',
+  overdue: 'En retard',
+  CANCELLED: 'Annulées',
+  REFUNDED: 'Remboursées',
+};
+
+/** Périodes du tableau de bord facturation (§4). */
+export const BILLING_PERIODS = ['7d', '30d', '3m', '6m', '12m', 'custom'] as const;
+export type BillingPeriod = (typeof BILLING_PERIODS)[number];
+
+export const BILLING_PERIOD_LABELS: Record<BillingPeriod, string> = {
+  '7d': '7 jours',
+  '30d': '30 jours',
+  '3m': '3 mois',
+  '6m': '6 mois',
+  '12m': '12 mois',
+  custom: 'Personnalisée',
+};
+
+export const BILLING_PERIOD_DAYS: Record<Exclude<BillingPeriod, 'custom'>, number> = {
+  '7d': 7,
+  '30d': 30,
+  '3m': 90,
+  '6m': 182,
+  '12m': 365,
+};
+
+/* ------------------------------ Paramètres ------------------------------ */
+
+export const billingSettingsSchema = z.object({
+  legalName: z.string().trim().max(160).optional().nullable(),
+  tradeName: z.string().trim().max(160).optional().nullable(),
+  address: z.string().trim().max(300).optional().nullable(),
+  city: z.string().trim().max(120).optional().nullable(),
+  country: z.string().trim().max(120).optional().nullable(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  email: z.string().trim().max(160).optional().nullable(),
+  website: z.string().trim().max(200).optional().nullable(),
+  taxId: z.string().trim().max(80).optional().nullable(),
+  registrationNumber: z.string().trim().max(80).optional().nullable(),
+  defaultCurrency: z.string().trim().min(3).max(3).optional(),
+  paymentTerms: z.string().trim().max(500).optional().nullable(),
+  paymentDetails: z.string().trim().max(1000).optional().nullable(),
+  logoUrl: z.string().trim().max(2000).optional().nullable(),
+  footerNote: z.string().trim().max(500).optional().nullable(),
+  whatsappNumber: z.string().trim().max(30).optional().nullable(),
+  autoSendOnPayment: z.boolean().optional(),
+  remindBeforeDue: z.boolean().optional(),
+  remindAfterDue: z.boolean().optional(),
+  sendPaymentConfirmation: z.boolean().optional(),
+  remindBeforeDays: z.coerce.number().int().min(1).max(30).optional(),
+  invoiceWhatsappTemplate: z.string().trim().max(1500).optional().nullable(),
+  reminderBeforeTemplate: z.string().trim().max(1500).optional().nullable(),
+  reminderDueTemplate: z.string().trim().max(1500).optional().nullable(),
+  reminderAfterTemplate: z.string().trim().max(1500).optional().nullable(),
+});
+export type BillingSettingsInput = z.infer<typeof billingSettingsSchema>;
+
+/* ------------------------- Gabarits WhatsApp (§16-18) ------------------------- */
+
+export const INVOICE_TEMPLATE_VARS = [
+  'nom',
+  'etablissement',
+  'facture',
+  'montant',
+  'devise',
+  'statut',
+  'debut',
+  'fin',
+  'echeance',
+  'solde',
+] as const;
+
+export const DEFAULT_INVOICE_WA_TEMPLATE = [
+  'Bonjour {nom},',
+  '',
+  'Merci pour votre paiement et votre confiance envers OculoSaaS.',
+  '',
+  'Voici votre facture *{facture}* concernant votre abonnement OculoSaaS.',
+  '',
+  'Montant : *{montant}*',
+  'Statut : *{statut}*',
+  'Période : *{debut} – {fin}*',
+  '',
+  'Merci d’utiliser OculoSaaS, votre logiciel de gestion pour opticiens.',
+  'https://oculosaas.com',
+].join('\n');
+
+export const DEFAULT_REMINDER_BEFORE_TEMPLATE = [
+  'Bonjour {nom},',
+  '',
+  'Votre abonnement OculoSaaS arrive à échéance le {echeance}.',
+  '',
+  'Montant à régler : *{montant}* (facture {facture}).',
+  '',
+  'Pour éviter toute interruption, vous pouvez le renouveler dès maintenant.',
+].join('\n');
+
+export const DEFAULT_REMINDER_DUE_TEMPLATE = [
+  'Bonjour {nom},',
+  '',
+  'Votre abonnement OculoSaaS arrive à échéance aujourd’hui.',
+  '',
+  'Montant à régler : *{montant}* (facture {facture}).',
+].join('\n');
+
+export const DEFAULT_REMINDER_AFTER_TEMPLATE = [
+  'Bonjour {nom},',
+  '',
+  'Votre abonnement OculoSaaS est actuellement en attente de renouvellement.',
+  '',
+  'Solde restant : *{solde}* (facture {facture}, échéance {echeance}).',
+  '',
+  'Répondez à ce message si vous souhaitez notre aide pour le régler.',
+].join('\n');
+
+export type InvoiceMessageKind = 'invoice' | 'before' | 'due' | 'after';
+
+export const DEFAULT_INVOICE_TEMPLATES: Record<InvoiceMessageKind, string> = {
+  invoice: DEFAULT_INVOICE_WA_TEMPLATE,
+  before: DEFAULT_REMINDER_BEFORE_TEMPLATE,
+  due: DEFAULT_REMINDER_DUE_TEMPLATE,
+  after: DEFAULT_REMINDER_AFTER_TEMPLATE,
+};
+
+/* ------------------------- Création manuelle (§6) ------------------------- */
+
+const invoiceMoneySchema = z.coerce
+  .number()
+  .min(0, 'Montant négatif impossible')
+  .max(1_000_000_000);
+
+export const invoiceItemInputSchema = z.object({
+  description: z.string().trim().min(2, 'Désignation requise').max(300),
+  periodLabel: z.string().trim().max(120).optional().nullable(),
+  quantity: z.coerce.number().min(0.01, 'Quantité invalide').max(100_000).default(1),
+  unitPrice: invoiceMoneySchema,
+});
+export type InvoiceItemInput = z.infer<typeof invoiceItemInputSchema>;
+
+export const manualInvoiceSchema = z
+  .object({
+    tenantId: z.string().min(1, 'Établissement requis'),
+    // Coordonnées : préremplies depuis l'établissement, modifiables, puis
+    // FIGÉES sur la facture émise.
+    billingName: z.string().trim().max(160).optional().nullable(),
+    billingContact: z.string().trim().max(160).optional().nullable(),
+    billingWhatsapp: z.string().trim().max(30).optional().nullable(),
+    billingEmail: z.string().trim().max(160).optional().nullable(),
+    billingAddress: z.string().trim().max(300).optional().nullable(),
+    billingCity: z.string().trim().max(120).optional().nullable(),
+    billingCountry: z.string().trim().max(120).optional().nullable(),
+
+    items: z.array(invoiceItemInputSchema).min(1, 'Au moins une ligne'),
+    discount: invoiceMoneySchema.default(0),
+    tax: invoiceMoneySchema.default(0),
+    currency: z.string().trim().min(3).max(3).default('XOF'),
+
+    // Abonnement rattaché (optionnel) : si un nombre de mois est indiqué, le
+    // règlement de la facture prolonge l'abonnement d'autant.
+    planId: z.string().optional().nullable(),
+    periodStart: z.string().optional().nullable(),
+    periodEnd: z.string().optional().nullable(),
+    periodMonths: z.coerce.number().int().min(0).max(60).default(0),
+
+    issueDate: z.string().optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    notes: z.string().trim().max(1000).optional().nullable(),
+
+    // Règlement éventuel enregistré dans le même geste (§21).
+    payment: z
+      .object({
+        amount: invoiceMoneySchema,
+        method: z.nativeEnum(PaymentMethod),
+        reference: z.string().trim().max(120).optional().nullable(),
+        paidAt: z.string().optional().nullable(),
+        notes: z.string().trim().max(500).optional().nullable(),
+      })
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (v) => {
+      const subtotal = v.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+      return v.discount <= subtotal;
+    },
+    { message: 'La remise dépasse le sous-total', path: ['discount'] },
+  )
+  .refine((v) => !v.payment || v.payment.amount > 0, {
+    message: 'Le montant du règlement doit être supérieur à zéro',
+    path: ['payment', 'amount'],
+  });
+export type ManualInvoiceInput = z.infer<typeof manualInvoiceSchema>;
+
+/** Calcul du total, partagé par le formulaire et le serveur (§10). */
+export function invoiceTotals(input: {
+  items: { quantity: number; unitPrice: number }[];
+  discount?: number;
+  tax?: number;
+}): { subtotal: number; discount: number; tax: number; total: number } {
+  const subtotal = input.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  const discount = input.discount ?? 0;
+  const tax = input.tax ?? 0;
+  return { subtotal, discount, tax, total: Math.max(0, subtotal - discount + tax) };
+}
+
+/* -------------------- Encaissement, remboursement, avoir -------------------- */
+
+export const recordPaymentSchema = z.object({
+  amount: invoiceMoneySchema.refine((v) => v > 0, 'Montant requis'),
+  method: z.nativeEnum(PaymentMethod),
+  reference: z.string().trim().max(120).optional().nullable(),
+  paidAt: z.string().optional().nullable(),
+  notes: z.string().trim().max(500).optional().nullable(),
+});
+export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
+
+export const refundSchema = z.object({
+  amount: invoiceMoneySchema.refine((v) => v > 0, 'Montant requis'),
+  reason: z.string().trim().min(3, 'Motif requis').max(500),
+  method: z.nativeEnum(PaymentMethod).optional().nullable(),
+  reference: z.string().trim().max(120).optional().nullable(),
+  refundedAt: z.string().optional().nullable(),
+});
+export type RefundInput = z.infer<typeof refundSchema>;
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().trim().min(3, 'Motif requis').max(500),
+});
+export type CancelInvoiceInput = z.infer<typeof cancelInvoiceSchema>;
+
+/* ------------------------------ Journal (§19) ------------------------------ */
+
+export const INVOICE_EVENT_LABELS: Record<string, string> = {
+  CREATED: 'Facture créée',
+  PAYMENT_RECORDED: 'Paiement enregistré',
+  PAID: 'Paiement confirmé',
+  WHATSAPP_PREPARED: 'Message WhatsApp préparé',
+  WHATSAPP_SENT: 'Facture envoyée sur WhatsApp',
+  EMAIL_SENT: 'Facture envoyée par e-mail',
+  REMINDER_SENT: 'Relance envoyée',
+  CANCELLED: 'Facture annulée',
+  REFUNDED: 'Remboursement enregistré',
+  CREDIT_NOTE_ISSUED: 'Avoir émis',
+  UPDATED: 'Facture modifiée',
+};

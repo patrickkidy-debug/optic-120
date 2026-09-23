@@ -789,6 +789,10 @@ enum PaymentMethod {
   MULTICAIXA
   UNITEL_MONEY
   VINTI4
+  /// Facturation de l'éditeur (console fondateur). Volontairement absents de
+  /// PAYMENT_METHODS_BY_COUNTRY : la caisse des opticiens ne les propose pas.
+  BANK_TRANSFER
+  OTHER
 }
 
 enum PaymentStatus {
@@ -1555,6 +1559,18 @@ enum SubInvoiceStatus {
   PAID
   FAILED
   VOID
+  /// Un acompte a été encaissé, le solde reste dû.
+  PARTIALLY_PAID
+  /// Annulée sans suppression : une facture émise garde son historique.
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum SubInvoiceKind {
+  INVOICE
+  /// Avoir (série AV-) émis en contrepartie d'une facture annulée ou remboursée.
+  CREDIT_NOTE
 }
 
 model SubscriptionPlan {
@@ -1620,10 +1636,160 @@ model SubscriptionInvoice {
   paidAt         DateTime?
   createdAt      DateTime         @default(now())
 
+  kind SubInvoiceKind @default(INVOICE)
+
+  /// Avoir : facture d'origine qu'il annule. Référence libre (pas de FK
+  /// auto-relationnelle) pour garder l'avoir lisible si l'historique évolue.
+  creditedInvoiceId String?
+
+  /// Décomposition du montant. `amount` reste le TOTAL À PAYER — sa
+  /// signification ne change pas, les colonnes ci-dessous l'expliquent.
+  /// subtotal - discount + tax = amount.
+  subtotal Decimal @default(0) @db.Decimal(12, 2)
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  tax      Decimal @default(0) @db.Decimal(12, 2)
+
+  /// Somme des paiements réussis. Le solde est toujours dérivé
+  /// (amount - amountPaid), jamais stocké : un seul chiffre fait foi.
+  amountPaid     Decimal @default(0) @db.Decimal(12, 2)
+  amountRefunded Decimal @default(0) @db.Decimal(12, 2)
+
+  /// Coordonnées de facturation FIGÉES à l'émission : une facture émise ne doit
+  /// pas changer parce que l'établissement a déménagé depuis.
+  billingName     String?
+  billingContact  String?
+  billingWhatsapp String?
+  billingEmail    String?
+  billingAddress  String?
+  billingCity     String?
+  billingCountry  String?
+
+  notes String?
+
+  /// 'AUTO' (issue d'un paiement d'abonnement) ou 'MANUAL' (saisie fondateur).
+  source       String    @default("AUTO")
+  issuedById   String?
+  cancelledAt  DateTime?
+  cancelReason String?
+
   payments SubscriptionPayment[]
+  items    SubscriptionInvoiceItem[]
+  refunds  SubscriptionRefund[]
+  events   InvoiceEvent[]
 
   @@unique([tenantId, number])
   @@index([tenantId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+/// Ligne d'une facture d'abonnement. Une facture automatique en porte une
+/// (l'abonnement facturé) ; une facture manuelle peut en porter plusieurs.
+model SubscriptionInvoiceItem {
+  id          String              @id @default(uuid())
+  invoiceId   String
+  invoice     SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  /// Période couverte, en clair (ex. « 01/10/2026 → 31/10/2026 »).
+  periodLabel String?
+  quantity    Decimal             @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal             @db.Decimal(12, 2)
+  total       Decimal             @db.Decimal(12, 2)
+  sortOrder   Int                 @default(0)
+
+  @@index([invoiceId])
+}
+
+/// Remboursement, total ou partiel. Ne modifie ni la facture ni le paiement
+/// d'origine : l'historique comptable reste intégralement lisible.
+model SubscriptionRefund {
+  id          String              @id @default(uuid())
+  tenantId    String
+  invoiceId   String
+  invoice     SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paymentId   String?
+  amount      Decimal             @db.Decimal(12, 2)
+  currency    String              @default("XOF")
+  reason      String
+  method      PaymentMethod?
+  reference   String?
+  refundedAt  DateTime            @default(now())
+  createdById String?
+  createdAt   DateTime            @default(now())
+
+  @@index([invoiceId])
+  @@index([tenantId])
+}
+
+/// Journal d'une facture : création, encaissement, envoi WhatsApp, relance,
+/// annulation, remboursement. Alimente l'onglet « Historique » (§19) et sert de
+/// piste d'audit lisible par le fondateur, en plus de AuditLog.
+model InvoiceEvent {
+  id        String              @id @default(uuid())
+  invoiceId String
+  invoice   SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// CREATED | PAYMENT_RECORDED | PAID | WHATSAPP_PREPARED | WHATSAPP_SENT |
+  /// EMAIL_SENT | REMINDER_SENT | CANCELLED | REFUNDED | CREDIT_NOTE_ISSUED
+  type      String
+  message   String
+  actorId   String?
+  actorName String?
+  /// Référence externe éventuelle (transaction, identifiant d'envoi WhatsApp).
+  reference String?
+  metadata  Json?
+  createdAt DateTime            @default(now())
+
+  @@index([invoiceId, createdAt])
+}
+
+/// Coordonnées légales de l'éditeur, imprimées sur les factures, et réglages
+/// d'envoi automatique. Ligne unique (id fixe « default »), comme
+/// PlatformSettings. Aucune valeur n'est inventée : un champ vide n'est pas
+/// imprimé.
+model PlatformBillingSettings {
+  id                 String  @id @default("default")
+  legalName          String?
+  tradeName          String?
+  address            String?
+  city               String?
+  country            String?
+  phone              String?
+  email              String?
+  website            String?
+  taxId              String?
+  registrationNumber String?
+  defaultCurrency    String  @default("XOF")
+  paymentTerms       String?
+  paymentDetails     String?
+  logoUrl            String?
+  footerNote         String?
+  /// Numéro WhatsApp de l'éditeur, expéditeur affiché des relances.
+  whatsappNumber     String?
+
+  /// §17 — chaque envoi est explicitement choisi par le fondateur.
+  autoSendOnPayment       Boolean @default(false)
+  remindBeforeDue         Boolean @default(false)
+  remindAfterDue          Boolean @default(false)
+  sendPaymentConfirmation Boolean @default(false)
+  /// Jours avant échéance déclenchant la relance « avant ».
+  remindBeforeDays        Int     @default(3)
+
+  invoiceWhatsappTemplate String?
+  reminderBeforeTemplate  String?
+  reminderDueTemplate     String?
+  reminderAfterTemplate   String?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Compteur de numérotation GLOBAL à la plateforme (séries « FAC-2026 »,
+/// « AV-2026 »). Distinct de DocumentCounter, qui est rattaché à un
+/// établissement par clé étrangère : les factures de l'éditeur forment une
+/// seule suite, pas une suite par client.
+model PlatformCounter {
+  series    String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 model SubscriptionPayment {
@@ -1648,6 +1814,13 @@ model SubscriptionPayment {
   capiContext Json?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+
+  /// Date RÉELLE de l'encaissement, distincte de createdAt : un paiement saisi
+  /// par le fondateur peut être daté de la veille (virement reçu hier).
+  paidAt       DateTime?
+  notes        String?
+  /// Opérateur ayant saisi le paiement (null pour un paiement via passerelle).
+  recordedById String?
 
   @@index([tenantId])
   @@index([provider, providerRef])
