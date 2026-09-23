@@ -28,13 +28,10 @@ export function AppShell() {
   const showSupportChat = SUPPORT_CHAT_PAGES.has(pathname);
 
   /**
-   * La console fondateur porte SA PROPRE navigation laterale, groupee par
-   * domaine. Empiler la barre de l'application par-dessus donnait deux colonnes
-   * de menus sans rapport et pres de 500 px pris sur la largeur utile : les
-   * tableaux de la console y perdaient exactement la place qui leur manquait.
-   *
-   * Sur ces routes, la barre de l'application s'efface et le contenu prend
-   * toute la largeur. Toutes les autres pages sont inchangees.
+   * La console fondateur garde la barre laterale de l'application — sa propre
+   * navigation est horizontale — mais pas la largeur bridee a max-w-7xl : ses
+   * tableaux (utilisateurs, factures, paiements) y perdaient la place qui leur
+   * manquait, et les colonnes de droite se faisaient couper.
    */
   const isConsole = pathname === '/plateforme' || pathname.startsWith('/plateforme/');
 
@@ -68,21 +65,11 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg">
-      {!isConsole && (
-        <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
-          <Sidebar />
-        </aside>
-      )}
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
+        <Sidebar />
+      </aside>
 
-      {/* Tiroir mobile de l'application. Retire sur la console, qui a le sien :
-          deux tiroirs superposes ouvraient des menus differents. */}
-      <div
-        className={clsx(
-          'fixed inset-0 z-40 lg:hidden',
-          (!sidebarOpen || isConsole) && 'pointer-events-none',
-          isConsole && 'hidden',
-        )}
-      >
+      <div className={clsx('fixed inset-0 z-40 lg:hidden', !sidebarOpen && 'pointer-events-none')}>
         <div
           className={clsx(
             'absolute inset-0 bg-black/50 transition-opacity',
@@ -100,7 +87,7 @@ export function AppShell() {
         </aside>
       </div>
 
-      <div className={isConsole ? undefined : 'lg:pl-64'}>
+      <div className="lg:pl-64">
         <Topbar />
         <TrialBanner />
         {/* Bandeau de confirmation d'email retiré : la vérification n'est pas
