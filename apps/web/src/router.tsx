@@ -1,6 +1,7 @@
 import { LOCALES } from './lib/locale-resolve';
 import { Outlet } from 'react-router-dom';
 import { PwaControls } from './components/PwaControls';
+import { ToastProvider } from './components/Toast';
 import { ActivationPage } from './pages/activation/ActivationPage';
 import { ActivationReturnPage } from './pages/activation/ActivationReturnPage';
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
@@ -56,7 +57,7 @@ const AuditPage = lazy(() => named(import('./pages/settings/AuditPage'), 'AuditP
 const ProfilePage = lazy(() => named(import('./pages/settings/ProfilePage'), 'ProfilePage'));
 const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionPage'), 'SubscriptionPage'));
 const StoreSetupPage = lazy(() => named(import('./pages/settings/StoreSetupPage'), 'StoreSetupPage'));
-const PlatformPage = lazy(() => named(import('./pages/platform/PlatformPage'), 'PlatformPage'));
+const PlatformPage = lazy(() => named(import('./pages/platform/ConsolePage'), 'ConsolePage'));
 const CrmPage = lazy(() => named(import('./pages/platform/CrmPage'), 'CrmPage'));
 const NotFound = lazy(() => named(import('./pages/NotFound'), 'NotFound'));
 const SupportPage = lazy(() => named(import('./pages/SupportPage'), 'SupportPage'));
@@ -119,10 +120,13 @@ function OperatorOnly({ children }: { children: ReactNode }) {
  */
 function RootLayout() {
   return (
-    <>
+    // Les retours d'action (toasts) sont montes ici, au-dessus de toutes les
+    // routes : un ecran qui declenche une action puis navigue doit pouvoir
+    // afficher son retour apres la navigation.
+    <ToastProvider>
       <Outlet />
       <PwaControls />
-    </>
+    </ToastProvider>
   );
 }
 
@@ -185,6 +189,10 @@ export const router = createBrowserRouter([
               { path: '/parametres/profil', element: <ProfilePage /> },
               { path: '/aide', element: <SupportPage /> },
               { path: '/plateforme', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
+              // La section de la console vit dans l'URL : un lien est
+              // partageable et un rechargement ne ramene pas a l'accueil.
+              // `/plateforme/crm` est statique, donc prioritaire sur ce motif.
+              { path: '/plateforme/:section', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
               { path: '/plateforme/crm', element: <OperatorOnly><CrmPage /></OperatorOnly> },
 
               { path: '/clinique/dashboard', element: perm('clinic.patients.view', <ClinicDashboardPage />) },

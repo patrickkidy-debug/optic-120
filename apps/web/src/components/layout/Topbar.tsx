@@ -31,7 +31,7 @@ import { logout } from '../../features/auth/api';
 import { Avatar } from '../Avatar';
 import i18n, { LOCALES } from '../../lib/i18n';
 import type { ThemeMode } from '../../lib/theme';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function ThemeToggle() {
   const theme = useUIStore((s) => s.theme);
@@ -323,8 +323,15 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 export function Topbar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  // La console fondateur a sa propre navigation laterale ET sa propre recherche
+  // globale, liee a Ctrl+K. Laisser celles de l'application actives y ferait
+  // ouvrir deux recherches differentes sur la meme frappe.
+  const isConsole = pathname === '/plateforme' || pathname.startsWith('/plateforme/');
 
   useEffect(() => {
+    if (isConsole) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -333,14 +340,20 @@ export function Topbar() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isConsole]);
 
   return (
     <header
       className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-bg/80 px-4 backdrop-blur-md"
       style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(4rem + env(safe-area-inset-top))' }}
     >
-      <button onClick={toggleSidebar} className="btn-ghost h-9 w-9 rounded-xl p-0 lg:hidden">
+      {/* Console fondateur : elle porte son propre menu lateral, donc son propre
+          bouton sur mobile. Afficher les deux donnait deux hamburgers empiles
+          ouvrant des menus differents. */}
+      <button
+        onClick={toggleSidebar}
+        className={`btn-ghost h-9 w-9 rounded-xl p-0 lg:hidden ${isConsole ? 'hidden' : ''}`}
+      >
         <Menu className="h-5 w-5" />
       </button>
       <BranchSelector />

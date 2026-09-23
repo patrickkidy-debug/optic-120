@@ -27,6 +27,17 @@ export function AppShell() {
   const { pathname } = useLocation();
   const showSupportChat = SUPPORT_CHAT_PAGES.has(pathname);
 
+  /**
+   * La console fondateur porte SA PROPRE navigation laterale, groupee par
+   * domaine. Empiler la barre de l'application par-dessus donnait deux colonnes
+   * de menus sans rapport et pres de 500 px pris sur la largeur utile : les
+   * tableaux de la console y perdaient exactement la place qui leur manquait.
+   *
+   * Sur ces routes, la barre de l'application s'efface et le contenu prend
+   * toute la largeur. Toutes les autres pages sont inchangees.
+   */
+  const isConsole = pathname === '/plateforme' || pathname.startsWith('/plateforme/');
+
   // Préchargement en tâche de fond (quand le navigateur est libre) des pages les
   // plus consultées → premières navigations instantanées, sans gêner le rendu.
   useEffect(() => {
@@ -57,11 +68,21 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
-        <Sidebar />
-      </aside>
+      {!isConsole && (
+        <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
+          <Sidebar />
+        </aside>
+      )}
 
-      <div className={clsx('fixed inset-0 z-40 lg:hidden', !sidebarOpen && 'pointer-events-none')}>
+      {/* Tiroir mobile de l'application. Retire sur la console, qui a le sien :
+          deux tiroirs superposes ouvraient des menus differents. */}
+      <div
+        className={clsx(
+          'fixed inset-0 z-40 lg:hidden',
+          (!sidebarOpen || isConsole) && 'pointer-events-none',
+          isConsole && 'hidden',
+        )}
+      >
         <div
           className={clsx(
             'absolute inset-0 bg-black/50 transition-opacity',
@@ -79,14 +100,21 @@ export function AppShell() {
         </aside>
       </div>
 
-      <div className="lg:pl-64">
+      <div className={isConsole ? undefined : 'lg:pl-64'}>
         <Topbar />
         <TrialBanner />
         {/* Bandeau de confirmation d'email retiré : la vérification n'est pas
             encore opérationnelle, le message serait donc sans issue pour
             l'utilisateur. Remonter <EmailVerifyBanner /> ici le jour où
             l'envoi des emails sera actif. */}
-        <main className="mx-auto max-w-7xl animate-fade-in px-4 py-6 sm:px-6">
+        <main
+          className={clsx(
+            'animate-fade-in',
+            // La console gere elle-meme ses marges et sa largeur : la brider a
+            // max-w-7xl couperait ses tableaux.
+            isConsole ? 'w-full' : 'mx-auto max-w-7xl px-4 py-6 sm:px-6',
+          )}
+        >
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>

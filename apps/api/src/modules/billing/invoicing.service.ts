@@ -1148,6 +1148,98 @@ export async function listBillingSubscriptions() {
   });
 }
 
+/* ------------------------- Mouvements de paiement (§16) ------------------------- */
+
+export interface ListPaymentsParams {
+  status?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/**
+ * Liste des paiements d'abonnement, tous établissements confondus.
+ *
+ * Distincte de la liste des factures : une facture peut porter plusieurs
+ * règlements, et un règlement échoué n'apparaît sur aucune facture payée. Les
+ * confondre revient à ne jamais voir les échecs, qui sont pourtant ce qu'il
+ * faut rattraper.
+ */
+export async function listPlatformPayments(params: ListPaymentsParams = {}) {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(200, Math.max(10, params.pageSize ?? 50));
+
+  const where: Prisma.SubscriptionPaymentWhereInput = {};
+  if (params.status && params.status !== 'all') {
+    where.status = params.status as PaymentStatus;
+  }
+  if (params.from || params.to) {
+    const from = params.from ? parseDate(params.from, new Date(0)) : undefined;
+    const to = params.to ? new Date(parseDate(params.to, new Date()).getTime() + DAY_MS - 1) : undefined;
+    where.OR = [
+      { paidAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } },
+      { paidAt: null, createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } },
+    ];
+  }
+  const search = params.search?.trim();
+  if (search) {
+    const like = { contains: search, mode: 'insensitive' as const };
+    where.AND = [
+      {
+        OR: [
+          { providerRef: like },
+          { invoice: { number: like } },
+          { invoice: { tenant: { name: like } } },
+        ],
+      },
+    ];
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.subscriptionPayment.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        invoice: {
+          select: { id: true, number: true, tenantId: true, tenant: { select: { name: true } } },
+        },
+      },
+    }),
+    prisma.subscriptionPayment.count({ where }),
+  ]);
+
+  return {
+    payments: rows.map((p) => ({
+      id: p.id,
+      amount: num(p.amount),
+      currency: p.currency,
+      method: p.method,
+      methodLabel: PAYMENT_METHOD_LABELS[p.method as PaymentMethod] ?? p.method,
+      status: p.status,
+      provider: p.provider,
+      reference: p.providerRef,
+      channel: p.channel,
+      // La date qui compte est celle de l'encaissement. `createdAt` n'est que
+      // la date de l'intention de paiement, souvent antérieure de plusieurs
+      // jours pour un virement.
+      date: p.paidAt ?? p.createdAt,
+      createdAt: p.createdAt,
+      notes: p.notes,
+      invoiceId: p.invoice.id,
+      invoiceNumber: p.invoice.number,
+      tenantId: p.invoice.tenantId,
+      tenantName: p.invoice.tenant.name,
+    })),
+    total,
+    page,
+    pageSize,
+  };
+}
+
 /* ----------------------- Relances dues (§18) ----------------------- */
 
 /**

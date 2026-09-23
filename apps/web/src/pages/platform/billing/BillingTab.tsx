@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BellRing, FileText, LayoutDashboard, Repeat, Settings, Wallet } from 'lucide-react';
 import type { InvoiceMessageKind } from '@oculo/shared-types';
@@ -33,9 +33,21 @@ type SubTab = (typeof SUB_TABS)[number]['id'];
  * liste, la fiche et les relances. Dupliquer ces écrans par onglet aurait
  * garanti qu'ils divergent.
  */
-export function BillingTab() {
+export function BillingTab({
+  initialTab = 'overview',
+  /** Facture a ouvrir d'emblee (venue d'une recherche ou d'un autre ecran). */
+  openInvoiceId = null,
+  /** Facturation d'un client a ouvrir d'emblee. */
+  openTenantId = null,
+  onConsumeDeepLink,
+}: {
+  initialTab?: SubTab;
+  openInvoiceId?: string | null;
+  openTenantId?: string | null;
+  onConsumeDeepLink?: () => void;
+} = {}) {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<SubTab>('overview');
+  const [tab, setTab] = useState<SubTab>(initialTab);
   const [refreshToken, setRefreshToken] = useState(0);
 
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -44,6 +56,27 @@ export function BillingTab() {
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [refunding, setRefunding] = useState<Invoice | null>(null);
   const [sending, setSending] = useState<{ invoice: Invoice; kind: InvoiceMessageKind } | null>(null);
+
+  // Ouverture pilotee depuis l'exterieur (recherche globale, autre section).
+  // Le lien est « consomme » apres ouverture : sans cela, fermer la fiche la
+  // rouvrirait aussitot au rendu suivant.
+  useEffect(() => {
+    if (!openInvoiceId) return;
+    setTab('invoices');
+    setDetailId(openInvoiceId);
+    onConsumeDeepLink?.();
+  }, [openInvoiceId, onConsumeDeepLink]);
+
+  useEffect(() => {
+    if (!openTenantId) return;
+    setTenantBilling(openTenantId);
+    onConsumeDeepLink?.();
+  }, [openTenantId, onConsumeDeepLink]);
+
+  // Un changement de section met a jour l'onglet actif.
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   /**
    * Un mouvement d'argent touche la liste, les indicateurs, les relances ET la

@@ -168,7 +168,7 @@ function Delta({ value }: { value: string }) {
 }
 
 /** Cloche de notifications de la console fondateur (ex. nouvel établissement créé). */
-function NotificationBell() {
+export function NotificationBell() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const { data } = useQuery({
@@ -238,128 +238,6 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'billing' | 'payments' | 'renewals' | 'announcements' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
-
-export function PlatformPage() {
-  const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>('users');
-
-  const { data: stats } = useQuery({ queryKey: ['platform-stats'], queryFn: getPlatformStats });
-
-  const billingMut = useMutation({
-    mutationFn: runBilling,
-    onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ['platform-users'] });
-      qc.invalidateQueries({ queryKey: ['platform-stats'] });
-      alert(`Cycle exécuté : ${r.markedPastDue} en retard, ${r.suspended} suspendu(s).`);
-    },
-    onError: (e) => alert(apiErrorMessage(e)),
-  });
-
-  return (
-    <div>
-      <PageHeader
-        title="Console fondateur"
-        subtitle="Pilotage de toute la plateforme — établissements, utilisateurs et offres"
-        actions={
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <Button variant="outline" onClick={() => billingMut.mutate()} loading={billingMut.isPending}>
-              <RefreshCw className="h-4 w-4" /> Cycle de facturation
-            </Button>
-          </div>
-        }
-      />
-
-      {/* KPI — vue d'ensemble */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          icon={Building2}
-          tone="primary"
-          label="Établissements"
-          value={stats?.tenantsTotal ?? '—'}
-          sub={stats ? <Delta value={`+${stats.newTenants30d} ce mois`} /> : null}
-        />
-        <KpiCard
-          icon={Banknote}
-          tone="success"
-          label="Revenu mensuel (MRR)"
-          value={stats ? formatCurrency(stats.mrr) : '—'}
-          sub={stats ? <span className="text-content-faint">{stats.subsActive} abonnements actifs</span> : null}
-        />
-        <KpiCard
-          icon={Sparkles}
-          tone="accent"
-          label="Abonnements actifs"
-          value={stats?.subsActive ?? '—'}
-          sub={stats ? <span className="text-content-faint">{stats.subsTrialing} en essai</span> : null}
-        />
-        <KpiCard
-          icon={Users}
-          tone="info"
-          label="Utilisateurs"
-          value={stats?.usersTotal ?? '—'}
-          sub={stats ? <Delta value={`+${stats.newUsers30d} ce mois`} /> : null}
-        />
-      </div>
-      {stats && (
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="badge bg-surface-3 text-content-muted">{stats.subsTrialing} en essai</span>
-          <span className="badge bg-surface-3 text-content-muted">{stats.subsPastDue} en retard</span>
-          <span className="badge bg-surface-3 text-content-muted">{stats.subsSuspended} suspendus</span>
-        </div>
-      )}
-
-      {/* Onglets */}
-      <div className="mt-6 flex gap-1 overflow-x-auto border-b">
-        {[
-          { id: 'billing' as Tab, label: 'Facturation', icon: ReceiptText },
-          { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
-          { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
-          { id: 'renewals' as Tab, label: 'Renouvellements', icon: BellRing },
-          { id: 'announcements' as Tab, label: 'Nouveautés', icon: Megaphone },
-          { id: 'demos' as Tab, label: 'Démos', icon: CalendarClock },
-          { id: 'engagement' as Tab, label: 'Engagement', icon: Flame },
-          { id: 'users' as Tab, label: 'Utilisateurs', icon: Users },
-          { id: 'storeSetup' as Tab, label: 'Configuration boutique', icon: ListChecks },
-          { id: 'team' as Tab, label: 'Équipe & accès', icon: Lock },
-          { id: 'plans' as Tab, label: 'Offres', icon: Layers },
-          { id: 'partners' as Tab, label: 'Partenaires', icon: Handshake },
-          { id: 'support' as Tab, label: 'Support', icon: LifeBuoy },
-        ].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-              tab === t.id
-                ? 'border-primary text-content'
-                : 'border-transparent text-content-muted hover:text-content'
-            }`}
-          >
-            <t.icon className="h-4 w-4" /> {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5">
-        {tab === 'billing' && <BillingTab />}
-        {tab === 'finance' && <FinanceTab />}
-        {tab === 'payments' && <PaymentsTab />}
-        {tab === 'renewals' && <RenewalsTab />}
-        {tab === 'announcements' && <AnnouncementsTab />}
-        {tab === 'demos' && <DemosTab />}
-        {tab === 'engagement' && <EngagementTab />}
-        {tab === 'users' && <UsersTab />}
-        {tab === 'storeSetup' && <StoreSetupTab />}
-        {tab === 'team' && <TeamTab />}
-        {tab === 'plans' && <PlansTab />}
-        {tab === 'partners' && <PartnersTab />}
-        {tab === 'support' && <SupportTab />}
-      </div>
-    </div>
-  );
-}
-
 /**
  * État RÉEL d'un abonnement : le statut stocké ne suffit pas (un abonnement
  * reste « ACTIVE » en base alors que sa période est déjà terminée). On croise
@@ -388,471 +266,6 @@ function realState(status: string, periodEnd: string) {
  * quand, sur n'importe quel établissement. Reste gratuit (statut TRIALING) :
  * distinct de l'activation payante (n'affecte pas le MRR).
  */
-function ExtendTrialModal({
-  sub,
-  onClose,
-  onDone,
-}: {
-  sub: { tenantId: string; tenantName: string };
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [amount, setAmount] = useState('24');
-  const [unit, setUnit] = useState<'hours' | 'days'>('hours');
-  const [error, setError] = useState('');
-
-  const minutes = Math.max(1, Number(amount) || 0) * (unit === 'days' ? 24 * 60 : 60);
-
-  const mut = useMutation({
-    mutationFn: () => extendTrial(sub.tenantId, minutes),
-    onSuccess: onDone,
-    onError: (e) => setError(apiErrorMessage(e)),
-  });
-
-  return (
-    <Modal open onClose={onClose} title={`Prolonger l'essai — ${sub.tenantName}`} size="sm">
-      <div className="space-y-3">
-        <p className="text-sm text-content-muted">
-          Reconduit l'essai gratuit (accès complet, sans paiement), à partir de l'échéance actuelle si
-          elle n'est pas encore passée, sinon de maintenant.
-        </p>
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <Field label="Durée">
-              <input
-                type="number"
-                min={1}
-                className="input text-right"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </Field>
-          </div>
-          <select
-            className="input h-[42px] w-28"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as 'hours' | 'days')}
-          >
-            <option value="hours">heures</option>
-            <option value="days">jours</option>
-          </select>
-        </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button loading={mut.isPending} onClick={() => mut.mutate()}>
-            <Clock className="h-4 w-4" /> Reconduire
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Activation manuelle d'un abonnement (paiement reçu en direct) : durée ET
- * offre au choix — un client peut régler une offre différente de la sienne.
- */
-function ActivateSubscriptionModal({
-  sub,
-  onClose,
-  onDone,
-}: {
-  sub: { tenantId: string; tenantName: string; planCode: string | null };
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { data: plans } = useQuery({ queryKey: ['platform-plans'], queryFn: getPlatformPlans });
-  const [planCode, setPlanCode] = useState(sub.planCode ?? '');
-  const [months, setMonths] = useState('1');
-  const [error, setError] = useState('');
-
-  const chosen = plans?.find((p) => p.code === planCode);
-  const nb = Math.max(1, Number(months) || 1);
-  const total = chosen ? Number(chosen.priceMonthly) * nb : 0;
-
-  const mut = useMutation({
-    mutationFn: () => platformActivate(sub.tenantId, nb, planCode),
-    onSuccess: onDone,
-    onError: (e) => setError(apiErrorMessage(e)),
-  });
-
-  return (
-    <Modal open onClose={onClose} title={`Activer — ${sub.tenantName}`} size="sm">
-      <div className="space-y-3">
-        <p className="text-sm text-content-muted">
-          Paiement reçu en direct : choisissez l'offre réglée par le client et la durée à créditer.
-        </p>
-        <Field label="Offre payée">
-          <select className="input" value={planCode} onChange={(e) => setPlanCode(e.target.value)}>
-            {plans?.map((p) => (
-              <option key={p.id} value={p.code}>
-                {p.name} — {formatCurrency(Number(p.priceMonthly))} / mois
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Durée (mois)">
-          <input
-            type="number"
-            min={1}
-            className="input text-right"
-            value={months}
-            onChange={(e) => setMonths(e.target.value)}
-          />
-        </Field>
-        {chosen && (
-          <div className="flex justify-between rounded-xl bg-surface-2 px-3 py-2 text-sm">
-            <span className="text-content-muted">Montant correspondant</span>
-            <span className="font-display font-bold text-content">{formatCurrency(total)}</span>
-          </div>
-        )}
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button loading={mut.isPending} onClick={() => mut.mutate()}>
-            <BadgeCheck className="h-4 w-4" /> Activer {nb} mois
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function UsersTab() {
-  const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ['platform-users'], queryFn: listPlatformUsers });
-  const [query, setQuery] = useState('');
-  // Filtre d'état : « Comptes actifs » par défaut sur « Tous ».
-  const [status, setStatus] = useState<'all' | 'paid' | 'active' | 'inactive'>('all');
-
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ['platform-users'] });
-    qc.invalidateQueries({ queryKey: ['platform-stats'] });
-  };
-  const activeMut = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => setUserActive(id, isActive),
-    onSuccess: invalidate,
-    onError: (e) => alert(apiErrorMessage(e)),
-  });
-  const logoutMut = useMutation({
-    mutationFn: forceLogoutUser,
-    onSuccess: () => alert('Sessions révoquées : cet utilisateur devra se reconnecter.'),
-    onError: (e) => alert(apiErrorMessage(e)),
-  });
-  const resetPasswordMut = useMutation({
-    mutationFn: platformResetPassword,
-    onError: (e) => alert(apiErrorMessage(e)),
-  });
-  const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
-  // Actions sur l'abonnement de l'établissement (essai, activation, suspension) —
-  // regroupées ici avec la gestion des comptes : l'ex-onglet « Abonnements »
-  // faisait doublon avec cette liste sans rien offrir de plus.
-  const [activating, setActivating] = useState<{ tenantId: string; tenantName: string; planCode: string | null } | null>(null);
-  const [extending, setExtending] = useState<{ tenantId: string; tenantName: string } | null>(null);
-  const suspendMut = useMutation({ mutationFn: platformSuspend, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
-  const reactivateMut = useMutation({ mutationFn: platformReactivate, onSuccess: invalidate, onError: (e) => alert(apiErrorMessage(e)) });
-  const now = Date.now();
-
-  const counts = useMemo(() => {
-    const rows = data ?? [];
-    return {
-      all: rows.length,
-      // Compte utilisable ET établissement à jour de paiement.
-      paid: rows.filter((u) => u.isActive && u.isPaid).length,
-      active: rows.filter((u) => u.isActive).length,
-      inactive: rows.filter((u) => !u.isActive).length,
-    };
-  }, [data]);
-
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    const q = query.trim().toLowerCase();
-    let rows = data.filter((u) => {
-      if (status === 'paid') return u.isActive && u.isPaid;
-      if (status === 'active') return u.isActive;
-      if (status === 'inactive') return !u.isActive;
-      return true;
-    });
-    if (q) {
-      rows = rows.filter(
-        (u) =>
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          u.tenantName.toLowerCase().includes(q) ||
-          (u.phone ?? '').replace(/\s/g, '').includes(q.replace(/\s/g, '')),
-      );
-    }
-    // Sur les vues filtrées, on met en tête ceux qui se sont connectés le plus
-    // récemment : c'est la vraie photo de l'usage de la plateforme.
-    if (status === 'active' || status === 'paid') {
-      rows = [...rows].sort(
-        (a, b) =>
-          new Date(b.lastLoginAt ?? 0).getTime() - new Date(a.lastLoginAt ?? 0).getTime(),
-      );
-    }
-    return rows;
-  }, [data, query, status]);
-
-  if (isLoading) return <PageLoader />;
-  if (!data || data.length === 0) return <EmptyState icon={Users} title="Aucun utilisateur" />;
-
-  const FILTERS = [
-    { key: 'all' as const, label: 'Tous', count: counts.all },
-    { key: 'paid' as const, label: 'Actifs & payés', count: counts.paid },
-    { key: 'active' as const, label: 'Actifs', count: counts.active },
-    { key: 'inactive' as const, label: 'Inactifs', count: counts.inactive },
-  ];
-
-  return (
-    <div>
-      {/* Filtre par état du compte : « Comptes actifs » isole ceux qui peuvent
-          réellement se connecter. */}
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setStatus(f.key)}
-            className={`badge px-3 py-1.5 text-xs ${
-              status === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
-            }`}
-          >
-            {f.key === 'paid' && <BadgeCheck className="h-3.5 w-3.5" />}
-            {f.key === 'active' && <ShieldCheck className="h-3.5 w-3.5" />}
-            {f.label} ({f.count})
-          </button>
-        ))}
-        {(status === 'active' || status === 'paid') && (
-          <span className="ml-1 text-xs text-content-faint">
-            {status === 'paid' ? 'Comptes actifs dont l’abonnement est en cours' : 'Comptes actifs'}
-            {' — '}
-            triés par dernière connexion, {filtered.length} sur {counts.all}
-          </span>
-        )}
-      </div>
-
-      <div className="relative mb-3 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher (nom, email, établissement)…"
-          className="input pl-9"
-        />
-      </div>
-      {/* Hauteur bornée + scroll interne (au lieu d'un simple overflow-x-auto qui
-          étire la carte sur toute la hauteur) : la barre de défilement horizontale
-          reste accessible dès le haut du tableau, sans avoir à faire défiler toute
-          la page jusqu'en bas pour l'atteindre. */}
-      <div className="card max-h-[65vh] overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-surface">
-            <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-              <th className="table-cell font-semibold">Utilisateur</th>
-              <th className="table-cell font-semibold">Téléphone</th>
-              <th className="table-cell font-semibold">Établissement</th>
-              <th className="table-cell font-semibold">Abonnement</th>
-              <th className="table-cell font-semibold">Rôle</th>
-              <th className="table-cell font-semibold">Statut</th>
-              <th className="table-cell font-semibold">Dernière connexion</th>
-              <th className="table-cell min-w-[250px] font-semibold">
-                <span className="block text-content">Actions</span>
-                <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-content-faint">
-                  Gestion du compte et de l'abonnement
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={8} className="table-cell text-center text-sm text-content-muted">
-                  Aucun compte ne correspond à ce filtre.
-                </td>
-              </tr>
-            )}
-            {filtered.map((u) => (
-              <tr key={u.id} className="border-b last:border-0 hover:bg-surface-2/50">
-                <td className="table-cell">
-                  <div className="font-medium text-content">{u.name}</div>
-                  <div className="text-xs text-content-faint">{u.email}</div>
-                </td>
-                <td className="table-cell">
-                  {u.phone ? (
-                    <a
-                      href={waLink(u.phone, u.name, u.tenantName)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Ouvrir la discussion WhatsApp"
-                      className="inline-flex items-center gap-1.5 text-sm text-content-muted transition hover:text-success"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                      {u.phone}
-                    </a>
-                  ) : (
-                    <span className="text-content-faint">—</span>
-                  )}
-                </td>
-                <td className="table-cell text-content-muted">{u.tenantName}</td>
-                <td className="table-cell">
-                  {u.subscriptionStatus && u.subscriptionEndsAt ? (
-                    (() => {
-                      const st = realState(u.subscriptionStatus!, u.subscriptionEndsAt!);
-                      return (
-                        <div className="flex flex-col gap-0.5">
-                          <Badge tone={st.tone}>{st.label}</Badge>
-                          <span className="text-[10px] text-content-faint">{u.planName}</span>
-                          <span className="text-[11px] font-medium text-content-muted">
-                            Échéance : {formatDateTime(u.subscriptionEndsAt!)}
-                          </span>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <Badge tone="neutral">Aucun</Badge>
-                  )}
-                </td>
-                <td className="table-cell text-content-muted">{u.roleLabel}</td>
-                <td className="table-cell">
-                  <Badge tone={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Actif' : 'Inactif'}</Badge>
-                </td>
-                <td className="table-cell text-content-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}</td>
-                <td className="table-cell min-w-[250px]">
-                  {/* Les libellés restent visibles : les icônes seules rendaient les
-                      actions difficiles à identifier sans survol. La grille garde
-                      toutefois la colonne compacte et lisible. */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      title="Régler la durée d'essai de cet établissement"
-                      onClick={() => setExtending({ tenantId: u.tenantId, tenantName: u.tenantName })}
-                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-primary"
-                    >
-                      <Clock className="h-3.5 w-3.5 shrink-0" /> Essai
-                    </button>
-                    {(() => {
-                      const hasAccess =
-                        u.subscriptionStatus === 'ACTIVE' &&
-                        !!u.subscriptionEndsAt &&
-                        new Date(u.subscriptionEndsAt).getTime() > now;
-                      return hasAccess ? (
-                        <>
-                          <button
-                            title="Prolonger l'abonnement payé"
-                            onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
-                            className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-content-muted"
-                          >
-                            <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Prolonger
-                          </button>
-                          <button
-                            title="Suspendre l'abonnement"
-                            onClick={() => { if (confirm(`Suspendre l'abonnement de ${u.tenantName} ?`)) suspendMut.mutate(u.tenantId); }}
-                            className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-danger"
-                          >
-                            <Pause className="h-3.5 w-3.5 shrink-0" /> Suspendre
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {u.subscriptionStatus === 'SUSPENDED' && (
-                            <button
-                              title="Réactiver l'abonnement suspendu"
-                              onClick={() => reactivateMut.mutate(u.tenantId)}
-                              className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-content-muted"
-                            >
-                              <Play className="h-3.5 w-3.5 shrink-0" /> Réactiver
-                            </button>
-                          )}
-                          <button
-                            title="Activer manuellement l'abonnement (paiement reçu en direct)"
-                            onClick={() => setActivating({ tenantId: u.tenantId, tenantName: u.tenantName, planCode: u.planCode })}
-                            className="btn-outline h-8 justify-start rounded-lg px-2.5 text-xs text-success"
-                          >
-                            <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Activer
-                          </button>
-                        </>
-                      );
-                    })()}
-                    <button
-                      title="Réinitialiser le mot de passe (sans email)"
-                      onClick={() => {
-                        if (confirm(`Générer un nouveau mot de passe temporaire pour ${u.name} ? Ses sessions actives seront déconnectées.`)) {
-                          resetPasswordMut.mutate(u.id, {
-                            onSuccess: (res) => setResetResult({ user: u, tempPassword: res.tempPassword }),
-                          });
-                        }
-                      }}
-                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs"
-                    >
-                      <KeyRound className="h-3.5 w-3.5 shrink-0" /> Mot de passe
-                    </button>
-                    <button
-                      title="Déconnecter de toutes les sessions"
-                      onClick={() => { if (confirm(`Forcer la déconnexion de ${u.name} ?`)) logoutMut.mutate(u.id); }}
-                      className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs"
-                    >
-                      <LogOut className="h-3.5 w-3.5 shrink-0" /> Déconnecter
-                    </button>
-                    {u.isActive ? (
-                      <button
-                        title="Désactiver le compte"
-                        onClick={() => { if (confirm(`Désactiver le compte de ${u.name} ?`)) activeMut.mutate({ id: u.id, isActive: false }); }}
-                        className="btn-ghost h-8 justify-start rounded-lg px-2.5 text-xs text-danger"
-                      >
-                        <ShieldOff className="h-3.5 w-3.5 shrink-0" /> Désactiver
-                      </button>
-                    ) : (
-                      <button
-                        title="Réactiver le compte"
-                        onClick={() => activeMut.mutate({ id: u.id, isActive: true })}
-                        className="btn-outline h-8 justify-start rounded-lg px-2.5 text-xs text-success"
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Réactiver
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {resetResult && (
-        <PlatformResetPasswordModal
-          user={resetResult.user}
-          tempPassword={resetResult.tempPassword}
-          onClose={() => setResetResult(null)}
-        />
-      )}
-
-      {activating && (
-        <ActivateSubscriptionModal
-          sub={activating}
-          onClose={() => setActivating(null)}
-          onDone={() => {
-            setActivating(null);
-            invalidate();
-          }}
-        />
-      )}
-
-      {extending && (
-        <ExtendTrialModal
-          sub={extending}
-          onClose={() => setExtending(null)}
-          onDone={() => {
-            setExtending(null);
-            invalidate();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 const STORE_SETUP_STEP_LABELS: Record<string, string> = {
   store_information: 'Informations boutique',
   team: 'Équipe',
@@ -870,7 +283,7 @@ const STORE_SETUP_STEP_LABELS: Record<string, string> = {
  * Qui a configuré sa boutique (assistant "Configuration boutique"), et où il
  * en est — pour repérer les établissements à relancer/accompagner.
  */
-function StoreSetupTab() {
+export function StoreSetupTab() {
   const { data, isLoading } = useQuery({ queryKey: ['platform-store-setup'], queryFn: getStoreSetupSummary });
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'done' | 'in_progress' | 'not_started'>('all');
@@ -986,51 +399,7 @@ function StoreSetupTab() {
  * clair). Débloque un compte (page de connexion) sans dépendre de l'envoi
  * d'email, même si le tenant concerné n'a plus d'administrateur actif.
  */
-function PlatformResetPasswordModal({
-  user,
-  tempPassword,
-  onClose,
-}: {
-  user: PlatformUser;
-  tempPassword: string;
-  onClose: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(tempPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Presse-papier indisponible : copie manuelle.
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title="Mot de passe temporaire" size="sm">
-      <p className="text-sm text-content-muted">
-        Nouveau mot de passe pour <b className="text-content">{user.name}</b> ({user.email}) —{' '}
-        {user.tenantName}. Transmettez-le vous-même (WhatsApp, SMS…) — il ne sera plus affiché après
-        fermeture de cette fenêtre.
-      </p>
-      <div className="mt-4 flex items-center gap-2 rounded-xl border bg-surface-2 p-3">
-        <span className="flex-1 select-all font-mono text-lg font-bold tracking-wider text-content">{tempPassword}</span>
-        <button onClick={copy} className="btn-ghost h-9 w-9 rounded-lg p-0" title="Copier">
-          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-        </button>
-      </div>
-      <p className="mt-3 text-xs text-content-faint">
-        Ses sessions actives ont été déconnectées ; il devra se reconnecter avec ce mot de passe.
-      </p>
-      <Button className="mt-5 w-full" onClick={onClose}>
-        J'ai noté le mot de passe
-      </Button>
-    </Modal>
-  );
-}
-
-function TeamTab() {
+export function TeamTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-operators'], queryFn: listOperators });
   const [email, setEmail] = useState('');
@@ -1118,7 +487,7 @@ const INVOICE_STATUS: Record<string, { label: string; tone: 'success' | 'warning
   FAILED: { label: 'Échouée', tone: 'danger' },
 };
 
-function FinanceTab() {
+export function FinanceTab() {
   const [days, setDays] = useState(30);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const { data: summary, isLoading: loadingSummary } = useQuery({
@@ -1309,7 +678,7 @@ function FinanceTab() {
   );
 }
 
-function PaymentsTab() {
+export function PaymentsTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-pending'], queryFn: listPendingPayments });
   const mut = useMutation({
@@ -1390,7 +759,7 @@ function demoEvent(d: DemoRequest) {
   return { title: `Démo OculoSaaS — ${who}`, start: new Date(d.preferredAt), details };
 }
 
-function DemosTab() {
+export function DemosTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-demos'], queryFn: listDemoRequests });
   const mut = useMutation({
@@ -1491,7 +860,7 @@ function DemosTab() {
   );
 }
 
-function SupportTab() {
+export function SupportTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['platform-support'], queryFn: listSupportTickets });
   const mut = useMutation({
@@ -1532,7 +901,7 @@ function SupportTab() {
   );
 }
 
-function PlansTab() {
+export function PlansTab() {
   const { data, isLoading } = useQuery({ queryKey: ['platform-plans'], queryFn: getPlatformPlans });
 
   return (
@@ -1682,7 +1051,7 @@ function PlanEditor({ plan }: { plan: PlatformPlan }) {
  * Trié par score d'intérêt calculé côté serveur (vidéos terminées, % moyen,
  * demandes d'aide) — les prospects les plus chauds arrivent en tête.
  */
-function EngagementTab() {
+export function EngagementTab() {
   const { data, isLoading } = useQuery({
     queryKey: ['platform-demo-engagement'],
     queryFn: getDemoEngagement,
@@ -1805,7 +1174,7 @@ const TIER_CODES = ['AMBASSADOR', 'PARTNER_PRO', 'PARTNER_EXPERT'] as const;
  * de commission (par offre × niveau) et de la file de validation des
  * commissions. Séparé en trois sous-sections pour rester lisible.
  */
-function PartnersTab() {
+export function PartnersTab() {
   const [section, setSection] = useState<'list' | 'commissions' | 'rules'>('list');
   const SECTIONS = [
     { key: 'list' as const, label: 'Partenaires' },

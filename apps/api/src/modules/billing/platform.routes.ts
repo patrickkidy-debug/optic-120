@@ -20,6 +20,7 @@ import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as billing from './billing.service.js';
 import * as platform from './platform.service.js';
 import { invoicingRoutes } from './invoicing.routes.js';
+import * as console_ from './console.service.js';
 import * as renewalsService from './renewals.service.js';
 import { getPaymentProviderStatus } from './platform-provider.js';
 import * as announcements from '../announcements/announcements.service.js';
@@ -47,6 +48,42 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   // Facturation (§3). Greffon ENFANT : il herite des deux gardes ci-dessus,
   // donc aucune de ses routes n'est accessible hors console fondateur.
   await app.register(invoicingRoutes, { prefix: '/billing' });
+
+  /**
+   * Vue d'ensemble du fondateur : tous les compteurs de la page d'accueil en
+   * UNE requete. Les repartir en cinq appels donnerait cinq instantanes
+   * differents, donc des chiffres qui ne s'additionnent pas.
+   */
+  app.get('/overview', async (req, reply) => {
+    const { from, to } = req.query as { from?: string; to?: string };
+    return reply.send({ overview: await console_.getFounderOverview({ from, to }) });
+  });
+
+  // Recherche transversale de la console (§27).
+  app.get('/search', async (req, reply) => {
+    const { q } = req.query as { q?: string };
+    return reply.send({ results: await console_.searchPlatform(q ?? '') });
+  });
+
+  // Etablissements : liste paginee et fiche.
+  app.get('/tenants', async (req, reply) => {
+    const q = req.query as { search?: string; state?: string; page?: string; pageSize?: string };
+    return reply.send(
+      await console_.listPlatformTenants({
+        search: q.search,
+        state: q.state as never,
+        page: q.page ? Number(q.page) : undefined,
+        pageSize: q.pageSize ? Number(q.pageSize) : undefined,
+      }),
+    );
+  });
+
+  app.get('/tenants/:tenantId', async (req, reply) => {
+    const { tenantId } = req.params as { tenantId: string };
+    const tenant = await console_.getPlatformTenant(tenantId);
+    if (!tenant) throw notFound('Etablissement introuvable');
+    return reply.send({ tenant });
+  });
 
   // Indicateurs clés (console fondateur).
   app.get('/stats', async (_req, reply) => {
@@ -94,6 +131,24 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Liste des utilisateurs de toute la plateforme (suivi).
+  /**
+   * Liste paginee cote serveur. Les anciens appels sans parametre recoivent la
+   * premiere page : la reponse porte desormais `users`, `total`, `page` et
+   * `pageSize` la ou elle ne portait que `users`, donc l'ancien lecteur
+   * continue de fonctionner.
+   */
+  app.get('/users/paged', async (req, reply) => {
+    const q = req.query as { search?: string; filter?: string; page?: string; pageSize?: string };
+    return reply.send(
+      await console_.listPlatformUsers({
+        search: q.search,
+        filter: q.filter as never,
+        page: q.page ? Number(q.page) : undefined,
+        pageSize: q.pageSize ? Number(q.pageSize) : undefined,
+      }),
+    );
+  });
+
   app.get('/users', async (_req, reply) => {
     const users = await billing.listAllUsers();
     return reply.send({ users });

@@ -144,6 +144,27 @@ export async function invoicingRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(await invoicing.markInvoiceSent(id, resolved, actorOf(req)));
   });
 
+  app.get('/payments', async (req, reply) => {
+    const q = req.query as {
+      status?: string;
+      search?: string;
+      from?: string;
+      to?: string;
+      page?: string;
+      pageSize?: string;
+    };
+    return reply.send(
+      await invoicing.listPlatformPayments({
+        status: q.status,
+        search: q.search,
+        from: q.from,
+        to: q.to,
+        page: q.page ? Number(q.page) : undefined,
+        pageSize: q.pageSize ? Number(q.pageSize) : undefined,
+      }),
+    );
+  });
+
   /* ------------------------- Abonnements et relances ------------------------- */
 
   app.get('/subscriptions', async (_req, reply) => {
