@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Repeat, Search } from 'lucide-react';
+import { Receipt, Repeat, Search } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@oculo/shared-types';
-import { Badge, EmptyState, PageLoader } from '../../../components/ui';
+import { Badge, Button, EmptyState, PageLoader } from '../../../components/ui';
 import { formatCurrency } from '../../../lib/format';
 import { listBillingSubscriptions } from '../../../features/billing/invoicing';
 import { shortDate } from './shared';
@@ -23,7 +23,7 @@ const STATUS_META: Record<string, { label: string; tone: 'success' | 'warning' |
  * sinon l'écran affiche « Actif » pour un accès que le garde d'abonnement
  * refuse déjà.
  */
-export function BillingSubscriptionsTab() {
+export function BillingSubscriptionsTab({ onOpenTenant }: { onOpenTenant: (tenantId: string) => void }) {
   const [search, setSearch] = useState('');
   const { data, isLoading } = useQuery({
     queryKey: ['platform-billing-subscriptions'],
@@ -71,6 +71,7 @@ export function BillingSubscriptionsTab() {
                 <th className="table-cell font-semibold">Renouvellement</th>
                 <th className="table-cell font-semibold">Statut</th>
                 <th className="table-cell font-semibold">Dernier paiement</th>
+                <th className="table-cell text-right font-semibold">Facturation</th>
               </tr>
             </thead>
             <tbody>
@@ -116,6 +117,15 @@ export function BillingSubscriptionsTab() {
                       ) : (
                         <span className="text-xs">Aucun paiement enregistré</span>
                       )}
+                    </td>
+                    <td className="table-cell text-right">
+                      <Button
+                        variant="outline"
+                        className="h-8 px-3 text-xs"
+                        onClick={() => onOpenTenant(s.tenantId)}
+                      >
+                        <Receipt className="h-3.5 w-3.5" /> Facturation
+                      </Button>
                     </td>
                   </tr>
                 );

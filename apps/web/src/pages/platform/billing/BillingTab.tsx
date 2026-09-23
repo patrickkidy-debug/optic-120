@@ -13,6 +13,7 @@ import { NewInvoiceModal } from './NewInvoiceModal';
 import { PaymentModal } from './PaymentModal';
 import { RefundModal } from './RefundModal';
 import { WhatsappModal } from './WhatsappModal';
+import { TenantBillingModal } from './TenantBillingModal';
 
 const SUB_TABS = [
   { id: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard },
@@ -38,7 +39,8 @@ export function BillingTab() {
   const [refreshToken, setRefreshToken] = useState(0);
 
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<{ tenantId?: string } | null>(null);
+  const [tenantBilling, setTenantBilling] = useState<string | null>(null);
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [refunding, setRefunding] = useState<Invoice | null>(null);
   const [sending, setSending] = useState<{ invoice: Invoice; kind: InvoiceMessageKind } | null>(null);
@@ -57,6 +59,7 @@ export function BillingTab() {
       'platform-billing-subscriptions',
       'platform-billing-reminders',
       'platform-billing-clients',
+      'platform-billing-tenant',
       // Les écrans historiques de la console lisent les mêmes factures.
       'platform-finance-summary',
       'platform-finance-invoices',
@@ -94,7 +97,7 @@ export function BillingTab() {
 
       {tab === 'overview' && (
         <BillingOverviewTab
-          onCreateInvoice={() => setCreating(true)}
+          onCreateInvoice={() => setCreating({})}
           onSendInvoice={() => setTab('invoices')}
         />
       )}
@@ -103,14 +106,14 @@ export function BillingTab() {
         <BillingInvoicesTab
           refreshToken={refreshToken}
           onOpen={(i) => setDetailId(i.id)}
-          onCreate={() => setCreating(true)}
+          onCreate={() => setCreating({})}
           onRecordPayment={setPaying}
           onRefund={setRefunding}
           onSendWhatsapp={(i) => setSending({ invoice: i, kind: 'invoice' })}
         />
       )}
 
-      {tab === 'subscriptions' && <BillingSubscriptionsTab />}
+      {tab === 'subscriptions' && <BillingSubscriptionsTab onOpenTenant={setTenantBilling} />}
 
       {tab === 'reminders' && (
         <BillingRemindersTab onSend={(invoice, kind) => setSending({ invoice, kind })} />
@@ -131,9 +134,10 @@ export function BillingTab() {
 
       {creating && (
         <NewInvoiceModal
-          onClose={() => setCreating(false)}
+          presetTenantId={creating.tenantId}
+          onClose={() => setCreating(null)}
           onCreated={(invoice) => {
-            setCreating(false);
+            setCreating(null);
             refreshAll();
             setDetailId(invoice.id);
             // La facture vient d'être émise : l'envoyer est le geste suivant
@@ -164,6 +168,22 @@ export function BillingTab() {
             refreshAll();
             setDetailId(invoice.id);
           }}
+        />
+      )}
+
+      {tenantBilling && (
+        <TenantBillingModal
+          tenantId={tenantBilling}
+          onClose={() => setTenantBilling(null)}
+          // La facture part deja rattachee au bon etablissement : le fondateur
+          // n'a pas a le rechoisir dans une liste de 43 lignes (§32).
+          onCreateInvoice={(tenantId) => {
+            setTenantBilling(null);
+            setCreating({ tenantId });
+          }}
+          onOpenInvoice={(i) => setDetailId(i.id)}
+          onRecordPayment={setPaying}
+          onSendWhatsapp={(i) => setSending({ invoice: i, kind: 'invoice' })}
         />
       )}
 
