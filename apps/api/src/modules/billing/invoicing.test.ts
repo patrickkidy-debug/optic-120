@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SubInvoiceStatus, invoiceTotals, manualInvoiceSchema, refundSchema } from '@oculo/shared-types';
-import { isOverdue, settlementStatus } from './invoicing.service.js';
+import { isOverdue, settlementStatus, startOfTodayUtc } from './invoicing.service.js';
 
 /**
  * Ces tests portent sur les trois règles qui décident si de l'argent est
@@ -45,6 +45,20 @@ describe('retard', () => {
 
   it("une facture dont l'échéance est à venir ne l'est pas", () => {
     expect(isOverdue({ status: 'PENDING', dueDate: future, amount: 100, amountPaid: 0 })).toBe(false);
+  });
+
+  /**
+   * Le cas qui envoyait une relance « en retard » le matin même de l'échéance :
+   * le client a la journée entière pour payer.
+   */
+  it("une facture due AUJOURD'HUI n'est pas encore en retard", () => {
+    const today = new Date(startOfTodayUtc());
+    expect(isOverdue({ status: 'PENDING', dueDate: today, amount: 100, amountPaid: 0 })).toBe(false);
+  });
+
+  it("une facture due hier est en retard", () => {
+    const yesterday = new Date(startOfTodayUtc() - 86_400_000);
+    expect(isOverdue({ status: 'PENDING', dueDate: yesterday, amount: 100, amountPaid: 0 })).toBe(true);
   });
 
   /**

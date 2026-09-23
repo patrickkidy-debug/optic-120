@@ -50,6 +50,7 @@ import {
   type LucideIcon,
   BellRing,
   Megaphone,
+  ReceiptText,
 } from 'lucide-react';
 import {
   platformSuspend,
@@ -107,6 +108,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, Field, Modal, ProgressBar } from '../../components/ui';
 import { RenewalsTab } from './RenewalsTab';
 import { AnnouncementsTab } from './AnnouncementsTab';
+import { BillingTab } from './billing/BillingTab';
 import { PaymentProviderCard } from './PaymentProviderCard';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
@@ -236,7 +238,7 @@ function NotificationBell() {
   );
 }
 
-type Tab = 'payments' | 'renewals' | 'announcements' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
+type Tab = 'billing' | 'payments' | 'renewals' | 'announcements' | 'demos' | 'engagement' | 'users' | 'plans' | 'support' | 'finance' | 'team' | 'partners' | 'storeSetup';
 
 export function PlatformPage() {
   const qc = useQueryClient();
@@ -311,6 +313,7 @@ export function PlatformPage() {
       {/* Onglets */}
       <div className="mt-6 flex gap-1 overflow-x-auto border-b">
         {[
+          { id: 'billing' as Tab, label: 'Facturation', icon: ReceiptText },
           { id: 'finance' as Tab, label: 'Finances', icon: Wallet },
           { id: 'payments' as Tab, label: 'À confirmer', icon: BadgeCheck },
           { id: 'renewals' as Tab, label: 'Renouvellements', icon: BellRing },
@@ -339,6 +342,7 @@ export function PlatformPage() {
       </div>
 
       <div className="mt-5">
+        {tab === 'billing' && <BillingTab />}
         {tab === 'finance' && <FinanceTab />}
         {tab === 'payments' && <PaymentsTab />}
         {tab === 'renewals' && <RenewalsTab />}

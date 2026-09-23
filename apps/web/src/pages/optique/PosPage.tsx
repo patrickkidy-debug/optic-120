@@ -68,6 +68,11 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   MULTICAIXA: 'Multicaixa Express',
   UNITEL_MONEY: 'Unitel Money',
   VINTI4: 'Vinti4',
+  // Facturation de l'editeur uniquement : absents de paymentMethodsForCountry(),
+  // donc jamais proposes en caisse. Presents ici parce que la carte est
+  // exhaustive par type.
+  BANK_TRANSFER: 'Virement bancaire',
+  OTHER: 'Autre',
 };
 
 /**

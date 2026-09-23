@@ -93,11 +93,31 @@ export function settlementStatus(total: number, paid: number): SubInvoiceStatus 
   return SubInvoiceStatus.PARTIALLY_PAID;
 }
 
-/** Une facture est « en retard » si elle reste due et que l'échéance est passée. */
+/**
+ * Début du jour courant, en UTC — la même référence que celle utilisée pour
+ * stocker les échéances saisies (« AAAA-MM-JJ » devient minuit UTC).
+ */
+export function startOfTodayUtc(now: Date = new Date()): number {
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+/**
+ * Une facture est « en retard » si elle reste due et que son échéance est
+ * STRICTEMENT antérieure à aujourd'hui.
+ *
+ * Comparer l'échéance à l'instant présent déclarerait en retard, dès la
+ * première minute, une facture due le jour même : le client a la journée pour
+ * payer, et une relance « en retard » envoyée le matin de l'échéance est une
+ * erreur visible par le client.
+ */
 export function isOverdue(row: { status: string; dueDate: Date; amount: unknown; amountPaid: unknown }): boolean {
   const stillDue =
     row.status === SubInvoiceStatus.PENDING || row.status === SubInvoiceStatus.PARTIALLY_PAID;
-  return stillDue && row.dueDate.getTime() < Date.now() && num(row.amount as never) > num(row.amountPaid as never);
+  return (
+    stillDue &&
+    row.dueDate.getTime() < startOfTodayUtc() &&
+    num(row.amount as never) > num(row.amountPaid as never)
+  );
 }
 
 /* -------------------------------- Journal -------------------------------- */
@@ -280,7 +300,7 @@ export async function listInvoices(params: ListInvoiceParams) {
   if (filter === 'overdue') {
     // Déduit, pas stocké : voir INVOICE_FILTERS côté types partagés.
     where.status = { in: [SubInvoiceStatus.PENDING, SubInvoiceStatus.PARTIALLY_PAID] };
-    where.dueDate = { lt: new Date() };
+    where.dueDate = { lt: new Date(startOfTodayUtc()) };
   } else if (filter === 'CANCELLED') {
     where.status = { in: [SubInvoiceStatus.CANCELLED, SubInvoiceStatus.VOID] };
   } else if (filter === 'REFUNDED') {
@@ -883,8 +903,14 @@ function boundsFor(params: OverviewParams): { from: Date; to: Date } {
 /**
  * Indicateurs de la période. Le chiffre d'affaires vient des PAIEMENTS réussis,
  * daté de l'encaissement réel (`paidAt` quand il est connu, sinon la date de
- * création). Les avoirs et les remboursements sont retranchés : un module qui
- * annonce un encaissement déjà rendu au client est faux.
+ * création).
+ *
+ * Seuls les REMBOURSEMENTS sont retranchés, pas les avoirs. Un avoir est le
+ * document qui constate l'annulation ; le remboursement est le mouvement
+ * d'argent. Les retrancher tous les deux compte deux fois le même retour —
+ * c'est ce qui affichait un chiffre d'affaires négatif sur une facture à la
+ * fois remboursée et avoirée. Les avoirs restent affichés à part : leur nombre
+ * et leur montant renseignent, mais ils ne sortent pas de caisse.
  */
 export async function getBillingOverview(params: OverviewParams) {
   const { from, to } = boundsFor(params);
@@ -949,7 +975,7 @@ export async function getBillingOverview(params: OverviewParams) {
       case SubInvoiceStatus.PARTIALLY_PAID:
         counters.pending += 1;
         outstanding += balance;
-        if (row.dueDate.getTime() < Date.now() && balance > 0) counters.overdue += 1;
+        if (row.dueDate.getTime() < startOfTodayUtc() && balance > 0) counters.overdue += 1;
         break;
       case SubInvoiceStatus.CANCELLED:
       case SubInvoiceStatus.VOID:
@@ -987,7 +1013,10 @@ export async function getBillingOverview(params: OverviewParams) {
       gross: grossRevenue,
       refunded,
       credited,
-      net: grossRevenue - refunded - credited,
+      // Le net peut etre negatif si l'on rembourse sur la periode un paiement
+      // recu avant elle. C'est un fait, pas une anomalie : on l'affiche tel
+      // quel plutot que de le rabattre a zero.
+      net: grossRevenue - refunded,
       paymentsCount: payments.length,
     },
     mrr,
