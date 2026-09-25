@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
 import {
   ACTIVATION_NEEDS,
@@ -62,7 +62,12 @@ function writeToken(token: string): void {
 
 export function ActivationPage() {
   const [params] = useSearchParams();
+  const location = useLocation();
+  // Clic sur le logo : on veut la presentation, meme si un parcours est en cours.
+  const wantsIntro = (location.state as { intro?: boolean } | null)?.intro === true;
   const [screen, setScreen] = useState<Screen>('INTRO');
+  // Etape ou reprendre un parcours interrompu, quand on repart de la presentation.
+  const [resumeStep, setResumeStep] = useState<ActivationStep>('ACTIVITY');
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -107,17 +112,38 @@ export function ActivationPage() {
           city: s.city ?? '',
         });
         // Un parcours déjà réglé ne se reprend pas : il repart de zéro.
-        if (!s.activated && s.step !== 'DONE') setScreen(s.step as ActivationStep);
+        if (!s.activated && s.step !== 'DONE') {
+          setResumeStep(s.step as ActivationStep);
+          // Arrivee par le logo : la presentation d'abord, la reprise ensuite.
+          if (!wantsIntro) setScreen(s.step as ActivationStep);
+        }
       })
       .catch(() => undefined)
       .finally(() => setRestoring(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Toute etape atteinte devient le point de reprise : sans cela, repasser par
+  // la presentation au milieu du parcours ramenait a la premiere question.
+  useEffect(() => {
+    if (screen !== 'INTRO') setResumeStep(screen);
+  }, [screen]);
+
+  // Clic sur le logo alors que la page est deja ouverte : meme route, donc pas
+  // de remontage — on bascule l'ecran explicitement.
+  useEffect(() => {
+    if (!wantsIntro) return;
+    setScreen('INTRO');
+    setError('');
+    window.scrollTo({ top: 0 });
+  }, [location.key, wantsIntro]);
 
   /** Crée le parcours au premier clic, avec l'origine publicitaire. */
   async function begin() {
     setError('');
     if (token) {
-      setScreen('ACTIVITY');
+      // Parcours deja entame : reprendre a l'etape atteinte, pas au debut.
+      setScreen(resumeStep);
       return;
     }
     setBusy(true);

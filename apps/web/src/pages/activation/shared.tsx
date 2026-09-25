@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { ACTIVATION_STEP_COUNT, ACTIVATION_STEP_ORDER, type ActivationStep } from '@oculo/shared-types';
 
@@ -50,14 +51,28 @@ export function ActivationShell({
   );
 }
 
+/**
+ * Logo et nom : ramenent a la presentation du tunnel (l'ecran d'accueil de
+ * /activation), pas au site vitrine. Le prospect est en train de s'activer ;
+ * le renvoyer ailleurs lui ferait perdre le fil.
+ *
+ * La presentation n'a pas de route propre — c'est un etat de la page — donc le
+ * lien passe l'intention par l'etat de navigation. La progression enregistree
+ * n'est pas effacee : « Commencer » reprend ou le prospect s'etait arrete.
+ */
 export function Brand() {
   return (
-    <div className="mb-6 flex items-center gap-2">
+    <Link
+      to="/activation"
+      state={{ intro: true }}
+      aria-label="OculoSaaS — revenir à la présentation"
+      className="mb-6 inline-flex items-center gap-2 rounded-xl transition-opacity hover:opacity-80"
+    >
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-sm">
         O
       </span>
       <span className="font-display text-lg font-extrabold tracking-tight text-content">OculoSaaS</span>
-    </div>
+    </Link>
   );
 }
 
