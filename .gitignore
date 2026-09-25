@@ -51,3 +51,6 @@ Thumbs.db
 .cache/
 tmp/
 temp/
+
+# Inventaires du script de purge : contiennent e-mails et numeros de clients.
+purge-unpaid-*.json
