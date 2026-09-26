@@ -15,6 +15,7 @@ import { branchesRoutes } from './modules/branches/branches.routes.js';
 import { productsRoutes } from './modules/products/products.routes.js';
 import { productsImportRoutes } from './modules/products/products-import.routes.js';
 import { stockRoutes } from './modules/stock/stock.routes.js';
+import { syncRoutes } from './modules/sync/sync.routes.js';
 import { inventoryRoutes } from './modules/inventory/inventory.routes.js';
 import { customersRoutes } from './modules/customers/customers.routes.js';
 import { salesRoutes } from './modules/sales/sales.routes.js';
@@ -145,6 +146,7 @@ export async function buildApp() {
   await app.register(productsRoutes, { prefix: '/products' });
   await app.register(productsImportRoutes, { prefix: '/products/import' });
   await app.register(stockRoutes, { prefix: '/stock' });
+  await app.register(syncRoutes, { prefix: '/sync' });
   await app.register(inventoryRoutes, { prefix: '/inventory-counts' });
   await app.register(customersRoutes, { prefix: '/customers' });
   await app.register(salesRoutes, { prefix: '/sales' });

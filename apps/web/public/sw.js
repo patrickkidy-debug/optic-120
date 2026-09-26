@@ -1,11 +1,38 @@
 /* Service worker OculoSaaS — rend l'app installable (PWA) et utilisable hors-ligne.
  * Stratégie sûre : navigation = network-first (jamais de HTML périmé),
  * assets hashés = cache-first. L'API (cross-origin) n'est jamais interceptée. */
-const CACHE = 'oculosaas-v3';
+const CACHE = 'oculosaas-v4';
+
+/**
+ * Installation : met en cache TOUTE l'application (liste produite au build,
+ * /precache.json), pour que chaque écran s'ouvre hors ligne — y compris ceux
+ * jamais visités, chargés à la demande.
+ *
+ * Un fichier qui ne se télécharge pas n'empêche pas l'installation : mieux vaut
+ * une application presque entièrement disponible hors ligne que pas de mise à
+ * jour du tout sur une connexion mobile capricieuse.
+ */
+async function precacheApp() {
+  const cache = await caches.open(CACHE);
+  try {
+    const res = await fetch('/precache.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const files = await res.json();
+    await Promise.all(
+      ['/index.html', ...files].map((url) =>
+        cache.add(new Request(url, { cache: 'reload' })).catch(() => undefined),
+      ),
+    );
+  } catch {
+    /* Hors ligne à l'installation : les fichiers seront mis en cache à l'usage. */
+  }
+}
 
 // Active immédiatement la nouvelle version (pas d'attente que tous les onglets
 // ferment) ; combiné à clients.claim(), la MAJ s'applique sans délai.
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (event) => {
+  event.waitUntil(precacheApp().then(() => self.skipWaiting()));
+});
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });

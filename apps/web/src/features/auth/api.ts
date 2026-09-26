@@ -10,6 +10,8 @@ import type {
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 import { setUnlockSecret, clearUnlockSecret } from '../../lib/unlock';
+import { clearOfflineSession } from '../../lib/offline/session';
+import { wipeLocalDataOnLogout } from '../../lib/offline';
 
 interface AuthResponse {
   accessToken: string;
@@ -143,9 +145,16 @@ export async function resendVerification(): Promise<void> {
 
 export async function logout(): Promise<void> {
   try {
-    await api.post('/auth/logout');
+    await api.post('/auth/logout', {}, { timeout: 8000, _noRetry: true } as never);
+  } catch {
+    // Hors ligne, le serveur ne peut pas être prévenu : la déconnexion locale
+    // a lieu quand même, et le cookie de session expirera de lui-même.
   } finally {
     clearUnlockSecret();
+    clearOfflineSession();
+    // Données locales de cet utilisateur effacées de l'appareil, sauf les
+    // actions pas encore envoyées, gardées pour sa prochaine connexion.
+    await wipeLocalDataOnLogout().catch(() => 0);
     useAuthStore.getState().clear();
   }
 }

@@ -3579,3 +3579,51 @@ export const INVOICE_EVENT_LABELS: Record<string, string> = {
   CREDIT_NOTE_ISSUED: 'Avoir émis',
   UPDATED: 'Facture modifiée',
 };
+
+/* ==========================================================================
+ * SYNCHRONISATION HORS-LIGNE — protocole appareil <-> serveur
+ *
+ * Chaque operation porte un identifiant cree sur l'appareil (`opId`). Le
+ * serveur le garde : une operation renvoyee recoit le resultat deja obtenu,
+ * sans etre rejouee. C'est l'idempotence qui empeche les doublons.
+ * ========================================================================== */
+
+export const SYNC_OP_KINDS = ['SALE_CREATE', 'STOCK_ADJUST'] as const;
+export type SyncOpKind = (typeof SYNC_OP_KINDS)[number];
+
+/** Nombre maximal d'operations par envoi : borne la taille d'une requete. */
+export const SYNC_PUSH_MAX = 50;
+
+export const syncOperationSchema = z.object({
+  opId: z.string().uuid(),
+  kind: z.enum(SYNC_OP_KINDS),
+  entityId: z.string().uuid().optional(),
+  payload: z.record(z.unknown()),
+  /** Instant ou l'utilisateur a agi, sur l'appareil (ISO 8601). */
+  createdAt: z.string().datetime(),
+});
+export type SyncOperationInput = z.infer<typeof syncOperationSchema>;
+
+export const syncPushSchema = z.object({
+  deviceId: z.string().min(8).max(64),
+  operations: z.array(syncOperationSchema).min(1).max(SYNC_PUSH_MAX),
+});
+export type SyncPushInput = z.infer<typeof syncPushSchema>;
+
+/**
+ * Issue d'une operation cote serveur.
+ * - APPLIED  : appliquee (ou deja appliquee lors d'un envoi precedent).
+ * - REJECTED : refusee pour une raison metier ou de droits. DEFINITIF : la
+ *              renvoyer donnerait le meme refus. A montrer au gerant.
+ * - RETRY    : non traitee (operation concurrente en cours, panne
+ *              transitoire). L'appareil la renverra plus tard.
+ */
+export type SyncOpOutcome = 'APPLIED' | 'REJECTED' | 'RETRY';
+
+export interface SyncOpResult {
+  opId: string;
+  outcome: SyncOpOutcome;
+  /** Donnees utiles a l'appareil (ex. numero definitif de la vente). */
+  result?: Record<string, unknown>;
+  error?: string;
+}

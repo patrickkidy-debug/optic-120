@@ -20,6 +20,7 @@ import {
   cancelClaimForSale,
 } from '../management/insurance.service.js';
 import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
+import { adjustStockBy, decrementStockIfAvailable } from '../../lib/stock-atomic.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -97,7 +98,17 @@ interface ComputedLine {
  * serveur (jamais confiance au client). Pour une vente, le stock est décrémenté
  * atomiquement (rejet si insuffisant).
  */
-export async function createSale(tenantId: string, userId: string, input: SaleCreateInput) {
+export async function createSale(
+  tenantId: string,
+  userId: string,
+  input: SaleCreateInput,
+  /**
+   * Identifiant impose par l'appelant : une vente creee hors-ligne arrive avec
+   * l'UUID genere sur l'appareil, pour que la vente affichee localement et la
+   * vente enregistree soient la meme.
+   */
+  opts: { id?: string } = {},
+) {
   if (input.type === SaleType.SALE) {
     await assertWithinLimit(tenantId, 'sales');
   }
@@ -198,6 +209,7 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
 
     const sale = await tx.sale.create({
       data: {
+        ...(opts.id ? { id: opts.id } : {}),
         tenantId,
         branchId: input.branchId,
         customerId: input.customerId ?? null,
@@ -261,13 +273,9 @@ export async function createSale(tenantId: string, userId: string, input: SaleCr
         const item = await tx.stockItem.findFirst({
           where: { productId: line.productId, branchId: input.branchId, tenantId },
         });
-        if (!item || item.quantity < line.quantity) {
+        if (!item || !(await decrementStockIfAvailable(tx, item.id, line.quantity))) {
           throw badRequest(`Stock insuffisant pour « ${line.name} »`);
         }
-        await tx.stockItem.update({
-          where: { id: item.id },
-          data: { quantity: item.quantity - line.quantity },
-        });
         await tx.stockMovement.create({
           data: {
             tenantId,
@@ -445,13 +453,13 @@ export async function updateSale(
           if (delta > 0) throw badRequest(`Stock insuffisant pour « ${label} »`);
           continue;
         }
-        if (delta > 0 && item.quantity < delta) {
-          throw badRequest(`Stock insuffisant pour « ${label} »`);
+        if (delta > 0) {
+          if (!(await decrementStockIfAvailable(tx, item.id, delta))) {
+            throw badRequest(`Stock insuffisant pour « ${label} »`);
+          }
+        } else {
+          await adjustStockBy(tx, item.id, -delta);
         }
-        await tx.stockItem.update({
-          where: { id: item.id },
-          data: { quantity: item.quantity - delta },
-        });
         await tx.stockMovement.create({
           data: {
             tenantId,
@@ -600,10 +608,7 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
         where: { productId: i.productId, branchId: sale.branchId, tenantId },
       });
       if (item) {
-        await tx.stockItem.update({
-          where: { id: item.id },
-          data: { quantity: item.quantity + i.quantity },
-        });
+        await adjustStockBy(tx, item.id, i.quantity);
         await tx.stockMovement.create({
           data: {
             tenantId,
@@ -652,10 +657,7 @@ export async function cancelSale(tenantId: string, saleId: string, userId: strin
           where: { productId: line.productId, branchId: sale.branchId, tenantId },
         });
         if (item) {
-          await tx.stockItem.update({
-            where: { id: item.id },
-            data: { quantity: item.quantity + line.quantity },
-          });
+          await adjustStockBy(tx, item.id, line.quantity);
           await tx.stockMovement.create({
             data: {
               tenantId,
@@ -695,13 +697,9 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
       const item = await tx.stockItem.findFirst({
         where: { productId: line.productId, branchId: quote.branchId, tenantId },
       });
-      if (!item || item.quantity < line.quantity) {
+      if (!item || !(await decrementStockIfAvailable(tx, item.id, line.quantity))) {
         throw badRequest('Stock insuffisant pour convertir ce devis');
       }
-      await tx.stockItem.update({
-        where: { id: item.id },
-        data: { quantity: item.quantity - line.quantity },
-      });
       await tx.stockMovement.create({
         data: {
           tenantId,

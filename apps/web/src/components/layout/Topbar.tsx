@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { WhatsNewBell } from './WhatsNewBell';
+import { SyncStatus } from '../SyncStatus';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -367,6 +368,7 @@ export function Topbar() {
       </div>
 
       <div className="flex-1" />
+      <SyncStatus />
       <WhatsNewBell />
       <ThemeToggle />
       <LanguageToggle />

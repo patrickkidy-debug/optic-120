@@ -12,6 +12,7 @@ import { useUIStore } from './store/ui';
 import { refreshSession } from './lib/api';
 import { trackPixelPageView } from './lib/pixel';
 import { captureReferralFromUrl } from './lib/partnerReferral';
+import { startOffline } from './lib/offline';
 
 applyTheme(getStoredTheme());
 
@@ -27,8 +28,12 @@ router.subscribe((state) => {
 function Root() {
   useEffect(() => {
     const unwatch = watchSystemTheme(() => useUIStore.getState().theme);
+    startOffline();
     void refreshSession().then((token) => {
-      if (!token) useAuthStore.getState().setStatus('unauthenticated');
+      // Pas de jeton mais une session hors ligne ouverte : on la garde.
+      if (!token && useAuthStore.getState().status !== 'authenticated') {
+        useAuthStore.getState().setStatus('unauthenticated');
+      }
     });
     // OculoPartners : capture un lien de parrainage (?ref=CODE) présent dans
     // l'URL d'atterrissage, quelle que soit la page. Fire-and-forget.

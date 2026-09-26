@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Download, WifiOff, X, Share } from 'lucide-react';
 import { Button } from './ui';
+import { useNetworkStore } from '../lib/offline/network';
+import { useAuthStore } from '../store/auth';
 
 const IOS_HINT_KEY = 'oculo_ios_hint_dismissed';
 
@@ -38,7 +40,10 @@ export function PwaControls() {
   // ligne » reste affiche partout, lui : il previent d'une vraie panne.
   const onFunnel = useLocation().pathname.startsWith('/activation');
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
-  const [offline, setOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
+  // Etat reseau VERIFIE (voir lib/offline/network.ts) plutot que
+  // navigator.onLine, qui dit « en ligne » sur un Wi-Fi sans Internet.
+  const offline = !useNetworkStore((st) => st.online);
+  const hasSession = useAuthStore((st) => !!st.user);
   const [dismissed, setDismissed] = useState(false);
   const [iosHint, setIosHint] = useState(false);
 
@@ -57,22 +62,16 @@ export function PwaControls() {
       w.__oculoInstallPrompt = null;
       setDeferred(null);
     };
-    const goOnline = () => setOffline(false);
-    const goOffline = () => setOffline(true);
 
     setIosHint(shouldShowIosHint());
     if (w.__oculoInstallPrompt) setDeferred(w.__oculoInstallPrompt);
     window.addEventListener('oculo-install-available', onAvailable);
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
     return () => {
       window.removeEventListener('oculo-install-available', onAvailable);
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
     };
   }, []);
 
@@ -98,7 +97,9 @@ export function PwaControls() {
           role="status"
         >
           <WifiOff className="h-4 w-4 shrink-0" />
-          Hors ligne — les données ne se mettent plus à jour. Reconnexion automatique au retour du réseau.
+          {hasSession
+            ? 'Hors connexion — vos modifications sont enregistrées sur cet appareil et seront synchronisées automatiquement.'
+            : 'Hors connexion — reconnexion automatique au retour du réseau.'}
         </div>
       )}
 

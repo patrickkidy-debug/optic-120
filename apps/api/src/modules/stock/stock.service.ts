@@ -1,6 +1,7 @@
 import { StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
 import { badRequest, notFound } from '../../lib/http-error.js';
+import { adjustStockBy, decrementStockIfAvailable } from '../../lib/stock-atomic.js';
 
 export interface AdjustStockInput {
   productId: string;
@@ -39,15 +40,17 @@ export async function adjustStock(tenantId: string, input: AdjustStockInput, use
       });
     }
 
-    const newQty = item.quantity + input.delta;
-    if (newQty < 0) throw badRequest('Stock insuffisant pour cet ajustement');
-
+    // Retrait : verifie et retire en une instruction ; ajout : increment.
+    if (input.delta < 0) {
+      if (!(await decrementStockIfAvailable(tx, item.id, -input.delta))) {
+        throw badRequest('Stock insuffisant pour cet ajustement');
+      }
+    } else {
+      await adjustStockBy(tx, item.id, input.delta);
+    }
     item = await tx.stockItem.update({
       where: { id: item.id },
-      data: {
-        quantity: newQty,
-        ...(input.minAlert !== undefined ? { minAlert: input.minAlert } : {}),
-      },
+      data: input.minAlert !== undefined ? { minAlert: input.minAlert } : {},
     });
 
     await tx.stockMovement.create({
@@ -115,10 +118,7 @@ export async function receiveStock(
       if (!product) throw badRequest(`Produit introuvable : ${line.productId}`);
 
       const item = await ensureStockItem(tx, tenantId, line.productId, input.branchId);
-      await tx.stockItem.update({
-        where: { id: item.id },
-        data: { quantity: item.quantity + line.quantity },
-      });
+      await adjustStockBy(tx, item.id, line.quantity);
       await tx.stockMovement.create({
         data: {
           tenantId,
@@ -181,14 +181,9 @@ export async function transferStock(
       const source = await tx.stockItem.findFirst({
         where: { productId: line.productId, branchId: input.fromBranchId, tenantId },
       });
-      if (!source || source.quantity < line.quantity) {
+      if (!source || !(await decrementStockIfAvailable(tx, source.id, line.quantity))) {
         throw badRequest(`Stock insuffisant pour « ${product.name} » dans ${from.name}`);
       }
-
-      await tx.stockItem.update({
-        where: { id: source.id },
-        data: { quantity: source.quantity - line.quantity },
-      });
       await tx.stockMovement.create({
         data: {
           tenantId,
@@ -252,10 +247,7 @@ export async function confirmTransfer(tenantId: string, userId: string, transfer
 
     for (const item of transfer.items) {
       const target = await ensureStockItem(tx, tenantId, item.productId, transfer.toBranchId);
-      await tx.stockItem.update({
-        where: { id: target.id },
-        data: { quantity: target.quantity + item.quantity },
-      });
+      await adjustStockBy(tx, target.id, item.quantity);
       await tx.stockMovement.create({
         data: {
           tenantId,
@@ -298,10 +290,7 @@ export async function cancelTransfer(tenantId: string, userId: string, transferI
 
     for (const item of transfer.items) {
       const source = await ensureStockItem(tx, tenantId, item.productId, transfer.fromBranchId);
-      await tx.stockItem.update({
-        where: { id: source.id },
-        data: { quantity: source.quantity + item.quantity },
-      });
+      await adjustStockBy(tx, source.id, item.quantity);
       await tx.stockMovement.create({
         data: {
           tenantId,

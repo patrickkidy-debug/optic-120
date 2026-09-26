@@ -74,6 +74,7 @@ model Tenant {
   payments               Payment[]
   cashRegisters          CashRegister[]
   auditLogs              AuditLog[]
+  syncOperations         SyncOperation[]
   patients               Patient[]
   consultations          Consultation[]
   appointments           Appointment[]
@@ -2413,4 +2414,31 @@ model PartnerAuditLog {
 
   @@index([partnerId, createdAt])
   @@index([action, createdAt])
+}
+
+/// Journal des operations envoyees par les appareils (synchronisation
+/// hors-ligne). La cle primaire EST l'identifiant d'operation genere sur
+/// l'appareil : une operation renvoyee (coupure pendant la reponse, reprise
+/// apres crash) retrouve sa ligne et recoit le meme resultat, sans rien rejouer.
+/// C'est ce qui empeche une vente envoyee deux fois de devenir deux ventes.
+model SyncOperation {
+  id              String    @id
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId          String
+  deviceId        String
+  /// Nature de l'operation, ex. SALE_CREATE, STOCK_ADJUST.
+  kind            String
+  entityId        String?
+  /// PROCESSING (en cours) | APPLIED (appliquee) | REJECTED (refusee, definitif)
+  status          String
+  result          Json?
+  error           String?
+  /// Instant ou l'utilisateur a agi sur l'appareil — pas celui de l'envoi.
+  clientCreatedAt DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, deviceId])
+  @@index([tenantId, status])
 }
