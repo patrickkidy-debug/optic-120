@@ -83,10 +83,12 @@ const envSchema = z.object({
   // Encaissement MANUEL des abonnements par virement bancaire : coordonnées du
   // compte de l'éditeur. Même principe que le Mobile Money ci-dessus (le
   // fondateur confirme depuis la console) — proposé en plus, pas à la place.
-  PLATFORM_BANK_NAME: z.string().optional().default(''),
-  PLATFORM_BANK_ACCOUNT_NAME: z.string().optional().default(''),
-  PLATFORM_BANK_ACCOUNT_NUMBER: z.string().optional().default(''),
-  PLATFORM_BANK_SWIFT: z.string().optional().default(''),
+  // Valeurs par défaut = compte CBAO de l'éditeur (coordonnées destinées à
+  // être affichées aux clients) ; une variable d'environnement les remplace.
+  PLATFORM_BANK_NAME: z.string().optional().default('CBAO Saint-Louis (Groupe Attijariwafa bank)'),
+  PLATFORM_BANK_ACCOUNT_NAME: z.string().optional().default('PATRICK KONAN'),
+  PLATFORM_BANK_ACCOUNT_NUMBER: z.string().optional().default('SN08 SN012 08274 035216465301 66'),
+  PLATFORM_BANK_SWIFT: z.string().optional().default('CBAOSNDA'),
 
   // PayTech — passerelle de paiement (Wave, Orange Money, Free Money, cartes).
   // Clés de la PLATEFORME (encaissement des abonnements). Tant que la clé API
