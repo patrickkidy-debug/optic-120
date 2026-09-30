@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
 import {
   ACTIVATION_NEEDS,
@@ -12,6 +12,7 @@ import {
   type ActivationInformationInput,
   type ActivationNeed,
   type ActivationStep,
+  type AuthUser,
   type BranchCount,
   type PaymentMethod,
   type StructureType,
@@ -22,10 +23,14 @@ import {
   saveInformation,
   saveNeeds,
   savePlan,
+  getTrialOffer,
   startActivation,
   startPayment,
+  startTrial,
 } from '../../features/activation/api';
-import { apiErrorMessage } from '../../lib/api';
+import { api, apiErrorMessage } from '../../lib/api';
+import { useAuthStore } from '../../store/auth';
+import { setActiveCurrency } from '../../lib/format';
 import { Button, PageLoader } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, MultiChoiceCard, PrimaryAction } from './shared';
 import { Intro } from './Intro';
@@ -72,6 +77,11 @@ export function ActivationPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [restoring, setRestoring] = useState(true);
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  // Essai gratuit en fin de parcours ; 0 tant que la durée n'est pas connue
+  // (ou si l'essai est désactivé en console) : le bouton reste alors masqué.
+  const [trialMinutes, setTrialMinutes] = useState(0);
 
   const [structureType, setStructureType] = useState<StructureType | null>(null);
   const [branchCount, setBranchCount] = useState<BranchCount | null>(null);
@@ -121,6 +131,12 @@ export function ActivationPage() {
       .catch(() => undefined)
       .finally(() => setRestoring(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    getTrialOffer()
+      .then(setTrialMinutes)
+      .catch(() => setTrialMinutes(0));
   }, []);
 
   // Toute etape atteinte devient le point de reprise : sans cela, repasser par
@@ -191,6 +207,25 @@ export function ActivationPage() {
       // Pas de redirection (paiement mobile à confirmer) : on suit l'état
       // depuis la page de retour, seule à décider de l'activation.
       window.location.href = `/activation/retour?session=${encodeURIComponent(token)}`;
+    } catch (e) {
+      setError(apiErrorMessage(e));
+      setBusy(false);
+    }
+  }
+
+  /** Essai gratuit : le serveur ouvre la session, on entre directement dans l'espace. */
+  async function tryForFree() {
+    if (!token) return;
+    setBusy(true);
+    setError('');
+    try {
+      const { accessToken } = await startTrial(token);
+      const { data } = await api.get<{ user: AuthUser }>('/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setActiveCurrency(data.user.tenantCurrency);
+      setAuth(accessToken, data.user);
+      navigate('/dashboard', { replace: true });
     } catch (e) {
       setError(apiErrorMessage(e));
       setBusy(false);
@@ -344,6 +379,8 @@ export function ActivationPage() {
         error={error}
         onBack={() => setScreen('INFORMATION')}
         onPay={(m) => void pay(m)}
+        trialMinutes={trialMinutes}
+        onTrial={() => void tryForFree()}
       />
     );
   }

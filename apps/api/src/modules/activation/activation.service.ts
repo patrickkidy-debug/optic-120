@@ -335,6 +335,61 @@ export async function getActivationStatus(
   return { activated: true, ...tokens };
 }
 
+/** Durée de l'essai proposé en fin de tunnel ; 0 = essai désactivé en console. */
+export async function getTrialOffer(): Promise<{ minutes: number }> {
+  return { minutes: await billing.getTrialDurationMinutes() };
+}
+
+/**
+ * Essai gratuit, alternative au paiement en fin de tunnel.
+ *
+ * Seule exception à la règle « aucun accès avant paiement », et bornée :
+ *  - durée = réglage de la console fondateur (0 = essai refusé) ;
+ *  - un seul essai par établissement : n'est accepté que depuis l'état
+ *    PAST_DUE posé à la création (saveInformation). Un essai déjà consommé
+ *    laisse TRIALING, un paiement laisse ACTIVE : les deux sont refusés ;
+ *  - statut TRIALING, jamais ACTIVE : un essai ne compte pas comme revenu et
+ *    `paidAt` n'est pas posé — le parcours reste payable ensuite.
+ */
+export async function startTrial(
+  token: string,
+  meta: { ipAddress?: string; userAgent?: string },
+): Promise<{ trialEndsAt: Date; accessToken: string; refreshToken: string }> {
+  const session = await require_(token);
+  if (!session.tenantId) throw badRequest("Renseignez vos informations avant de tester le logiciel");
+  if (session.paidAt) throw conflict('Votre abonnement est déjà actif');
+
+  const minutes = await billing.getTrialDurationMinutes();
+  if (minutes <= 0) throw badRequest("L'essai gratuit n'est pas disponible pour le moment");
+
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + minutes * 60_000);
+  // Condition sur le statut DANS l'écriture : deux clics simultanés ne
+  // peuvent pas ouvrir deux essais.
+  const { count } = await prisma.subscription.updateMany({
+    where: { tenantId: session.tenantId, status: SubscriptionStatus.PAST_DUE },
+    data: {
+      status: SubscriptionStatus.TRIALING,
+      currentPeriodStart: now,
+      currentPeriodEnd: trialEnd,
+      trialEndsAt: trialEnd,
+    },
+  });
+  if (count === 0) throw conflict("L'essai gratuit a déjà été utilisé pour cet établissement");
+
+  await track(session.id, 'trial_started', { minutes });
+  await prisma.activationSession.update({ where: { id: session.id }, data: { lastSeenAt: now } });
+
+  const admin = await prisma.user.findFirst({
+    where: { tenantId: session.tenantId, isActive: true },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, tenantId: true, roleId: true },
+  });
+  if (!admin) throw notFound('Compte administrateur introuvable');
+  const tokens = await issueSession(admin, meta);
+  return { trialEndsAt: trialEnd, ...tokens };
+}
+
 export async function recordEvent(token: string, name: ActivationEventName): Promise<void> {
   const session = await require_(token);
   await track(session.id, name);

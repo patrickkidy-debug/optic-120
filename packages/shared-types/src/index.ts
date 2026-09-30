@@ -3242,6 +3242,7 @@ export const ACTIVATION_EVENTS = [
   'payment_started',
   'payment_success',
   'payment_failed',
+  'trial_started',
   'booking_started',
   'booking_completed',
   'whatsapp_clicked',

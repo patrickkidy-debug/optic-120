@@ -88,6 +88,21 @@ export async function activationRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ activated: status.activated, accessToken: status.accessToken });
   });
 
+  /** Durée de l'essai gratuit proposé en fin de parcours (0 = indisponible). */
+  app.get('/trial-offer', async (_req, reply) => {
+    return reply.send(await service.getTrialOffer());
+  });
+
+  /** Essai gratuit : ouvre l'espace sans paiement, une seule fois par établissement. */
+  app.post('/:token/trial', async (req: FastifyRequest, reply: FastifyReply) => {
+    const result = await service.startTrial(tokenOf(req), {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    setRefreshCookie(reply, result.refreshToken);
+    return reply.send({ accessToken: result.accessToken, trialEndsAt: result.trialEndsAt });
+  });
+
   /** Suivi marketing : mesure des abandons et des clics WhatsApp. */
   app.post('/:token/event', async (req, reply) => {
     const { name } = (req.body ?? {}) as { name?: string };

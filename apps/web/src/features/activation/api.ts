@@ -71,6 +71,18 @@ export async function startPayment(token: string, method: PaymentMethod): Promis
   return data;
 }
 
+/** Durée de l'essai gratuit en minutes ; 0 = essai désactivé. */
+export async function getTrialOffer(): Promise<number> {
+  const { data } = await api.get<{ minutes: number }>('/activation/trial-offer');
+  return data.minutes;
+}
+
+/** Démarre l'essai gratuit : le serveur ouvre la session (cookie + jeton d'accès). */
+export async function startTrial(token: string): Promise<{ accessToken: string; trialEndsAt: string }> {
+  const { data } = await api.post<{ accessToken: string; trialEndsAt: string }>(`/activation/${token}/trial`);
+  return data;
+}
+
 /** Ouvre une session quand le paiement est confirmé. `activated` fait foi. */
 export async function getActivationStatus(
   token: string,

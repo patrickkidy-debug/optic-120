@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Lock, PlayCircle, ShieldCheck } from 'lucide-react';
 import {
   PLAN_CATALOG,
   SUPPORTED_COUNTRIES,
@@ -26,6 +26,14 @@ const METHOD_LABELS: Record<string, string> = {
   MULTICAIXA: 'Multicaixa',
 };
 
+/** 120 -> « 2 heures », 4320 -> « 3 jours », 45 -> « 45 minutes ». */
+export function formatTrialDuration(minutes: number): string {
+  const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
+  if (minutes % 1440 === 0) return plural(minutes / 1440, 'jour');
+  if (minutes % 60 === 0) return plural(minutes / 60, 'heure');
+  return plural(minutes, 'minute');
+}
+
 /**
  * Étape 5 — paiement.
  *
@@ -42,6 +50,8 @@ export function PaymentStep({
   error,
   onBack,
   onPay,
+  trialMinutes,
+  onTrial,
 }: {
   planCode: string | null;
   billingCycle: string | null;
@@ -50,6 +60,9 @@ export function PaymentStep({
   error: string;
   onBack: () => void;
   onPay: (method: PaymentMethod) => void;
+  /** Durée de l'essai gratuit ; 0 = pas d'essai proposé. */
+  trialMinutes: number;
+  onTrial: () => void;
 }) {
   const plan = PLAN_CATALOG.find((p) => p.code === planCode) ?? PLAN_CATALOG[0]!;
   const currency = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.currency ?? 'XOF';
@@ -121,6 +134,24 @@ export function PaymentStep({
             </PrimaryAction>
           </div>
         </div>
+
+        {trialMinutes > 0 && (
+          <div className="mt-3 text-center">
+            <Button
+              variant="outline"
+              className="w-full justify-center"
+              disabled={submitting}
+              onClick={onTrial}
+            >
+              <PlayCircle className="h-4 w-4" />
+              Tester gratuitement pendant {formatTrialDuration(trialMinutes)}
+            </Button>
+            <p className="mt-1.5 text-xs text-content-muted">
+              Sans paiement. Vous activerez votre abonnement quand vous le souhaitez, depuis votre
+              espace.
+            </p>
+          </div>
+        )}
       </ActionBar>
     </ActivationShell>
   );
