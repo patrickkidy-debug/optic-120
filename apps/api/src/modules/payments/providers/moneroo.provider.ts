@@ -47,6 +47,22 @@ function splitName(full: string): { first: string; last: string } {
 }
 
 /**
+ * Téléphone au format accepté par Moneroo : un NOMBRE, indicatif compris,
+ * sans « + » ni séparateurs. « +225 07 12 34 56 78 » -> 2250712345678.
+ * Moneroo rejette toute la transaction (« The customer.phone must be a
+ * number ») sur un numéro formaté ; le champ étant facultatif, un numéro
+ * inexploitable est omis plutôt que de bloquer le paiement.
+ */
+export function monerooPhone(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  let digits = raw.replace(/\D/g, '');
+  if (raw.trim().startsWith('00')) digits = digits.slice(2); // 00225… = +225…
+  if (digits.length < 8 || digits.length > 15) return undefined;
+  const n = Number(digits);
+  return Number.isSafeInteger(n) ? n : undefined;
+}
+
+/**
  * Fournisseur Moneroo (https://moneroo.io) — agrégateur Mobile Money + cartes
  * pour l'Afrique. Paiement par redirection vers un checkout hébergé : on
  * initialise la transaction, on redirige le client vers `checkout_url`, puis
@@ -89,7 +105,7 @@ export class MonerooProvider implements PaymentProvider {
             email,
             first_name: first,
             last_name: last,
-            phone: input.customerPhone || undefined,
+            phone: monerooPhone(input.customerPhone),
           },
           // L'appelant peut imposer son propre retour (tunnel d'activation).
           return_url: input.returnUrl ?? this.config.returnUrl,
