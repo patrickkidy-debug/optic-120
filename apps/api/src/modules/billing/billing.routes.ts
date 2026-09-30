@@ -101,14 +101,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
             network: env.PLATFORM_PAY_NETWORK || null,
           }
         : null,
-      bank: env.PLATFORM_BANK_ACCOUNT_NUMBER
-        ? {
-            bankName: env.PLATFORM_BANK_NAME || null,
-            accountName: env.PLATFORM_BANK_ACCOUNT_NAME || null,
-            accountNumber: env.PLATFORM_BANK_ACCOUNT_NUMBER,
-            swift: env.PLATFORM_BANK_SWIFT || null,
-          }
-        : null,
+      bank: billing.bankTransferDetails(),
     });
   });
 

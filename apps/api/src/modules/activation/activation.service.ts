@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import {
   ActivationStep,
+  PaymentStatus,
   SubscriptionStatus,
   type ActivationActivityInput,
   type ActivationEventName,
@@ -335,9 +336,69 @@ export async function getActivationStatus(
   return { activated: true, ...tokens };
 }
 
-/** Durée de l'essai proposé en fin de tunnel ; 0 = essai désactivé en console. */
-export async function getTrialOffer(): Promise<{ minutes: number }> {
-  return { minutes: await billing.getTrialDurationMinutes() };
+/**
+ * Options de démarrage proposées en fin de tunnel : durée de l'essai (0 =
+ * désactivé en console) et coordonnées bancaires pour le virement (null si
+ * non configurées).
+ */
+export async function getTrialOffer(): Promise<{
+  minutes: number;
+  bank: billing.BankTransferDetails | null;
+}> {
+  return { minutes: await billing.getTrialDurationMinutes(), bank: billing.bankTransferDetails() };
+}
+
+export interface BankTransferRequest {
+  invoiceNumber: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Déclaration d'un virement bancaire depuis le tunnel.
+ *
+ * N'ouvre AUCUN accès : crée la facture et un paiement manuel en attente, que
+ * le fondateur confirme depuis la console après avoir reçu le reçu par
+ * WhatsApp. Idempotent : redéclarer renvoie la même facture, pour qu'un
+ * double clic ou un retour arrière ne crée pas deux factures.
+ */
+export async function requestBankTransfer(token: string): Promise<BankTransferRequest> {
+  const session = await require_(token);
+  if (!session.tenantId) throw badRequest('Renseignez vos informations avant de payer');
+  if (session.paidAt) throw conflict('Ce parcours est déjà réglé');
+  if (!billing.bankTransferDetails()) throw badRequest("Le virement bancaire n'est pas disponible");
+
+  if (session.invoiceId) {
+    const pending = await prisma.subscriptionPayment.findFirst({
+      where: { invoiceId: session.invoiceId, provider: 'manual', status: PaymentStatus.PENDING },
+      include: { invoice: { select: { number: true, amount: true, currency: true } } },
+    });
+    if (pending) {
+      return {
+        invoiceNumber: pending.invoice.number,
+        amount: Number(pending.invoice.amount),
+        currency: pending.invoice.currency,
+      };
+    }
+  }
+
+  const plans = await prisma.subscriptionPlan.findMany({ where: { isActive: true } });
+  const plan =
+    plans.find((p) => p.code === session.planCode) ?? plans.find((p) => p.code === 'STARTER');
+  if (!plan) throw badRequest('Aucune offre disponible');
+
+  const result = await billing.subscribeManual(
+    session.tenantId,
+    plan.id,
+    (session.billingCycle as never) ?? undefined,
+    'BANK_TRANSFER',
+  );
+  await prisma.activationSession.update({
+    where: { id: session.id },
+    data: { invoiceId: result.invoiceId, lastSeenAt: new Date() },
+  });
+  await track(session.id, 'bank_transfer_requested', { invoice: result.number, planCode: plan.code });
+  return { invoiceNumber: result.number, amount: result.amount, currency: result.currency };
 }
 
 /**

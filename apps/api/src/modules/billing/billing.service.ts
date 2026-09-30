@@ -19,7 +19,7 @@ import { badRequest, notFound, conflict } from '../../lib/http-error.js';
 import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
 import { recordCommissionForPayment } from '../partners/partner.service.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
-import { appOrigin } from '../../config/env.js';
+import { appOrigin, env } from '../../config/env.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -415,6 +415,28 @@ export async function subscribeManual(
     amount: Number(invoice.amount),
     currency: invoice.currency,
     planName: plan.name,
+  };
+}
+
+export interface BankTransferDetails {
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string;
+  swift: string | null;
+}
+
+/**
+ * Coordonnées bancaires de l'éditeur pour les virements (variables
+ * PLATFORM_BANK_*). Null tant que le numéro de compte n'est pas renseigné :
+ * aucun écran ne propose alors le virement.
+ */
+export function bankTransferDetails(): BankTransferDetails | null {
+  if (!env.PLATFORM_BANK_ACCOUNT_NUMBER) return null;
+  return {
+    bankName: env.PLATFORM_BANK_NAME || null,
+    accountName: env.PLATFORM_BANK_ACCOUNT_NAME || null,
+    accountNumber: env.PLATFORM_BANK_ACCOUNT_NUMBER,
+    swift: env.PLATFORM_BANK_SWIFT || null,
   };
 }
 

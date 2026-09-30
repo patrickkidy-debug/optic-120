@@ -16,6 +16,23 @@ export function waLink(phone?: string | null): string | null {
 /** Numéro WhatsApp de l'équipe pour les demandes de démonstration gratuite (landing + dashboard). */
 export const DEMO_WHATSAPP_NUMBER = '2385936598';
 
+/** Numéro de l'équipe au format lisible : « +238 593 65 98 ». */
+export const TEAM_WHATSAPP_DISPLAY = '+238 593 65 98';
+
+/**
+ * Lien WhatsApp pour envoyer le reçu d'un virement à l'équipe, message
+ * pré-rempli avec la facture : l'équipe retrouve le paiement sans échange.
+ */
+export function transferReceiptLink(info: { invoiceNumber?: string; establishment?: string | null; amount?: string }): string {
+  const lines = [
+    'Bonjour, voici la capture / le reçu de mon virement pour mon abonnement OculoSaaS.',
+    info.invoiceNumber ? `Facture : ${info.invoiceNumber}` : '',
+    info.establishment ? `Établissement : ${info.establishment}` : '',
+    info.amount ? `Montant : ${info.amount}` : '',
+  ].filter(Boolean);
+  return `https://wa.me/${DEMO_WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+}
+
 /** Lien wa.me pré-rempli vers l'équipe, pour une demande de démonstration. */
 export function demoWhatsappLink(message: string): string {
   return `https://wa.me/${DEMO_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;

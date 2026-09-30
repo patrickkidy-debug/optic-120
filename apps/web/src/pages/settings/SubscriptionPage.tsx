@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Crown, Check, Loader2, CheckCircle2, Sparkles, Tag } from 'lucide-react';
+import { Crown, Check, Loader2, CheckCircle2, MessageCircle, Sparkles, Tag } from 'lucide-react';
+import { TEAM_WHATSAPP_DISPLAY, transferReceiptLink } from '../../lib/whatsapp';
 import type { PaymentMethod, BillingCycle } from '@oculo/shared-types';
 import {
   getPlans,
@@ -15,6 +16,7 @@ import {
   subscribeManual,
   type Plan,
   type ManualPaymentChannel,
+  type ManualSubscribeResult,
 } from '../../features/billing/api';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { planPrice, planPriceForCycle, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT } from '@oculo/shared-types';
@@ -143,7 +145,7 @@ export function SubscriptionPage() {
   const qc = useQueryClient();
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
-  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; cycle: BillingCycle } | null>(null);
+  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; xof?: number; cycle: BillingCycle } | null>(null);
   // Prolongation anticipée : l'abonnement est encore valide, mais le client
   // veut payer d'avance. Le serveur ajoute les mois réglés à l'échéance en
   // cours (billing.service : base = currentPeriodEnd si elle est future),
@@ -226,6 +228,7 @@ export function SubscriptionPage() {
       id: sub.plan.id,
       label: sub.plan.name,
       amount: planPriceForCycle(sub.plan.code, currency, cycle),
+      xof: planPriceForCycle(sub.plan.code, 'XOF', cycle),
       cycle,
     });
     setParams({}, { replace: true });
@@ -407,6 +410,7 @@ export function SubscriptionPage() {
                           id: p.id,
                           label: p.name,
                           amount: planPriceForCycle(p.code, currency, cycle),
+                          xof: planPriceForCycle(p.code, 'XOF', cycle),
                           cycle,
                         })
                       }
@@ -434,7 +438,7 @@ export function SubscriptionPage() {
             canManage={canManage}
             cycle={cycle}
             onSubscribe={() =>
-              setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: planPriceForCycle(p.code, currency, cycle), cycle })
+              setPayFor({ kind: 'plan', id: p.id, label: p.name, amount: planPriceForCycle(p.code, currency, cycle), xof: planPriceForCycle(p.code, 'XOF', cycle), cycle })
             }
           />
         ))}
@@ -575,7 +579,8 @@ function BillingPaymentModal({
   onPaid,
 }: {
   /** `currency` : devise de la facture ; absente = devise de l'établissement (prix d'offre). */
-  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; cycle: BillingCycle };
+  /** `xof` : montant réellement facturé en FCFA (abonnement toujours facturé en FCFA). */
+  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; xof?: number; cycle: BillingCycle };
   onClose: () => void;
   onPaid: () => void;
 }) {
@@ -592,9 +597,14 @@ function BillingPaymentModal({
   // le paiement en attente ; le fondateur confirme ensuite depuis la console
   // (onglet « À confirmer »).
   const [manualChannel, setManualChannel] = useState<ManualPaymentChannel | null>(null);
+  const [manualResult, setManualResult] = useState<ManualSubscribeResult | null>(null);
+  const tenantName = useAuthStore((s) => s.user?.tenantName ?? null);
+  // Hors zone FCFA (Europe) : Moneroo n'encaisse pas, seul le virement est proposé.
+  const outsideCfa = !['XOF', 'XAF'].includes(getActiveCurrency());
   const manualMut = useMutation({
     mutationFn: (channel: ManualPaymentChannel) => subscribeManual(target.id, target.cycle, channel),
-    onSuccess: (_, channel) => {
+    onSuccess: (res, channel) => {
+      setManualResult(res);
       setManualChannel(channel);
       setPhase('manual');
     },
@@ -668,10 +678,11 @@ function BillingPaymentModal({
         </span>
         <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount, target.currency)}</span>
       </div>
-      {/* Hors zone FCFA (Europe…) : l'abonnement est débité en francs CFA par carte. */}
-      {!['XOF', 'XAF'].includes(getActiveCurrency()) && (
+      {/* Hors zone FCFA (Europe…) : réglé par virement, en francs CFA. */}
+      {outsideCfa && (
         <p className="-mt-2 mb-4 text-xs text-content-muted">
-          Réglé par carte bancaire et débité en francs CFA
+          Réglé par virement bancaire en francs CFA
+          {target.xof ? ` : ${formatCurrency(target.xof, 'XOF')}` : ''}
           {getActiveCurrency() === 'EUR' ? ' (1 € = 655,957 FCFA, parité fixe).' : ' ; le montant dans votre devise est indicatif.'}
         </p>
       )}
@@ -681,7 +692,7 @@ function BillingPaymentModal({
               Moneroo héberge lui-même le choix du moyen (Wave, Orange Money,
               carte…) sur sa page de checkout — un choix ici en plus était pure
               friction, sans le moindre effet sur le paiement réel. */}
-          {payInfo?.gateway !== false && (
+          {payInfo?.gateway !== false && !outsideCfa && (
             <>
               <Button
                 className="w-full"
@@ -706,7 +717,7 @@ function BillingPaymentModal({
 
           {/* Règlement direct sur le numéro de l'éditeur : toujours proposé si
               configuré, et seule option quand aucune passerelle n'est active. */}
-          {target.kind === 'plan' && payInfo?.manual && (
+          {target.kind === 'plan' && payInfo?.manual && !outsideCfa && (
             <div className={payInfo.gateway ? 'mt-4 border-t pt-3' : ''}>
               <p className="text-sm font-medium text-content">
                 {payInfo.gateway ? 'Ou payer directement par Mobile Money' : 'Payer par Mobile Money'}
@@ -754,9 +765,9 @@ function BillingPaymentModal({
           {/* Virement bancaire direct sur le compte de l'éditeur : même principe
               que le Mobile Money ci-dessus. */}
           {target.kind === 'plan' && payInfo?.bank && (
-            <div className={payInfo.gateway || payInfo.manual ? 'mt-4 border-t pt-3' : ''}>
+            <div className={!outsideCfa && (payInfo.gateway || payInfo.manual) ? 'mt-4 border-t pt-3' : ''}>
               <p className="text-sm font-medium text-content">
-                {payInfo.gateway || payInfo.manual ? 'Ou payer par virement bancaire' : 'Payer par virement bancaire'}
+                {!outsideCfa && (payInfo.gateway || payInfo.manual) ? 'Ou payer par virement bancaire' : 'Payer par virement bancaire'}
               </p>
               <div className="mt-2 rounded-xl bg-surface-2 p-3 text-sm">
                 {payInfo.bank.bankName && (
@@ -784,13 +795,13 @@ function BillingPaymentModal({
                 <div className="mt-1 flex justify-between border-t pt-1">
                   <span className="text-content-muted">Montant</span>
                   <span className="font-display font-bold text-content">
-                    {formatCurrency(target.amount)}
+                    {target.xof ? formatCurrency(target.xof, 'XOF') : formatCurrency(target.amount, target.currency)}
                   </span>
                 </div>
               </div>
               <Button
                 className="mt-3 w-full"
-                variant={payInfo.gateway || payInfo.manual ? 'outline' : undefined}
+                variant={!outsideCfa && (payInfo.gateway || payInfo.manual) ? 'outline' : undefined}
                 loading={manualMut.isPending && manualMut.variables === 'BANK_TRANSFER'}
                 disabled={manualMut.isPending}
                 onClick={() => manualMut.mutate('BANK_TRANSFER')}
@@ -798,14 +809,15 @@ function BillingPaymentModal({
                 J'ai payé — enregistrer ma demande
               </Button>
               <p className="mt-1.5 text-xs text-content-faint">
-                Effectuez le virement sur le compte ci-dessus, puis cliquez : nous confirmons votre
-                paiement et votre abonnement s'active.
+                Effectuez le virement sur le compte ci-dessus, cliquez, puis envoyez la capture
+                d'écran ou le reçu sur WhatsApp au {TEAM_WHATSAPP_DISPLAY}. Nous vérifions le
+                virement et activons votre abonnement.
               </p>
             </div>
           )}
 
           {/* Rien n'est disponible : on le dit clairement au lieu d'échouer. */}
-          {payInfo && !payInfo.gateway && !payInfo.manual && !payInfo.bank && (
+          {payInfo && !payInfo.bank && (outsideCfa || (!payInfo.gateway && !payInfo.manual)) && (
             <p className="rounded-xl bg-[color:var(--warning)]/10 p-3 text-sm text-content">
               Le paiement en ligne n'est pas encore disponible. Contactez-nous depuis la page Aide
               pour activer votre abonnement.
@@ -821,9 +833,24 @@ function BillingPaymentModal({
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
           <p className="mt-3 font-display text-lg font-bold text-content">Demande enregistrée</p>
           <p className="mt-1 text-sm text-content-muted">
-            Dès que nous aurons vérifié votre {manualChannel === 'BANK_TRANSFER' ? 'virement' : 'versement'},
-            votre abonnement sera activé. Vous n'avez rien d'autre à faire.
+            {manualChannel === 'BANK_TRANSFER'
+              ? `Envoyez maintenant la capture d'écran ou le reçu de votre virement sur WhatsApp au ${TEAM_WHATSAPP_DISPLAY}. Nous le vérifions puis activons votre abonnement.`
+              : "Dès que nous aurons vérifié votre versement, votre abonnement sera activé. Vous n'avez rien d'autre à faire."}
           </p>
+          {manualChannel === 'BANK_TRANSFER' && (
+            <a
+              href={transferReceiptLink({
+                invoiceNumber: manualResult?.number,
+                establishment: tenantName,
+                amount: manualResult ? formatCurrency(manualResult.amount, manualResult.currency) : undefined,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-auto mt-4 flex max-w-xs items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 font-semibold text-white hover:brightness-95"
+            >
+              <MessageCircle className="h-4 w-4" /> Envoyer mon reçu sur WhatsApp
+            </a>
+          )}
           <Button className="mt-5" onClick={onClose}>
             Fermer
           </Button>

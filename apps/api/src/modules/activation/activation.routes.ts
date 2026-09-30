@@ -93,6 +93,11 @@ export async function activationRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(await service.getTrialOffer());
   });
 
+  /** Virement déclaré : facture en attente, confirmée par le fondateur à réception du reçu. */
+  app.post('/:token/bank-transfer', async (req, reply) => {
+    return reply.send(await service.requestBankTransfer(tokenOf(req)));
+  });
+
   /** Essai gratuit : ouvre l'espace sans paiement, une seule fois par établissement. */
   app.post('/:token/trial', async (req: FastifyRequest, reply: FastifyReply) => {
     const result = await service.startTrial(tokenOf(req), {

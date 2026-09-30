@@ -24,9 +24,12 @@ import {
   saveNeeds,
   savePlan,
   getTrialOffer,
+  requestBankTransfer,
   startActivation,
   startPayment,
   startTrial,
+  type BankDetails,
+  type BankTransferRequest,
 } from '../../features/activation/api';
 import { api, apiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
@@ -35,7 +38,7 @@ import { Button, PageLoader } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, MultiChoiceCard, PrimaryAction } from './shared';
 import { Intro } from './Intro';
 import { InformationStep } from './InformationStep';
-import { PaymentStep } from './PaymentStep';
+import { BankTransferSent, PaymentStep } from './PaymentStep';
 
 /**
  * Tunnel d'activation — parcours commercial obligatoire.
@@ -82,6 +85,10 @@ export function ActivationPage() {
   // Essai gratuit en fin de parcours ; 0 tant que la durée n'est pas connue
   // (ou si l'essai est désactivé en console) : le bouton reste alors masqué.
   const [trialMinutes, setTrialMinutes] = useState(0);
+  // Coordonnées bancaires de l'éditeur (null = virement non proposé).
+  const [bank, setBank] = useState<BankDetails | null>(null);
+  // Virement déclaré : l'écran suivant demande le reçu par WhatsApp.
+  const [transfer, setTransfer] = useState<BankTransferRequest | null>(null);
 
   const [structureType, setStructureType] = useState<StructureType | null>(null);
   const [branchCount, setBranchCount] = useState<BranchCount | null>(null);
@@ -135,7 +142,10 @@ export function ActivationPage() {
 
   useEffect(() => {
     getTrialOffer()
-      .then(setTrialMinutes)
+      .then((o) => {
+        setTrialMinutes(o.minutes);
+        setBank(o.bank);
+      })
       .catch(() => setTrialMinutes(0));
   }, []);
 
@@ -228,6 +238,21 @@ export function ActivationPage() {
       navigate('/dashboard', { replace: true });
     } catch (e) {
       setError(apiErrorMessage(e));
+      setBusy(false);
+    }
+  }
+
+  /** Virement déclaré : facture en attente, activation par l'équipe à réception du reçu. */
+  async function declareTransfer() {
+    if (!token) return;
+    setBusy(true);
+    setError('');
+    try {
+      setTransfer(await requestBankTransfer(token));
+      window.scrollTo({ top: 0 });
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    } finally {
       setBusy(false);
     }
   }
@@ -370,6 +395,21 @@ export function ActivationPage() {
     );
   }
 
+  if ((screen === 'PAYMENT' || screen === 'DONE') && transfer) {
+    return (
+      <BankTransferSent
+        request={transfer}
+        bank={bank}
+        country={country}
+        establishment={info.establishmentName ?? null}
+        trialMinutes={trialMinutes}
+        submitting={busy}
+        error={error}
+        onTrial={() => void tryForFree()}
+      />
+    );
+  }
+
   if (screen === 'PAYMENT' || screen === 'DONE') {
     return (
       <PaymentStep
@@ -382,6 +422,8 @@ export function ActivationPage() {
         onPay={(m) => void pay(m)}
         trialMinutes={trialMinutes}
         onTrial={() => void tryForFree()}
+        bank={bank}
+        onBankTransfer={() => void declareTransfer()}
       />
     );
   }

@@ -71,10 +71,29 @@ export async function startPayment(token: string, method: PaymentMethod): Promis
   return data;
 }
 
-/** Durée de l'essai gratuit en minutes ; 0 = essai désactivé. */
-export async function getTrialOffer(): Promise<number> {
-  const { data } = await api.get<{ minutes: number }>('/activation/trial-offer');
-  return data.minutes;
+export interface BankDetails {
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string;
+  swift: string | null;
+}
+
+/** Options de fin de parcours : essai (minutes, 0 = désactivé) et virement (null = indisponible). */
+export async function getTrialOffer(): Promise<{ minutes: number; bank: BankDetails | null }> {
+  const { data } = await api.get<{ minutes: number; bank: BankDetails | null }>('/activation/trial-offer');
+  return data;
+}
+
+export interface BankTransferRequest {
+  invoiceNumber: string;
+  amount: number;
+  currency: string;
+}
+
+/** Déclare un virement : facture en attente, activée par l'équipe à réception du reçu. */
+export async function requestBankTransfer(token: string): Promise<BankTransferRequest> {
+  const { data } = await api.post<BankTransferRequest>(`/activation/${token}/bank-transfer`);
+  return data;
 }
 
 /** Démarre l'essai gratuit : le serveur ouvre la session (cookie + jeton d'accès). */
