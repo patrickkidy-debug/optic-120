@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import {
   SUPPORTED_COUNTRIES,
@@ -35,10 +35,13 @@ export function InformationStep({
 }) {
   const [fullName, setFullName] = useState(initial.fullName ?? '');
   const [establishmentName, setEstablishmentName] = useState(initial.establishmentName ?? '');
-  const [phone, setPhone] = useState(initial.phone ?? '');
-  const [whatsapp, setWhatsapp] = useState(initial.whatsapp ?? '');
+  const [country, setCountry] = useState(
+    initial.country || countryOf(initial.whatsapp)?.code || countryOf(initial.phone)?.code || '',
+  );
+  // Numéros saisis SANS indicatif : l'indicatif vient du pays choisi.
+  const [phone, setPhone] = useState(localPart(initial.phone));
+  const [whatsapp, setWhatsapp] = useState(localPart(initial.whatsapp));
   const [email, setEmail] = useState(initial.email ?? '');
-  const [country, setCountry] = useState(initial.country ?? '');
   const [city, setCity] = useState(initial.city ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,21 +49,31 @@ export function InformationStep({
   const [hasExistingData, setHasExistingData] = useState<boolean | null>(null);
   const [localError, setLocalError] = useState('');
 
-  // L'indicatif est obligatoire : on le prerempli des que le pays est choisi,
-  // plutot que de laisser l'utilisateur echouer a la validation puis deviner
-  // le format attendu. La saisie deja commencee n'est jamais ecrasee.
+  // L'indicatif suit le pays : changer de pays change l'indicatif des deux
+  // numéros sans toucher à ce qui a été tapé.
   const dial = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.dial ?? '';
-  useEffect(() => {
-    if (!dial) return;
-    setWhatsapp((v) => (v.trim() === '' || /^\+\d{1,4}\s?$/.test(v.trim()) ? `${dial} ` : v));
-  }, [dial]);
+
+  /** Numéro collé avec son indicatif (+33 6…) : le pays s'aligne dessus. */
+  function typeNumber(value: string, set: (v: string) => void) {
+    const pasted = value.trim().startsWith('+') || value.trim().startsWith('00') ? countryOf(value) : undefined;
+    if (pasted) {
+      setCountry(pasted.code);
+      set(localPart(value));
+      return;
+    }
+    set(value.replace(/^\s+/, ''));
+  }
 
   function submit() {
+    if (!dial) {
+      setLocalError('Choisissez votre pays : il fixe l’indicatif de vos numéros.');
+      return;
+    }
     const parsed = activationInformationSchema.safeParse({
       fullName,
       establishmentName,
-      phone,
-      whatsapp,
+      phone: withDial(dial, phone),
+      whatsapp: withDial(dial, whatsapp),
       email,
       country,
       city,
@@ -95,43 +108,6 @@ export function InformationStep({
         </Field>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Téléphone">
-            <input
-              className="input"
-              type="tel"
-              inputMode="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </Field>
-          <Field label="WhatsApp">
-            <input
-              className="input"
-              type="tel"
-              inputMode="tel"
-              placeholder={dial ? `${dial} 77 123 45 67` : '+225 07 12 34 56'}
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-content-faint">
-              Indicatif du pays obligatoire{dial ? ` (${dial})` : ''} : c'est par ce numéro que nous
-              vous rappellerons.
-            </p>
-          </Field>
-        </div>
-
-        <Field label="Email">
-          <input
-            className="input"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Pays">
             <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
               <option value="">Choisissez votre pays</option>
@@ -146,6 +122,34 @@ export function InformationStep({
             <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
           </Field>
         </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Téléphone">
+            <DialInput dial={dial} value={phone} onChange={(v) => typeNumber(v, setPhone)} />
+          </Field>
+          <Field label="WhatsApp">
+            <DialInput
+              dial={dial}
+              value={whatsapp}
+              placeholder="07 12 34 56 78"
+              onChange={(v) => typeNumber(v, setWhatsapp)}
+            />
+            <p className="mt-1 text-xs text-content-faint">
+              C'est par ce numéro que nous vous rappellerons.
+            </p>
+          </Field>
+        </div>
+
+        <Field label="Email">
+          <input
+            className="input"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
 
         <Field label="Mot de passe">
           <div className="relative">
@@ -206,6 +210,71 @@ export function InformationStep({
         </div>
       </ActionBar>
     </ActivationShell>
+  );
+}
+
+/** Pays d'un numéro international (indicatif le plus long d'abord : +352 avant +35). */
+function countryOf(value: string | null | undefined) {
+  if (!value) return undefined;
+  const cleaned = value.replace(/[\s().-]/g, '').replace(/^00/, '+');
+  return [...SUPPORTED_COUNTRIES]
+    .sort((a, b) => b.dial.length - a.dial.length)
+    .find((c) => cleaned.startsWith(c.dial));
+}
+
+/** « +225 07 12 34 56 » -> « 07 12 34 56 » ; un numéro sans indicatif est gardé tel quel. */
+function localPart(value: string | null | undefined): string {
+  if (!value) return '';
+  const c = countryOf(value);
+  if (!c) return value.trim();
+  const trimmed = value.trim().replace(/^00/, '+');
+  // Retire l'indicatif en tolérant les séparateurs saisis entre ses chiffres.
+  let i = 0;
+  let matched = 0;
+  while (i < trimmed.length && matched < c.dial.length) {
+    if (trimmed[i] === c.dial[matched]) matched += 1;
+    else if (!/[\s().-]/.test(trimmed[i]!)) break;
+    i += 1;
+  }
+  return trimmed.slice(i).trim();
+}
+
+/** Numéro complet envoyé au serveur : indicatif du pays + numéro local. */
+function withDial(dial: string, local: string): string {
+  const n = local.trim();
+  return n ? `${dial} ${n}` : '';
+}
+
+/** Champ téléphone avec l'indicatif du pays affiché devant, non modifiable. */
+function DialInput({
+  dial,
+  value,
+  placeholder,
+  onChange,
+}: {
+  dial: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex">
+      <span
+        className="inline-flex min-w-[3.5rem] items-center justify-center rounded-l-xl border border-r-0 border-line bg-surface-2 px-2.5 text-sm font-medium text-content-muted"
+        aria-label={dial ? `Indicatif ${dial}` : 'Indicatif : choisissez un pays'}
+      >
+        {dial || '+…'}
+      </span>
+      <input
+        className="input rounded-l-none"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel-national"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
   );
 }
 
