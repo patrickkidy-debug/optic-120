@@ -31,7 +31,13 @@ describe('coordonnées du tunnel', () => {
   });
 
   it('refuse un indicatif hors des pays desservis', () => {
-    expect(parse({ whatsapp: '+33 6 12 34 56 78' }).success).toBe(false);
+    expect(parse({ whatsapp: '+49 151 2345 6789' }).success).toBe(false); // Allemagne
+  });
+
+  it("accepte l'Europe francophone", () => {
+    for (const whatsapp of ['+33 6 12 34 56 78', '+32 470 12 34 56', '+41 79 123 45 67', '+352 621 123 456', '+377 6 12 34 56 78']) {
+      expect(parse({ whatsapp }).success, whatsapp).toBe(true);
+    }
   });
 
   it('accepte les indicatifs des pays desservis', () => {
