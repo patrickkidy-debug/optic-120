@@ -280,6 +280,59 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
   });
 
   // Webhook public Moneroo pour les paiements d'abonnement.
+  /**
+   * Pulse Chariow (successful.sale, failed.sale, abandoned.sale).
+   *
+   * Chariow DESACTIVE le Pulse apres 5 echecs de livraison. On ne renvoie donc
+   * une erreur que lorsque la requete est illegitime (signature). Tout le reste
+   * — vente d'un autre produit de la boutique, evenement de test, montant non
+   * conforme — recoit 200 : un renvoi ne changerait rien, et une erreur
+   * couperait les notifications de TOUS les abonnements.
+   */
+  app.post('/chariow-subscription', async (req, reply) => {
+    const provider = resolvePlatformProvider();
+    if (provider.name !== 'chariow') {
+      return reply.status(409).send({ error: "Chariow n'est pas la passerelle active" });
+    }
+    const headers = req.headers as Record<string, string | string[] | undefined>;
+    const rawBody = (req as FastifyRequest & { rawBody?: string }).rawBody;
+
+    // Evenement de test du tableau de bord Chariow : pas d'identifiant de
+    // livraison, vente fictive. On confirme la reception, sans rien regler.
+    if (!headers['x-pulse-delivery-id']) {
+      return reply.send({ ok: true, test: true });
+    }
+
+    let result;
+    try {
+      result = await provider.handleWebhook(req.body, headers['x-chariow-signature'] as string | undefined, { rawBody, headers });
+    } catch (err) {
+      req.log.warn({ err }, 'Pulse Chariow refuse');
+      return reply.status(401).send({ error: 'Pulse refuse' });
+    }
+
+    const payment = await billing.findPaymentByProviderRef(result.providerRef);
+    if (!payment) return reply.send({ ok: true, ignored: 'vente sans rapport avec un abonnement' });
+
+    // Le prix vient du produit Chariow, pas de la facture : on verifie que le
+    // montant paye est bien celui de la facture avant d'ouvrir l'acces.
+    const sale = result.raw as { amount?: { value: number; currency: string } } | undefined;
+    if (sale?.amount && result.status === 'SUCCESS') {
+      const expected = Number(payment.amount);
+      const sameCurrency = sale.amount.currency?.toUpperCase() === payment.currency.toUpperCase();
+      if (!sameCurrency || Math.round(sale.amount.value) < Math.round(expected)) {
+        req.log.error(
+          { paymentId: payment.id, paid: sale.amount, expected: { value: expected, currency: payment.currency } },
+          'Montant Chariow different de la facture : abonnement NON active',
+        );
+        return reply.send({ ok: true, ignored: 'montant non conforme a la facture' });
+      }
+    }
+
+    await billing.settleSubscriptionPayment(payment.id, result.status, result.raw);
+    return reply.send({ ok: true });
+  });
+
   app.post('/moneroo-subscription', async (req, reply) => {
     const body = (req.body ?? {}) as { data?: { id?: string }; providerRef?: string };
     const providerRef = body.data?.id ?? body.providerRef;

@@ -17,6 +17,12 @@ export interface InitiatePaymentInput {
    * l'application auquel le prospect n'a pas encore acces.
    */
   returnUrl?: string;
+  /**
+   * Ce qui est vendu, pour les passerelles qui encaissent un PRODUIT a prix
+   * fixe plutot qu'un montant libre (Chariow) : code de l'offre + nombre de
+   * mois, ex. « STANDARD:1 ». Ignore par les autres passerelles.
+   */
+  productKey?: string;
 }
 
 export interface InitiatePaymentResult {

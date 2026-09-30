@@ -2,22 +2,46 @@ import { env, appOrigin, isProd } from '../../config/env.js';
 import type { PaymentProvider } from '../payments/payment-provider.interface.js';
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
 import { MonerooProvider } from '../payments/providers/moneroo.provider.js';
+import { ChariowProvider, parseChariowProducts } from '../payments/providers/chariow.provider.js';
 
 /**
  * Fournisseur de paiement de la PLATEFORME : l'editeur encaisse les
  * abonnements. Distinct du fournisseur des ventes, qui encaisse pour le compte
  * d'un magasin.
  *
- * MONEROO UNIQUEMENT, par decision produit. La cascade precedente (Moneroo,
- * puis GeniusPay, puis PayTech) faisait qu'une cle Moneroo absente ou invalide
- * basculait silencieusement sur une autre passerelle : les paiements
- * partaient ailleurs sans que personne ne le remarque. Une seule passerelle
- * rend la configuration verifiable.
+ * UNE SEULE passerelle a la fois, choisie par PLATFORM_PAYMENT_PROVIDER :
+ * « moneroo » (defaut) ou « chariow ». La cascade d'autrefois (Moneroo, puis
+ * GeniusPay, puis PayTech) faisait qu'une cle absente ou invalide basculait
+ * silencieusement sur une autre passerelle : les paiements partaient ailleurs
+ * sans que personne ne le remarque. Ici, la passerelle choisie sans ses cles
+ * ECHOUE en production au lieu de se rabattre sur l'autre.
  *
  * Les fournisseurs GeniusPay et PayTech restent dans le code : ils servent
  * encore aux encaissements des magasins, qui ne passent pas par ici.
  */
+function chariowReady(): boolean {
+  return Boolean(env.CHARIOW_API_KEY) && Object.keys(parseChariowProducts(env.CHARIOW_PRODUCTS)).length > 0;
+}
+
 export function resolvePlatformProvider(): PaymentProvider {
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'chariow') {
+    if (chariowReady()) {
+      return new ChariowProvider({
+        apiKey: env.CHARIOW_API_KEY,
+        baseUrl: env.CHARIOW_BASE_URL,
+        pulseSecret: env.CHARIOW_PULSE_SECRET || undefined,
+        products: parseChariowProducts(env.CHARIOW_PRODUCTS),
+      });
+    }
+    if (isProd) {
+      throw new Error(
+        'Chariow choisi (PLATFORM_PAYMENT_PROVIDER=chariow) mais non configure : ' +
+          'definissez CHARIOW_API_KEY et CHARIOW_PRODUCTS.',
+      );
+    }
+    return new SimulatedPaymentProvider();
+  }
+
   if (env.MONEROO_SECRET_KEY) {
     return new MonerooProvider({
       secretKey: env.MONEROO_SECRET_KEY,
@@ -51,8 +75,16 @@ export function resolvePlatformProvider(): PaymentProvider {
  * booleens et des URLs publiques.
  */
 export interface PaymentProviderStatus {
-  /** Passerelle retenue : « moneroo » ou « simulation ». */
+  /** Passerelle retenue : « moneroo », « chariow » ou « simulation ». */
   active: string;
+  /** Passerelle choisie dans la configuration, meme si ses cles manquent. */
+  selected: 'moneroo' | 'chariow';
+  chariowConfigured: boolean;
+  chariowPulseSecret: boolean;
+  /** Offres couvertes par un produit Chariow, ex. ["STANDARD:1"]. */
+  chariowProducts: string[];
+  /** URL a declarer comme Pulse chez Chariow. */
+  chariowWebhookUrl: string;
   /** Vrai quand aucune cle Moneroo n'est posee (developpement seulement). */
   simulation: boolean;
   monerooConfigured: boolean;
@@ -71,8 +103,16 @@ export interface PaymentProviderStatus {
 export function getPaymentProviderStatus(): PaymentProviderStatus {
   const monerooConfigured = Boolean(env.MONEROO_SECRET_KEY);
   const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
+  const selected = env.PLATFORM_PAYMENT_PROVIDER;
+  const active =
+    selected === 'chariow' ? (chariowReady() ? 'chariow' : 'simulation') : monerooConfigured ? 'moneroo' : 'simulation';
   return {
-    active: monerooConfigured ? 'moneroo' : 'simulation',
+    active,
+    selected,
+    chariowConfigured: chariowReady(),
+    chariowPulseSecret: Boolean(env.CHARIOW_PULSE_SECRET),
+    chariowProducts: Object.keys(parseChariowProducts(env.CHARIOW_PRODUCTS)),
+    chariowWebhookUrl: apiBase ? `${apiBase}/webhooks/chariow-subscription` : '',
     simulation: isPlatformSimulation(),
     monerooConfigured,
     monerooWebhookSecret: Boolean(env.MONEROO_WEBHOOK_SECRET),
@@ -84,5 +124,6 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
 export function isPlatformSimulation(): boolean {
   // Jamais de simulation en production : seul un paiement reel active un abonnement.
   if (isProd) return false;
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'chariow') return !chariowReady();
   return !env.MONEROO_SECRET_KEY;
 }

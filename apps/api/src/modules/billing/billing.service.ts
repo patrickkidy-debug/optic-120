@@ -477,7 +477,7 @@ async function initiateInvoicePayment(
   });
   const plan = await prisma.subscriptionPlan.findUnique({
     where: { id: invoice.planId },
-    select: { name: true },
+    select: { name: true, code: true },
   });
 
   const payment = await prisma.subscriptionPayment.create({
@@ -499,10 +499,13 @@ async function initiateInvoicePayment(
     currency: invoice.currency,
     method,
     customerName: tenant?.name ?? 'Abonné OculoSaaS',
-    customerPhone,
+    // Le numero WhatsApp de l'etablissement sert de repli : certaines
+    // passerelles (Chariow) exigent un telephone.
+    customerPhone: customerPhone ?? tenant?.whatsappPhone ?? undefined,
     customerEmail: owner?.email ?? undefined,
     saleNumber: invoice.number,
     returnUrl,
+    productKey: plan ? `${plan.code}:${invoice.periodMonths}` : undefined,
   });
 
   await prisma.subscriptionPayment.update({

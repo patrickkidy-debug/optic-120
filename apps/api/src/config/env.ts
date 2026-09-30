@@ -55,6 +55,24 @@ const envSchema = z.object({
   MONEROO_BASE_URL: z.string().default('https://api.moneroo.io/v1'),
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
+  /**
+   * Passerelle d'encaissement des ABONNEMENTS : « moneroo » (defaut) ou
+   * « chariow ». Une seule a la fois : pas de bascule silencieuse de l'une a
+   * l'autre si une cle manque (voir platform-provider.ts).
+   */
+  PLATFORM_PAYMENT_PROVIDER: z.enum(['moneroo', 'chariow']).default('moneroo'),
+  CHARIOW_API_KEY: z.string().optional().default(''),
+  CHARIOW_BASE_URL: z.string().default('https://api.chariow.com/v1'),
+  /** Secret de signature du Pulse (whsec_...), propre a chaque Pulse. */
+  CHARIOW_PULSE_SECRET: z.string().optional().default(''),
+  /**
+   * Produit Chariow par offre et par duree, en JSON :
+   *   {"STANDARD:1":"prd_xxx","STANDARD:6":"prd_yyy","GROWTH:1":"prd_zzz"}
+   * Cle = code de l'offre OculoSaaS + nombre de mois factures. Chariow ne
+   * laisse pas l'API fixer le prix : il vient du produit, d'ou ce tableau.
+   */
+  CHARIOW_PRODUCTS: z.string().optional().default('{}'),
+
   // Encaissement MANUEL des abonnements : numéro Mobile Money de l'éditeur sur
   // lequel le client règle directement, puis le fondateur confirme depuis la
   // console. Permet de vendre même sans passerelle configurée.
