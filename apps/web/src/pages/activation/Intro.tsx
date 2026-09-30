@@ -7,11 +7,14 @@ import {
   CreditCard,
   Glasses,
   Headphones,
+  MessageCircle,
   Smartphone,
   Users,
   Wallet,
 } from 'lucide-react';
+import { demoWhatsappLink } from '../../lib/whatsapp';
 import { ActivationShell, Glow, Pill, PrimaryAction } from './shared';
+import { SoftwarePreview } from './SoftwarePreview';
 import { formatTrialDuration } from './PaymentStep';
 
 /**
@@ -23,10 +26,31 @@ import { formatTrialDuration } from './PaymentStep';
  * quel, chacun de ces éléments aurait été une affirmation fausse vis-à-vis des
  * opticiens d'Afrique de l'Ouest, et une promesse que le logiciel ne tient pas.
  *
- * Une seule action, aussi : proposer « parler à un conseiller » ici offrirait
- * une sortie avant la première question. L'accompagnement est annoncé, et
- * proposé concrètement APRÈS l'activation.
+ * Une action principale (commencer), et une seule alternative discrète :
+ * discuter sur WhatsApp avant d'activer quoi que ce soit, pour le prospect
+ * qui a une question plutôt que de le laisser partir sans réponse.
  */
+
+/** Lien WhatsApp secondaire, sous un bouton d'activation. */
+function WhatsappQuestion({ light }: { light?: boolean }) {
+  return (
+    <a
+      href={demoWhatsappLink(
+        "Bonjour, j'ai une question sur OculoSaaS avant d'activer mon espace.",
+      )}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+        light
+          ? 'bg-white/15 text-white hover:bg-white/25'
+          : 'text-[#128C7E] ring-1 ring-[#25D366]/40 hover:bg-[#25D366]/10'
+      }`}
+    >
+      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+      Une question ? Discuter sur WhatsApp
+    </a>
+  );
+}
 
 const MODULES = [
   { icon: Boxes, title: 'Stock', text: 'Montures, verres et accessoires, magasin par magasin.' },
@@ -89,6 +113,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           <PrimaryAction onClick={onStart}>
             Commencer mon activation <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
+          <WhatsappQuestion />
         </div>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
@@ -100,6 +125,9 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           ))}
         </ul>
       </section>
+
+      {/* Aperçu : vrais écrans du logiciel */}
+      <SoftwarePreview />
 
       {/* Modules */}
       <section className="mt-12">
@@ -204,6 +232,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           >
             Commencer mon activation <ArrowRight className="h-4 w-4" />
           </button>
+          <WhatsappQuestion light />
         </div>
       </section>
 

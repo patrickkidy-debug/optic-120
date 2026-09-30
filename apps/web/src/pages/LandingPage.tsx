@@ -21,11 +21,13 @@ import {
   FolderX,
   EyeOff,
   Hourglass,
+  MessageCircle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { demoWhatsappLink } from '../lib/whatsapp';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -190,6 +192,24 @@ function Reveal({
     >
       {children}
     </div>
+  );
+}
+
+/**
+ * Discussion WhatsApp avant toute inscription : un prospect qui hésite pose
+ * sa question plutôt que de partir. Secondaire par rapport au bouton principal.
+ */
+function WhatsappQuestion() {
+  const { t } = useTranslation();
+  return (
+    <a
+      href={demoWhatsappLink(t('landing.whatsappQuestionMessage'))}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex w-fit items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[#128C7E] ring-1 ring-[#25D366]/40 transition hover:bg-[#25D366]/10 dark:text-[#25D366]"
+    >
+      <MessageCircle className="h-4 w-4" aria-hidden="true" /> {t('landing.whatsappQuestion')}
+    </a>
   );
 }
 
@@ -467,6 +487,7 @@ export function LandingPage() {
                   >
                     {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
+                  <WhatsappQuestion />
                   <a
                     href="/downloads/OculoSaaS.apk"
                     download
@@ -896,13 +917,14 @@ export function LandingPage() {
             <p className="mx-auto mb-12 max-w-2xl text-lg text-content-muted">
               {t('landing.ctaSubtitle')}
             </p>
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-4">
               <Link
                 to="/signup"
                 className="btn-primary neon-glow rounded-full px-12 py-5 text-lg transition hover:-translate-y-0.5"
               >
                 {t('landing.useSoftware')} <ArrowRight className="h-5 w-5" />
               </Link>
+              <WhatsappQuestion />
             </div>
           </Reveal>
         </section>
