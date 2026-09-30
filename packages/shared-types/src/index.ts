@@ -116,6 +116,12 @@ export const PAYMENT_METHODS_BY_COUNTRY: Record<string, PaymentMethod[]> = {
   MZ: [PaymentMethod.MPESA, PaymentMethod.EMOLA, PaymentMethod.MKESH],
   AO: [PaymentMethod.MULTICAIXA, PaymentMethod.UNITEL_MONEY],
   CV: [PaymentMethod.VINTI4],
+  // Europe : pas de Mobile Money. Espèces, carte et chèque, déjà proposés partout.
+  FR: [],
+  BE: [],
+  CH: [],
+  LU: [],
+  MC: [],
 };
 
 /** Moyens proposés par défaut (Afrique de l'Ouest francophone). */
@@ -333,10 +339,15 @@ export const DEFAULT_PLAN_CODE = 'STARTER';
  * Une devise absente de cette table retombe sur le tarif XOF.
  */
 export const PLAN_PRICES: Record<string, Partial<Record<SupportedCurrency, number>>> = {
-  STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800 },
-  STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250 },
-  GROWTH: { XOF: 30000, XAF: 30000, CVE: 5100, AOA: 50000, MZN: 3100 },
+  // EUR : conversion EXACTE du tarif XOF (parité fixe 1 € = 655,957 FCFA),
+  // l'abonnement étant débité en FCFA. CHF : indicatif, le franc suisse flotte.
+  STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800, EUR: 11.43, CHF: 10.75 },
+  STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250, EUR: 18.29, CHF: 17.2 },
+  GROWTH: { XOF: 30000, XAF: 30000, CVE: 5100, AOA: 50000, MZN: 3100, EUR: 45.73, CHF: 43 },
 };
+
+/** Parité fixe de l'euro en franc CFA (UEMOA et CEMAC). */
+export const XOF_PER_EUR = 655.957;
 
 /** Prix mensuel d'une offre dans la devise de l'établissement. */
 export function planPrice(planCode: string, currency: string): number {
@@ -378,8 +389,11 @@ export const SEMIANNUAL_DISCOUNT = BILLING_CYCLE_DISCOUNT.SEMIANNUAL;
 export function planPriceForCycle(planCode: string, currency: string, cycle: BillingCycle): number {
   const monthly = planPrice(planCode, currency);
   const months = BILLING_CYCLE_MONTHS[cycle];
-  const total = monthly * months;
-  return Math.round(total * (1 - BILLING_CYCLE_DISCOUNT[cycle]));
+  const total = monthly * months * (1 - BILLING_CYCLE_DISCOUNT[cycle]);
+  // Arrondi à l'unité de la devise : FCFA sans centimes, euro au centime.
+  const decimals = CURRENCY_FORMAT[currency as SupportedCurrency]?.decimals ?? 0;
+  const factor = 10 ** decimals;
+  return Math.round(total * factor) / factor;
 }
 
 /* ============================================================
@@ -672,7 +686,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
  * ============================================================ */
 
 export const DEFAULT_CURRENCY = 'XOF';
-export const SUPPORTED_CURRENCIES = ['XOF', 'XAF', 'CVE', 'AOA', 'MZN'] as const;
+export const SUPPORTED_CURRENCIES = ['XOF', 'XAF', 'CVE', 'AOA', 'MZN', 'EUR', 'CHF'] as const;
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 /**
@@ -689,6 +703,8 @@ export const CURRENCY_FORMAT: Record<
   CVE: { symbol: '$', decimals: 0, label: 'Escudo cap-verdien' },
   AOA: { symbol: 'Kz', decimals: 0, label: 'Kwanza angolais' },
   MZN: { symbol: 'MT', decimals: 0, label: 'Metical mozambicain' },
+  EUR: { symbol: '€', decimals: 2, label: 'Euro' },
+  CHF: { symbol: 'CHF', decimals: 2, label: 'Franc suisse' },
 };
 
 export const VAT_RATE = 0.18; // TVA 18 % (UEMOA)
@@ -701,6 +717,11 @@ export const DEFAULT_VAT_BY_COUNTRY: Record<string, number> = {
   CV: 15, // Cap-Vert
   AO: 14, // Angola
   MZ: 16, // Mozambique
+  FR: 20, // France
+  BE: 21, // Belgique
+  CH: 8.1, // Suisse
+  LU: 17, // Luxembourg
+  MC: 20, // Monaco (TVA française)
 };
 export const SUPPORTED_LOCALES = ['fr', 'en', 'pt'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -720,7 +741,7 @@ const passwordSchema = z
  * ET de la devise attribuée à l'établissement (déduite de son indicatif, le
  * formulaire ne demandant pas le pays séparément).
  *
- * Couvre la CEDEAO + Mauritanie, plus les marchés lusophones hors Afrique de
+ * Couvre la CEDEAO + Mauritanie, l'Europe francophone, plus les marchés lusophones hors Afrique de
  * l'Ouest (Angola, Mozambique) ouverts en test.
  */
 export const SUPPORTED_COUNTRIES = [
@@ -743,6 +764,13 @@ export const SUPPORTED_COUNTRIES = [
   // Marchés lusophones ouverts en test (hors CEDEAO).
   { code: 'AO', name: 'Angola', dial: '+244', flag: '🇦🇴', currency: 'AOA', locale: 'pt' },
   { code: 'MZ', name: 'Mozambique', dial: '+258', flag: '🇲🇿', currency: 'MZN', locale: 'pt' },
+  // Europe francophone. L'abonnement y est réglé par carte bancaire via
+  // Moneroo, débité en francs CFA (Moneroo n'encaisse pas l'euro par carte).
+  { code: 'FR', name: 'France', dial: '+33', flag: '🇫🇷', currency: 'EUR', locale: 'fr' },
+  { code: 'BE', name: 'Belgique', dial: '+32', flag: '🇧🇪', currency: 'EUR', locale: 'fr' },
+  { code: 'CH', name: 'Suisse', dial: '+41', flag: '🇨🇭', currency: 'CHF', locale: 'fr' },
+  { code: 'LU', name: 'Luxembourg', dial: '+352', flag: '🇱🇺', currency: 'EUR', locale: 'fr' },
+  { code: 'MC', name: 'Monaco', dial: '+377', flag: '🇲🇨', currency: 'EUR', locale: 'fr' },
 ] as const;
 
 export type SupportedCountry = (typeof SUPPORTED_COUNTRIES)[number];
@@ -763,7 +791,7 @@ export function countryFromPhone(phone: string): SupportedCountry | undefined {
 
 /**
  * Numéro WhatsApp du responsable (obligatoire à l'inscription). Doit porter
- * l'indicatif international d'un pays d'Afrique de l'Ouest (CEDEAO + Mauritanie),
+ * l'indicatif international d'un pays desservi (voir SUPPORTED_COUNTRIES),
  * suivi de 5 à 12 chiffres. Espaces / tirets / points / parenthèses tolérés.
  */
 export const whatsappSchema = z

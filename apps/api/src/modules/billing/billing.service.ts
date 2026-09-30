@@ -64,7 +64,7 @@ export async function listPlans(activeOnly = true) {
 /* --------------------- Abonnement d'un tenant --------------------- */
 
 const PLATFORM_SETTINGS_ID = 'default';
-const DEFAULT_TRIAL_MINUTES = 120; // 2 heures
+const DEFAULT_TRIAL_MINUTES = 1440; // 24 heures
 
 /** Durée actuelle de l'essai gratuit offert à l'inscription, réglable depuis la console fondateur. */
 export async function getTrialDurationMinutes(): Promise<number> {

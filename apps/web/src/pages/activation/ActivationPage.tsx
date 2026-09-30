@@ -234,7 +234,7 @@ export function ActivationPage() {
 
   if (restoring) return <PageLoader />;
 
-  if (screen === 'INTRO') return <Intro onStart={() => void begin()} />;
+  if (screen === 'INTRO') return <Intro onStart={() => void begin()} trialMinutes={trialMinutes} />;
 
   if (screen === 'ACTIVITY') {
     const ready = Boolean(structureType && branchCount && country);
@@ -358,6 +358,7 @@ export function ActivationPage() {
     return (
       <InformationStep
         initial={{ ...info, country: country || info.country }}
+        trialMinutes={trialMinutes}
         submitting={busy}
         error={error}
         onBack={() => setScreen('PLAN')}
@@ -416,7 +417,8 @@ export function ActivationPage() {
               <p className="mt-1 text-sm text-content-muted">{p.description}</p>
 
               <p className="mt-3 font-display text-2xl font-extrabold text-content">
-                {planPrice(p.code, currency).toLocaleString('fr-FR')} {currency}
+                {planPrice(p.code, currency).toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(planPrice(p.code, currency)) ? 0 : 2 })}{' '}
+                {currency}
                 <span className="ml-1 text-sm font-normal text-content-muted">/ mois</span>
               </p>
 

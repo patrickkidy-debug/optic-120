@@ -7,6 +7,7 @@ import {
 } from '@oculo/shared-types';
 import { Button, Field } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
+import { formatTrialDuration } from './PaymentStep';
 
 /**
  * Étape 4 — coordonnées, et création de l'espace.
@@ -18,12 +19,15 @@ import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared'
  */
 export function InformationStep({
   initial,
+  trialMinutes,
   submitting,
   error,
   onBack,
   onSubmit,
 }: {
   initial: Partial<ActivationInformationInput>;
+  /** Durée de l'essai gratuit proposé à l'étape suivante ; 0 = aucun. */
+  trialMinutes: number;
   submitting: boolean;
   error: string;
   onBack: () => void;
@@ -177,7 +181,9 @@ export function InformationStep({
 
       <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs text-content-muted ring-1 ring-line">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-        Votre espace est créé à l'étape suivante et s'ouvrira dès la confirmation de votre paiement.
+        {trialMinutes > 0
+          ? `Votre espace est créé à l'étape suivante. Vous pourrez le tester gratuitement pendant ${formatTrialDuration(trialMinutes)} ou activer directement votre abonnement.`
+          : "Votre espace est créé à l'étape suivante et s'ouvrira dès la confirmation de votre paiement."}
       </p>
 
       {(localError || error) && (
@@ -193,7 +199,7 @@ export function InformationStep({
           </Button>
           <div className="flex-1">
             <PrimaryAction onClick={submit} disabled={submitting}>
-              {submitting ? 'Création en cours…' : 'Continuer vers le paiement'}
+              {submitting ? 'Création en cours…' : trialMinutes > 0 ? 'Continuer' : 'Continuer vers le paiement'}
               <ArrowRight className="h-4 w-4" />
             </PrimaryAction>
           </div>

@@ -143,7 +143,7 @@ export function SubscriptionPage() {
   const qc = useQueryClient();
   const canManage = usePermission('billing.manage');
   const setSuspended = useAuthStore((s) => s.setSuspended);
-  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; cycle: BillingCycle } | null>(null);
+  const [payFor, setPayFor] = useState<{ kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; cycle: BillingCycle } | null>(null);
   // Prolongation anticipée : l'abonnement est encore valide, mais le client
   // veut payer d'avance. Le serveur ajoute les mois réglés à l'échéance en
   // cours (billing.service : base = currentPeriodEnd si elle est future),
@@ -463,7 +463,7 @@ export function SubscriptionPage() {
                     <td className="table-cell text-content-muted">
                       {formatDate(inv.periodStart)} → {formatDate(inv.periodEnd)}
                     </td>
-                    <td className="table-cell text-right font-semibold text-content">{formatCurrency(Number(inv.amount))}</td>
+                    <td className="table-cell text-right font-semibold text-content">{formatCurrency(Number(inv.amount), inv.currency)}</td>
                     <td className="table-cell">
                       <Badge tone={inv.status === 'PAID' ? 'success' : inv.status === 'FAILED' ? 'danger' : 'warning'}>
                         {inv.status === 'PAID' ? 'Payée' : inv.status === 'FAILED' ? 'Échouée' : 'En attente'}
@@ -471,7 +471,7 @@ export function SubscriptionPage() {
                     </td>
                     <td className="table-cell text-right">
                       {inv.status !== 'PAID' && canManage && (
-                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount), cycle: 'MONTHLY' })} className="h-8 px-3 text-xs">
+                        <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount), currency: inv.currency, cycle: 'MONTHLY' })} className="h-8 px-3 text-xs">
                           Payer
                         </Button>
                       )}
@@ -574,7 +574,8 @@ function BillingPaymentModal({
   onClose,
   onPaid,
 }: {
-  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number; cycle: BillingCycle };
+  /** `currency` : devise de la facture ; absente = devise de l'établissement (prix d'offre). */
+  target: { kind: 'plan' | 'invoice'; id: string; label: string; amount: number; currency?: string; cycle: BillingCycle };
   onClose: () => void;
   onPaid: () => void;
 }) {
@@ -665,8 +666,15 @@ function BillingPaymentModal({
         <span className="text-sm text-content-muted">
           Montant à régler{target.kind === 'plan' ? ` (${BILLING_CYCLE_MONTHS[target.cycle]} mois)` : ''}
         </span>
-        <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount)}</span>
+        <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount, target.currency)}</span>
       </div>
+      {/* Hors zone FCFA (Europe…) : l'abonnement est débité en francs CFA par carte. */}
+      {!['XOF', 'XAF'].includes(getActiveCurrency()) && (
+        <p className="-mt-2 mb-4 text-xs text-content-muted">
+          Réglé par carte bancaire et débité en francs CFA
+          {getActiveCurrency() === 'EUR' ? ' (1 € = 655,957 FCFA, parité fixe).' : ' ; le montant dans votre devise est indicatif.'}
+        </p>
+      )}
       {phase === 'choose' && (
         <>
           {/* Paiement en ligne : uniquement si une passerelle est configurée.

@@ -12,6 +12,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { ActivationShell, Glow, Pill, PrimaryAction } from './shared';
+import { formatTrialDuration } from './PaymentStep';
 
 /**
  * Accueil du tunnel : page de conversion.
@@ -63,7 +64,8 @@ const ONBOARDING = [
   'Rapports et application mobile',
 ];
 
-export function Intro({ onStart }: { onStart: () => void }) {
+export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; trialMinutes?: number }) {
+  const trial = trialMinutes > 0 ? `Essai gratuit ${formatTrialDuration(trialMinutes)}` : null;
   return (
     <ActivationShell wide>
       {/* Hero */}
@@ -90,7 +92,7 @@ export function Intro({ onStart }: { onStart: () => void }) {
         </div>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-          {['Configuration accompagnée', 'Paiement sécurisé', 'Accès après activation'].map((t) => (
+          {['Configuration accompagnée', 'Paiement sécurisé', trial ?? 'Accès après activation'].map((t) => (
             <li key={t} className="flex items-center gap-1.5 text-xs text-content-muted">
               <BadgeCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               {t}
@@ -174,7 +176,8 @@ export function Intro({ onStart }: { onStart: () => void }) {
           <Wallet className="h-4 w-4 text-primary" aria-hidden="true" /> Paiement mobile ou carte
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <BadgeCheck className="h-4 w-4 text-success" aria-hidden="true" /> Accès dès le paiement confirmé
+          <BadgeCheck className="h-4 w-4 text-success" aria-hidden="true" />{' '}
+          {trial ? `${trial}, sans paiement` : 'Accès dès le paiement confirmé'}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Headphones className="h-4 w-4 text-accent" aria-hidden="true" /> Assistance WhatsApp
