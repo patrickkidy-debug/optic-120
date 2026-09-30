@@ -424,6 +424,7 @@ export function ActivationPage() {
         onTrial={() => void tryForFree()}
         bank={bank}
         onBankTransfer={() => void declareTransfer()}
+        contact={{ fullName: info.fullName, establishment: info.establishmentName, city: info.city }}
       />
     );
   }

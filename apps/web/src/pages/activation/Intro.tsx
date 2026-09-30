@@ -7,12 +7,10 @@ import {
   CreditCard,
   Glasses,
   Headphones,
-  MessageCircle,
   Smartphone,
   Users,
   Wallet,
 } from 'lucide-react';
-import { demoWhatsappLink } from '../../lib/whatsapp';
 import { ActivationShell, Glow, Pill, PrimaryAction } from './shared';
 import { SoftwarePreview } from './SoftwarePreview';
 import { formatTrialDuration } from './PaymentStep';
@@ -26,31 +24,10 @@ import { formatTrialDuration } from './PaymentStep';
  * quel, chacun de ces éléments aurait été une affirmation fausse vis-à-vis des
  * opticiens d'Afrique de l'Ouest, et une promesse que le logiciel ne tient pas.
  *
- * Une action principale (commencer), et une seule alternative discrète :
- * discuter sur WhatsApp avant d'activer quoi que ce soit, pour le prospect
- * qui a une question plutôt que de le laisser partir sans réponse.
+ * Une seule action : commencer. La discussion WhatsApp n'est proposée qu'à
+ * l'étape 5, une fois les coordonnées saisies : l'équipe ne parle qu'à des
+ * prospects qualifiés, dont elle connaît déjà l'établissement et l'offre.
  */
-
-/** Lien WhatsApp secondaire, sous un bouton d'activation. */
-function WhatsappQuestion({ light }: { light?: boolean }) {
-  return (
-    <a
-      href={demoWhatsappLink(
-        "Bonjour, j'ai une question sur OculoSaaS avant d'activer mon espace.",
-      )}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-        light
-          ? 'bg-white/15 text-white hover:bg-white/25'
-          : 'text-[#128C7E] ring-1 ring-[#25D366]/40 hover:bg-[#25D366]/10'
-      }`}
-    >
-      <MessageCircle className="h-4 w-4" aria-hidden="true" />
-      Une question ? Discuter sur WhatsApp
-    </a>
-  );
-}
 
 const MODULES = [
   { icon: Boxes, title: 'Stock', text: 'Montures, verres et accessoires, magasin par magasin.' },
@@ -70,7 +47,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Activez votre abonnement',
-    text: 'Paiement par Orange Money, Wave, MTN MoMo, Moov Money ou carte bancaire.',
+    text: 'Paiement par Orange Money, Wave, MTN MoMo, Moov Money ou virement bancaire.',
   },
   {
     n: '03',
@@ -113,7 +90,6 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           <PrimaryAction onClick={onStart}>
             Commencer mon activation <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
-          <WhatsappQuestion />
         </div>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
@@ -201,7 +177,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
       {/* Réassurance */}
       <section className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-2xl bg-surface-3/50 px-4 py-3 text-xs text-content-muted">
         <span className="inline-flex items-center gap-1.5">
-          <Wallet className="h-4 w-4 text-primary" aria-hidden="true" /> Paiement mobile ou carte
+          <Wallet className="h-4 w-4 text-primary" aria-hidden="true" /> Paiement mobile ou virement
         </span>
         <span className="inline-flex items-center gap-1.5">
           <BadgeCheck className="h-4 w-4 text-success" aria-hidden="true" />{' '}
@@ -232,7 +208,6 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           >
             Commencer mon activation <ArrowRight className="h-4 w-4" />
           </button>
-          <WhatsappQuestion light />
         </div>
       </section>
 

@@ -11,7 +11,7 @@ import {
 } from '@oculo/shared-types';
 import { Button } from '../../components/ui';
 import type { BankDetails, BankTransferRequest } from '../../features/activation/api';
-import { TEAM_WHATSAPP_DISPLAY, transferReceiptLink } from '../../lib/whatsapp';
+import { TEAM_WHATSAPP_DISPLAY, demoWhatsappLink, transferReceiptLink } from '../../lib/whatsapp';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
 
 const METHOD_LABELS: Record<string, string> = {
@@ -57,7 +57,7 @@ function isOutsideCfa(country: string | null): boolean {
 /**
  * Étape 5 — choix libre : tester gratuitement ou activer l'abonnement.
  *
- * Trois façons d'activer : Mobile Money ou carte via Moneroo (checkout,
+ * Deux façons d'activer : Mobile Money via Moneroo (checkout,
  * activation à la confirmation de la passerelle), ou virement bancaire
  * (facture en attente, activation par l'équipe à réception du reçu envoyé
  * sur WhatsApp). Depuis l'Europe, Moneroo n'encaisse pas : seul le virement
@@ -75,6 +75,7 @@ export function PaymentStep({
   onTrial,
   bank,
   onBankTransfer,
+  contact,
 }: {
   planCode: string | null;
   billingCycle: string | null;
@@ -89,6 +90,8 @@ export function PaymentStep({
   /** Coordonnées bancaires de l'éditeur ; null = virement non proposé. */
   bank: BankDetails | null;
   onBankTransfer: () => void;
+  /** Coordonnées saisies à l'étape 4, reprises dans le message WhatsApp. */
+  contact: { fullName?: string | null; establishment?: string | null; city?: string | null };
 }) {
   const plan = PLAN_CATALOG.find((p) => p.code === planCode) ?? PLAN_CATALOG[0]!;
   const currency = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.currency ?? 'XOF';
@@ -99,7 +102,8 @@ export function PaymentStep({
   const outsideCfa = isOutsideCfa(country);
 
   const mobile = paymentMethodsForCountry(country).filter((m) => m !== 'CASH' && m !== 'CHEQUE');
-  const online: PaymentMethod[] = outsideCfa ? [] : [...mobile.filter((m) => m !== 'CARD'), 'CARD'];
+  // Pas de carte bancaire : Mobile Money via Moneroo, ou virement.
+  const online: PaymentMethod[] = outsideCfa ? [] : mobile.filter((m) => m !== 'CARD');
   const methods: PaymentMethod[] = [...online, ...(bank ? (['BANK_TRANSFER'] as PaymentMethod[]) : [])];
   const [method, setMethod] = useState<PaymentMethod | null>(methods[0] ?? null);
 
@@ -133,6 +137,8 @@ export function PaymentStep({
           </Button>
         </section>
       )}
+
+      <WhatsappContact contact={contact} planName={plan.name} />
 
       {trial && (
         <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-content-faint">
@@ -225,6 +231,39 @@ export function PaymentStep({
         </div>
       </ActionBar>
     </ActivationShell>
+  );
+}
+
+/**
+ * Discussion avec l'équipe, proposée seulement ici : le prospect a déjà donné
+ * ses coordonnées, le message pré-rempli les reprend pour que l'équipe sache
+ * à qui elle parle sans poser de questions.
+ */
+function WhatsappContact({
+  contact,
+  planName,
+}: {
+  contact: { fullName?: string | null; establishment?: string | null; city?: string | null };
+  planName: string;
+}) {
+  const lines = [
+    "Bonjour, j'ai une question sur OculoSaaS avant d'activer mon espace.",
+    contact.fullName ? `Nom : ${contact.fullName}` : '',
+    contact.establishment
+      ? `Établissement : ${contact.establishment}${contact.city ? ` (${contact.city})` : ''}`
+      : '',
+    `Offre envisagée : ${planName}`,
+  ].filter(Boolean);
+  return (
+    <a
+      href={demoWhatsappLink(lines.join('\n'))}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-[#128C7E] ring-1 ring-[#25D366]/50 transition hover:bg-[#25D366]/10"
+    >
+      <MessageCircle className="h-4 w-4" aria-hidden="true" />
+      Une question avant de vous lancer ? Discutons sur WhatsApp
+    </a>
   );
 }
 
