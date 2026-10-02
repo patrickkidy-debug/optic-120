@@ -70,29 +70,30 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
   return (
     <ActivationShell wide>
       {/* Hero */}
-      <section className="relative overflow-hidden text-center">
+      <section className="relative overflow-hidden text-center lg:grid lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-12 lg:overflow-visible lg:py-6 lg:text-left">
         <Glow />
+        <div>
         <Pill>Logiciel de gestion pour opticiens</Pill>
 
-        <h1 className="mx-auto max-w-lg font-display text-3xl font-extrabold leading-tight tracking-tight text-content sm:text-4xl">
+        <h1 className="mx-auto max-w-lg font-display text-3xl font-extrabold leading-tight tracking-tight text-content sm:text-4xl lg:mx-0 lg:text-5xl">
           Activez OculoSaaS{' '}
           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             pour votre magasin
           </span>
         </h1>
 
-        <p className="mx-auto mt-3 max-w-md text-sm text-content-muted sm:text-base">
+        <p className="mx-auto mt-3 max-w-md text-sm text-content-muted sm:text-base lg:mx-0 lg:text-lg">
           Répondez à quelques questions, choisissez votre formule et activez votre espace. Notre équipe
           vous accompagne ensuite dans la configuration.
         </p>
 
-        <div className="mx-auto mt-6 max-w-sm">
+        <div className="mx-auto mt-6 max-w-sm lg:mx-0">
           <PrimaryAction onClick={onStart}>
             Commencer mon activation <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
         </div>
 
-        <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:justify-start">
           {['Configuration accompagnée', 'Paiement sécurisé', trial ?? 'Accès après activation'].map((t) => (
             <li key={t} className="flex items-center gap-1.5 text-xs text-content-muted">
               <BadgeCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -100,6 +101,26 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
             </li>
           ))}
         </ul>
+        </div>
+
+        {/* Grand écran : le logiciel visible dès l'arrivée. */}
+        <div className="hidden lg:block">
+          <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_20px_60px_-20px_rgba(124,58,237,0.35)]">
+            <div className="flex items-center gap-1.5 border-b border-line bg-surface-2 px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-danger/50" />
+              <span className="h-2.5 w-2.5 rounded-full bg-accent/50" />
+              <span className="h-2.5 w-2.5 rounded-full bg-success/50" />
+              <span className="ml-3 font-mono text-[11px] text-content-faint">oculosaas.com/dashboard</span>
+            </div>
+            <img
+              src="/apercu/dashboard-vignette.webp"
+              alt="Tableau de bord d'OculoSaaS"
+              width={720}
+              height={508}
+              className="block h-auto w-full"
+            />
+          </div>
+        </div>
       </section>
 
       {/* Aperçu : vrais écrans du logiciel */}
@@ -113,7 +134,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
         <h2 className="mb-5 text-center font-display text-xl font-extrabold text-content sm:text-2xl">
           Ce que vous gérez avec OculoSaaS
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
           {MODULES.map((m) => (
             <div key={m.title} className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
               <span className="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary">
@@ -134,9 +155,9 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
         <h2 className="mb-6 text-center font-display text-xl font-extrabold text-content sm:text-2xl">
           Activation en 3 étapes
         </h2>
-        <ol className="space-y-3">
+        <ol className="space-y-3 lg:grid lg:grid-cols-3 lg:gap-4 lg:space-y-0">
           {STEPS.map((s) => (
-            <li key={s.n} className="flex gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
+            <li key={s.n} className="flex gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm lg:flex-col lg:p-6">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-accent font-display font-bold text-white">
                 {s.n}
               </span>
@@ -150,7 +171,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
       </section>
 
       {/* Accompagnement */}
-      <section className="mt-12 rounded-3xl border border-line bg-surface p-6 shadow-sm">
+      <section className="mt-12 rounded-3xl border border-line bg-surface p-6 shadow-sm lg:p-10">
         <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
           <Headphones className="h-4 w-4" aria-hidden="true" /> Accompagnement inclus
         </span>
@@ -160,7 +181,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
         <p className="mt-2 text-sm text-content-muted">
           Une session de 30 à 45 minutes avec notre équipe pour mettre votre magasin en route.
         </p>
-        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {ONBOARDING.map((t) => (
             <li key={t} className="flex items-start gap-2 text-sm text-content">
               <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
@@ -189,7 +210,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
       </section>
 
       {/* Dernier appel */}
-      <section className="relative mt-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-accent p-6 text-center text-white shadow-lg">
+      <section className="relative mt-8 overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-accent p-6 text-center text-white shadow-lg lg:p-12">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl"

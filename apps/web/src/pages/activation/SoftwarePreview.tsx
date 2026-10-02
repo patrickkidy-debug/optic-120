@@ -77,10 +77,10 @@ export function SoftwarePreview() {
         Voyez OculoSaaS avant de commencer
       </h2>
       <p className="mx-auto mb-5 mt-1 max-w-md text-center text-sm text-content-muted">
-        Les vrais écrans du logiciel. Touchez une image pour l'agrandir.
+        Les vrais écrans du logiciel. Cliquez ou touchez une image pour l'agrandir.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
         {SCREENS.map((s, i) => (
           <button
             key={s.key}
