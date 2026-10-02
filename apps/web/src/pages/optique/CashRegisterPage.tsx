@@ -84,6 +84,8 @@ export function CashRegisterPage() {
     opening: number;
     cashSales: number;
     transfersNet?: number;
+    salesTotal?: number;
+    netTotal?: number;
   } | null>(null);
 
   const { data: register, isLoading } = useQuery({
@@ -125,6 +127,8 @@ export function CashRegisterPage() {
         opening: res.openingAmount ?? Number(register?.openingAmount ?? 0),
         cashSales: res.cashSalesTotal ?? (summary?.cash ?? 0),
         transfersNet: res.transfersNet,
+        salesTotal: res.salesTotal,
+        netTotal: res.netTotal,
       });
       setClosing('');
       setClosingTouched(false);
@@ -161,6 +165,16 @@ export function CashRegisterPage() {
                 <CheckCircle2 className="h-5 w-5 text-success" />
                 <h3 className="font-display font-bold text-content">Caisse fermée avec succès</h3>
               </div>
+              {closeResult.salesTotal !== undefined && closeResult.netTotal !== undefined && (
+                <>
+                  <SummaryRow label="Total encaissé de la journée" value={formatCurrency(closeResult.salesTotal)} />
+                  {closeResult.expenses > 0 && (
+                    <SummaryRow label="Dépenses" value={`- ${formatCurrency(closeResult.expenses)}`} />
+                  )}
+                  <SummaryRow label="Net après dépenses" value={formatCurrency(closeResult.netTotal)} />
+                  <div className="my-1 border-t" />
+                </>
+              )}
               <SummaryRow label="Fond de caisse" value={formatCurrency(closeResult.opening)} />
               <SummaryRow label="Ventes espèces" value={`+ ${formatCurrency(closeResult.cashSales)}`} />
               {closeResult.transfersNet !== undefined && closeResult.transfersNet !== 0 && (

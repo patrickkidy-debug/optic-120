@@ -1,8 +1,41 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { cashOpenSchema, cashCloseSchema, CashRegisterStatus } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { badRequest, conflict, notFound } from '../../lib/http-error.js';
+
+type Db = NonNullable<FastifyRequest['db']>;
+
+/**
+ * Début de la période dont la session répond, pour les dépenses et versements.
+ *
+ * Pas l'heure d'ouverture seule : une dépense saisie le matin avant d'ouvrir
+ * la caisse (ou depuis « Dépenses / Versements ») était ignorée à la fermeture.
+ * On remonte donc au début de la journée d'ouverture, sans jamais repasser
+ * avant la fermeture précédente du même magasin : une dépense déjà déduite
+ * par une session n'est pas déduite deux fois.
+ */
+async function sessionStart(db: Db, register: { id: string; branchId: string; openedAt: Date }): Promise<Date> {
+  const dayStart = new Date(register.openedAt);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const previous = await db.cashRegister.findFirst({
+    where: { branchId: register.branchId, id: { not: register.id }, closedAt: { not: null, lte: register.openedAt } },
+    orderBy: { closedAt: 'desc' },
+    select: { closedAt: true },
+  });
+  const prevClose = previous?.closedAt;
+  return prevClose && prevClose > dayStart ? prevClose : dayStart;
+}
+
+/** Filtre « magasin de la caisse (ou sans magasin) » + « saisi ou daté depuis `since` ». */
+function sessionWhere(branchId: string, since: Date) {
+  return {
+    AND: [
+      { OR: [{ branchId }, { branchId: null }] },
+      { OR: [{ createdAt: { gte: since } }, { date: { gte: since } }] },
+    ],
+  };
+}
 
 export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -42,22 +75,8 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       .sort((a, b) => b.amount - a.amount);
     const cash = byMethod.find((m) => m.method === 'CASH')?.amount ?? 0;
     const total = byMethod.reduce((s, m) => s + m.amount, 0);
-    const expenseWhere = {
-      AND: [
-        {
-          OR: [
-            { branchId: register.branchId },
-            { branchId: null },
-          ],
-        },
-        {
-          OR: [
-            { createdAt: { gte: register.openedAt } },
-            { date: { gte: register.openedAt } },
-          ],
-        },
-      ],
-    };
+    const since = await sessionStart(req.db!, register);
+    const expenseWhere = sessionWhere(register.branchId, since);
 
     const [expensesAgg, expensesList, transfersInAgg, transfersOutAgg] = await Promise.all([
       req.db!.expense.aggregate({
@@ -80,20 +99,14 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       req.db!.cashTransfer.aggregate({
         where: {
           direction: 'IN',
-          AND: [
-            { OR: [{ branchId: register.branchId }, { branchId: null }] },
-            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
-          ],
+          ...sessionWhere(register.branchId, since),
         },
         _sum: { amount: true },
       }),
       req.db!.cashTransfer.aggregate({
         where: {
           direction: 'OUT',
-          AND: [
-            { OR: [{ branchId: register.branchId }, { branchId: null }] },
-            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
-          ],
+          ...sessionWhere(register.branchId, since),
         },
         _sum: { amount: true },
       }),
@@ -195,22 +208,8 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     if (!register) throw notFound('Caisse introuvable');
     if (register.status === CashRegisterStatus.CLOSED) throw conflict('Caisse déjà fermée');
 
-    const expenseWhere = {
-      AND: [
-        {
-          OR: [
-            { branchId: register.branchId },
-            { branchId: null },
-          ],
-        },
-        {
-          OR: [
-            { createdAt: { gte: register.openedAt } },
-            { date: { gte: register.openedAt } },
-          ],
-        },
-      ],
-    };
+    const since = await sessionStart(req.db!, register);
+    const expenseWhere = sessionWhere(register.branchId, since);
 
     // Espèces attendues : fond + ventes espèces + apports - retraits - dépenses de la session.
     const [cashSales, expensesAgg, transfersInAgg, transfersOutAgg] = await Promise.all([
@@ -230,20 +229,14 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       req.db!.cashTransfer.aggregate({
         where: {
           direction: 'IN',
-          AND: [
-            { OR: [{ branchId: register.branchId }, { branchId: null }] },
-            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
-          ],
+          ...sessionWhere(register.branchId, since),
         },
         _sum: { amount: true },
       }),
       req.db!.cashTransfer.aggregate({
         where: {
           direction: 'OUT',
-          AND: [
-            { OR: [{ branchId: register.branchId }, { branchId: null }] },
-            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
-          ],
+          ...sessionWhere(register.branchId, since),
         },
         _sum: { amount: true },
       }),
@@ -255,6 +248,13 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     const cashSalesTotal = Number(cashSales._sum.amount ?? 0);
     const openingAmount = Number(register.openingAmount);
     const expected = openingAmount + cashSalesTotal + transfersNet - expensesTotal;
+    // Total encaissé tous moyens confondus, et net après dépenses : ce que
+    // l'opticien appelle « la vente de la journée ».
+    const allSales = await req.db!.payment.aggregate({
+      where: { status: 'SUCCESS', createdAt: { gte: register.openedAt }, sale: { branchId: register.branchId } },
+      _sum: { amount: true },
+    });
+    const salesTotal = Number(allSales._sum.amount ?? 0);
 
     const updated = await req.db!.cashRegister.updateMany({
       where: { id },
@@ -275,6 +275,8 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       cashSalesTotal,
       openingAmount,
       transfersNet,
+      salesTotal,
+      netTotal: salesTotal + transfersNet - expensesTotal,
     });
   });
 }

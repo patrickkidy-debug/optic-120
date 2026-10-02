@@ -82,6 +82,8 @@ export async function closeRegister(
   cashSalesTotal?: number;
   openingAmount?: number;
   transfersNet?: number;
+  salesTotal?: number;
+  netTotal?: number;
 }> {
   const { data } = await api.post<{
     register: CashRegister;
@@ -90,6 +92,8 @@ export async function closeRegister(
     cashSalesTotal?: number;
     openingAmount?: number;
     transfersNet?: number;
+    salesTotal?: number;
+    netTotal?: number;
   }>(`/cashregister/${id}/close`, { closingAmount });
   return data;
 }
