@@ -41,9 +41,19 @@ describe('coordonnées du tunnel', () => {
   });
 
   it('accepte les indicatifs des pays desservis', () => {
-    for (const n of ['+221 77 123 45 67', '+225 07 12 34 56', '+229 97 12 34 56']) {
+    for (const n of ['+221 77 123 45 67', '+225 07 12 34 56', '+229 97 12 34 56', '+250 788 12 34 56']) {
       expect(parse({ whatsapp: n }).success).toBe(true);
     }
+  });
+
+  it('accepte le Rwanda avec pays RW et indicatif +250', () => {
+    expect(
+      parse({
+        country: 'RW',
+        whatsapp: '+250 788 12 34 56',
+        city: 'Kigali',
+      }).success,
+    ).toBe(true);
   });
 
   it('tolère espaces, tirets et parenthèses', () => {

@@ -16,6 +16,7 @@ describe('téléphone au format Chariow', () => {
   it('sépare le pays et le numéro', () => {
     expect(splitPhone('+225 07 12 34 56')).toEqual({ country_code: 'CI', number: '07123456' });
     expect(splitPhone('+221 77 123 45 67')).toEqual({ country_code: 'SN', number: '771234567' });
+    expect(splitPhone('+250 788 12 34 56')).toEqual({ country_code: 'RW', number: '788123456' });
     expect(splitPhone('+352 621 123 456')).toEqual({ country_code: 'LU', number: '621123456' });
   });
   it('refuse un numéro sans indicatif ou hors des pays desservis', () => {

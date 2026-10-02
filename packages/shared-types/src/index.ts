@@ -113,6 +113,7 @@ export const MOBILE_MONEY_METHODS: PaymentMethod[] = [
  * voie « Wave ». Espèces et carte sont proposées partout.
  */
 export const PAYMENT_METHODS_BY_COUNTRY: Record<string, PaymentMethod[]> = {
+  RW: [PaymentMethod.MTN_MOMO],
   MZ: [PaymentMethod.MPESA, PaymentMethod.EMOLA, PaymentMethod.MKESH],
   AO: [PaymentMethod.MULTICAIXA, PaymentMethod.UNITEL_MONEY],
   CV: [PaymentMethod.VINTI4],
@@ -341,9 +342,9 @@ export const DEFAULT_PLAN_CODE = 'STARTER';
 export const PLAN_PRICES: Record<string, Partial<Record<SupportedCurrency, number>>> = {
   // EUR : conversion EXACTE du tarif XOF (parité fixe 1 € = 655,957 FCFA),
   // l'abonnement étant débité en FCFA. CHF : indicatif, le franc suisse flotte.
-  STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800, EUR: 11.43, CHF: 10.75 },
-  STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250, EUR: 18.29, CHF: 17.2 },
-  GROWTH: { XOF: 30000, XAF: 30000, CVE: 5100, AOA: 50000, MZN: 3100, EUR: 45.73, CHF: 43 },
+  STARTER: { XOF: 7500, XAF: 7500, CVE: 1250, AOA: 12000, MZN: 800, EUR: 11.43, CHF: 10.75, RWF: 16000 },
+  STANDARD: { XOF: 12000, XAF: 12000, CVE: 2000, AOA: 20000, MZN: 1250, EUR: 18.29, CHF: 17.2, RWF: 25000 },
+  GROWTH: { XOF: 30000, XAF: 30000, CVE: 5100, AOA: 50000, MZN: 3100, EUR: 45.73, CHF: 43, RWF: 65000 },
 };
 
 /** Parité fixe de l'euro en franc CFA (UEMOA et CEMAC). */
@@ -688,7 +689,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
  * ============================================================ */
 
 export const DEFAULT_CURRENCY = 'XOF';
-export const SUPPORTED_CURRENCIES = ['XOF', 'XAF', 'CVE', 'AOA', 'MZN', 'EUR', 'CHF'] as const;
+export const SUPPORTED_CURRENCIES = ['XOF', 'XAF', 'CVE', 'AOA', 'MZN', 'EUR', 'CHF', 'RWF'] as const;
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 /**
@@ -705,6 +706,7 @@ export const CURRENCY_FORMAT: Record<
   CVE: { symbol: '$', decimals: 0, label: 'Escudo cap-verdien' },
   AOA: { symbol: 'Kz', decimals: 0, label: 'Kwanza angolais' },
   MZN: { symbol: 'MT', decimals: 0, label: 'Metical mozambicain' },
+  RWF: { symbol: 'RWF', decimals: 0, label: 'Franc rwandais' },
   EUR: { symbol: '€', decimals: 2, label: 'Euro' },
   CHF: { symbol: 'CHF', decimals: 2, label: 'Franc suisse' },
 };
@@ -719,6 +721,7 @@ export const DEFAULT_VAT_BY_COUNTRY: Record<string, number> = {
   CV: 15, // Cap-Vert
   AO: 14, // Angola
   MZ: 16, // Mozambique
+  RW: 18, // Rwanda
   FR: 20, // France
   BE: 21, // Belgique
   CH: 8.1, // Suisse
@@ -744,7 +747,7 @@ const passwordSchema = z
  * formulaire ne demandant pas le pays séparément).
  *
  * Couvre la CEDEAO + Mauritanie, l'Europe francophone, plus les marchés lusophones hors Afrique de
- * l'Ouest (Angola, Mozambique) ouverts en test.
+ * l'Ouest (Angola, Mozambique) ouverts en test, et le Rwanda en Afrique de l'Est.
  */
 export const SUPPORTED_COUNTRIES = [
   { code: 'BJ', name: 'Bénin', dial: '+229', flag: '🇧🇯', currency: 'XOF', locale: 'fr' },
@@ -763,6 +766,8 @@ export const SUPPORTED_COUNTRIES = [
   { code: 'SN', name: 'Sénégal', dial: '+221', flag: '🇸🇳', currency: 'XOF', locale: 'fr' },
   { code: 'SL', name: 'Sierra Leone', dial: '+232', flag: '🇸🇱', currency: 'XOF', locale: 'en' },
   { code: 'TG', name: 'Togo', dial: '+228', flag: '🇹🇬', currency: 'XOF', locale: 'fr' },
+  // Afrique de l'Est / Grands Lacs
+  { code: 'RW', name: 'Rwanda', dial: '+250', flag: '🇷🇼', currency: 'RWF', locale: 'fr' },
   // Marchés lusophones ouverts en test (hors CEDEAO).
   { code: 'AO', name: 'Angola', dial: '+244', flag: '🇦🇴', currency: 'AOA', locale: 'pt' },
   { code: 'MZ', name: 'Mozambique', dial: '+258', flag: '🇲🇿', currency: 'MZN', locale: 'pt' },

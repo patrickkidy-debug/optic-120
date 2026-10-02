@@ -203,7 +203,6 @@ export const PROSPECT_DIAL_CODES: DialCode[] = [
   { dial: '+254', code: 'KE', name: 'Kenya', flag: '🇰🇪' },
   { dial: '+255', code: 'TZ', name: 'Tanzanie', flag: '🇹🇿' },
   { dial: '+256', code: 'UG', name: 'Ouganda', flag: '🇺🇬' },
-  { dial: '+250', code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
   { dial: '+257', code: 'BI', name: 'Burundi', flag: '🇧🇮' },
   { dial: '+27', code: 'ZA', name: 'Afrique du Sud', flag: '🇿🇦' },
   { dial: '+261', code: 'MG', name: 'Madagascar', flag: '🇲🇬' },
