@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lock, Unlock, Wallet, CheckCircle2, AlertTriangle, Banknote, Smartphone, CreditCard } from 'lucide-react';
+import {
+  Lock,
+  Unlock,
+  Wallet,
+  CheckCircle2,
+  AlertTriangle,
+  Banknote,
+  Smartphone,
+  CreditCard,
+  PlusCircle,
+  Receipt,
+} from 'lucide-react';
+import {
+  expenseCreateSchema,
+  type ExpenseCreateInput,
+} from '@oculo/shared-types';
 import {
   getCurrentRegister,
   getRegisterSummary,
@@ -8,11 +25,13 @@ import {
   closeRegister,
   type CashRegister,
 } from '../../features/cashregister/api';
+import { createExpense } from '../../features/management/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
+import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDateTime } from '../../lib/format';
-import { PageHeader, PageLoader, Button, Field, Badge } from '../../components/ui';
+import { PageHeader, PageLoader, Button, Field, Badge, Modal } from '../../components/ui';
 
 /** Libellés commerciaux des moyens d'encaissement. */
 const METHOD_LABELS: Record<string, string> = {
@@ -33,16 +52,39 @@ const METHOD_LABELS: Record<string, string> = {
 };
 const methodIcon = (m: string) => (m === 'CASH' ? Banknote : m === 'CARD' ? CreditCard : Smartphone);
 
+const EXPENSE_CATEGORIES = [
+  { value: 'SUPPLIES', label: 'Fournitures' },
+  { value: 'TRANSPORT', label: 'Transport' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'MARKETING', label: 'Marketing' },
+  { value: 'ELECTRICITY', label: 'Électricité' },
+  { value: 'WATER', label: 'Eau' },
+  { value: 'INTERNET', label: 'Internet' },
+  { value: 'RENT', label: 'Loyer' },
+  { value: 'SALARIES', label: 'Salaires' },
+  { value: 'TAXES', label: 'Impôts & taxes' },
+  { value: 'OTHER', label: 'Divers' },
+];
+
 export function CashRegisterPage() {
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canOpen = usePermission('optique.cashregister.open');
   const canClose = usePermission('optique.cashregister.close');
+  const canAddExpense = usePermission('finance.expenses.create');
 
   const [opening, setOpening] = useState('');
   const [closing, setClosing] = useState('');
   const [closingTouched, setClosingTouched] = useState(false);
-  const [closeResult, setCloseResult] = useState<{ expected: number; counted: number; expenses: number } | null>(null);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [closeResult, setCloseResult] = useState<{
+    expected: number;
+    counted: number;
+    expenses: number;
+    opening: number;
+    cashSales: number;
+    transfersNet?: number;
+  } | null>(null);
 
   const { data: register, isLoading } = useQuery({
     queryKey: ['cash-current', branchId],
@@ -58,7 +100,7 @@ export function CashRegisterPage() {
   });
 
   // Le montant de fermeture s'actualise automatiquement avec les espèces reçues
-  // (fond + ventes espèces), tant que le caissier ne l'a pas saisi manuellement.
+  // (fond + ventes espèces - dépenses), tant que le caissier ne l'a pas saisi manuellement.
   useEffect(() => {
     if (summary && !closingTouched) setClosing(String(summary.expectedCash));
   }, [summary, closingTouched]);
@@ -76,7 +118,14 @@ export function CashRegisterPage() {
     mutationFn: (reg: CashRegister) =>
       closeRegister(reg.id, Math.max(0, Math.round(Number(closing) || 0))),
     onSuccess: (res) => {
-      setCloseResult({ expected: res.expectedAmount, counted: Number(res.register.closingAmount ?? 0), expenses: res.expensesTotal });
+      setCloseResult({
+        expected: res.expectedAmount,
+        counted: Number(res.register.closingAmount ?? 0),
+        expenses: res.expensesTotal,
+        opening: res.openingAmount ?? Number(register?.openingAmount ?? 0),
+        cashSales: res.cashSalesTotal ?? (summary?.cash ?? 0),
+        transfersNet: res.transfersNet,
+      });
       setClosing('');
       setClosingTouched(false);
       qc.invalidateQueries({ queryKey: ['cash-current'] });
@@ -89,7 +138,17 @@ export function CashRegisterPage() {
 
   return (
     <div>
-      <PageHeader title="Session de caisse" subtitle="Ouverture, fermeture et contrôle d'écart (Z)" />
+      <PageHeader
+        title="Session de caisse"
+        subtitle="Ouverture, fermeture et contrôle d'écart (Z)"
+        actions={
+          register && canAddExpense ? (
+            <Button variant="outline" onClick={() => setExpenseModalOpen(true)}>
+              <PlusCircle className="h-4 w-4" /> Dépense / Sortie
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
         <PageLoader />
@@ -100,11 +159,22 @@ export function CashRegisterPage() {
             <div className="card p-5">
               <div className="mb-3 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-success" />
-                <h3 className="font-display font-bold text-content">Caisse fermée</h3>
+                <h3 className="font-display font-bold text-content">Caisse fermée avec succès</h3>
               </div>
-              <SummaryRow label="Attendu (fond + espèces)" value={formatCurrency(closeResult.expected)} />
-              <SummaryRow label="Dépenses déduites" value={`- ${formatCurrency(closeResult.expenses)}`} />
-              <SummaryRow label="Compté" value={formatCurrency(closeResult.counted)} />
+              <SummaryRow label="Fond de caisse" value={formatCurrency(closeResult.opening)} />
+              <SummaryRow label="Ventes espèces" value={`+ ${formatCurrency(closeResult.cashSales)}`} />
+              {closeResult.transfersNet !== undefined && closeResult.transfersNet !== 0 && (
+                <SummaryRow
+                  label="Versements nets"
+                  value={`${closeResult.transfersNet > 0 ? '+' : '-'} ${formatCurrency(Math.abs(closeResult.transfersNet))}`}
+                />
+              )}
+              {closeResult.expenses > 0 && (
+                <SummaryRow label="Dépenses déduites" value={`- ${formatCurrency(closeResult.expenses)}`} />
+              )}
+              <div className="my-1 border-t" />
+              <SummaryRow label="Attendu théorique en caisse" value={formatCurrency(closeResult.expected)} />
+              <SummaryRow label="Montant réel compté" value={formatCurrency(closeResult.counted)} />
               <div className="my-2 border-t" />
               {(() => {
                 const diff = closeResult.counted - closeResult.expected;
@@ -168,6 +238,15 @@ export function CashRegisterPage() {
                       <span className="text-content-muted">Dépenses ({summary.expensesCount})</span>
                       <span className="font-medium text-danger">- {formatCurrency(summary.expensesTotal)}</span>
                     </div>
+                    {summary.transfersNet !== undefined && summary.transfersNet !== 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-content-muted">Versements nets</span>
+                        <span className={`font-medium ${summary.transfersNet >= 0 ? 'text-success' : 'text-danger'}`}>
+                          {summary.transfersNet > 0 ? '+' : ''}
+                          {formatCurrency(summary.transfersNet)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between border-t pt-1.5">
                       <span className="text-sm font-semibold text-content">Net après dépenses</span>
                       <span className="font-display font-bold text-content">{formatCurrency(summary.netTotal)}</span>
@@ -175,6 +254,34 @@ export function CashRegisterPage() {
                   </div>
                 )}
               </div>
+
+              {/* Détail des dépenses enregistrées pendant la session */}
+              {summary && summary.expenses && summary.expenses.length > 0 && (
+                <div className="mt-4 rounded-xl border border-line bg-surface-2/50 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-danger flex items-center gap-1.5">
+                      <Receipt className="h-3.5 w-3.5" />
+                      Dépenses de session ({summary.expenses.length})
+                    </p>
+                    <span className="font-display text-xs font-bold text-danger">
+                      - {formatCurrency(summary.expensesTotal)}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 divide-y divide-line/40">
+                    {summary.expenses.map((exp) => (
+                      <div key={exp.id} className="flex items-center justify-between pt-1 text-sm first:pt-0">
+                        <div>
+                          <span className="font-medium text-content">{exp.label}</span>
+                          <span className="block text-xs text-content-faint">
+                            {formatDateTime(exp.createdAt)}
+                          </span>
+                        </div>
+                        <span className="font-medium text-danger">- {formatCurrency(exp.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Ventes annulées de la session : leurs encaissements restent
                   comptés ci-dessus, il faut donc pouvoir les justifier avant
@@ -250,7 +357,7 @@ export function CashRegisterPage() {
                   </Field>
                   {summary && !closingTouched && (
                     <p className="mt-1 text-xs text-content-faint">
-                      Pré-rempli avec les espèces reçues aujourd'hui — ajustez-le au comptage réel.
+                      Pré-rempli avec les espèces attendues (fond + ventes - dépenses) — ajustez-le au comptage réel.
                     </p>
                   )}
                   <Button
@@ -308,7 +415,89 @@ export function CashRegisterPage() {
           )}
         </div>
       )}
+
+      {/* Modal d'ajout direct d'une dépense / sortie de caisse */}
+      {expenseModalOpen && register && (
+        <RegisterExpenseModal
+          branchId={register.branchId}
+          onClose={() => setExpenseModalOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function RegisterExpenseModal({
+  branchId,
+  onClose,
+}: {
+  branchId: string;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [error, setError] = useState('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ExpenseCreateInput>({
+    resolver: zodResolver(expenseCreateSchema),
+    defaultValues: { category: 'SUPPLIES', branchId },
+  });
+
+  const mut = useMutation({
+    mutationFn: (v: ExpenseCreateInput) => createExpense({ ...v, branchId }),
+    onSuccess: () => {
+      invalidateFinancialViews(qc);
+      onClose();
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title="Sortie de caisse / Dépense" size="sm">
+      <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
+        <Field label="Libellé (motif)">
+          <input
+            className="input"
+            placeholder="Ex: Transport coursier, fournitures, entretien..."
+            {...register('label')}
+          />
+          {errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}
+        </Field>
+        <Field label="Catégorie">
+          <select className="input" {...register('category')}>
+            {EXPENSE_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Montant retiré (FCFA)">
+          <input
+            className="input"
+            type="number"
+            min={1}
+            placeholder="0"
+            {...register('amount', { valueAsNumber: true })}
+          />
+          {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
+        </Field>
+        <Field label="Note / Justificatif (optionnel)">
+          <input className="input" placeholder="Détails supplémentaires..." {...register('notes')} />
+        </Field>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" loading={mut.isPending}>
+            Enregistrer la sortie
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

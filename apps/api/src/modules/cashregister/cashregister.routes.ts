@@ -42,12 +42,74 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       .sort((a, b) => b.amount - a.amount);
     const cash = byMethod.find((m) => m.method === 'CASH')?.amount ?? 0;
     const total = byMethod.reduce((s, m) => s + m.amount, 0);
-    const expenses = await req.db!.expense.aggregate({
-      where: { branchId: register.branchId, date: { gte: register.openedAt } },
-      _sum: { amount: true },
-      _count: { _all: true },
-    });
-    const expensesTotal = Number(expenses._sum.amount ?? 0);
+    const expenseWhere = {
+      AND: [
+        {
+          OR: [
+            { branchId: register.branchId },
+            { branchId: null },
+          ],
+        },
+        {
+          OR: [
+            { createdAt: { gte: register.openedAt } },
+            { date: { gte: register.openedAt } },
+          ],
+        },
+      ],
+    };
+
+    const [expensesAgg, expensesList, transfersInAgg, transfersOutAgg] = await Promise.all([
+      req.db!.expense.aggregate({
+        where: expenseWhere,
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      req.db!.expense.findMany({
+        where: expenseWhere,
+        select: {
+          id: true,
+          label: true,
+          amount: true,
+          category: true,
+          date: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      req.db!.cashTransfer.aggregate({
+        where: {
+          direction: 'IN',
+          AND: [
+            { OR: [{ branchId: register.branchId }, { branchId: null }] },
+            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
+          ],
+        },
+        _sum: { amount: true },
+      }),
+      req.db!.cashTransfer.aggregate({
+        where: {
+          direction: 'OUT',
+          AND: [
+            { OR: [{ branchId: register.branchId }, { branchId: null }] },
+            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
+          ],
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+    const expensesTotal = Number(expensesAgg._sum.amount ?? 0);
+    const expenses = expensesList.map((e) => ({
+      id: e.id,
+      label: e.label,
+      amount: Number(e.amount),
+      category: e.category,
+      date: e.date,
+      createdAt: e.createdAt,
+    }));
+    const transfersInTotal = Number(transfersInAgg._sum.amount ?? 0);
+    const transfersOutTotal = Number(transfersOutAgg._sum.amount ?? 0);
+    const transfersNet = transfersInTotal - transfersOutTotal;
 
     // Ventes annulées pendant la session. L'annulation remet le stock mais ne
     // supprime pas les encaissements déjà passés : le caissier doit voir à
@@ -90,14 +152,18 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       byMethod,
       cash,
       total,
+      expenses,
       expensesTotal,
-      expensesCount: expenses._count._all,
-      netTotal: total - expensesTotal,
+      expensesCount: expensesAgg._count._all,
+      transfersInTotal,
+      transfersOutTotal,
+      transfersNet,
+      netTotal: total + transfersNet - expensesTotal,
       cancelled,
       cancelledCount: cancelled.length,
       cancelledCashedTotal,
       openingAmount: Number(register.openingAmount),
-      expectedCash: Number(register.openingAmount) + cash - expensesTotal,
+      expectedCash: Number(register.openingAmount) + cash + transfersNet - expensesTotal,
       openedAt: register.openedAt,
     });
   });
@@ -129,8 +195,25 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     if (!register) throw notFound('Caisse introuvable');
     if (register.status === CashRegisterStatus.CLOSED) throw conflict('Caisse déjà fermée');
 
-    // Espèces attendues : fond + ventes espèces - dépenses de la session.
-    const [cashSales, expenses] = await Promise.all([
+    const expenseWhere = {
+      AND: [
+        {
+          OR: [
+            { branchId: register.branchId },
+            { branchId: null },
+          ],
+        },
+        {
+          OR: [
+            { createdAt: { gte: register.openedAt } },
+            { date: { gte: register.openedAt } },
+          ],
+        },
+      ],
+    };
+
+    // Espèces attendues : fond + ventes espèces + apports - retraits - dépenses de la session.
+    const [cashSales, expensesAgg, transfersInAgg, transfersOutAgg] = await Promise.all([
       req.db!.payment.aggregate({
         where: {
           method: 'CASH',
@@ -141,12 +224,37 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
         _sum: { amount: true },
       }),
       req.db!.expense.aggregate({
-        where: { branchId: register.branchId, date: { gte: register.openedAt } },
+        where: expenseWhere,
+        _sum: { amount: true },
+      }),
+      req.db!.cashTransfer.aggregate({
+        where: {
+          direction: 'IN',
+          AND: [
+            { OR: [{ branchId: register.branchId }, { branchId: null }] },
+            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
+          ],
+        },
+        _sum: { amount: true },
+      }),
+      req.db!.cashTransfer.aggregate({
+        where: {
+          direction: 'OUT',
+          AND: [
+            { OR: [{ branchId: register.branchId }, { branchId: null }] },
+            { OR: [{ createdAt: { gte: register.openedAt } }, { date: { gte: register.openedAt } }] },
+          ],
+        },
         _sum: { amount: true },
       }),
     ]);
-    const expensesTotal = Number(expenses._sum.amount ?? 0);
-    const expected = Number(register.openingAmount) + Number(cashSales._sum.amount ?? 0) - expensesTotal;
+    const expensesTotal = Number(expensesAgg._sum.amount ?? 0);
+    const transfersInTotal = Number(transfersInAgg._sum.amount ?? 0);
+    const transfersOutTotal = Number(transfersOutAgg._sum.amount ?? 0);
+    const transfersNet = transfersInTotal - transfersOutTotal;
+    const cashSalesTotal = Number(cashSales._sum.amount ?? 0);
+    const openingAmount = Number(register.openingAmount);
+    const expected = openingAmount + cashSalesTotal + transfersNet - expensesTotal;
 
     const updated = await req.db!.cashRegister.updateMany({
       where: { id },
@@ -160,6 +268,13 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     });
     if (updated.count === 0) throw notFound('Caisse introuvable');
     const result = await req.db!.cashRegister.findFirst({ where: { id } });
-    return reply.send({ register: result, expectedAmount: expected, expensesTotal });
+    return reply.send({
+      register: result,
+      expectedAmount: expected,
+      expensesTotal,
+      cashSalesTotal,
+      openingAmount,
+      transfersNet,
+    });
   });
 }

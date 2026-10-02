@@ -23,12 +23,25 @@ export interface CancelledSaleSummary {
   methods: string[];
 }
 
+export interface RegisterExpenseSummary {
+  id: string;
+  label: string;
+  amount: number;
+  category: string;
+  date: string;
+  createdAt: string;
+}
+
 export interface RegisterSummary {
   byMethod: { method: string; amount: number; count: number }[];
   cash: number;
   total: number;
+  expenses?: RegisterExpenseSummary[];
   expensesTotal: number;
   expensesCount: number;
+  transfersInTotal?: number;
+  transfersOutTotal?: number;
+  transfersNet?: number;
   netTotal: number;
   cancelled: CancelledSaleSummary[];
   cancelledCount: number;
@@ -62,10 +75,21 @@ export async function openRegister(branchId: string, openingAmount: number): Pro
 export async function closeRegister(
   id: string,
   closingAmount: number,
-): Promise<{ register: CashRegister; expectedAmount: number; expensesTotal: number }> {
-  const { data } = await api.post<{ register: CashRegister; expectedAmount: number; expensesTotal: number }>(
-    `/cashregister/${id}/close`,
-    { closingAmount },
-  );
+): Promise<{
+  register: CashRegister;
+  expectedAmount: number;
+  expensesTotal: number;
+  cashSalesTotal?: number;
+  openingAmount?: number;
+  transfersNet?: number;
+}> {
+  const { data } = await api.post<{
+    register: CashRegister;
+    expectedAmount: number;
+    expensesTotal: number;
+    cashSalesTotal?: number;
+    openingAmount?: number;
+    transfersNet?: number;
+  }>(`/cashregister/${id}/close`, { closingAmount });
   return data;
 }

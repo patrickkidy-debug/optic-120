@@ -11,6 +11,8 @@ import {
   getFinanceSummary,
 } from '../../features/management/api';
 import { getBranding, updateBranding } from '../../features/settings/api';
+import { listBranches } from '../../features/optique/api';
+import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
@@ -208,13 +210,16 @@ function PaybackCard({ monthlyNet }: { monthlyNet: number }) {
 function ExpenseModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [error, setError] = useState('');
+  const activeBranchId = useUIStore((s) => s.activeBranchId);
+  const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
   const { register, handleSubmit, formState: { errors } } = useForm<ExpenseCreateInput>({
     resolver: zodResolver(expenseCreateSchema),
-    defaultValues: { category: 'RENT' },
+    defaultValues: { category: 'RENT', branchId: activeBranchId || '' },
   });
 
   const mut = useMutation({
-    mutationFn: (v: ExpenseCreateInput) => createExpense(v),
+    mutationFn: (v: ExpenseCreateInput) =>
+      createExpense({ ...v, branchId: v.branchId || activeBranchId || undefined }),
     onSuccess: () => {
       invalidateFinancialViews(qc);
       onClose();
@@ -235,6 +240,18 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
           <Field label="Montant (FCFA)"><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}</Field>
           <Field label="Date"><input className="input" type="date" {...register('date')} /></Field>
         </div>
+        {branches && branches.length > 1 && (
+          <Field label="Boutique">
+            <select className="input" {...register('branchId')}>
+              <option value="">— Toutes / non précisé —</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Note"><input className="input" {...register('notes')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
