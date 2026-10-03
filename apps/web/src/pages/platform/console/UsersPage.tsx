@@ -8,6 +8,7 @@ import {
   Clock,
   KeyRound,
   LogOut,
+  Mail,
   MessageCircle,
   Pause,
   Play,
@@ -40,7 +41,12 @@ import {
   listConsoleUsers,
   type ConsoleUser,
 } from '../../../features/billing/console';
-import { ActivateSubscriptionModal, ExtendTrialModal, PlatformResetPasswordModal } from './modals';
+import {
+  ActivateSubscriptionModal,
+  ChangeEmailModal,
+  ExtendTrialModal,
+  PlatformResetPasswordModal,
+} from './modals';
 
 const FILTERS = [
   { id: 'all', label: 'Tous' },
@@ -85,6 +91,7 @@ export function ConsoleUsersPage({
   const [activating, setActivating] = useState<{ tenantId: string; tenantName: string; planCode: string | null } | null>(null);
   const [extending, setExtending] = useState<{ tenantId: string; tenantName: string } | null>(null);
   const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
+  const [editingEmail, setEditingEmail] = useState<ConsoleUser | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(search.trim()), 350);
@@ -194,6 +201,11 @@ export function ConsoleUsersPage({
       });
     }
 
+    items.push({
+      label: "Modifier l'email",
+      icon: Mail,
+      onClick: () => setEditingEmail(u),
+    });
     items.push({
       label: 'Réinitialiser le mot de passe',
       icon: KeyRound,
@@ -387,6 +399,17 @@ export function ConsoleUsersPage({
             setActivating(null);
             invalidate();
             toast.success('Abonnement activé');
+          }}
+        />
+      )}
+      {editingEmail && (
+        <ChangeEmailModal
+          user={editingEmail}
+          onClose={() => setEditingEmail(null)}
+          onDone={(email) => {
+            setEditingEmail(null);
+            invalidate();
+            toast.success(`Email modifié : ${email}`);
           }}
         />
       )}

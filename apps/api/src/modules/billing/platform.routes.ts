@@ -4,6 +4,7 @@ import {
   SubscriptionStatus,
   operatorCreateSchema,
   userActiveSchema,
+  userEmailSchema,
   type PartnerStatus,
   type PartnerCommissionStatus,
   partnerUpdateStatusSchema,
@@ -542,6 +543,22 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
       ...requestMeta(req),
     });
     return reply.send({ ok: true });
+  });
+
+  app.patch('/users/:id/email', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { email } = userEmailSchema.parse(req.body);
+    const result = await platform.changeUserEmailCrossTenant(id, email);
+    await recordAudit({
+      tenantId: result.tenantId,
+      userId: req.auth!.userId,
+      action: 'PLATFORM_USER_EMAIL_CHANGED',
+      entity: 'User',
+      entityId: id,
+      metadata: { from: result.previousEmail, to: result.email },
+      ...requestMeta(req),
+    });
+    return reply.send({ email: result.email });
   });
 
   app.post('/users/:id/force-logout', async (req, reply) => {

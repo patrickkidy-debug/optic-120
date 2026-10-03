@@ -462,6 +462,11 @@ export async function listAllInvoices(status?: string): Promise<PlatformInvoice[
 export async function setUserActive(id: string, isActive: boolean): Promise<void> {
   await api.patch(`/platform/users/${id}/active`, { isActive });
 }
+/** Change l'email de connexion d'un utilisateur (console fondateur). */
+export async function platformChangeEmail(id: string, email: string): Promise<{ email: string }> {
+  const { data } = await api.patch<{ email: string }>(`/platform/users/${id}/email`, { email });
+  return data;
+}
 export async function forceLogoutUser(id: string): Promise<void> {
   await api.post(`/platform/users/${id}/force-logout`);
 }

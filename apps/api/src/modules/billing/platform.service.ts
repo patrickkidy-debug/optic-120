@@ -173,6 +173,54 @@ export async function resetUserPasswordCrossTenant(userId: string): Promise<{ te
   return { tenantId: user.tenantId, tempPassword };
 }
 
+/**
+ * Change l'email (identifiant de connexion) d'un utilisateur depuis la console
+ * fondateur. Les emails opérateurs sont exclus dans les deux sens : donner un
+ * email opérateur à un compte client lui ouvrirait la console, et renommer un
+ * compte opérateur lui en couperait l'accès. Les liens de réinitialisation et
+ * de confirmation en cours (envoyés à l'ancienne adresse) sont invalidés, et
+ * les sessions révoquées puisque le jeton d'accès porte l'email.
+ */
+export async function changeUserEmailCrossTenant(
+  userId: string,
+  newEmail: string,
+): Promise<{ tenantId: string; previousEmail: string; email: string }> {
+  const email = newEmail.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw notFound('Utilisateur introuvable');
+  if (user.email.toLowerCase() === email) throw badRequest("C'est déjà l'email de ce compte");
+
+  const operators = getOperatorEmails();
+  if (operators.has(user.email.toLowerCase())) {
+    throw badRequest("L'email d'un compte opérateur ne peut pas être modifié ici");
+  }
+  if (operators.has(email)) throw conflict('Cet email est réservé.');
+
+  const taken = await prisma.user.findFirst({
+    where: { tenantId: user.tenantId, email: { equals: email, mode: 'insensitive' }, NOT: { id: userId } },
+    select: { id: true },
+  });
+  if (taken) throw conflict('Un utilisateur avec cet email existe déjà');
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        email,
+        resetTokenHash: null,
+        resetTokenExpiresAt: null,
+        verifyTokenHash: null,
+        verifyTokenExpiresAt: null,
+      },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+  return { tenantId: user.tenantId, previousEmail: user.email, email };
+}
+
 /** Révoque toutes les sessions actives d'un utilisateur (déconnexion forcée immédiate). */
 export async function forceLogoutUser(userId: string): Promise<{ tenantId: string }> {
   const user = await prisma.user.findUnique({ where: { id: userId } });

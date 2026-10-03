@@ -8,6 +8,7 @@ import {
   extendTrial,
   getPlatformPlans,
   platformActivate,
+  platformChangeEmail,
   type PlatformUser,
 } from '../../../features/billing/api';
 
@@ -195,6 +196,72 @@ export function PlatformResetPasswordModal({
       <Button className="mt-5 w-full" onClick={onClose}>
         J'ai noté le mot de passe
       </Button>
+    </Modal>
+  );
+}
+
+/**
+ * Change l'email de connexion d'un utilisateur. Le serveur révoque ses sessions :
+ * il devra se reconnecter avec la nouvelle adresse (même mot de passe).
+ */
+export function ChangeEmailModal({
+  user,
+  onClose,
+  onDone,
+}: {
+  user: { id: string; name: string; email: string; tenantName: string };
+  onClose: () => void;
+  onDone: (email: string) => void;
+}) {
+  const [email, setEmail] = useState(user.email);
+  const [error, setError] = useState('');
+
+  const trimmed = email.trim().toLowerCase();
+  const unchanged = trimmed === user.email.toLowerCase();
+
+  const mut = useMutation({
+    mutationFn: () => platformChangeEmail(user.id, trimmed),
+    onSuccess: (res) => onDone(res.email),
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={`Modifier l'email — ${user.name}`} size="sm">
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError('');
+          if (!unchanged && trimmed) mut.mutate();
+        }}
+      >
+        <p className="text-sm text-content-muted">
+          {user.tenantName} — email actuel : <b className="text-content">{user.email}</b>
+        </p>
+        <Field label="Nouvel email">
+          <input
+            type="email"
+            required
+            autoFocus
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <p className="text-xs text-content-faint">
+          C'est son identifiant de connexion. Ses sessions actives seront déconnectées ; il se reconnecte
+          avec la nouvelle adresse et le même mot de passe.
+        </p>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" loading={mut.isPending} disabled={unchanged || !trimmed}>
+            Enregistrer
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

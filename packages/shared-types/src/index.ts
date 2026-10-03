@@ -2419,6 +2419,12 @@ export const userActiveSchema = z.object({
 });
 export type UserActiveInput = z.infer<typeof userActiveSchema>;
 
+/** Changement d'email d'un utilisateur depuis la console fondateur. */
+export const userEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Email invalide').max(200),
+});
+export type UserEmailInput = z.infer<typeof userEmailSchema>;
+
 /* --- Profil & image de marque --- */
 
 // Image en data URL (base64) redimensionnée côté client, ou chaîne vide pour retirer.
