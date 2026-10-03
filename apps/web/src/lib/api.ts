@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/auth';
 import { clearOfflineSession, readOfflineSession } from './offline/session';
 import { reportNetworkFailure } from './offline/network';
 import { tr } from './tr';
+import { trFr } from './sharedLabels';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -130,7 +131,9 @@ api.interceptors.response.use(
 export function apiErrorMessage(err: unknown, fallback = tr('ui.api.uneErreurEstSurvenue')): string {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data as { error?: { message?: string } } | undefined;
-    return data?.error?.message ?? err.message ?? fallback;
+    // Message du serveur (en français) traduit dans la langue active quand il est connu.
+    const message = data?.error?.message;
+    return message ? trFr(message) : err.message ?? fallback;
   }
   return fallback;
 }

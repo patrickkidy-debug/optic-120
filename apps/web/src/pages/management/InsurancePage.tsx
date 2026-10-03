@@ -23,6 +23,7 @@ import { ClaimsTab, ClaimDetailModal } from './insurance/ClaimsTab';
 import { RefundsTab } from './insurance/RefundsTab';
 import { ReceivablesTab } from './insurance/ReceivablesTab';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 type Tab = 'overview' | 'insurers' | 'contracts' | 'claims' | 'refunds' | 'receivables';
 
@@ -240,7 +241,7 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
   return (
     <Modal open onClose={onClose} title={insurer ? tr('ui.InsurancePage.modifierLAssurance') : tr('ui.InsurancePage.nouvelleAssurance')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label={tr('ui.InsurancePage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
+        <Field label={tr('ui.InsurancePage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{trFr(errors.name.message)}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.InsurancePage.type')}>
             <select className="input" {...register('type')}>

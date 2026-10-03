@@ -8,6 +8,7 @@ import { WatchDemoCard } from '../features/demo/WatchDemoCard';
 import { apiErrorMessage } from '../lib/api';
 import { PageHeader, Button, Field } from '../components/ui';
 import { tr } from '../lib/tr';
+import { trFr } from '../lib/sharedLabels';
 
 const SUPPORT_EMAIL = 'oculossaas@gmail.com';
 const WHATSAPP = '221768881739'; // numéro de support (format international, sans +)
@@ -97,11 +98,11 @@ export function SupportPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Field label={tr('ui.SupportPage.sujet')}>
                 <input className="input" placeholder={tr('ui.SupportPage.exProblemeDEncaissement')} {...register('subject')} />
-                {errors.subject && <p className="mt-1 text-xs text-danger">{errors.subject.message}</p>}
+                {errors.subject && <p className="mt-1 text-xs text-danger">{trFr(errors.subject.message)}</p>}
               </Field>
               <Field label="Message">
                 <textarea className="input min-h-[140px]" placeholder={tr('ui.SupportPage.decrivezVotreDemande')} {...register('message')} />
-                {errors.message && <p className="mt-1 text-xs text-danger">{errors.message.message}</p>}
+                {errors.message && <p className="mt-1 text-xs text-danger">{trFr(errors.message.message)}</p>}
               </Field>
               {error && <p className="text-sm text-danger">{error}</p>}
               <Button type="submit" loading={isSubmitting}>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { trFr } from '../../lib/sharedLabels';import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -348,11 +349,11 @@ function NewCustomerModal({
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('common.firstName')}>
             <input className="input" {...register('firstName')} />
-            {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
+            {errors.firstName && <p className="mt-1 text-xs text-danger">{trFr(errors.firstName.message)}</p>}
           </Field>
           <Field label={t('common.lastName')}>
             <input className="input" {...register('lastName')} />
-            {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
+            {errors.lastName && <p className="mt-1 text-xs text-danger">{trFr(errors.lastName.message)}</p>}
           </Field>
         </div>
         <Field label={t('saleTools.phoneOptional')}>

@@ -8,6 +8,7 @@ import {
 import { Button, Field } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
 import { formatTrialDuration } from './PaymentStep';
+import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 /**
@@ -83,7 +84,7 @@ export function InformationStep({
       hasExistingData: hasExistingData ?? false,
     });
     if (!parsed.success) {
-      setLocalError(parsed.error.issues[0]?.message ?? tr('ui.InformationStep.verifiezLesInformationsSaisies'));
+      setLocalError(trFr(parsed.error.issues[0]?.message) ?? tr('ui.InformationStep.verifiezLesInformationsSaisies'));
       return;
     }
     setLocalError('');

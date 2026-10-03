@@ -15,6 +15,7 @@ import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
 import { OpticalShopIllustration } from '../../components/illustrations/OpticalShopIllustration';
+import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
@@ -149,7 +150,7 @@ export function SignupPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.tenantName')}>
           <input className="input" placeholder={t('auth.placeholderOrg')} {...register('tenantName')} />
-          {errors.tenantName && <p className="mt-1 text-xs text-danger">{errors.tenantName.message}</p>}
+          {errors.tenantName && <p className="mt-1 text-xs text-danger">{trFr(errors.tenantName.message)}</p>}
         </Field>
         <Field label={t('auth.branchName')}>
           <input className="input" {...register('branchName')} />
@@ -158,19 +159,19 @@ export function SignupPage() {
           <Field label={t('auth.firstName')}>
             <input className="input" {...register('adminFirstName')} />
             {errors.adminFirstName && (
-              <p className="mt-1 text-xs text-danger">{errors.adminFirstName.message}</p>
+              <p className="mt-1 text-xs text-danger">{trFr(errors.adminFirstName.message)}</p>
             )}
           </Field>
           <Field label={t('auth.lastName')}>
             <input className="input" {...register('adminLastName')} />
             {errors.adminLastName && (
-              <p className="mt-1 text-xs text-danger">{errors.adminLastName.message}</p>
+              <p className="mt-1 text-xs text-danger">{trFr(errors.adminLastName.message)}</p>
             )}
           </Field>
         </div>
         <Field label={t('auth.email')}>
           <input className="input" type="email" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
-          {errors.adminEmail && <p className="mt-1 text-xs text-danger">{errors.adminEmail.message}</p>}
+          {errors.adminEmail && <p className="mt-1 text-xs text-danger">{trFr(errors.adminEmail.message)}</p>}
         </Field>
         <Field label={t('auth.whatsapp')}>
           <WhatsappField
@@ -178,7 +179,7 @@ export function SignupPage() {
             onChange={(v) => setValue('whatsapp', v, { shouldValidate: isSubmitted })}
           />
           {errors.whatsapp ? (
-            <p className="mt-1 text-xs text-danger">{errors.whatsapp.message}</p>
+            <p className="mt-1 text-xs text-danger">{trFr(errors.whatsapp.message)}</p>
           ) : (
             <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
           )}
@@ -186,7 +187,7 @@ export function SignupPage() {
         <Field label={t('auth.password')}>
           <PasswordInput placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
           {errors.adminPassword && (
-            <p className="mt-1 text-xs text-danger">{errors.adminPassword.message}</p>
+            <p className="mt-1 text-xs text-danger">{trFr(errors.adminPassword.message)}</p>
           )}
         </Field>
 

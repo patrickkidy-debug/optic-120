@@ -43,6 +43,7 @@ import { LensCatalog } from './LensCatalog';
 import { FrameFormModal, LensFormModal, GenericProductFormModal } from './CatalogForms';
 import { usePosStore } from '../../store/pos';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 const CATEGORIES = [
@@ -882,7 +883,7 @@ function ProductModal({
 
         <Field label={tr('ui.ProductsPage.nomDuProduit')}>
           <input className="input" {...register('name')} />
-          {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs text-danger">{trFr(errors.name.message)}</p>}
         </Field>
         <div className={hideSku ? '' : 'grid grid-cols-2 gap-3'}>
           {!hideSku && (
@@ -891,7 +892,7 @@ function ProductModal({
                 className={`input ${dupProduct ? 'border-danger focus:border-danger' : ''}`}
                 {...register('sku')}
               />
-              {errors.sku && <p className="mt-1 text-xs text-danger">{errors.sku.message}</p>}
+              {errors.sku && <p className="mt-1 text-xs text-danger">{trFr(errors.sku.message)}</p>}
               {dupProduct && (
                 <p className="mt-1 flex items-start gap-1 text-xs text-danger">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -1054,7 +1055,7 @@ function ProductModal({
           </Field>
           <Field label={tr('ui.ProductsPage.prixDeVenteFcfa')}>
             <input className="input" type="number" step="1" {...register('sellPrice', { valueAsNumber: true })} />
-            {errors.sellPrice && <p className="mt-1 text-xs text-danger">{errors.sellPrice.message}</p>}
+            {errors.sellPrice && <p className="mt-1 text-xs text-danger">{trFr(errors.sellPrice.message)}</p>}
           </Field>
         </div>
 

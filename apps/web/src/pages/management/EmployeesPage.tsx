@@ -10,6 +10,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, initials } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
   ACTIVE: { get label() { return tr('ui.EmployeesPage.actif'); }, tone: 'success' },
@@ -116,10 +117,10 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
     <Modal open onClose={onClose} title={employee ? tr('ui.EmployeesPage.modifierLEmploye') : tr('ui.EmployeesPage.nouvelEmploye')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.EmployeesPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
-          <Field label={tr('ui.EmployeesPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
+          <Field label={tr('ui.EmployeesPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{trFr(errors.firstName.message)}</p>}</Field>
+          <Field label={tr('ui.EmployeesPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{trFr(errors.lastName.message)}</p>}</Field>
         </div>
-        <Field label={tr('ui.EmployeesPage.poste')}><input className="input" {...register('position')} />{errors.position && <p className="mt-1 text-xs text-danger">{errors.position.message}</p>}</Field>
+        <Field label={tr('ui.EmployeesPage.poste')}><input className="input" {...register('position')} />{errors.position && <p className="mt-1 text-xs text-danger">{trFr(errors.position.message)}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.EmployeesPage.telephone')}><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>

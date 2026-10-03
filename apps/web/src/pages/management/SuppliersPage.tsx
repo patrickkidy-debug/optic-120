@@ -9,6 +9,7 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 export function SuppliersPage() {
   const canCreate = usePermission('suppliers.create');
@@ -90,7 +91,7 @@ function SupplierModal({ supplier, onClose }: { supplier: Supplier | null; onClo
   return (
     <Modal open onClose={onClose} title={supplier ? tr('ui.SuppliersPage.modifierLeFournisseur') : tr('ui.SuppliersPage.nouveauFournisseur')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label={tr('ui.SuppliersPage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
+        <Field label={tr('ui.SuppliersPage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{trFr(errors.name.message)}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.SuppliersPage.type')}>
             <select className="input" {...register('type')}>

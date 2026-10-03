@@ -18,6 +18,7 @@ import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { PatientRecord } from './PatientRecord';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 const GENDERS = [
   { value: 'MALE', get label() { return tr('ui.PatientsPage.homme'); } },
@@ -174,11 +175,11 @@ function PatientModal({ patient, onClose }: { patient: Patient | null; onClose: 
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.PatientsPage.prenom')}>
             <input className="input" {...register('firstName')} />
-            {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
+            {errors.firstName && <p className="mt-1 text-xs text-danger">{trFr(errors.firstName.message)}</p>}
           </Field>
           <Field label={tr('ui.PatientsPage.nom')}>
             <input className="input" {...register('lastName')} />
-            {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
+            {errors.lastName && <p className="mt-1 text-xs text-danger">{trFr(errors.lastName.message)}</p>}
           </Field>
         </div>
         <div className="grid grid-cols-3 gap-3">

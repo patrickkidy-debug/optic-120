@@ -30,6 +30,7 @@ import { createPatientFromCustomer } from '../../features/clinic/api';
 import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
 import { ClientRecord } from './ClientRecord';
+import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 export function ClientsPage() {
@@ -319,8 +320,8 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
     <Modal open onClose={onClose} title={customer ? t('clients.editClient') : t('clients.newClient')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.ClientsPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
-          <Field label={tr('ui.ClientsPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
+          <Field label={tr('ui.ClientsPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{trFr(errors.firstName.message)}</p>}</Field>
+          <Field label={tr('ui.ClientsPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{trFr(errors.lastName.message)}</p>}</Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.ClientsPage.telephone')}><input className="input" {...register('phone')} /></Field>

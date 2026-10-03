@@ -295,16 +295,16 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <Field label={tr('ui.UsersPage.prenom')}>
             <input className="input" {...register('firstName')} />
-            {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
+            {errors.firstName && <p className="mt-1 text-xs text-danger">{trFr(errors.firstName.message)}</p>}
           </Field>
           <Field label={tr('ui.UsersPage.nom')}>
             <input className="input" {...register('lastName')} />
-            {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
+            {errors.lastName && <p className="mt-1 text-xs text-danger">{trFr(errors.lastName.message)}</p>}
           </Field>
         </div>
         <Field label="Email">
           <input className="input" type="email" {...register('email')} />
-          {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
+          {errors.email && <p className="mt-1 text-xs text-danger">{trFr(errors.email.message)}</p>}
         </Field>
         <Field label={tr('ui.UsersPage.telephoneWhatsapp')}>
           <input
@@ -313,11 +313,11 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
             placeholder="+225 07 00 00 00 00"
             {...register('phone')}
           />
-          {errors.phone && <p className="mt-1 text-xs text-danger">{errors.phone.message}</p>}
+          {errors.phone && <p className="mt-1 text-xs text-danger">{trFr(errors.phone.message)}</p>}
         </Field>
         <Field label={tr('ui.UsersPage.motDePasseTemporaire')}>
           <input className="input" type="text" {...register('password')} placeholder={tr('ui.UsersPage.auMoins8Caracteres')} />
-          {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
+          {errors.password && <p className="mt-1 text-xs text-danger">{trFr(errors.password.message)}</p>}
         </Field>
         <Field label={tr('ui.UsersPage.role')}>
           <select className="input" {...register('roleId')}>
@@ -326,7 +326,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
               <option key={r.id} value={r.id}>{trFr(r.name)}</option>
             ))}
           </select>
-          {errors.roleId && <p className="mt-1 text-xs text-danger">{errors.roleId.message}</p>}
+          {errors.roleId && <p className="mt-1 text-xs text-danger">{trFr(errors.roleId.message)}</p>}
         </Field>
         <Field label={tr('ui.UsersPage.magasinsAssignes')}>
           <div className="space-y-1.5 rounded-xl bg-surface-2 p-2">

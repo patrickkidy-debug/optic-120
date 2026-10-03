@@ -36,6 +36,7 @@ import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDateTime, getActiveCurrency } from '../../lib/format';
 import { EXPENSE_CATEGORY_CODES, expenseCategoryLabel, paymentMethodLabel } from '../../lib/labels';
 import { PageHeader, PageLoader, Button, Field, Badge, Modal } from '../../components/ui';
+import { trFr } from '../../lib/sharedLabels';
 
 const methodIcon = (m: string) => (m === 'CASH' ? Banknote : m === 'CARD' ? CreditCard : Smartphone);
 
@@ -451,7 +452,7 @@ function RegisterExpenseModal({
             placeholder={t('cash.expenseLabelPlaceholder')}
             {...register('label')}
           />
-          {errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}
+          {errors.label && <p className="mt-1 text-xs text-danger">{trFr(errors.label.message)}</p>}
         </Field>
         <Field label={t('cash.category')}>
           <select className="input" {...register('category')}>
@@ -470,7 +471,7 @@ function RegisterExpenseModal({
             placeholder="0"
             {...register('amount', { valueAsNumber: true })}
           />
-          {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
+          {errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}
         </Field>
         <Field label={t('cash.noteOptional')}>
           <input className="input" placeholder={t('cash.notePlaceholder')} {...register('notes')} />

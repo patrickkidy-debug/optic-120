@@ -18,6 +18,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDate, displayLocale } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
+import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 const CATEGORIES = [
@@ -230,14 +231,14 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal open onClose={onClose} title={tr('ui.FinancePage.nouvelleDepense')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label={tr('ui.FinancePage.libelle')}><input className="input" {...register('label')} />{errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}</Field>
+        <Field label={tr('ui.FinancePage.libelle')}><input className="input" {...register('label')} />{errors.label && <p className="mt-1 text-xs text-danger">{trFr(errors.label.message)}</p>}</Field>
         <Field label={tr('ui.FinancePage.categorie')}>
           <select className="input" {...register('category')}>
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.FinancePage.montantFcfa')}><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}</Field>
+          <Field label={tr('ui.FinancePage.montantFcfa')}><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}</Field>
           <Field label="Date"><input className="input" type="date" {...register('date')} /></Field>
         </div>
         {branches && branches.length > 1 && (
