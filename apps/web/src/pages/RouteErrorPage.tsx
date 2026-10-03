@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { RefreshCw, Home } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { tr } from '../lib/tr';
 
 /**
  * Filet de sécurité final du routeur (posé sur la route racine dans
@@ -54,21 +55,21 @@ export function RouteErrorPage() {
           <Logo />
         </div>
         <h1 className="font-display text-2xl font-bold text-content">
-          {reloading ? 'Mise à jour en cours…' : chunkError ? 'Une nouvelle version est disponible' : 'Une erreur est survenue'}
+          {reloading ? tr('ui.RouteErrorPage.miseAJourEnCours') : chunkError ? tr('ui.RouteErrorPage.uneNouvelleVersionEstDisponible') : tr('ui.RouteErrorPage.uneErreurEstSurvenue')}
         </h1>
         <p className="mt-2 text-content-muted">
           {reloading
-            ? "L'application se recharge pour récupérer la dernière version."
+            ? tr('ui.RouteErrorPage.lApplicationSeRechargePour')
             : chunkError
-              ? "Cette page a été mise à jour depuis votre dernière visite. Rechargez pour continuer."
+              ? tr('ui.RouteErrorPage.cettePageAEteMise')
               : "Quelque chose s'est mal passé. Rechargez la page ; si le problème persiste, contactez le support."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button type="button" onClick={() => window.location.reload()} className="btn-primary" disabled={reloading}>
-            <RefreshCw className="h-4 w-4" /> Recharger la page
+            <RefreshCw className="h-4 w-4" /> {tr('ui.RouteErrorPage.rechargerLaPage')}
           </button>
           <a href="/" className="btn-outline">
-            <Home className="h-4 w-4" /> Accueil
+            <Home className="h-4 w-4" /> {tr('ui.RouteErrorPage.accueil')}
           </a>
         </div>
       </div>

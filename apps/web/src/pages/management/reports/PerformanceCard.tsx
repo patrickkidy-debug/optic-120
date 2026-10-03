@@ -5,19 +5,20 @@ import type { Chart as ChartJS, TooltipItem } from 'chart.js';
 import type { ReportSeriesPoint } from '../../../features/optique/api';
 import { formatCurrency } from '../../../lib/format';
 import { Skeleton, bucketLabel } from './shared';
+import { tr } from '../../../lib/tr';
 
 type Metric = 'revenue' | 'collected' | 'count';
 
 const METRICS: { key: Metric; label: string; color: string; money: boolean }[] = [
-  { key: 'revenue', label: "Chiffre d'affaires", color: '#7c3aed', money: true },
-  { key: 'collected', label: 'Encaissements', color: '#0d9488', money: true },
-  { key: 'count', label: 'Nombre de ventes', color: '#2563eb', money: false },
+  { key: 'revenue', get label() { return tr('ui.PerformanceCard.chiffreDAffaires'); }, color: '#7c3aed', money: true },
+  { key: 'collected', get label() { return tr('ui.PerformanceCard.encaissements'); }, color: '#0d9488', money: true },
+  { key: 'count', get label() { return tr('ui.PerformanceCard.nombreDeVentes'); }, color: '#2563eb', money: false },
 ];
 
 const GRANULARITY_NOTE: Record<'day' | 'week' | 'month', string> = {
-  day: 'Regroupé par jour',
-  week: 'Regroupé par semaine',
-  month: 'Regroupé par mois',
+  get day() { return tr('ui.PerformanceCard.regroupeParJour'); },
+  get week() { return tr('ui.PerformanceCard.regroupeParSemaine'); },
+  get month() { return tr('ui.PerformanceCard.regroupeParMois'); },
 };
 
 export function PerformanceCardSkeleton() {
@@ -69,13 +70,13 @@ export function PerformanceCard({
   };
 
   return (
-    <section className="card mb-4 p-4" aria-label="Évolution des performances">
+    <section className="card mb-4 p-4" aria-label={tr('ui.PerformanceCard.evolutionDesPerformances')}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-display text-base font-bold text-content">Évolution des performances</h3>
+          <h3 className="font-display text-base font-bold text-content">{tr('ui.PerformanceCard.evolutionDesPerformances')}</h3>
           <p className="text-xs text-content-faint">{GRANULARITY_NOTE[granularity]}</p>
         </div>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Indicateur affiché">
+        <div className="flex flex-wrap gap-1" role="group" aria-label={tr('ui.PerformanceCard.indicateurAffiche')}>
           {METRICS.map((m) => (
             <button
               key={m.key}
@@ -96,7 +97,7 @@ export function PerformanceCard({
 
       {series.length === 0 ? (
         <p className="py-16 text-center text-sm text-content-muted">
-          Aucune vente sur cette période : il n'y a rien à représenter.
+          {tr('ui.PerformanceCard.aucuneVenteSurCettePeriode')}
         </p>
       ) : (
         <div className="h-[260px]">
@@ -117,9 +118,9 @@ export function PerformanceCard({
                       const p = series[items[0]?.dataIndex ?? 0];
                       if (!p) return '';
                       return [
-                        `CA : ${formatCurrency(p.revenue)}`,
-                        `Encaissé : ${formatCurrency(p.collected)}`,
-                        `Ventes : ${p.count}`,
+                        tr('ui.PerformanceCard.caRevenue', { revenue: formatCurrency(p.revenue) }),
+                        tr('ui.PerformanceCard.encaisseCollected', { collected: formatCurrency(p.collected) }),
+                        tr('ui.PerformanceCard.ventesCount', { count: p.count }),
                       ];
                     },
                     label: () => '',

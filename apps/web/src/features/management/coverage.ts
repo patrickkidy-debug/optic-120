@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { computeGuaranteeCoverage, type CoverageCartLine } from '@oculo/shared-types';
 import { getCustomerCoverage, type CustomerCoverage, type Insurer } from './api';
+import { tr } from '../../lib/tr';
 
 /**
  * Contrat applicable au client sélectionné. Sans client, sans assureur ou sans
@@ -51,6 +52,6 @@ export function decideCoverage(
   if (!insurer) return { amount: 0, rule: '' };
   return {
     amount: Math.round((total * insurer.coveragePercent) / 100),
-    rule: `Taux par défaut de ${insurer.name} — ${insurer.coveragePercent} %`,
+    rule: tr('ui.coverage.tauxParDefautDeName', { name: insurer.name, coveragePercent: insurer.coveragePercent }),
   };
 }

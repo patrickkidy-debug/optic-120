@@ -25,19 +25,20 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const EXPENSE_CATEGORIES = [
-  { value: 'RENT', label: 'Loyer' },
-  { value: 'SALARIES', label: 'Salaires' },
-  { value: 'ELECTRICITY', label: 'Électricité' },
-  { value: 'WATER', label: 'Eau' },
+  { value: 'RENT', get label() { return tr('ui.CashFlowPage.loyer'); } },
+  { value: 'SALARIES', get label() { return tr('ui.CashFlowPage.salaires'); } },
+  { value: 'ELECTRICITY', get label() { return tr('ui.CashFlowPage.electricite'); } },
+  { value: 'WATER', get label() { return tr('ui.CashFlowPage.eau'); } },
   { value: 'INTERNET', label: 'Internet' },
   { value: 'MARKETING', label: 'Marketing' },
   { value: 'TRANSPORT', label: 'Transport' },
-  { value: 'SUPPLIES', label: 'Fournitures' },
-  { value: 'MAINTENANCE', label: 'Entretien' },
-  { value: 'TAXES', label: 'Taxes' },
-  { value: 'OTHER', label: 'Autre' },
+  { value: 'SUPPLIES', get label() { return tr('ui.CashFlowPage.fournitures'); } },
+  { value: 'MAINTENANCE', get label() { return tr('ui.CashFlowPage.entretien'); } },
+  { value: 'TAXES', get label() { return tr('ui.CashFlowPage.taxes'); } },
+  { value: 'OTHER', get label() { return tr('ui.CashFlowPage.autre'); } },
 ];
 const expenseCatLabel = (v: string) => EXPENSE_CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -90,16 +91,16 @@ export function CashFlowPage() {
   return (
     <div>
       <PageHeader
-        title="Dépenses / Versements"
-        subtitle="Charges de la boutique et mouvements de caisse hors ventes"
+        title={tr('ui.CashFlowPage.depensesVersements')}
+        subtitle={tr('ui.CashFlowPage.chargesDeLaBoutiqueEt')}
         actions={
           canCreate && (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setExpenseOpen(true)}>
-                <Plus className="h-4 w-4" /> Dépense
+                <Plus className="h-4 w-4" /> {tr('ui.CashFlowPage.depense')}
               </Button>
               <Button onClick={() => setTransferOpen(true)}>
-                <Plus className="h-4 w-4" /> Versement
+                <Plus className="h-4 w-4" /> {tr('ui.CashFlowPage.versement')}
               </Button>
             </div>
           )
@@ -109,25 +110,25 @@ export function CashFlowPage() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={ArrowDownCircle}
-          label="Apports (entrées)"
+          label={tr('ui.CashFlowPage.apportsEntrees')}
           value={formatCurrency(transfersIn)}
           tone="success"
         />
         <StatCard
           icon={ArrowUpCircle}
-          label="Sorties totales (dépenses + retraits)"
+          label={tr('ui.CashFlowPage.sortiesTotalesDepensesRetraits')}
           value={formatCurrency(totalOutflows)}
           tone="danger"
         />
         <StatCard
           icon={TrendingDown}
-          label="Dépenses d'exploitation"
+          label={tr('ui.CashFlowPage.depensesDExploitation')}
           value={formatCurrency(expensesTotal)}
           tone="danger"
         />
         <StatCard
           icon={Wallet}
-          label="Solde net de trésorerie"
+          label={tr('ui.CashFlowPage.soldeNetDeTresorerie')}
           value={formatCurrency(netCashflow)}
           tone={netCashflow >= 0 ? 'primary' : 'danger'}
         />
@@ -135,8 +136,8 @@ export function CashFlowPage() {
 
       <div className="mb-5 flex flex-wrap gap-1 border-b">
         {([
-          { key: 'transfers' as Tab, label: 'Versements' },
-          { key: 'expenses' as Tab, label: 'Dépenses' },
+          { key: 'transfers' as Tab, label: tr('ui.CashFlowPage.versements') },
+          { key: 'expenses' as Tab, label: tr('ui.CashFlowPage.depenses') },
         ]).map((t) => (
           <button
             key={t.key}
@@ -158,18 +159,18 @@ export function CashFlowPage() {
         ) : !cash || cash.transfers.length === 0 ? (
           <EmptyState
             icon={Wallet}
-            title="Aucun versement enregistré"
-            hint="Enregistrez les apports d'argent dans la boutique et les retraits vers la banque ou le propriétaire."
+            title={tr('ui.CashFlowPage.aucunVersementEnregistre')}
+            hint={tr('ui.CashFlowPage.enregistrezLesApportsDArgent')}
           />
         ) : (
           <div className="card overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Libellé</th>
-                  <th className="table-cell font-semibold">Sens</th>
+                  <th className="table-cell font-semibold">{tr('ui.CashFlowPage.libelle')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.CashFlowPage.sens')}</th>
                   <th className="table-cell font-semibold">Date</th>
-                  <th className="table-cell text-right font-semibold">Montant</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.CashFlowPage.montant')}</th>
                   {canDelete && <th className="table-cell text-right font-semibold">Actions</th>}
                 </tr>
               </thead>
@@ -197,12 +198,12 @@ export function CashFlowPage() {
                       <td className="table-cell text-right">
                         <button
                           onClick={() => {
-                            if (confirm(`Supprimer le versement « ${t.label} » ?`)) {
+                            if (confirm(tr('ui.CashFlowPage.supprimerLeVersementLabel', { label: t.label }))) {
                               delTransfer.mutate(t.id);
                             }
                           }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
-                          title="Supprimer"
+                          title={tr('ui.CashFlowPage.supprimer')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -217,16 +218,16 @@ export function CashFlowPage() {
       ) : loadingExpenses ? (
         <PageLoader />
       ) : !expenses || expenses.length === 0 ? (
-        <EmptyState icon={TrendingDown} title="Aucune dépense enregistrée" />
+        <EmptyState icon={TrendingDown} title={tr('ui.CashFlowPage.aucuneDepenseEnregistree')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Libellé</th>
-                <th className="table-cell font-semibold">Catégorie</th>
+                <th className="table-cell font-semibold">{tr('ui.CashFlowPage.libelle')}</th>
+                <th className="table-cell font-semibold">{tr('ui.CashFlowPage.categorie')}</th>
                 <th className="table-cell font-semibold">Date</th>
-                <th className="table-cell text-right font-semibold">Montant</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.CashFlowPage.montant')}</th>
                 {canDelete && <th className="table-cell text-right font-semibold">Actions</th>}
               </tr>
             </thead>
@@ -245,10 +246,10 @@ export function CashFlowPage() {
                     <td className="table-cell text-right">
                       <button
                         onClick={() => {
-                          if (confirm(`Supprimer la dépense « ${x.label} » ?`)) delExpense.mutate(x.id);
+                          if (confirm(tr('ui.CashFlowPage.supprimerLaDepenseLabel', { label: x.label }))) delExpense.mutate(x.id);
                         }}
                         className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
-                        title="Supprimer"
+                        title={tr('ui.CashFlowPage.supprimer')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -290,20 +291,20 @@ function TransferModal({ onClose, defaultBranchId }: { onClose: () => void; defa
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouveau versement" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.CashFlowPage.nouveauVersement')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Sens du mouvement">
+        <Field label={tr('ui.CashFlowPage.sensDuMouvement')}>
           <select className="input" {...register('direction')}>
-            <option value="IN">Apport — argent ajouté à la boutique</option>
-            <option value="OUT">Retrait — argent sorti de la boutique</option>
+            <option value="IN">{tr('ui.CashFlowPage.apportArgentAjouteALa')}</option>
+            <option value="OUT">{tr('ui.CashFlowPage.retraitArgentSortiDeLa')}</option>
           </select>
         </Field>
-        <Field label="Libellé">
-          <input className="input" placeholder="Ex : dépôt en banque, apport du gérant" {...register('label')} />
+        <Field label={tr('ui.CashFlowPage.libelle')}>
+          <input className="input" placeholder={tr('ui.CashFlowPage.exDepotEnBanqueApport')} {...register('label')} />
           {errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Montant (FCFA)">
+          <Field label={tr('ui.CashFlowPage.montantFcfa')}>
             <input className="input" type="number" {...register('amount', { valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
           </Field>
@@ -311,9 +312,9 @@ function TransferModal({ onClose, defaultBranchId }: { onClose: () => void; defa
             <input className="input" type="date" {...register('date')} />
           </Field>
         </div>
-        <Field label="Boutique">
+        <Field label={tr('ui.CashFlowPage.boutique')}>
           <select className="input" {...register('branchId')}>
-            <option value="">— Toutes / non précisé —</option>
+            <option value="">{tr('ui.CashFlowPage.toutesNonPrecise')}</option>
             {branches?.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -327,10 +328,10 @@ function TransferModal({ onClose, defaultBranchId }: { onClose: () => void; defa
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.CashFlowPage.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending}>
-            Enregistrer
+            {tr('ui.CashFlowPage.enregistrer')}
           </Button>
         </div>
       </form>
@@ -361,13 +362,13 @@ function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defau
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle dépense" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.CashFlowPage.nouvelleDepense')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Libellé">
+        <Field label={tr('ui.CashFlowPage.libelle')}>
           <input className="input" {...register('label')} />
           {errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}
         </Field>
-        <Field label="Catégorie">
+        <Field label={tr('ui.CashFlowPage.categorie')}>
           <select className="input" {...register('category')}>
             {EXPENSE_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
@@ -377,7 +378,7 @@ function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defau
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Montant (FCFA)">
+          <Field label={tr('ui.CashFlowPage.montantFcfa')}>
             <input className="input" type="number" {...register('amount', { valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
           </Field>
@@ -385,9 +386,9 @@ function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defau
             <input className="input" type="date" {...register('date')} />
           </Field>
         </div>
-        <Field label="Boutique">
+        <Field label={tr('ui.CashFlowPage.boutique')}>
           <select className="input" {...register('branchId')}>
-            <option value="">— Toutes / non précisé —</option>
+            <option value="">{tr('ui.CashFlowPage.toutesNonPrecise')}</option>
             {branches?.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -401,10 +402,10 @@ function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defau
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.CashFlowPage.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending}>
-            Enregistrer
+            {tr('ui.CashFlowPage.enregistrer')}
           </Button>
         </div>
       </form>

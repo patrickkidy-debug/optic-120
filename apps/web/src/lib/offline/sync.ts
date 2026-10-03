@@ -11,6 +11,7 @@ import {
   markSyncing,
   recoverInterrupted,
 } from './outbox';
+import { tr } from '../tr';
 
 /**
  * Moteur de synchronisation : vide la file d'opérations vers le serveur.
@@ -98,9 +99,9 @@ export function createSyncEngine(deps: SyncDeps) {
       if (outcome.kind !== 'ok') {
         const reason =
           outcome.kind === 'offline'
-            ? 'Connexion perdue pendant l’envoi'
+            ? tr('ui.sync.connexionPerduePendantLEnvoi')
             : outcome.kind === 'unauthorized'
-              ? 'Session à renouveler'
+              ? tr('ui.sync.sessionARenouveler')
               : outcome.message;
         for (const op of batch) await markRetry(db, op.opId, reason);
         useSyncStore.getState().set({ lastError: reason });
@@ -112,13 +113,13 @@ export function createSyncEngine(deps: SyncDeps) {
       for (const op of batch) {
         const r = byId.get(op.opId);
         if (!r || r.outcome === 'RETRY') {
-          await markRetry(db, op.opId, r?.error ?? 'Réponse incomplète du serveur');
+          await markRetry(db, op.opId, r?.error ?? tr('ui.sync.reponseIncompleteDuServeur'));
         } else if (r.outcome === 'APPLIED') {
           await deps.onApplied?.(op, r.result ?? {});
           await markApplied(db, op.opId);
           progressed = true;
         } else {
-          await markRejected(db, op.opId, r.error ?? 'Refusée par le serveur');
+          await markRejected(db, op.opId, r.error ?? tr('ui.sync.refuseeParLeServeur'));
           progressed = true;
         }
       }
@@ -145,7 +146,7 @@ export function createSyncEngine(deps: SyncDeps) {
       try {
         await drain(db);
       } catch (e) {
-        useSyncStore.getState().set({ lastError: e instanceof Error ? e.message : 'Erreur de synchronisation' });
+        useSyncStore.getState().set({ lastError: e instanceof Error ? e.message : tr('ui.sync.erreurDeSynchronisation') });
       } finally {
         await refreshCounters(db).catch(() => undefined);
         useSyncStore.getState().set({ phase: 'idle' });

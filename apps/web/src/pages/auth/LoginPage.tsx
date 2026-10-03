@@ -13,6 +13,7 @@ import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
+import { tr } from '../../lib/tr';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export function LoginPage() {
   const google = useGoogleAuthFlow('/dashboard');
   const [slow, setSlow] = useState(false);
   const [tenantName, setTenantName] = useState('');
-  const [branchName, setBranchName] = useState('Magasin principal');
+  const [branchName, setBranchName] = useState(tr('ui.LoginPage.magasinPrincipal'));
   const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const {
@@ -73,7 +74,7 @@ export function LoginPage() {
       }
       navigate(redirectTo);
     } catch (e) {
-      setServerError(apiErrorMessage(e, 'Connexion impossible'));
+      setServerError(apiErrorMessage(e, tr('ui.LoginPage.connexionImpossible')));
     }
   }
 
@@ -89,7 +90,7 @@ export function LoginPage() {
       }
       navigate(redirectTo);
     } catch (e) {
-      setServerError(apiErrorMessage(e, 'Connexion impossible'));
+      setServerError(apiErrorMessage(e, tr('ui.LoginPage.connexionImpossible')));
     } finally {
       setSelecting(false);
     }
@@ -104,7 +105,7 @@ export function LoginPage() {
       await loginTwoFactor(challenge, code.trim());
       navigate(redirectTo);
     } catch (err) {
-      setServerError(apiErrorMessage(err, 'Code invalide'));
+      setServerError(apiErrorMessage(err, tr('ui.LoginPage.codeInvalide')));
     } finally {
       setVerifying(false);
     }
@@ -114,8 +115,8 @@ export function LoginPage() {
   if (establishments) {
     return (
       <AuthLayout
-        title="Choisissez votre établissement"
-        subtitle="Votre email gère plusieurs établissements"
+        title={tr('ui.LoginPage.choisissezVotreEtablissement')}
+        subtitle={tr('ui.LoginPage.votreEmailGerePlusieursEtablissements')}
       >
         <div className="space-y-3">
           {establishments.map((e) => (
@@ -144,7 +145,7 @@ export function LoginPage() {
             }}
             className="w-full text-center text-sm text-content-muted hover:text-content"
           >
-            ← Retour
+            {tr('ui.LoginPage.retour')}
           </button>
         </div>
       </AuthLayout>
@@ -154,9 +155,9 @@ export function LoginPage() {
   // Étape 2 : saisie du code de vérification (2FA).
   if (challenge) {
     return (
-      <AuthLayout title="Vérification en deux étapes" subtitle="Saisissez le code de votre application d'authentification">
+      <AuthLayout title={tr('ui.LoginPage.verificationEnDeuxEtapes')} subtitle={tr('ui.LoginPage.saisissezLeCodeDeVotre')}>
         <form onSubmit={onVerify} className="space-y-4">
-          <Field label="Code à 6 chiffres">
+          <Field label={tr('ui.LoginPage.codeA6Chiffres')}>
             <input
               className="input text-center text-2xl tracking-[0.4em]"
               autoFocus
@@ -171,14 +172,14 @@ export function LoginPage() {
             <div className="rounded-xl bg-[color:var(--danger)]/12 px-3 py-2 text-sm text-danger">{serverError}</div>
           )}
           <Button type="submit" loading={verifying} disabled={code.length !== 6} className="w-full">
-            Vérifier
+            {tr('ui.LoginPage.verifier')}
           </Button>
           <button
             type="button"
             onClick={() => { setChallenge(null); setCode(''); setServerError(''); }}
             className="w-full text-center text-sm text-content-muted hover:text-content"
           >
-            ← Retour
+            {tr('ui.LoginPage.retour')}
           </button>
         </form>
       </AuthLayout>
@@ -188,18 +189,18 @@ export function LoginPage() {
   // Connexion Google : compte inexistant → on demande juste le nom de l'établissement.
   if (google.step.kind === 'needsSignup') {
     return (
-      <AuthLayout title="Finalisez votre inscription" subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
+      <AuthLayout title={tr('ui.LoginPage.finalisezVotreInscription')} subtitle={tr('ui.LoginPage.bienvenueFirstnameEncoreUneEtape', { firstName: google.step.firstName })}>
         <form
           onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName, googleWhatsapp); }}
           className="space-y-4"
         >
-          <Field label="Email Google">
+          <Field label={tr('ui.LoginPage.emailGoogle')}>
             <input className="input" value={google.step.email} disabled />
           </Field>
-          <Field label="Nom de l'établissement">
-            <input className="input" autoFocus value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Clinique Vision Plus" />
+          <Field label={tr('ui.LoginPage.nomDeLEtablissement')}>
+            <input className="input" autoFocus value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder={tr('ui.LoginPage.cliniqueVisionPlus')} />
           </Field>
-          <Field label="Magasin principal">
+          <Field label={tr('ui.LoginPage.magasinPrincipal')}>
             <input className="input" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
           </Field>
           <Field label={t('auth.whatsapp')}>
@@ -208,10 +209,10 @@ export function LoginPage() {
           </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
           <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2 || googleWhatsapp.trim().length < 8} className="w-full">
-            Créer mon compte
+            {tr('ui.LoginPage.creerMonCompte')}
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">
-            ← Retour
+            {tr('ui.LoginPage.retour')}
           </button>
         </form>
       </AuthLayout>
@@ -221,9 +222,9 @@ export function LoginPage() {
   // Connexion Google : compte protégé par 2FA → même défi que la connexion classique.
   if (google.step.kind === 'twoFactor') {
     return (
-      <AuthLayout title="Vérification en deux étapes" subtitle="Saisissez le code de votre application d'authentification">
+      <AuthLayout title={tr('ui.LoginPage.verificationEnDeuxEtapes')} subtitle={tr('ui.LoginPage.saisissezLeCodeDeVotre')}>
         <form onSubmit={(e) => { e.preventDefault(); void google.verifyTwoFactor(googleCode); }} className="space-y-4">
-          <Field label="Code à 6 chiffres">
+          <Field label={tr('ui.LoginPage.codeA6Chiffres')}>
             <input
               className="input text-center text-2xl tracking-[0.4em]"
               autoFocus
@@ -236,10 +237,10 @@ export function LoginPage() {
           </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
           <Button type="submit" loading={google.loading} disabled={googleCode.length !== 6} className="w-full">
-            Vérifier
+            {tr('ui.LoginPage.verifier')}
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">
-            ← Retour
+            {tr('ui.LoginPage.retour')}
           </button>
         </form>
       </AuthLayout>
@@ -251,7 +252,7 @@ export function LoginPage() {
       <GoogleSignInButton text="signin_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
       {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
       <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
-        <div className="h-px flex-1 bg-line" /> ou <div className="h-px flex-1 bg-line" />
+        <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.identifier')}>
@@ -277,8 +278,7 @@ export function LoginPage() {
 
         {slow && isSubmitting && (
           <p className="text-center text-xs text-content-muted">
-            Démarrage du serveur en cours — cela peut prendre jusqu'à une minute la
-            première fois. Merci de patienter.
+            {tr('ui.LoginPage.demarrageDuServeurEnCours')}
           </p>
         )}
         <Button type="submit" loading={isSubmitting} className="w-full">

@@ -5,6 +5,7 @@ import { verifyEmail } from '../../features/auth/api';
 import { apiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 import { AuthLayout } from './AuthLayout';
+import { tr } from '../../lib/tr';
 
 export function VerifyEmailPage() {
   const [params] = useSearchParams();
@@ -18,7 +19,7 @@ export function VerifyEmailPage() {
     ran.current = true;
     if (!token) {
       setStatus('error');
-      setError('Lien invalide.');
+      setError(tr('ui.VerifyEmailPage.lienInvalide'));
       return;
     }
     verifyEmail(token)
@@ -30,23 +31,23 @@ export function VerifyEmailPage() {
       })
       .catch((err) => {
         setStatus('error');
-        setError(apiErrorMessage(err, 'Lien de confirmation invalide ou expiré'));
+        setError(apiErrorMessage(err, tr('ui.VerifyEmailPage.lienDeConfirmationInvalideOu')));
       });
   }, [token]);
 
   return (
-    <AuthLayout title="Confirmation de l'email" subtitle="Vérification de votre adresse">
+    <AuthLayout title={tr('ui.VerifyEmailPage.confirmationDeLEmail')} subtitle={tr('ui.VerifyEmailPage.verificationDeVotreAdresse')}>
       {status === 'loading' && (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-content-muted">Confirmation en cours…</p>
+          <p className="text-sm text-content-muted">{tr('ui.VerifyEmailPage.confirmationEnCours')}</p>
         </div>
       )}
       {status === 'done' && (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <CheckCircle2 className="h-12 w-12 text-success" />
-          <p className="font-display text-lg font-bold text-content">Adresse confirmée ✅</p>
-          <p className="text-sm text-content-muted">Votre adresse email est bien vérifiée.</p>
+          <p className="font-display text-lg font-bold text-content">{tr('ui.VerifyEmailPage.adresseConfirmee')}</p>
+          <p className="text-sm text-content-muted">{tr('ui.VerifyEmailPage.votreAdresseEmailEstBien')}</p>
         </div>
       )}
       {status === 'error' && (
@@ -54,13 +55,13 @@ export function VerifyEmailPage() {
           <XCircle className="h-12 w-12 text-danger" />
           <p className="text-sm text-danger">{error}</p>
           <p className="text-sm text-content-muted">
-            Le lien a peut-être expiré. Connectez-vous puis renvoyez l'email de confirmation.
+            {tr('ui.VerifyEmailPage.leLienAPeutEtre')}
           </p>
         </div>
       )}
       <p className="mt-6 text-center text-sm text-content-muted">
         <Link to="/login" className="font-semibold text-primary hover:underline">
-          Aller à la connexion
+          {tr('ui.VerifyEmailPage.allerALaConnexion')}
         </Link>
       </p>
     </AuthLayout>

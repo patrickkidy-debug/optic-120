@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { ShieldCheck, Smartphone, Store } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../../components/Logo';
+import { tr } from '../../lib/tr';
 
 const FEATURES = [
   { icon: Smartphone, key: 'auth.panelFeat1' },
@@ -55,7 +56,7 @@ export function AuthLayout({
             ))}
           </ul>
         </div>
-        <p className="relative text-xs text-content-faint">© 2026 OculoSaaS — Afrique</p>
+        <p className="relative text-xs text-content-faint">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
       </div>
 
       <div className="flex items-center justify-center bg-bg p-6">

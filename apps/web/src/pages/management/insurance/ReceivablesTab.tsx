@@ -9,6 +9,7 @@ import {
 import { formatCurrency, formatDate } from '../../../lib/format';
 import { PageLoader, EmptyState, Badge } from '../../../components/ui';
 import { CLAIM_STATUSES, ClaimStatusBadge, num } from './shared';
+import { tr } from '../../../lib/tr';
 
 /** Créances assurance : ce que les assureurs doivent encore, et depuis quand. */
 export function ReceivablesTab({
@@ -40,22 +41,22 @@ export function ReceivablesTab({
     <div>
       {data && (
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Tile label="Total dû" value={data.totals.due} tone="text-primary" />
-          <Tile label="En attente" value={data.totals.pending} tone="text-warning" />
-          <Tile label="En retard" value={data.totals.late} tone="text-danger" />
-          <Tile label="Partiellement payé" value={data.totals.partiallyPaid} tone="text-accent" />
-          <Tile label="Reçu" value={data.totals.paid} tone="text-success" />
+          <Tile label={tr('ui.ReceivablesTab.totalDu')} value={data.totals.due} tone="text-primary" />
+          <Tile label={tr('ui.ReceivablesTab.enAttente')} value={data.totals.pending} tone="text-warning" />
+          <Tile label={tr('ui.ReceivablesTab.enRetard')} value={data.totals.late} tone="text-danger" />
+          <Tile label={tr('ui.ReceivablesTab.partiellementPaye')} value={data.totals.partiallyPaid} tone="text-accent" />
+          <Tile label={tr('ui.ReceivablesTab.recu')} value={data.totals.paid} tone="text-success" />
         </div>
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
-          aria-label="Filtrer par assureur"
+          aria-label={tr('ui.ReceivablesTab.filtrerParAssureur')}
           className="input h-9 w-auto"
           value={insurerId}
           onChange={(e) => setInsurerId(e.target.value)}
         >
-          <option value="">Tous les assureurs</option>
+          <option value="">{tr('ui.ReceivablesTab.tousLesAssureurs')}</option>
           {insurers.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -63,12 +64,12 @@ export function ReceivablesTab({
           ))}
         </select>
         <select
-          aria-label="Filtrer par statut"
+          aria-label={tr('ui.ReceivablesTab.filtrerParStatut')}
           className="input h-9 w-auto"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{tr('ui.ReceivablesTab.tousLesStatuts')}</option>
           {CLAIM_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
@@ -76,25 +77,25 @@ export function ReceivablesTab({
           ))}
         </select>
         <input
-          aria-label="Depuis"
+          aria-label={tr('ui.ReceivablesTab.depuis')}
           className="input h-9 w-auto"
           type="date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
         />
         <input
-          aria-label="Jusqu'au"
+          aria-label={tr('ui.ReceivablesTab.jusquAu')}
           className="input h-9 w-auto"
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
         />
         <input
-          aria-label="Montant minimum"
+          aria-label={tr('ui.ReceivablesTab.montantMinimum')}
           className="input h-9 w-28"
           type="number"
           min="0"
-          placeholder="Montant min."
+          placeholder={tr('ui.ReceivablesTab.montantMin')}
           value={minAmount}
           onChange={(e) => setMinAmount(e.target.value)}
         />
@@ -103,20 +104,20 @@ export function ReceivablesTab({
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={Coins} title="Aucune créance" hint="Tous les dossiers filtrés sont soldés." />
+        <EmptyState icon={Coins} title={tr('ui.ReceivablesTab.aucuneCreance')} hint={tr('ui.ReceivablesTab.tousLesDossiersFiltresSont')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-surface-2/60 text-left text-xs uppercase tracking-wide text-content-muted">
-                <th className="table-cell font-semibold">Dossier</th>
-                <th className="table-cell font-semibold">Assureur</th>
+                <th className="table-cell font-semibold">{tr('ui.ReceivablesTab.dossier')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ReceivablesTab.assureur')}</th>
                 <th className="table-cell font-semibold">Client</th>
-                <th className="table-cell text-right font-semibold">Attendu</th>
-                <th className="table-cell text-right font-semibold">Reçu</th>
-                <th className="table-cell text-right font-semibold">Restant</th>
-                <th className="table-cell font-semibold">Échéance</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesTab.attendu')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesTab.recu')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesTab.restant')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ReceivablesTab.echeance')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ReceivablesTab.statut')}</th>
               </tr>
             </thead>
             <tbody>

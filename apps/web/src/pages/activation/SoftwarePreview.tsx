@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
+import { tr } from '../../lib/tr';
 
 /**
  * Aperçu du logiciel dans le tunnel de vente.
@@ -12,33 +13,33 @@ import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
 const SCREENS = [
   {
     key: 'dashboard',
-    title: 'Tableau de bord',
-    text: "Chiffre d'affaires, ventes du jour, panier moyen et clients : l'essentiel en un coup d'œil.",
+    get title() { return tr('ui.SoftwarePreview.tableauDeBord'); },
+    get text() { return tr('ui.SoftwarePreview.chiffreDAffairesVentesDu'); },
   },
   {
     key: 'caisse',
-    title: 'Caisse & ventes',
-    text: 'Montures, verres sur mesure et options, remise, TVA et garantie, devis ou encaissement.',
+    get title() { return tr('ui.SoftwarePreview.caisseVentes'); },
+    get text() { return tr('ui.SoftwarePreview.monturesVerresSurMesureEt'); },
   },
   {
     key: 'produits',
-    title: 'Catalogue produits',
-    text: 'Montures, verres, lentilles et accessoires, avec import Excel et export PDF.',
+    get title() { return tr('ui.SoftwarePreview.catalogueProduits'); },
+    get text() { return tr('ui.SoftwarePreview.monturesVerresLentillesEtAccessoires'); },
   },
   {
     key: 'stock',
-    title: 'Gestion du stock',
-    text: 'Quantités par magasin, alertes de rupture, réceptions, transferts et inventaire.',
+    get title() { return tr('ui.SoftwarePreview.gestionDuStock'); },
+    get text() { return tr('ui.SoftwarePreview.quantitesParMagasinAlertesDe'); },
   },
   {
     key: 'clients',
-    title: 'Clients & ordonnances',
-    text: 'Fiche client, ordonnances, devis et relance WhatsApp en un clic.',
+    get title() { return tr('ui.SoftwarePreview.clientsOrdonnances'); },
+    get text() { return tr('ui.SoftwarePreview.ficheClientOrdonnancesDevisEt'); },
   },
   {
     key: 'rapports',
-    title: 'Rapports & analyses',
-    text: "Chiffre d'affaires, encaissé, reste à encaisser et évolution sur la période choisie.",
+    get title() { return tr('ui.SoftwarePreview.rapportsAnalyses'); },
+    get text() { return tr('ui.SoftwarePreview.chiffreDAffairesEncaisseReste'); },
   },
 ] as const;
 
@@ -71,13 +72,13 @@ export function SoftwarePreview() {
   return (
     <section className="mt-12">
       <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wider text-primary">
-        Aperçu du logiciel
+        {tr('ui.SoftwarePreview.apercuDuLogiciel')}
       </p>
       <h2 className="text-center font-display text-xl font-extrabold text-content sm:text-2xl">
-        Voyez OculoSaaS avant de commencer
+        {tr('ui.SoftwarePreview.voyezOculosaasAvantDeCommencer')}
       </h2>
       <p className="mx-auto mb-5 mt-1 max-w-md text-center text-sm text-content-muted">
-        Les vrais écrans du logiciel. Cliquez ou touchez une image pour l'agrandir.
+        {tr('ui.SoftwarePreview.lesVraisEcransDuLogiciel')}
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
@@ -96,7 +97,7 @@ export function SoftwarePreview() {
               </div>
               <img
                 src={`/apercu/${s.key}-vignette.webp`}
-                alt={`Écran ${s.title} d'OculoSaaS`}
+                alt={tr('ui.SoftwarePreview.ecranTitleDOculosaas', { title: s.title })}
                 width={720}
                 height={508}
                 loading="lazy"
@@ -133,14 +134,14 @@ export function SoftwarePreview() {
                 type="button"
                 onClick={close}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 hover:bg-white/20"
-                aria-label="Fermer"
+                aria-label={tr('ui.SoftwarePreview.fermer')}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <img
               src={`/apercu/${current.key}.webp`}
-              alt={`Écran ${current.title} d'OculoSaaS`}
+              alt={tr('ui.SoftwarePreview.ecranTitleDOculosaas', { title: current.title })}
               width={1440}
               height={900}
               className="max-h-[75vh] w-full rounded-xl object-contain shadow-2xl"
@@ -151,7 +152,7 @@ export function SoftwarePreview() {
                 onClick={() => move(-1)}
                 className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
               >
-                <ChevronLeft className="h-4 w-4" /> Précédent
+                <ChevronLeft className="h-4 w-4" /> {tr('ui.SoftwarePreview.precedent')}
               </button>
               <span className="text-sm text-white/70">
                 {open + 1} / {SCREENS.length}
@@ -161,7 +162,7 @@ export function SoftwarePreview() {
                 onClick={() => move(1)}
                 className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
               >
-                Suivant <ChevronRight className="h-4 w-4" />
+                {tr('ui.SoftwarePreview.suivant')} <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>

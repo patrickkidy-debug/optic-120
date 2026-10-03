@@ -4,6 +4,7 @@ import { ScrollText } from 'lucide-react';
 import { getAuditLogs } from '../../features/settings/api';
 import { formatDateTime } from '../../lib/format';
 import { PageHeader, Badge, PageLoader, EmptyState, Button } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
   LOGIN_SUCCESS: 'success',
@@ -33,21 +34,21 @@ export function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Journal d'activité" subtitle="Traçabilité des actions sensibles" />
+      <PageHeader title={tr('ui.AuditPage.journalDActivite')} subtitle={tr('ui.AuditPage.tracabiliteDesActionsSensibles')} />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={ScrollText} title="Aucune activité enregistrée" />
+        <EmptyState icon={ScrollText} title={tr('ui.AuditPage.aucuneActiviteEnregistree')} />
       ) : (
         <>
           <div className="card overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Action</th>
-                  <th className="table-cell font-semibold">Utilisateur</th>
-                  <th className="table-cell font-semibold">Entité</th>
+                  <th className="table-cell font-semibold">{tr('ui.AuditPage.action')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.AuditPage.utilisateur')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.AuditPage.entite')}</th>
                   <th className="table-cell font-semibold">IP</th>
                   <th className="table-cell text-right font-semibold">Date</th>
                 </tr>
@@ -59,7 +60,7 @@ export function AuditPage() {
                       <Badge tone={ACTION_TONE[log.action] ?? 'neutral'}>{log.action}</Badge>
                     </td>
                     <td className="table-cell text-content-muted">
-                      {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'Système'}
+                      {log.user ? `${log.user.firstName} ${log.user.lastName}` : tr('ui.AuditPage.systeme')}
                     </td>
                     <td className="table-cell text-content-faint">{log.entity ?? '—'}</td>
                     <td className="table-cell font-mono text-xs text-content-faint">{log.ipAddress ?? '—'}</td>
@@ -70,14 +71,14 @@ export function AuditPage() {
             </table>
           </div>
           <div className="mt-4 flex items-center justify-between text-sm text-content-muted">
-            <span>{data.total} entrée(s)</span>
+            <span>{data.total} {tr('ui.AuditPage.entreeS')}</span>
             <div className="flex items-center gap-2">
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Précédent
+                {tr('ui.AuditPage.precedent')}
               </Button>
               <span>{page} / {totalPages}</span>
               <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                Suivant
+                {tr('ui.AuditPage.suivant')}
               </Button>
             </div>
           </div>

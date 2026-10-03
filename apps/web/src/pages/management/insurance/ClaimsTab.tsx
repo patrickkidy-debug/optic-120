@@ -14,6 +14,7 @@ import { apiErrorMessage } from '../../../lib/api';
 import { formatCurrency, formatDate } from '../../../lib/format';
 import { Button, Modal, Field, PageLoader, EmptyState } from '../../../components/ui';
 import { CLAIM_STATUSES, ClaimStatusBadge, claimStatusLabel, num } from './shared';
+import { tr } from '../../../lib/tr';
 
 /** Invalide tout ce qu'un mouvement de dossier fait bouger ailleurs. */
 export function useInsuranceRefresh() {
@@ -53,12 +54,12 @@ export function ClaimsTab({
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
-          aria-label="Filtrer par assureur"
+          aria-label={tr('ui.ClaimsTab.filtrerParAssureur')}
           className="input h-9 w-auto"
           value={insurerId}
           onChange={(e) => setInsurerId(e.target.value)}
         >
-          <option value="">Tous les assureurs</option>
+          <option value="">{tr('ui.ClaimsTab.tousLesAssureurs')}</option>
           {insurers.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -66,12 +67,12 @@ export function ClaimsTab({
           ))}
         </select>
         <select
-          aria-label="Filtrer par statut"
+          aria-label={tr('ui.ClaimsTab.filtrerParStatut')}
           className="input h-9 w-auto"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{tr('ui.ClaimsTab.tousLesStatuts')}</option>
           {CLAIM_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
@@ -80,7 +81,7 @@ export function ClaimsTab({
         </select>
         {canCreate && insurers.length > 0 && (
           <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> Nouveau dossier
+            <Plus className="h-4 w-4" /> {tr('ui.ClaimsTab.nouveauDossier')}
           </Button>
         )}
       </div>
@@ -90,23 +91,23 @@ export function ClaimsTab({
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="Aucune prise en charge"
-          hint="Chaque vente avec une part assurance ouvre automatiquement un dossier."
+          title={tr('ui.ClaimsTab.aucunePriseEnCharge')}
+          hint={tr('ui.ClaimsTab.chaqueVenteAvecUnePart')}
         />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-surface-2/60 text-left text-xs uppercase tracking-wide text-content-muted">
-                <th className="table-cell font-semibold">Dossier</th>
-                <th className="table-cell font-semibold">Assureur</th>
+                <th className="table-cell font-semibold">{tr('ui.ClaimsTab.dossier')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ClaimsTab.assureur')}</th>
                 <th className="table-cell font-semibold">Client</th>
-                <th className="table-cell text-right font-semibold">Demandé</th>
-                <th className="table-cell text-right font-semibold">Accepté</th>
-                <th className="table-cell text-right font-semibold">Payé</th>
-                <th className="table-cell text-right font-semibold">Restant</th>
-                <th className="table-cell font-semibold">Échéance</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ClaimsTab.demande')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ClaimsTab.accepte')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ClaimsTab.paye')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.ClaimsTab.restant')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ClaimsTab.echeance')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ClaimsTab.statut')}</th>
               </tr>
             </thead>
             <tbody>
@@ -188,31 +189,31 @@ export function ClaimDetailModal({
   const remaining = current.remainingAmount;
 
   return (
-    <Modal open onClose={onClose} title={`Prise en charge ${current.number}`}>
+    <Modal open onClose={onClose} title={tr('ui.ClaimsTab.priseEnChargeNumber', { number: current.number })}>
       <div className="space-y-4">
         <div className="rounded-xl bg-surface-2 p-3 text-sm">
           <div className="grid grid-cols-2 gap-2">
-            <Line label="Assureur" value={current.insurer?.name ?? '—'} />
+            <Line label={tr('ui.ClaimsTab.assureur')} value={current.insurer?.name ?? '—'} />
             <Line
               label="Client"
               value={current.customer ? `${current.customer.firstName} ${current.customer.lastName}` : '—'}
             />
-            <Line label="Vente" value={current.sale?.number ?? '—'} />
-            <Line label="Contrat" value={current.contract?.name ?? 'Aucun'} />
-            <Line label="Total de la vente" value={formatCurrency(num(current.totalAmount))} />
-            <Line label="Demandé" value={formatCurrency(num(current.requestedAmount))} />
-            <Line label="Part client" value={formatCurrency(num(current.patientAmount))} />
-            <Line label="Demandée le" value={formatDate(current.requestedAt)} />
+            <Line label={tr('ui.ClaimsTab.vente')} value={current.sale?.number ?? '—'} />
+            <Line label={tr('ui.ClaimsTab.contrat')} value={current.contract?.name ?? 'Aucun'} />
+            <Line label={tr('ui.ClaimsTab.totalDeLaVente')} value={formatCurrency(num(current.totalAmount))} />
+            <Line label={tr('ui.ClaimsTab.demande')} value={formatCurrency(num(current.requestedAmount))} />
+            <Line label={tr('ui.ClaimsTab.partClient')} value={formatCurrency(num(current.patientAmount))} />
+            <Line label={tr('ui.ClaimsTab.demandeeLe')} value={formatDate(current.requestedAt)} />
           </div>
         </div>
 
         <div className="rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-            <span className="text-content-muted">Créance assurance</span>
+            <span className="text-content-muted">{tr('ui.ClaimsTab.creanceAssurance')}</span>
             <span className="font-display text-xl font-bold text-content">{formatCurrency(remaining)}</span>
           </div>
           <p className="mt-1 text-xs text-content-muted">
-            {formatCurrency(expected)} attendu · {formatCurrency(num(current.paidAmount))} déjà reçu
+            {formatCurrency(expected)} {tr('ui.ClaimsTab.attendu')} {formatCurrency(num(current.paidAmount))} {tr('ui.ClaimsTab.dejaRecu')}
           </p>
         </div>
 
@@ -225,7 +226,7 @@ export function ClaimDetailModal({
             }}
           >
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Statut">
+              <Field label={tr('ui.ClaimsTab.statut')}>
                 <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
                   {CLAIM_STATUSES.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -234,7 +235,7 @@ export function ClaimDetailModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Montant accepté">
+              <Field label={tr('ui.ClaimsTab.montantAccepte')}>
                 <input
                   className="input"
                   type="number"
@@ -244,7 +245,7 @@ export function ClaimDetailModal({
                 />
               </Field>
             </div>
-            <Field label="Échéance">
+            <Field label={tr('ui.ClaimsTab.echeance')}>
               <input className="input" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
             </Field>
             <Field label="Notes">
@@ -254,21 +255,21 @@ export function ClaimDetailModal({
             <div className="flex flex-wrap justify-end gap-2">
               {remaining > 0 && status !== InsuranceClaimStatus.REJECTED && (
                 <Button type="button" variant="ghost" onClick={() => setRefunding(true)}>
-                  <Wallet className="h-4 w-4" /> Enregistrer un remboursement
+                  <Wallet className="h-4 w-4" /> {tr('ui.ClaimsTab.enregistrerUnRemboursement')}
                 </Button>
               )}
               <Button type="submit" loading={save.isPending}>
-                Enregistrer
+                {tr('ui.ClaimsTab.enregistrer')}
               </Button>
             </div>
           </form>
         )}
 
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-content">Remboursements reçus</h4>
+          <h4 className="mb-2 text-sm font-semibold text-content">{tr('ui.ClaimsTab.remboursementsRecus')}</h4>
           {!current.refunds || current.refunds.length === 0 ? (
             <p className="rounded-lg border border-dashed p-3 text-xs text-content-faint">
-              Aucun versement enregistré : rien n'a encore été encaissé sur ce dossier.
+              {tr('ui.ClaimsTab.aucunVersementEnregistreRienN')}
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -338,7 +339,7 @@ export function RefundModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={`Remboursement — ${claim.number}`} size="sm">
+    <Modal open onClose={onClose} title={tr('ui.ClaimsTab.remboursementNumber', { number: claim.number })} size="sm">
       <form
         className="space-y-3"
         onSubmit={(e) => {
@@ -348,11 +349,11 @@ export function RefundModal({
       >
         <div className="rounded-xl bg-surface-2 p-3 text-sm">
           <div className="flex justify-between gap-3">
-            <span className="text-content-muted">Restant dû</span>
+            <span className="text-content-muted">{tr('ui.ClaimsTab.restantDu')}</span>
             <span className="font-display font-bold text-content">{formatCurrency(max)}</span>
           </div>
         </div>
-        <Field label="Montant reçu">
+        <Field label={tr('ui.ClaimsTab.montantRecu')}>
           <input
             className="input"
             type="number"
@@ -363,11 +364,11 @@ export function RefundModal({
             onChange={(e) => setAmount(e.target.value)}
           />
           {invalid && (
-            <p className="mt-1 text-xs text-danger">Saisissez un montant entre 1 et {formatCurrency(max)}.</p>
+            <p className="mt-1 text-xs text-danger">{tr('ui.ClaimsTab.saisissezUnMontantEntre1')} {formatCurrency(max)}.</p>
           )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date de réception">
+          <Field label={tr('ui.ClaimsTab.dateDeReception')}>
             <input
               className="input"
               type="date"
@@ -375,25 +376,25 @@ export function RefundModal({
               onChange={(e) => setReceivedAt(e.target.value)}
             />
           </Field>
-          <Field label="Référence">
+          <Field label={tr('ui.ClaimsTab.reference')}>
             <input
               className="input"
-              placeholder="N° de chèque, virement…"
+              placeholder={tr('ui.ClaimsTab.nDeChequeVirement')}
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
           </Field>
         </div>
-        <Field label="Commentaire">
+        <Field label={tr('ui.ClaimsTab.commentaire')}>
           <textarea className="input min-h-[60px]" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ClaimsTab.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={invalid}>
-            Enregistrer
+            {tr('ui.ClaimsTab.enregistrer')}
           </Button>
         </div>
       </form>
@@ -434,13 +435,12 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
   const valid = form.insurerId && Number(form.requestedAmount) > 0;
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle prise en charge" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.ClaimsTab.nouvellePriseEnCharge')} size="sm">
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (valid) mut.mutate(); }}>
         <p className="rounded-lg bg-surface-2 p-3 text-xs text-content-muted">
-          Une vente encaissée avec une part assurance ouvre déjà son dossier automatiquement. Ce
-          formulaire sert aux dossiers saisis hors caisse.
+          {tr('ui.ClaimsTab.uneVenteEncaisseeAvecUne')}
         </p>
-        <Field label="Assureur">
+        <Field label={tr('ui.ClaimsTab.assureur')}>
           <select
             className="input"
             value={form.insurerId}
@@ -454,7 +454,7 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Montant total">
+          <Field label={tr('ui.ClaimsTab.montantTotal')}>
             <input
               className="input"
               type="number"
@@ -463,7 +463,7 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
               onChange={(e) => setForm({ ...form, totalAmount: e.target.value })}
             />
           </Field>
-          <Field label="Montant demandé">
+          <Field label={tr('ui.ClaimsTab.montantDemande')}>
             <input
               className="input"
               type="number"
@@ -474,7 +474,7 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Statut">
+          <Field label={tr('ui.ClaimsTab.statut')}>
             <select
               className="input"
               value={form.status}
@@ -487,7 +487,7 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
               ))}
             </select>
           </Field>
-          <Field label="Échéance">
+          <Field label={tr('ui.ClaimsTab.echeance')}>
             <input
               className="input"
               type="date"
@@ -506,10 +506,10 @@ function ClaimCreateModal({ insurers, onClose }: { insurers: Insurer[]; onClose:
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ClaimsTab.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={!valid}>
-            Créer
+            {tr('ui.ClaimsTab.creer')}
           </Button>
         </div>
       </form>

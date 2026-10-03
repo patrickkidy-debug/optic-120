@@ -9,6 +9,7 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 export function ConsultationsPage() {
   const canCreate = usePermission('clinic.consultations.create');
@@ -18,15 +19,15 @@ export function ConsultationsPage() {
   return (
     <div>
       <PageHeader
-        title="Consultations"
-        subtitle="Examens ophtalmologiques"
-        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nouvelle consultation</Button>}
+        title={tr('ui.ConsultationsPage.consultations')}
+        subtitle={tr('ui.ConsultationsPage.examensOphtalmologiques')}
+        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr('ui.ConsultationsPage.nouvelleConsultation')}</Button>}
       />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={Stethoscope} title="Aucune consultation" />
+        <EmptyState icon={Stethoscope} title={tr('ui.ConsultationsPage.aucuneConsultation')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
@@ -34,9 +35,9 @@ export function ConsultationsPage() {
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">Date</th>
                 <th className="table-cell font-semibold">Patient</th>
-                <th className="table-cell font-semibold">Diagnostic</th>
-                <th className="table-cell font-semibold">Verres</th>
-                <th className="table-cell font-semibold">AV OD / OG</th>
+                <th className="table-cell font-semibold">{tr('ui.ConsultationsPage.diagnostic')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ConsultationsPage.verres')}</th>
+                <th className="table-cell font-semibold">{tr('ui.ConsultationsPage.avOdOg')}</th>
               </tr>
             </thead>
             <tbody>
@@ -78,39 +79,39 @@ function NewConsultationModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle consultation" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.ConsultationsPage.nouvelleConsultation')} size="lg">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <Field label="Patient">
           <select className="input" {...register('patientId', { required: true })}>
-            <option value="">— Choisir —</option>
+            <option value="">{tr('ui.ConsultationsPage.choisir')}</option>
             {patients?.map((p) => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Acuité visuelle OD"><input className="input" {...register('visualAcuityRight')} /></Field>
-          <Field label="Acuité visuelle OG"><input className="input" {...register('visualAcuityLeft')} /></Field>
-          <Field label="Tonométrie OD"><input className="input" {...register('tonometryRight')} /></Field>
-          <Field label="Tonométrie OG"><input className="input" {...register('tonometryLeft')} /></Field>
+          <Field label={tr('ui.ConsultationsPage.acuiteVisuelleOd')}><input className="input" {...register('visualAcuityRight')} /></Field>
+          <Field label={tr('ui.ConsultationsPage.acuiteVisuelleOg')}><input className="input" {...register('visualAcuityLeft')} /></Field>
+          <Field label={tr('ui.ConsultationsPage.tonometrieOd')}><input className="input" {...register('tonometryRight')} /></Field>
+          <Field label={tr('ui.ConsultationsPage.tonometrieOg')}><input className="input" {...register('tonometryLeft')} /></Field>
         </div>
-        <Field label="Diagnostic"><input className="input" {...register('diagnosis')} /></Field>
+        <Field label={tr('ui.ConsultationsPage.diagnostic')}><input className="input" {...register('diagnosis')} /></Field>
 
         {/* Ordonnance optique : réfraction par œil + type de verres recommandé. */}
         <div className="rounded-xl border border-line bg-surface-2/40 p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-content">
-            <Glasses className="h-4 w-4 text-primary" /> Ordonnance
+            <Glasses className="h-4 w-4 text-primary" /> {tr('ui.ConsultationsPage.ordonnance')}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Réfraction OD (sph/cyl/axe/add)">
-              <input className="input" placeholder="ex : -1.25 (-0.50 × 90°) Add +2.00" {...register('refractionRight')} />
+            <Field label={tr('ui.ConsultationsPage.refractionOdSphCylAxe')}>
+              <input className="input" placeholder={tr('ui.ConsultationsPage.ex125050')} {...register('refractionRight')} />
             </Field>
-            <Field label="Réfraction OG (sph/cyl/axe/add)">
-              <input className="input" placeholder="ex : -1.00 (-0.75 × 85°) Add +2.00" {...register('refractionLeft')} />
+            <Field label={tr('ui.ConsultationsPage.refractionOgSphCylAxe')}>
+              <input className="input" placeholder={tr('ui.ConsultationsPage.ex100075')} {...register('refractionLeft')} />
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="Type de verres recommandé">
+            <Field label={tr('ui.ConsultationsPage.typeDeVerresRecommande')}>
               <select className="input" {...register('lensType')}>
-                <option value="">— Aucun —</option>
+                <option value="">{tr('ui.ConsultationsPage.aucun')}</option>
                 {lensOptions.map((b) => {
                   const label = lensLabel(pricing, b.key, []);
                   return <option key={b.key} value={label}>{label}</option>;
@@ -119,7 +120,7 @@ function NewConsultationModal({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="Prescription / remarques">
+            <Field label={tr('ui.ConsultationsPage.prescriptionRemarques')}>
               <textarea className="input min-h-[60px]" {...register('prescription')} />
             </Field>
           </div>
@@ -127,8 +128,8 @@ function NewConsultationModal({ onClose }: { onClose: () => void }) {
 
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.ConsultationsPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.ConsultationsPage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

@@ -4,6 +4,7 @@ import type { SignupInput } from '@oculo/shared-types';
 import { googleLogin, googleSignup, loginTwoFactor } from './api';
 import { apiErrorMessage } from '../../lib/api';
 import { getStoredReferral } from '../../lib/partnerReferral';
+import { tr } from '../../lib/tr';
 
 type GoogleStep =
   | { kind: 'idle' }
@@ -36,7 +37,7 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
       }
       navigate(redirectTo);
     } catch (e) {
-      setError(apiErrorMessage(e, 'Connexion Google impossible'));
+      setError(apiErrorMessage(e, tr('ui.useGoogleAuthFlow.connexionGoogleImpossible')));
     } finally {
       setLoading(false);
     }
@@ -51,7 +52,7 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
       await googleSignup({ idToken: step.idToken, tenantName, branchName, whatsapp, plan: plan ?? 'STARTER', ...referral });
       navigate(redirectTo);
     } catch (e) {
-      setError(apiErrorMessage(e, 'Inscription impossible'));
+      setError(apiErrorMessage(e, tr('ui.useGoogleAuthFlow.inscriptionImpossible')));
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
       await loginTwoFactor(step.challenge, code);
       navigate(redirectTo);
     } catch (e) {
-      setError(apiErrorMessage(e, 'Code invalide'));
+      setError(apiErrorMessage(e, tr('ui.useGoogleAuthFlow.codeInvalide')));
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { HandCoins, ShieldCheck, Clock, AlertTriangle } from 'lucide-react';
 import { getInsuranceSummary } from '../../features/management/api';
 import { MiniMetric } from './MiniMetric';
+import { tr } from '../../lib/tr';
 
 /** Résumé des remboursements assurance : à recouvrer / payé / en attente / en retard. */
 export function InsuranceWidget({ enabled }: { enabled: boolean }) {
@@ -12,14 +13,14 @@ export function InsuranceWidget({ enabled }: { enabled: boolean }) {
 
   return (
     <div className="card p-5">
-      <h3 className="mb-4 font-display font-bold text-content">Assurances</h3>
+      <h3 className="mb-4 font-display font-bold text-content">{tr('ui.InsuranceWidget.assurances')}</h3>
       <div className="grid grid-cols-2 gap-3">
-        <MiniMetric icon={HandCoins} label="À recouvrer" value={data.toCollect} tone="primary" currency />
-        <MiniMetric icon={ShieldCheck} label="Payé" value={data.paid} tone="success" currency />
-        <MiniMetric icon={Clock} label="En attente" value={data.pending} tone="accent" currency />
+        <MiniMetric icon={HandCoins} label={tr('ui.InsuranceWidget.aRecouvrer')} value={data.toCollect} tone="primary" currency />
+        <MiniMetric icon={ShieldCheck} label={tr('ui.InsuranceWidget.paye')} value={data.paid} tone="success" currency />
+        <MiniMetric icon={Clock} label={tr('ui.InsuranceWidget.enAttente')} value={data.pending} tone="accent" currency />
         <MiniMetric
           icon={AlertTriangle}
-          label="En retard"
+          label={tr('ui.InsuranceWidget.enRetard')}
           value={data.late}
           tone={data.late > 0 ? 'danger' : 'success'}
           currency

@@ -33,12 +33,13 @@ import {
 } from '../../features/activation/api';
 import { api, apiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
-import { setActiveCurrency } from '../../lib/format';
+import { setActiveCurrency, displayLocale } from '../../lib/format';
 import { Button, PageLoader } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, MultiChoiceCard, PrimaryAction } from './shared';
 import { Intro } from './Intro';
 import { InformationStep } from './InformationStep';
 import { BankTransferSent, PaymentStep } from './PaymentStep';
+import { tr } from '../../lib/tr';
 
 /**
  * Tunnel d'activation — parcours commercial obligatoire.
@@ -266,10 +267,10 @@ export function ActivationPage() {
     return (
       <ActivationShell
         step="ACTIVITY"
-        title="Parlez-nous de votre activité"
-        subtitle="Trois réponses suffisent pour vous proposer la formule adaptée."
+        title={tr('ui.ActivationPage.parlezNousDeVotreActivite')}
+        subtitle={tr('ui.ActivationPage.troisReponsesSuffisentPourVous')}
       >
-        <Question label="Quel type de structure gérez-vous ?">
+        <Question label={tr('ui.ActivationPage.quelTypeDeStructureGerez')}>
           {STRUCTURE_TYPES.map((s) => (
             <ChoiceCard
               key={s.value}
@@ -280,7 +281,7 @@ export function ActivationPage() {
           ))}
         </Question>
 
-        <Question label="Combien de boutiques gérez-vous ?">
+        <Question label={tr('ui.ActivationPage.combienDeBoutiquesGerezVous')}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {BRANCH_COUNTS.map((b) => (
               <ChoiceCard
@@ -293,14 +294,14 @@ export function ActivationPage() {
           </div>
         </Question>
 
-        <Question label="Dans quel pays êtes-vous situé ?">
+        <Question label={tr('ui.ActivationPage.dansQuelPaysEtesVous')}>
           <select
             className="input"
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            aria-label="Pays"
+            aria-label={tr('ui.ActivationPage.pays')}
           >
-            <option value="">Choisissez votre pays</option>
+            <option value="">{tr('ui.ActivationPage.choisissezVotrePays')}</option>
             {SUPPORTED_COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.flag} {c.name}
@@ -326,7 +327,7 @@ export function ActivationPage() {
               )
             }
           >
-            Continuer <ArrowRight className="h-4 w-4" />
+            {tr('ui.ActivationPage.continuer')} <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
         </ActionBar>
       </ActivationShell>
@@ -337,8 +338,8 @@ export function ActivationPage() {
     return (
       <ActivationShell
         step="NEEDS"
-        title="Que souhaitez-vous améliorer ?"
-        subtitle="Plusieurs réponses possibles. Cela nous sert à préparer votre configuration."
+        title={tr('ui.ActivationPage.queSouhaitezVousAmeliorer')}
+        subtitle={tr('ui.ActivationPage.plusieursReponsesPossiblesCelaNous')}
       >
         <div className="space-y-2">
           {ACTIVATION_NEEDS.map((n) => (
@@ -370,7 +371,7 @@ export function ActivationPage() {
                   void step((t) => saveNeeds(t, { needs }), 'PLAN');
                 }}
               >
-                Continuer <ArrowRight className="h-4 w-4" />
+                {tr('ui.ActivationPage.continuer')} <ArrowRight className="h-4 w-4" />
               </PrimaryAction>
             </div>
           </div>
@@ -437,8 +438,8 @@ export function ActivationPage() {
   return (
     <ActivationShell
       step="PLAN"
-      title="Voici la formule adaptée à votre activité"
-      subtitle={recommendation.reason}
+      title={tr('ui.ActivationPage.voiciLaFormuleAdapteeA')}
+      subtitle={reasonLabel(recommendation.reason)}
     >
       <div className="space-y-3">
         {shown.map((p) => {
@@ -453,16 +454,16 @@ export function ActivationPage() {
             >
               {isRecommended && (
                 <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-                  <Sparkles className="h-3 w-3" /> Recommandé pour vous
+                  <Sparkles className="h-3 w-3" /> {tr('ui.ActivationPage.recommandePourVous')}
                 </span>
               )}
               <h2 className="font-display text-xl font-extrabold text-content">{p.name}</h2>
               <p className="mt-1 text-sm text-content-muted">{p.description}</p>
 
               <p className="mt-3 font-display text-2xl font-extrabold text-content">
-                {planPrice(p.code, currency).toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(planPrice(p.code, currency)) ? 0 : 2 })}{' '}
+                {planPrice(p.code, currency).toLocaleString(displayLocale(), { minimumFractionDigits: Number.isInteger(planPrice(p.code, currency)) ? 0 : 2 })}{' '}
                 {currency}
-                <span className="ml-1 text-sm font-normal text-content-muted">/ mois</span>
+                <span className="ml-1 text-sm font-normal text-content-muted">{tr('units.perMonth')}</span>
               </p>
 
               <ul className="mt-3 space-y-1.5">
@@ -479,7 +480,7 @@ export function ActivationPage() {
                 variant={selected ? undefined : 'outline'}
                 onClick={() => setPlanCode(p.code)}
               >
-                {selected ? 'Formule sélectionnée' : 'Choisir cette formule'}
+                {selected ? tr('ui.ActivationPage.formuleSelectionnee') : tr('ui.ActivationPage.choisirCetteFormule')}
               </Button>
             </div>
           );
@@ -492,7 +493,7 @@ export function ActivationPage() {
           onClick={() => setComparing(true)}
           className="mt-3 text-sm font-medium text-primary underline-offset-2 hover:underline"
         >
-          Comparer les autres formules
+          {tr('ui.ActivationPage.comparerLesAutresFormules')}
         </button>
       )}
 
@@ -513,13 +514,25 @@ export function ActivationPage() {
                 )
               }
             >
-              Continuer <ArrowRight className="h-4 w-4" />
+              {tr('ui.ActivationPage.continuer')} <ArrowRight className="h-4 w-4" />
             </PrimaryAction>
           </div>
         </div>
       </ActionBar>
     </ActivationShell>
   );
+}
+
+/** Raison de la recommandation (texte français du code partagé) dans la langue active. */
+const REASON_KEYS: Record<string, string> = {
+  "Au-delà de 5 magasins, seule l'offre Growth couvre un réseau sans limite.": 'activationUi.reasonGrowth',
+  "Standard couvre jusqu'à 5 magasins, ce qui correspond à votre organisation.": 'activationUi.reasonStandardBranches',
+  'Vos besoins dépassent un point de vente unique : Standard les couvre tous.': 'activationUi.reasonStandardNeeds',
+  "Starter suffit à votre activité : tout l'essentiel, jusqu'à 2 magasins.": 'activationUi.reasonStarter',
+};
+function reasonLabel(fr: string): string {
+  const key = REASON_KEYS[fr];
+  return key ? tr(key) : fr;
 }
 
 function Question({ label, children }: { label: string; children: React.ReactNode }) {

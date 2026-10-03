@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AlertTriangle, Check, Info, X } from 'lucide-react';
+import { tr } from '../lib/tr';
 
 /**
  * Retours d'action discrets (§31).
@@ -94,7 +95,7 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Fermer"
+        aria-label={tr('ui.Toast.fermer')}
         className="shrink-0 text-content-faint transition-colors hover:text-content"
       >
         <X className="h-3.5 w-3.5" />

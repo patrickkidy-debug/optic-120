@@ -6,6 +6,7 @@ import { verifyPassword, logout } from '../features/auth/api';
 import { tryLocalUnlock, setUnlockSecret } from '../lib/unlock';
 import { Logo } from './Logo';
 import { Button } from './ui';
+import { tr } from '../lib/tr';
 
 export function LockScreen() {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export function LockScreen() {
         setError(t('auth.password') + ' incorrect');
       }
     } catch {
-      setError('Erreur de vérification');
+      setError(tr('ui.LockScreen.erreurDeVerification'));
     } finally {
       setLoading(false);
     }

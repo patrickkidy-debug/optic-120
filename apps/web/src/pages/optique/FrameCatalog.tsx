@@ -21,6 +21,7 @@ import type { Product, StockRow } from '../../features/optique/api';
 import { formatCurrency } from '../../lib/format';
 import { Badge, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 /** Attributs monture d'un produit, typés et sûrs même si le JSON est vide. */
 export function frameAttrs(p: Product): FrameAttributes {
@@ -104,7 +105,7 @@ function FrameCard({
           </div>
           {color && (
             <span
-              title={a.color}
+              title={trFr(a.color)}
               className="mt-0.5 h-4 w-4 shrink-0 rounded-full border"
               style={{ background: color.hex }}
             />
@@ -116,7 +117,7 @@ function FrameCard({
         <div className="mt-2 flex flex-wrap gap-1">
           {[a.frameType, a.gender, a.shape, a.size].filter(Boolean).map((t) => (
             <span key={t} className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
-              {t}
+              {trFr(t)}
             </span>
           ))}
         </div>
@@ -261,26 +262,26 @@ export function FrameCatalog({
           <select className="input h-9 w-auto py-1" value={brand} onChange={(e) => setBrand(e.target.value)}>
             <option value="">{tr('ui.FrameCatalog.toutesMarques')}</option>
             {brands.map((b) => (
-              <option key={b} value={b}>{b}</option>
+              <option key={b} value={b}>{trFr(b)}</option>
             ))}
           </select>
           <select className="input h-9 w-auto py-1" value={gender} onChange={(e) => setGender(e.target.value)}>
             <option value="">{tr('ui.FrameCatalog.tousGenres')}</option>
             {FRAME_GENDERS.map((g) => (
-              <option key={g} value={g}>{g}</option>
+              <option key={g} value={g}>{trFr(g)}</option>
             ))}
           </select>
           <select className="input h-9 w-auto py-1" value={shape} onChange={(e) => setShape(e.target.value)}>
             <option value="">{tr('ui.FrameCatalog.toutesFormes')}</option>
             {FRAME_SHAPES.map((f) => (
-              <option key={f} value={f}>{f}</option>
+              <option key={f} value={f}>{trFr(f)}</option>
             ))}
           </select>
           {sizes.length > 0 && (
             <select className="input h-9 w-auto py-1" value={size} onChange={(e) => setSize(e.target.value)}>
               <option value="">{tr('ui.FrameCatalog.toutesTailles')}</option>
               {sizes.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>{trFr(s)}</option>
               ))}
             </select>
           )}
@@ -306,7 +307,7 @@ export function FrameCatalog({
             {FRAME_COLORS.map((c) => (
               <button
                 key={c.name}
-                title={c.name}
+                title={trFr(c.name)}
                 onClick={() => setColor(color === c.name ? '' : c.name)}
                 style={{ background: c.hex }}
                 className={`h-5 w-5 rounded-full border transition ${
@@ -396,9 +397,9 @@ export function FrameCatalog({
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell text-content-muted">{a.gender || '—'}</td>
-                    <td className="table-cell text-content-muted">{a.shape || '—'}</td>
-                    <td className="table-cell text-content-muted">{a.color || '—'}</td>
+                    <td className="table-cell text-content-muted">{trFr(a.gender) || '—'}</td>
+                    <td className="table-cell text-content-muted">{trFr(a.shape) || '—'}</td>
+                    <td className="table-cell text-content-muted">{trFr(a.color) || '—'}</td>
                     <td className="table-cell text-content-muted">{a.size || '—'}</td>
                     <td className="table-cell text-right font-semibold text-content">
                       {formatCurrency(Number(p.sellPrice))}
@@ -499,10 +500,10 @@ export function FrameDetail({ p, stock }: { p: Product; stock?: StockRow }) {
 
         <dl className="mt-4 space-y-1.5 text-sm">
           {[
-            [tr('ui.FrameCatalog.genre'), a.gender],
-            [tr('ui.FrameCatalog.forme'), a.shape],
-            [tr('ui.FrameCatalog.couleur'), a.color],
-            [tr('ui.FrameCatalog.matiere'), a.material],
+            [tr('ui.FrameCatalog.genre'), trFr(a.gender)],
+            [tr('ui.FrameCatalog.forme'), trFr(a.shape)],
+            [tr('ui.FrameCatalog.couleur'), trFr(a.color)],
+            [tr('ui.FrameCatalog.matiere'), trFr(a.material)],
             [tr('ui.FrameCatalog.taille'), a.size],
             ['EAN', a.ean],
             [tr('ui.FrameCatalog.emplacement'), a.location],
@@ -569,7 +570,7 @@ export function FramePreview({
         <div className="mt-2 flex flex-wrap gap-1">
           {[gender, shape, size].filter(Boolean).map((t) => (
             <span key={t} className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
-              {t}
+              {trFr(t)}
             </span>
           ))}
         </div>

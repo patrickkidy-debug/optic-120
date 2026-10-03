@@ -6,6 +6,8 @@ import { lensBaseOptions, lensLabel, lensSku, DEFAULT_LENS_PRICING } from '@ocul
 import { listProducts, type Product } from '../../features/optique/api';
 import { useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
+import i18n from 'i18next';
 
 interface LabelData {
   name: string;
@@ -43,7 +45,7 @@ function LabelCard({ name, code, price, onPrint }: LabelData & { onPrint?: () =>
       {onPrint && (
         <button
           onClick={onPrint}
-          title="Imprimer cette étiquette seule"
+          title={tr('ui.LabelsPage.imprimerCetteEtiquetteSeule')}
           className="print-hide absolute right-1 top-1 rounded-md bg-black/5 p-1 text-black/50 opacity-0 transition hover:bg-black/10 hover:text-black group-hover:opacity-100"
         >
           <Printer className="h-3.5 w-3.5" />
@@ -71,7 +73,10 @@ export function LabelsPage() {
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   // Un seul étiquetage par type de verre (fixes + personnalisés), pas par produit.
   const lensTypes: LabelData[] = lensBaseOptions(pricing).map((b) => ({
-    name: lensLabel(pricing, b.key, []),
+    // Libellé dans la langue active ; un type personnalisé garde son nom.
+    name: i18n.exists(`lensBases.${b.key}`)
+      ? tr('ui.ProductsPage.verreValue', { value: i18n.t(`lensBases.${b.key}`) })
+      : lensLabel(pricing, b.key, []),
     code: lensSku(b.key, []),
     price: b.price,
   }));
@@ -95,19 +100,19 @@ export function LabelsPage() {
     <div>
       <div className="print-hide">
         <PageHeader
-          title="Étiquettes & codes-barres"
-          subtitle="Montures et types de verres — survolez une étiquette pour l'imprimer seule"
+          title={tr('ui.LabelsPage.etiquettesCodesBarres')}
+          subtitle={tr('ui.LabelsPage.monturesEtTypesDeVerres')}
           actions={
             <Button onClick={() => window.print()} disabled={nothing}>
-              <Printer className="h-4 w-4" /> Tout imprimer
+              <Printer className="h-4 w-4" /> {tr('ui.LabelsPage.toutImprimer')}
             </Button>
           }
         />
         <div className="mb-4 max-w-sm">
-          <Field label="Rechercher une monture">
+          <Field label={tr('ui.LabelsPage.rechercherUneMonture')}>
             <input
               className="input"
-              placeholder="Nom, référence, marque…"
+              placeholder={tr('ui.LabelsPage.nomReferenceMarque')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -118,17 +123,17 @@ export function LabelsPage() {
       {isLoading ? (
         <PageLoader />
       ) : nothing ? (
-        <EmptyState icon={BarcodeIcon} title="Aucune étiquette à générer" />
+        <EmptyState icon={BarcodeIcon} title={tr('ui.LabelsPage.aucuneEtiquetteAGenerer')} />
       ) : (
         // Quand on imprime une seule étiquette, la planche complète n'est plus
         // « print-area » (donc non imprimée) : seule l'étiquette choisie sort.
         <div className={printOne ? 'space-y-6' : 'print-area space-y-6'}>
           <section>
             <h2 className="print-hide mb-2 text-sm font-semibold uppercase tracking-wide text-content-faint">
-              Montures
+              {tr('ui.LabelsPage.montures')}
             </h2>
             {montures.length === 0 ? (
-              <p className="print-hide text-sm text-content-muted">Aucune monture au catalogue.</p>
+              <p className="print-hide text-sm text-content-muted">{tr('ui.LabelsPage.aucuneMontureAuCatalogue')}</p>
             ) : (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                 {montures.map((p) => {
@@ -141,7 +146,7 @@ export function LabelsPage() {
 
           <section>
             <h2 className="print-hide mb-2 text-sm font-semibold uppercase tracking-wide text-content-faint">
-              Types de verres
+              {tr('ui.LabelsPage.typesDeVerres')}
             </h2>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
               {lensTypes.map((l) => (

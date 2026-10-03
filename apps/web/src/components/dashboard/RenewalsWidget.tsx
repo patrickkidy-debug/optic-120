@@ -4,6 +4,7 @@ import { BellRing, MessageCircle } from 'lucide-react';
 import { listRenewals } from '../../features/optique/api';
 import { Avatar } from '../Avatar';
 import { formatDate } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 function waLink(phone?: string | null): string | null {
   if (!phone) return null;
@@ -21,17 +22,17 @@ export function RenewalsWidget({ enabled }: { enabled: boolean }) {
   return (
     <div className="card p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="font-display font-bold text-content">Renouvellements</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.RenewalsWidget.renouvellements')}</h3>
         <Link to="/optique/renouvellements" className="shrink-0 text-xs font-semibold text-primary hover:underline">
-          Voir tout
+          {tr('ui.RenewalsWidget.voirTout')}
         </Link>
       </div>
       {isLoading ? (
-        <p className="text-sm text-content-muted">Chargement…</p>
+        <p className="text-sm text-content-muted">{tr('ui.RenewalsWidget.chargement')}</p>
       ) : renewals.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-content-muted">
           <BellRing className="h-6 w-6 text-content-faint" />
-          Aucun rappel pour le moment
+          {tr('ui.RenewalsWidget.aucunRappelPourLeMoment')}
         </div>
       ) : (
         <div className="space-y-3">
@@ -51,10 +52,10 @@ export function RenewalsWidget({ enabled }: { enabled: boolean }) {
                   <p className="truncate text-xs text-content-faint">
                     {c.lastLensType ? `${c.lastLensType} · ` : ''}
                     {c.recommendedAt
-                      ? `recommandé depuis le ${formatDate(c.recommendedAt)}`
+                      ? tr('ui.RenewalsWidget.recommandeDepuisLeRecommendedat', { recommendedAt: formatDate(c.recommendedAt) })
                       : c.renewPrescription
-                        ? 'Ordonnance à renouveler'
-                        : 'Nouvel achat à proposer'}
+                        ? tr('ui.RenewalsWidget.ordonnanceARenouveler')
+                        : tr('ui.RenewalsWidget.nouvelAchatAProposer')}
                   </p>
                 </div>
                 {wa && (
@@ -64,7 +65,7 @@ export function RenewalsWidget({ enabled }: { enabled: boolean }) {
                     rel="noopener noreferrer"
                     className="btn-outline h-8 shrink-0 rounded-lg px-2.5 text-xs text-success"
                   >
-                    <MessageCircle className="h-3.5 w-3.5" /> Contacter
+                    <MessageCircle className="h-3.5 w-3.5" /> {tr('ui.RenewalsWidget.contacter')}
                   </a>
                 )}
               </div>

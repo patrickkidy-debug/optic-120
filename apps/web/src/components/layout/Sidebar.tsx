@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { lowStockCount, lensOverdueCount } from '../../features/optique/api';
 import { prefetchRoute } from '../../lib/routePrefetch';
+import { tr } from '../../lib/tr';
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -143,7 +144,7 @@ export function Sidebar() {
       </div>
 
       <div className="px-2 text-[10px] text-content-faint border-t pt-4">
-        OculoSaaS · v2.0 — Premium Dashboard
+        {tr('ui.Sidebar.oculosaasV20PremiumDashboard')}
       </div>
     </nav>
   );

@@ -9,6 +9,7 @@ import { api } from '../../lib/api';
 import { DEMO_WHATSAPP_NUMBER, waLink } from '../../lib/whatsapp';
 import { Button } from '../../components/ui';
 import { ActivationShell, Glow, PrimaryAction } from './shared';
+import { tr } from '../../lib/tr';
 
 /** Délai entre deux interrogations : le webhook arrive en quelques secondes. */
 const POLL_MS = 3000;
@@ -85,11 +86,11 @@ export function ActivationReturnPage() {
 
   if (state === 'checking') {
     return (
-      <ActivationShell title="Vérification de votre paiement">
+      <ActivationShell title={tr('ui.ActivationReturnPage.verificationDeVotrePaiement')}>
         <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-5">
           <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
           <p className="text-sm text-content-muted">
-            Nous attendons la confirmation de la passerelle. Ne fermez pas cette page.
+            {tr('ui.ActivationReturnPage.nousAttendonsLaConfirmationDe')}
           </p>
         </div>
       </ActivationShell>
@@ -98,17 +99,17 @@ export function ActivationReturnPage() {
 
   if (state === 'pending' || state === 'error') {
     return (
-      <ActivationShell title="Paiement non confirmé">
+      <ActivationShell title={tr('ui.ActivationReturnPage.paiementNonConfirme')}>
         <div className="rounded-2xl border border-line bg-surface p-5">
           <AlertTriangle className="mb-2 h-6 w-6 text-warning" aria-hidden="true" />
           <p className="text-sm text-content-muted">
             {state === 'error'
-              ? "Nous n'avons pas pu vérifier votre paiement."
-              : "Nous n'avons pas encore reçu la confirmation de votre paiement. S'il a bien été débité, votre espace s'ouvrira dès réception — vous pouvez recharger cette page dans quelques minutes."}
+              ? tr('ui.ActivationReturnPage.nousNAvonsPasPu')
+              : tr('ui.ActivationReturnPage.nousNAvonsPasEncore')}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={() => window.location.reload()}>Réessayer</Button>
-            <WhatsappButton token={token} phone={whatsapp} label="Nous contacter" />
+            <Button onClick={() => window.location.reload()}>{tr('ui.ActivationReturnPage.reessayer')}</Button>
+            <WhatsappButton token={token} phone={whatsapp} label={tr('ui.ActivationReturnPage.nousContacter')} />
           </div>
         </div>
       </ActivationShell>
@@ -123,12 +124,12 @@ export function ActivationReturnPage() {
           🎉
         </p>
         <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-content">
-          Bienvenue sur OculoSaaS
+          {tr('ui.ActivationReturnPage.bienvenueSurOculosaas')}
         </h1>
-        <p className="mt-2 text-content-muted">Votre abonnement est maintenant actif.</p>
+        <p className="mt-2 text-content-muted">{tr('ui.ActivationReturnPage.votreAbonnementEstMaintenantActif')}</p>
 
         <ul className="mx-auto mt-5 flex max-w-sm flex-col gap-2">
-          {['Paiement confirmé', 'Abonnement activé', 'Compte créé'].map((t) => (
+          {[tr('ui.ActivationReturnPage.paiementConfirme'), tr('ui.ActivationReturnPage.abonnementActive'), tr('ui.ActivationReturnPage.compteCree')].map((t) => (
             <li
               key={t}
               className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-content"
@@ -141,21 +142,20 @@ export function ActivationReturnPage() {
       </section>
 
       <section className="mt-8 rounded-3xl border border-line bg-surface p-6 shadow-sm">
-        <h2 className="font-display text-xl font-extrabold text-content">Votre prochaine étape</h2>
+        <h2 className="font-display text-xl font-extrabold text-content">{tr('ui.ActivationReturnPage.votreProchaineEtape')}</h2>
         <p className="mt-1 text-sm text-content-muted">
-          Entrez dans votre espace, ou laissez-nous le configurer avec vous : informations du magasin,
-          produits et stock, utilisateurs, permissions, ventes, encaissements et rapports.
+          {tr('ui.ActivationReturnPage.entrezDansVotreEspaceOu')}
         </p>
 
         <div className="mt-5 space-y-2">
           <PrimaryAction onClick={() => navigate('/dashboard')}>
-            <LayoutDashboard className="h-4 w-4" /> Accéder à mon tableau de bord
+            <LayoutDashboard className="h-4 w-4" /> {tr('ui.ActivationReturnPage.accederAMonTableauDe')}
             <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
           <WhatsappButton
             token={token}
             phone={whatsapp}
-            label="Configurer mon espace avec l'équipe"
+            label={tr('ui.ActivationReturnPage.configurerMonEspaceAvecL')}
             full
           />
         </div>

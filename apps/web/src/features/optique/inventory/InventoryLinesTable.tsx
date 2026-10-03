@@ -13,6 +13,7 @@ import {
 } from './api';
 import { formatCurrency } from '../../../lib/format';
 import { Badge } from '../../../components/ui';
+import { tr } from '../../../lib/tr';
 
 /** Un écart >= 5 unités (ou >= 30 % du théorique) est mis en avant, sans bloquer. */
 function isBigGap(line: InventoryCountLine): boolean {
@@ -23,20 +24,20 @@ function isBigGap(line: InventoryCountLine): boolean {
 }
 
 function lineStatusBadge(line: InventoryCountLine) {
-  if (line.countedQty == null) return <Badge tone="neutral">À compter</Badge>;
-  if (line.deltaQty === 0) return <Badge tone="success">Conforme</Badge>;
-  if ((line.deltaQty ?? 0) < 0) return <Badge tone="danger">Manquant</Badge>;
-  return <Badge tone="info">Surplus</Badge>;
+  if (line.countedQty == null) return <Badge tone="neutral">{tr('ui.InventoryLinesTable.aCompter')}</Badge>;
+  if (line.deltaQty === 0) return <Badge tone="success">{tr('ui.InventoryLinesTable.conforme')}</Badge>;
+  if ((line.deltaQty ?? 0) < 0) return <Badge tone="danger">{tr('ui.InventoryLinesTable.manquant')}</Badge>;
+  return <Badge tone="info">{tr('ui.InventoryLinesTable.surplus')}</Badge>;
 }
 
 const FILTERS: { key: InventoryLineStatusFilter; label: string }[] = [
-  { key: 'all', label: 'Tous' },
-  { key: 'to_count', label: 'À compter' },
-  { key: 'counted', label: 'Comptés' },
-  { key: 'conforme', label: 'Conforme' },
-  { key: 'ecart', label: 'Écart' },
-  { key: 'manquant', label: 'Manquant' },
-  { key: 'surplus', label: 'Surplus' },
+  { key: 'all', get label() { return tr('ui.InventoryLinesTable.tous'); } },
+  { key: 'to_count', get label() { return tr('ui.InventoryLinesTable.aCompter'); } },
+  { key: 'counted', get label() { return tr('ui.InventoryLinesTable.comptes'); } },
+  { key: 'conforme', get label() { return tr('ui.InventoryLinesTable.conforme'); } },
+  { key: 'ecart', get label() { return tr('ui.InventoryLinesTable.ecart'); } },
+  { key: 'manquant', get label() { return tr('ui.InventoryLinesTable.manquant'); } },
+  { key: 'surplus', get label() { return tr('ui.InventoryLinesTable.surplus'); } },
 ];
 
 export interface InventoryLinesTableProps {
@@ -115,7 +116,7 @@ export function InventoryLinesTable({
       setScanCode('');
       invalidate();
     } catch {
-      setScanError(`Aucun article de cet inventaire ne correspond à « ${code} »`);
+      setScanError(tr('ui.InventoryLinesTable.aucunArticleDeCetInventaire', { code: code }));
     }
     scanRef.current?.focus();
   }
@@ -128,11 +129,11 @@ export function InventoryLinesTable({
     <div className="space-y-4">
       {summary && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <SummaryTile label="Articles à compter" value={summary.total} />
-          <SummaryTile label="Articles comptés" value={summary.counted} />
-          <SummaryTile label="Écarts détectés" value={summary.ecart} tone={summary.ecart > 0 ? 'warning' : undefined} />
+          <SummaryTile label={tr('ui.InventoryLinesTable.articlesACompter')} value={summary.total} />
+          <SummaryTile label={tr('ui.InventoryLinesTable.articlesComptes')} value={summary.counted} />
+          <SummaryTile label={tr('ui.InventoryLinesTable.ecartsDetectes')} value={summary.ecart} tone={summary.ecart > 0 ? 'warning' : undefined} />
           <SummaryTile
-            label="Valeur des écarts"
+            label={tr('ui.InventoryLinesTable.valeurDesEcarts')}
             value={formatCurrency(summary.netValue)}
             tone={summary.netValue < 0 ? 'danger' : summary.netValue > 0 ? 'success' : undefined}
           />
@@ -146,17 +147,17 @@ export function InventoryLinesTable({
             <input
               ref={scanRef}
               className="input pl-9"
-              placeholder="Scanner un produit (référence)…"
+              placeholder={tr('ui.InventoryLinesTable.scannerUnProduitReference')}
               value={scanCode}
               onChange={(e) => setScanCode(e.target.value)}
             />
           </div>
           <button type="submit" className="btn-outline h-10 px-4 text-sm">
-            Scanner
+            {tr('ui.InventoryLinesTable.scanner')}
           </button>
           {savedRecently && (
             <span className="hidden shrink-0 text-xs text-content-faint sm:inline">
-              Dernière sauvegarde : il y a quelques secondes
+              {tr('ui.InventoryLinesTable.derniereSauvegardeIlYA')}
             </span>
           )}
         </form>
@@ -200,7 +201,7 @@ export function InventoryLinesTable({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input h-9 w-56 pl-9"
-            placeholder="Rechercher…"
+            placeholder={tr('ui.InventoryLinesTable.rechercher')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -213,26 +214,26 @@ export function InventoryLinesTable({
             <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
               {selectable && <th className="table-cell w-8" />}
               <th className="table-cell font-semibold">Article</th>
-              <th className="table-cell font-semibold">Référence</th>
-              <th className="table-cell font-semibold">Emplacement</th>
-              <th className="table-cell text-center font-semibold">Théorique</th>
-              <th className="table-cell text-center font-semibold">Compté</th>
-              <th className="table-cell text-center font-semibold">Écart</th>
-              <th className="table-cell text-right font-semibold">Valeur</th>
-              <th className="table-cell font-semibold">Statut</th>
+              <th className="table-cell font-semibold">{tr('ui.InventoryLinesTable.reference')}</th>
+              <th className="table-cell font-semibold">{tr('ui.InventoryLinesTable.emplacement')}</th>
+              <th className="table-cell text-center font-semibold">{tr('ui.InventoryLinesTable.theorique')}</th>
+              <th className="table-cell text-center font-semibold">{tr('ui.InventoryLinesTable.compte')}</th>
+              <th className="table-cell text-center font-semibold">{tr('ui.InventoryLinesTable.ecart')}</th>
+              <th className="table-cell text-right font-semibold">{tr('ui.InventoryLinesTable.valeur')}</th>
+              <th className="table-cell font-semibold">{tr('ui.InventoryLinesTable.statut')}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={9} className="table-cell py-8 text-center text-content-muted">
-                  Chargement…
+                  {tr('ui.InventoryLinesTable.chargement')}
                 </td>
               </tr>
             ) : lines.length === 0 ? (
               <tr>
                 <td colSpan={9} className="table-cell py-8 text-center text-content-muted">
-                  Aucun article pour ce filtre.
+                  {tr('ui.InventoryLinesTable.aucunArticlePourCeFiltre')}
                 </td>
               </tr>
             ) : (
@@ -342,7 +343,7 @@ export function InventoryLinesTable({
                       {lineStatusBadge(line)}
                       {line.regularized && (
                         <div className="mt-1 text-[11px] text-content-faint">
-                          Régularisé — {line.reason ? INVENTORY_REASON_LABELS[line.reason as InventoryAdjustmentReason] : ''}
+                          {tr('ui.InventoryLinesTable.regularise')} {line.reason ? INVENTORY_REASON_LABELS[line.reason as InventoryAdjustmentReason] : ''}
                         </div>
                       )}
                     </td>
@@ -362,16 +363,16 @@ export function InventoryLinesTable({
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Précédent
+            {tr('ui.InventoryLinesTable.precedent')}
           </button>
-          <span>Page {page}</span>
+          <span>{tr('ui.InventoryLinesTable.page')} {page}</span>
           <button
             type="button"
             className="btn-outline h-8 px-3 text-xs disabled:opacity-40"
             disabled={lines.length < (data.pageSize ?? 50)}
             onClick={() => setPage((p) => p + 1)}
           >
-            Suivant
+            {tr('ui.InventoryLinesTable.suivant')}
           </button>
         </div>
       )}

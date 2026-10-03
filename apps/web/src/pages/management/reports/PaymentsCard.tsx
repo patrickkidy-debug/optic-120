@@ -4,6 +4,7 @@ import type { ReportStatusBucket, ReportTotals } from '../../../features/optique
 import { formatCurrency } from '../../../lib/format';
 import { STATUS_META, STATUS_ORDER, Skeleton, formatPercent } from './shared';
 import type { StatusKey } from './shared';
+import { tr } from '../../../lib/tr';
 
 export function PaymentsSkeleton() {
   return (
@@ -50,12 +51,12 @@ export function PaymentsCard({
 
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <section className="card p-4" aria-label="État des paiements">
-        <h3 className="mb-3 font-display text-base font-bold text-content">État des paiements</h3>
+      <section className="card p-4" aria-label={tr('ui.PaymentsCard.etatDesPaiements')}>
+        <h3 className="mb-3 font-display text-base font-bold text-content">{tr('ui.PaymentsCard.etatDesPaiements')}</h3>
 
         {totalCount === 0 ? (
           <p className="py-12 text-center text-sm text-content-muted">
-            Aucune vente sur cette période.
+            {tr('ui.PaymentsCard.aucuneVenteSurCettePeriode')}
           </p>
         ) : (
           <div className="flex flex-col items-center gap-4 sm:flex-row">
@@ -81,7 +82,7 @@ export function PaymentsCard({
                       callbacks: {
                         label: (item) => {
                           const b = ordered[item.dataIndex];
-                          return `${b.count} vente${b.count > 1 ? 's' : ''} — ${formatCurrency(b.total)}`;
+                          return tr('ui.PaymentsCard.countVenteVTotal', { count: b.count, v: b.count > 1 ? 's' : '', total: formatCurrency(b.total) });
                         },
                       },
                     },
@@ -124,21 +125,21 @@ export function PaymentsCard({
         )}
       </section>
 
-      <section className="card p-4" aria-label="Encaissements">
-        <h3 className="mb-1 font-display text-base font-bold text-content">Encaissements</h3>
+      <section className="card p-4" aria-label={tr('ui.PaymentsCard.encaissements')}>
+        <h3 className="mb-1 font-display text-base font-bold text-content">{tr('ui.PaymentsCard.encaissements')}</h3>
         <p className="mb-4 text-xs text-content-faint">
-          Chiffre d'affaires, encaissé et reste à percevoir sont trois montants distincts.
+          {tr('ui.PaymentsCard.chiffreDAffairesEncaisseEt')}
         </p>
 
         <dl className="space-y-2.5 text-sm">
-          <Row label="Montant total des ventes" value={formatCurrency(summary.revenue)} />
-          <Row label="Montant encaissé" value={formatCurrency(summary.collected)} tone="success" />
-          <Row label="Montant restant" value={formatCurrency(summary.outstanding)} tone="warning" />
+          <Row label={tr('ui.PaymentsCard.montantTotalDesVentes')} value={formatCurrency(summary.revenue)} />
+          <Row label={tr('ui.PaymentsCard.montantEncaisse')} value={formatCurrency(summary.collected)} tone="success" />
+          <Row label={tr('ui.PaymentsCard.montantRestant')} value={formatCurrency(summary.outstanding)} tone="warning" />
         </dl>
 
         <div className="mt-4">
           <div className="mb-1.5 flex items-baseline justify-between">
-            <span className="text-xs text-content-muted">Taux d'encaissement</span>
+            <span className="text-xs text-content-muted">{tr('ui.PaymentsCard.tauxDEncaissement')}</span>
             <span className="font-display text-lg font-bold text-content">
               {formatPercent(summary.collectionRate)}
             </span>
@@ -149,7 +150,7 @@ export function PaymentsCard({
             aria-valuenow={Math.round(summary.collectionRate)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Taux d'encaissement"
+            aria-label={tr('ui.PaymentsCard.tauxDEncaissement')}
           >
             <div
               className="h-full rounded-full bg-[color:var(--success)] transition-all duration-500"
@@ -157,7 +158,7 @@ export function PaymentsCard({
             />
           </div>
           <p className="mt-1.5 text-xs text-content-faint">
-            100 % correspond au total facturé sur la période.
+            {tr('ui.PaymentsCard.n100CorrespondAuTotalFacture')}
           </p>
         </div>
       </section>

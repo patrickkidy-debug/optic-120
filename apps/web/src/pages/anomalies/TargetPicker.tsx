@@ -8,6 +8,8 @@ import { getCurrentRegister } from '../../features/cashregister/api';
 import { CustomerSearch } from '../../features/optique/SaleTools';
 import { PageLoader } from '../../components/ui';
 import { useUIStore } from '../../store/ui';
+import { tr } from '../../lib/tr';
+import { displayLocale } from '../../lib/format';
 
 export interface PickedTarget {
   id: string;
@@ -48,7 +50,7 @@ function SearchList<T>({
       {isLoading ? (
         <PageLoader />
       ) : items.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-content-faint">Aucun résultat.</p>
+        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-content-faint">{tr('ui.TargetPicker.aucunResultat')}</p>
       ) : (
         <div className="max-h-72 space-y-1 overflow-y-auto">
           {items.map((item) => (
@@ -153,12 +155,12 @@ function SalePicker({
       isLoading={isLoading}
       query={query}
       onQueryChange={setQuery}
-      placeholder="Numéro, client ou téléphone…"
+      placeholder={tr('ui.TargetPicker.numeroClientOuTelephone')}
       keyOf={(s) => s.id}
       renderRow={(s) => (
         <Row
-          title={`${s.number} — ${Number(s.totalAmount).toLocaleString('fr-FR')} FCFA`}
-          subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : 'Sans client'}
+          title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: Number(s.totalAmount).toLocaleString(displayLocale()) })}
+          subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : tr('ui.TargetPicker.sansClient')}
           onClick={async () => {
             const full = await getSale(s.id);
             onPick({
@@ -202,12 +204,12 @@ function ProductPicker({ query, setQuery, onPick }: { query: string; setQuery: (
       isLoading={isLoading}
       query={query}
       onQueryChange={setQuery}
-      placeholder="Nom, référence ou marque…"
+      placeholder={tr('ui.TargetPicker.nomReferenceOuMarque')}
       keyOf={(p) => p.id}
       renderRow={(p) => (
         <Row
           title={p.name}
-          subtitle={`${p.sku} · ${Number(p.sellPrice).toLocaleString('fr-FR')} FCFA`}
+          subtitle={tr('ui.TargetPicker.skuValueFcfa', { sku: p.sku, value: Number(p.sellPrice).toLocaleString(displayLocale()) })}
           onClick={() =>
             onPick({
               id: p.id,
@@ -252,12 +254,12 @@ function StockPicker({
       isLoading={isLoading}
       query={query}
       onQueryChange={setQuery}
-      placeholder="Nom du produit…"
+      placeholder={tr('ui.TargetPicker.nomDuProduit')}
       keyOf={(r) => r.stockItemId!}
       renderRow={(r) => (
         <Row
           title={r.name}
-          subtitle={`Stock système : ${r.quantity}`}
+          subtitle={tr('ui.TargetPicker.stockSystemeQuantity', { quantity: r.quantity })}
           onClick={() =>
             onPick({
               id: r.stockItemId!,
@@ -283,7 +285,7 @@ function LensOrderPicker({ query, setQuery, onPick }: { query: string; setQuery:
       isLoading={isLoading}
       query={query}
       onQueryChange={setQuery}
-      placeholder="Numéro ou description…"
+      placeholder={tr('ui.TargetPicker.numeroOuDescription')}
       keyOf={(o) => o.id}
       renderRow={(o) => (
         <Row
@@ -319,7 +321,7 @@ function RepairPicker({ query, setQuery, onPick }: { query: string; setQuery: (v
       isLoading={isLoading}
       query={query}
       onQueryChange={setQuery}
-      placeholder="Numéro ou description…"
+      placeholder={tr('ui.TargetPicker.numeroOuDescription')}
       keyOf={(r) => r.id}
       renderRow={(r) => (
         <Row
@@ -349,19 +351,18 @@ function CashRegisterPicker({ branchId, onPick }: { branchId: string | null; onP
   if (!data) {
     return (
       <p className="rounded-lg border border-dashed p-4 text-center text-sm text-content-faint">
-        Aucune session de caisse ouverte pour ce magasin. Ouvrez la caisse pour corriger sa session, ou
-        contactez le support pour une session déjà clôturée.
+        {tr('ui.TargetPicker.aucuneSessionDeCaisseOuverte')}
       </p>
     );
   }
   return (
     <Row
-      title={`Session ouverte le ${new Date(data.openedAt).toLocaleString('fr-FR')}`}
-      subtitle={`Fond de caisse : ${Number(data.openingAmount).toLocaleString('fr-FR')} FCFA`}
+      title={tr('ui.TargetPicker.sessionOuverteLeValue', { value: new Date(data.openedAt).toLocaleString(displayLocale()) })}
+      subtitle={tr('ui.TargetPicker.fondDeCaisseValueFcfa', { value: Number(data.openingAmount).toLocaleString(displayLocale()) })}
       onClick={() =>
         onPick({
           id: data.id,
-          reference: `Session du ${new Date(data.openedAt).toLocaleDateString('fr-FR')}`,
+          reference: tr('ui.TargetPicker.sessionDuValue', { value: new Date(data.openedAt).toLocaleDateString(displayLocale()) }),
           branchId,
           current: {
             openingAmount: money(data.openingAmount),
@@ -393,12 +394,12 @@ function PaymentPicker({ query, setQuery, onPick }: { query: string; setQuery: (
         isLoading={loadingSales}
         query={query}
         onQueryChange={setQuery}
-        placeholder="Trouvez d'abord la vente…"
+        placeholder={tr('ui.TargetPicker.trouvezDAbordLaVente')}
         keyOf={(s) => s.id}
         renderRow={(s) => (
           <Row
-            title={`${s.number} — ${Number(s.totalAmount).toLocaleString('fr-FR')} FCFA`}
-            subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : 'Sans client'}
+            title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: Number(s.totalAmount).toLocaleString(displayLocale()) })}
+            subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : tr('ui.TargetPicker.sansClient')}
             onClick={() => setSaleId(s.id)}
           />
         )}
@@ -412,19 +413,19 @@ function PaymentPicker({ query, setQuery, onPick }: { query: string; setQuery: (
   return (
     <div>
       <button type="button" onClick={() => setSaleId(null)} className="mb-2 text-xs text-content-muted hover:text-content">
-        ← Choisir une autre vente
+        {tr('ui.TargetPicker.choisirUneAutreVente')}
       </button>
       {payments.length === 0 ? (
         <p className="rounded-lg border border-dashed p-4 text-center text-sm text-content-faint">
-          Aucun paiement réglé sur cette vente.
+          {tr('ui.TargetPicker.aucunPaiementRegleSurCette')}
         </p>
       ) : (
         <div className="space-y-1">
           {payments.map((p) => (
             <Row
               key={p.id}
-              title={`${Number(p.amount).toLocaleString('fr-FR')} FCFA — ${p.method}`}
-              subtitle={new Date(p.createdAt).toLocaleString('fr-FR')}
+              title={tr('ui.TargetPicker.valueFcfaMethod', { value: Number(p.amount).toLocaleString(displayLocale()), method: p.method })}
+              subtitle={new Date(p.createdAt).toLocaleString(displayLocale())}
               onClick={() =>
                 onPick({
                   id: p.id,
@@ -467,14 +468,14 @@ function InsurancePicker({ query, setQuery, onPick }: { query: string; setQuery:
           onClick={() => setMode('CLAIM')}
           className={`rounded-md px-2.5 py-1 font-semibold ${mode === 'CLAIM' ? 'bg-primary text-white' : 'text-content-muted'}`}
         >
-          Dossier
+          {tr('ui.TargetPicker.dossier')}
         </button>
         <button
           type="button"
           onClick={() => setMode('REFUND')}
           className={`rounded-md px-2.5 py-1 font-semibold ${mode === 'REFUND' ? 'bg-primary text-white' : 'text-content-muted'}`}
         >
-          Remboursement
+          {tr('ui.TargetPicker.remboursement')}
         </button>
       </div>
       {mode === 'CLAIM' ? (
@@ -483,12 +484,12 @@ function InsurancePicker({ query, setQuery, onPick }: { query: string; setQuery:
           isLoading={loadingClaims}
           query={query}
           onQueryChange={setQuery}
-          placeholder="Numéro de dossier ou assureur…"
+          placeholder={tr('ui.TargetPicker.numeroDeDossierOuAssureur')}
           keyOf={(c) => c.id}
           renderRow={(c) => (
             <Row
               title={c.number}
-              subtitle={`${c.insurer?.name ?? '—'} · demandé ${Number(c.requestedAmount).toLocaleString('fr-FR')} FCFA`}
+              subtitle={tr('ui.TargetPicker.vDemandeValueFcfa', { v: c.insurer?.name ?? '—', value: Number(c.requestedAmount).toLocaleString(displayLocale()) })}
               onClick={() =>
                 onPick({
                   id: c.id,
@@ -506,12 +507,12 @@ function InsurancePicker({ query, setQuery, onPick }: { query: string; setQuery:
           isLoading={loadingRefunds}
           query={query}
           onQueryChange={setQuery}
-          placeholder="Numéro de dossier…"
+          placeholder={tr('ui.TargetPicker.numeroDeDossier')}
           keyOf={(r) => r.id}
           renderRow={(r) => (
             <Row
-              title={`${r.claim?.number ?? '—'} — ${Number(r.receivedAmount).toLocaleString('fr-FR')} FCFA`}
-              subtitle={new Date(r.receivedAt).toLocaleDateString('fr-FR')}
+              title={tr('ui.TargetPicker.vValueFcfa', { v: r.claim?.number ?? '—', value: Number(r.receivedAmount).toLocaleString(displayLocale()) })}
+              subtitle={new Date(r.receivedAt).toLocaleDateString(displayLocale())}
               onClick={() =>
                 onPick({
                   id: r.id,

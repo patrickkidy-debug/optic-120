@@ -2,6 +2,7 @@ import { Search, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { METHOD_LABEL, RANGE_LABEL, STATUS_META, STATUS_ORDER, describePeriod, rangeBounds } from './shared';
 import type { RangeKey, ReportFilters, StatusKey } from './shared';
+import { tr } from '../../../lib/tr';
 
 const QUICK_RANGES: RangeKey[] = [
   'today',
@@ -61,7 +62,7 @@ export function FilterBar({
   }
 
   return (
-    <section className="card mb-4 p-4" aria-label="Filtres du rapport">
+    <section className="card mb-4 p-4" aria-label={tr('ui.FilterBar.filtresDuRapport')}>
       <div className="flex flex-wrap items-center gap-1.5">
         {QUICK_RANGES.map((key) => {
           const active = filters.range === key;
@@ -86,7 +87,7 @@ export function FilterBar({
       {filters.range === 'custom' && (
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="text-xs text-content-muted">
-            Date de début
+            {tr('ui.FilterBar.dateDeDebut')}
             <input
               type="date"
               className="input mt-1"
@@ -96,7 +97,7 @@ export function FilterBar({
             />
           </label>
           <label className="text-xs text-content-muted">
-            Date de fin
+            {tr('ui.FilterBar.dateDeFin')}
             <input
               type="date"
               className="input mt-1"
@@ -118,20 +119,20 @@ export function FilterBar({
           <input
             type="search"
             className="input pl-9"
-            placeholder="Rechercher une vente, un client ou un numéro…"
-            aria-label="Rechercher une vente, un client ou un numéro"
+            placeholder={tr('ui.FilterBar.rechercherUneVenteUnClient')}
+            aria-label={tr('ui.FilterBar.rechercherUneVenteUnClient2')}
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
           />
         </div>
 
         <Button variant="outline" onClick={onToggleAdvanced} aria-expanded={showAdvanced}>
-          <SlidersHorizontal className="h-4 w-4" /> Plus de filtres
+          <SlidersHorizontal className="h-4 w-4" /> {tr('ui.FilterBar.plusDeFiltres')}
         </Button>
 
         {dirty && (
           <Button variant="ghost" onClick={onReset}>
-            <RotateCcw className="h-4 w-4" /> Réinitialiser les filtres
+            <RotateCcw className="h-4 w-4" /> {tr('ui.FilterBar.reinitialiserLesFiltres')}
           </Button>
         )}
       </div>
@@ -139,7 +140,7 @@ export function FilterBar({
       {showAdvanced && (
         <div className="mt-3 grid grid-cols-1 gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-3">
           <fieldset>
-            <legend className="mb-1.5 text-xs text-content-muted">Statut du paiement</legend>
+            <legend className="mb-1.5 text-xs text-content-muted">{tr('ui.FilterBar.statutDuPaiement')}</legend>
             <div className="flex flex-wrap gap-1.5">
               {STATUS_ORDER.map((key) => {
                 const active = filters.status.includes(key);
@@ -165,13 +166,13 @@ export function FilterBar({
           </fieldset>
 
           <label className="text-xs text-content-muted">
-            Vendeur
+            {tr('ui.FilterBar.vendeur')}
             <select
               className="input mt-1"
               value={filters.cashierId}
               onChange={(e) => onChange({ cashierId: e.target.value })}
             >
-              <option value="">Tous les vendeurs</option>
+              <option value="">{tr('ui.FilterBar.tousLesVendeurs')}</option>
               {sellers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -181,13 +182,13 @@ export function FilterBar({
           </label>
 
           <label className="text-xs text-content-muted">
-            Mode de paiement
+            {tr('ui.FilterBar.modeDePaiement')}
             <select
               className="input mt-1"
               value={filters.method}
               onChange={(e) => onChange({ method: e.target.value })}
             >
-              <option value="">Tous les modes</option>
+              <option value="">{tr('ui.FilterBar.tousLesModes')}</option>
               {methods.map((m) => (
                 <option key={m} value={m}>
                   {METHOD_LABEL[m] ?? m}

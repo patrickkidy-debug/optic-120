@@ -8,13 +8,14 @@ import { AnomaliesListTab } from './AnomaliesListTab';
 import { JournalTab } from './JournalTab';
 import { DeclareModal } from './DeclareModal';
 import { DetailModal } from './DetailModal';
+import { tr } from '../../lib/tr';
 
 type Tab = 'overview' | 'list' | 'journal';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'overview', label: 'Tableau de bord' },
-  { value: 'list', label: 'Anomalies' },
-  { value: 'journal', label: "Journal d'activité" },
+  { value: 'overview', get label() { return tr('ui.AnomaliesPage.tableauDeBord'); } },
+  { value: 'list', get label() { return tr('ui.AnomaliesPage.anomalies'); } },
+  { value: 'journal', get label() { return tr('ui.AnomaliesPage.journalDActivite'); } },
 ];
 
 export function AnomaliesPage() {
@@ -29,12 +30,12 @@ export function AnomaliesPage() {
   return (
     <div>
       <PageHeader
-        title="Anomalies & corrections"
-        subtitle="Déclaration, validation et correction tracée des erreurs métier"
+        title={tr('ui.AnomaliesPage.anomaliesCorrections')}
+        subtitle={tr('ui.AnomaliesPage.declarationValidationEtCorrectionTracee')}
         actions={
           canDeclare && (
             <Button onClick={() => setDeclaring(true)}>
-              <Plus className="h-4 w-4" /> Déclarer une anomalie
+              <Plus className="h-4 w-4" /> {tr('ui.AnomaliesPage.declarerUneAnomalie')}
             </Button>
           )
         }

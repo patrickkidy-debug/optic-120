@@ -5,6 +5,7 @@ import { createSupportTicket } from '../features/support/api';
 import { apiErrorMessage } from '../lib/api';
 import { useAuthStore } from '../store/auth';
 import { useUIStore } from '../store/ui';
+import { tr } from '../lib/tr';
 
 /**
  * Bulle de discussion flottante (assistance intégrée). L'utilisateur écrit un
@@ -28,7 +29,7 @@ export function SupportChatWidget() {
   async function send() {
     const text = message.trim();
     if (text.length < 5) {
-      setError('Écrivez au moins quelques mots.');
+      setError(tr('ui.SupportChatWidget.ecrivezAuMoinsQuelquesMots'));
       return;
     }
     setSending(true);
@@ -38,7 +39,7 @@ export function SupportChatWidget() {
       setSent(true);
       setMessage('');
     } catch (e) {
-      setError(apiErrorMessage(e, "Envoi impossible. Réessayez."));
+      setError(apiErrorMessage(e, tr('ui.SupportChatWidget.envoiImpossibleReessayez')));
     } finally {
       setSending(false);
     }
@@ -61,13 +62,13 @@ export function SupportChatWidget() {
                 <MessageCircle className="h-5 w-5" />
               </span>
               <div>
-                <div className="font-display text-sm font-bold leading-tight">Assistance OculoSaaS</div>
-                <div className="text-[11px] text-white/80">On vous répond rapidement 👋</div>
+                <div className="font-display text-sm font-bold leading-tight">{tr('ui.SupportChatWidget.assistanceOculosaas')}</div>
+                <div className="text-[11px] text-white/80">{tr('ui.SupportChatWidget.onVousRepondRapidement')}</div>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label="Fermer"
+              aria-label={tr('ui.SupportChatWidget.fermer')}
               className="grid h-8 w-8 place-items-center rounded-lg text-white/90 transition hover:bg-white/15"
             >
               <X className="h-4 w-4" />
@@ -77,13 +78,12 @@ export function SupportChatWidget() {
           {/* Corps */}
           <div className="flex max-h-[320px] flex-col gap-3 overflow-y-auto bg-bg-subtle px-4 py-4">
             <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-surface-2 px-3.5 py-2.5 text-sm text-content shadow-card">
-              Bonjour {firstName || ''} 👋 Une question ou un souci ? Écrivez-nous ici, notre
-              équipe vous répond par email au plus vite.
+              {tr('ui.SupportChatWidget.bonjour')} {firstName || ''} {tr('ui.SupportChatWidget.uneQuestionOuUnSouci')}
             </div>
             {sent && (
               <div className="flex items-start gap-2 self-end rounded-2xl rounded-tr-sm bg-success/15 px-3.5 py-2.5 text-sm text-success">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                Message envoyé ! Nous revenons vers vous très vite.
+                {tr('ui.SupportChatWidget.messageEnvoyeNousRevenonsVers')}
               </div>
             )}
           </div>
@@ -94,7 +94,7 @@ export function SupportChatWidget() {
             <div className="flex items-end gap-2">
               <textarea
                 className="input max-h-32 min-h-[44px] flex-1 resize-none py-2.5"
-                placeholder="Votre message…"
+                placeholder={tr('ui.SupportChatWidget.votreMessage')}
                 rows={1}
                 value={message}
                 onChange={(e) => {
@@ -111,7 +111,7 @@ export function SupportChatWidget() {
               <button
                 onClick={() => void send()}
                 disabled={sending || message.trim().length < 5}
-                aria-label="Envoyer"
+                aria-label={tr('ui.SupportChatWidget.envoyer')}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -123,7 +123,7 @@ export function SupportChatWidget() {
         <div className="relative">
           <button
             onClick={() => setOpen(true)}
-            aria-label="Ouvrir l'assistance"
+            aria-label={tr('ui.SupportChatWidget.ouvrirLAssistance')}
             className="group flex items-center gap-2 rounded-full bg-brand px-4 py-3.5 text-white shadow-card-lg transition hover:-translate-y-0.5 hover:shadow-glow"
           >
             <MessageCircle className="h-6 w-6" />
@@ -134,8 +134,8 @@ export function SupportChatWidget() {
               e.stopPropagation();
               setHidden(true);
             }}
-            aria-label="Masquer le bouton d'aide"
-            title="Masquer (réactivable dans Réglages → Apparence)"
+            aria-label={tr('ui.SupportChatWidget.masquerLeBoutonDAide')}
+            title={tr('ui.SupportChatWidget.masquerReactivableDansReglagesApparence')}
             className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full border border-line bg-surface text-content-muted shadow-card transition hover:text-danger"
           >
             <X className="h-3 w-3" />

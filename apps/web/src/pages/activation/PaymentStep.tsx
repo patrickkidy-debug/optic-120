@@ -13,11 +13,13 @@ import { Button } from '../../components/ui';
 import type { BankDetails, BankTransferRequest } from '../../features/activation/api';
 import { TEAM_WHATSAPP_DISPLAY, demoWhatsappLink, transferReceiptLink } from '../../lib/whatsapp';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
+import { displayLocale } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 const METHOD_LABELS: Record<string, string> = {
-  CASH: 'Espèces',
-  CARD: 'Carte bancaire',
-  CHEQUE: 'Chèque',
+  get CASH() { return tr('ui.PaymentStep.especes'); },
+  get CARD() { return tr('ui.PaymentStep.carteBancaire'); },
+  get CHEQUE() { return tr('ui.PaymentStep.cheque'); },
   WAVE: 'Wave',
   ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo',
@@ -27,20 +29,20 @@ const METHOD_LABELS: Record<string, string> = {
   EMOLA: 'e-Mola',
   MKESH: 'mKesh',
   MULTICAIXA: 'Multicaixa',
-  BANK_TRANSFER: 'Virement bancaire',
+  get BANK_TRANSFER() { return tr('ui.PaymentStep.virementBancaire'); },
 };
 
 /** 1440 -> « 24 heures », 4320 -> « 3 jours », 45 -> « 45 minutes ». */
 export function formatTrialDuration(minutes: number): string {
-  const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
-  if (minutes % 1440 === 0 && minutes > 1440) return plural(minutes / 1440, 'jour');
-  if (minutes % 60 === 0) return plural(minutes / 60, 'heure');
-  return plural(minutes, 'minute');
+  // Pluriel géré par i18next (units.hours_one / units.hours_other…).
+  if (minutes % 1440 === 0 && minutes > 1440) return tr('units.days', { count: minutes / 1440 });
+  if (minutes % 60 === 0) return tr('units.hours', { count: minutes / 60 });
+  return tr('units.minutes', { count: minutes });
 }
 
 /** 12000 -> « 12 000 », 17.2 -> « 17,20 » (centimes toujours complets). */
 const money = (n: number) =>
-  n.toLocaleString('fr-FR', Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  n.toLocaleString(displayLocale(), Number.isInteger(n) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Montant FCFA, avec son équivalent exact en euros hors zone FCFA. */
 function xofLabel(xof: number, withEuro: boolean): string {
@@ -108,32 +110,31 @@ export function PaymentStep({
   const [method, setMethod] = useState<PaymentMethod | null>(methods[0] ?? null);
 
   const trial = trialMinutes > 0;
-  const period = cycle === 'MONTHLY' ? '/ mois' : cycle === 'QUARTERLY' ? '/ 3 mois' : '/ 6 mois';
+  const period = tr(cycle === 'MONTHLY' ? 'units.perMonth' : cycle === 'QUARTERLY' ? 'units.per3Months' : 'units.per6Months');
   const isTransfer = method === 'BANK_TRANSFER';
 
   return (
     <ActivationShell
       step="PAYMENT"
-      title={trial ? 'Choisissez comment démarrer' : 'Activez votre abonnement'}
+      title={trial ? tr('ui.PaymentStep.choisissezCommentDemarrer') : tr('ui.PaymentStep.activezVotreAbonnement')}
       subtitle={
         trial
-          ? `Testez le logiciel gratuitement pendant ${formatTrialDuration(trialMinutes)}, ou activez votre abonnement dès maintenant.`
-          : "Votre espace s'ouvrira dès la confirmation du paiement."
+          ? tr('ui.PaymentStep.testezLeLogicielGratuitementPendant', { trialMinutes: formatTrialDuration(trialMinutes) })
+          : tr('ui.PaymentStep.votreEspaceSOuvriraDes')
       }
     >
       {trial && (
         <section className="rounded-2xl border border-primary/40 bg-primary-soft/40 p-5">
           <p className="flex items-center gap-2 font-display text-lg font-extrabold text-content">
             <PlayCircle className="h-5 w-5 text-primary" aria-hidden="true" />
-            Tester gratuitement pendant {formatTrialDuration(trialMinutes)}
+            {tr('ui.PaymentStep.testerGratuitementPendant')} {formatTrialDuration(trialMinutes)}
           </p>
           <p className="mt-1 text-sm text-content-muted">
-            Accès complet, sans paiement ni carte bancaire. Vous activerez votre abonnement quand vous
-            le souhaitez, depuis votre espace.
+            {tr('ui.PaymentStep.accesCompletSansPaiementNi')}
           </p>
           <Button className="mt-4 w-full justify-center" disabled={submitting} onClick={onTrial}>
             <PlayCircle className="h-4 w-4" />
-            {submitting ? 'Ouverture de votre espace…' : "Commencer l'essai gratuit"}
+            {submitting ? tr('ui.PaymentStep.ouvertureDeVotreEspace') : tr('ui.PaymentStep.commencerLEssaiGratuit')}
           </Button>
         </section>
       )}
@@ -142,7 +143,7 @@ export function PaymentStep({
 
       {trial && (
         <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-content-faint">
-          <span className="h-px flex-1 bg-line" /> ou activez dès maintenant <span className="h-px flex-1 bg-line" />
+          <span className="h-px flex-1 bg-line" /> {tr('ui.PaymentStep.ouActivezDesMaintenant')} <span className="h-px flex-1 bg-line" />
         </div>
       )}
 
@@ -154,21 +155,20 @@ export function PaymentStep({
         </p>
         {outsideCfa && (
           <p className="mt-2 text-xs text-content-muted">
-            Réglé par virement bancaire en francs CFA : {xofLabel(billedXof, currency === 'EUR')} {period}.
-            {currency === 'EUR' ? ' Parité fixe : 1 € = 655,957 FCFA.' : ' Le montant dans votre devise est indicatif.'}
+            {tr('ui.PaymentStep.regleParVirementBancaireEn')} {xofLabel(billedXof, currency === 'EUR')} {period}.
+            {currency === 'EUR' ? tr('ui.PaymentStep.pariteFixe1655957') : tr('ui.PaymentStep.leMontantDansVotreDevise')}
           </p>
         )}
       </div>
 
       {methods.length === 0 ? (
         <div className="mt-5 rounded-xl bg-[color:var(--warning)]/10 p-4 text-sm text-content">
-          Le paiement en ligne n'est pas disponible depuis votre pays. Écrivez-nous sur WhatsApp au{' '}
-          <span className="font-semibold">{TEAM_WHATSAPP_DISPLAY}</span> : nous vous indiquons comment
-          régler votre abonnement.
+          {tr('ui.PaymentStep.lePaiementEnLigneN')}{' '}
+          <span className="font-semibold">{TEAM_WHATSAPP_DISPLAY}</span> {tr('ui.PaymentStep.nousVousIndiquonsCommentRegler')}
         </div>
       ) : (
         <div className="mt-5">
-          <p className="mb-2 font-medium text-content">Moyen de paiement</p>
+          <p className="mb-2 font-medium text-content">{tr('ui.PaymentStep.moyenDePaiement')}</p>
           <div className="space-y-2">
             {methods.map((m) => (
               <ChoiceCard
@@ -186,12 +186,12 @@ export function PaymentStep({
         <div className="mt-4">
           <BankCard bank={bank} amount={xofLabel(billedXof, outsideCfa)} />
           <ol className="mt-3 space-y-1.5 text-sm text-content-muted">
-            <li>1. Faites le virement du montant ci-dessus sur ce compte.</li>
+            <li>{tr('ui.PaymentStep.n1FaitesLeVirementDu')}</li>
             <li>
-              2. Envoyez la capture d'écran ou le reçu sur WhatsApp au{' '}
+              {tr('ui.PaymentStep.n2EnvoyezLaCaptureD')}{' '}
               <span className="font-semibold text-content">{TEAM_WHATSAPP_DISPLAY}</span>.
             </li>
-            <li>3. Nous vérifions le virement et activons votre compte.</li>
+            <li>{tr('ui.PaymentStep.n3NousVerifionsLeVirement')}</li>
           </ol>
         </div>
       )}
@@ -199,8 +199,7 @@ export function PaymentStep({
       {!isTransfer && methods.length > 0 && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs text-content-muted ring-1 ring-line">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          Votre abonnement sera activé après confirmation du paiement par la passerelle. Un simple
-          retour depuis la page de paiement ne suffit pas.
+          {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
         </p>
       )}
 
@@ -219,12 +218,12 @@ export function PaymentStep({
             {isTransfer ? (
               <PrimaryAction disabled={submitting} onClick={onBankTransfer}>
                 <Landmark className="h-4 w-4" />
-                {submitting ? 'Enregistrement…' : "J'ai fait le virement"}
+                {submitting ? tr('ui.PaymentStep.enregistrement') : tr('ui.PaymentStep.jAiFaitLeVirement')}
               </PrimaryAction>
             ) : (
               <PrimaryAction disabled={!method || submitting} onClick={() => method && onPay(method)}>
                 <Lock className="h-4 w-4" />
-                {submitting ? 'Ouverture du paiement…' : 'Payer et activer mon abonnement'}
+                {submitting ? tr('ui.PaymentStep.ouvertureDuPaiement') : tr('ui.PaymentStep.payerEtActiverMonAbonnement')}
               </PrimaryAction>
             )}
           </div>
@@ -247,12 +246,12 @@ function WhatsappContact({
   planName: string;
 }) {
   const lines = [
-    "Bonjour, j'ai une question sur OculoSaaS avant d'activer mon espace.",
-    contact.fullName ? `Nom : ${contact.fullName}` : '',
+    tr('ui.PaymentStep.bonjourJAiUneQuestion'),
+    contact.fullName ? tr('ui.PaymentStep.nomFullname', { fullName: contact.fullName }) : '',
     contact.establishment
       ? `Établissement : ${contact.establishment}${contact.city ? ` (${contact.city})` : ''}`
       : '',
-    `Offre envisagée : ${planName}`,
+    tr('ui.PaymentStep.offreEnvisageePlanname', { planName: planName }),
   ].filter(Boolean);
   return (
     <a
@@ -262,7 +261,7 @@ function WhatsappContact({
       className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-[#128C7E] ring-1 ring-[#25D366]/50 transition hover:bg-[#25D366]/10"
     >
       <MessageCircle className="h-4 w-4" aria-hidden="true" />
-      Une question avant de vous lancer ? Discutons sur WhatsApp
+      {tr('ui.PaymentStep.uneQuestionAvantDeVous')}
     </a>
   );
 }
@@ -270,10 +269,10 @@ function WhatsappContact({
 /** Coordonnées bancaires de l'éditeur, avec le montant exact à virer. */
 export function BankCard({ bank, amount }: { bank: BankDetails; amount: string }) {
   const rows: [string, string | null, boolean?][] = [
-    ['Banque', bank.bankName],
-    ['Titulaire', bank.accountName],
-    ['IBAN / N° de compte', bank.accountNumber, true],
-    ['SWIFT / BIC', bank.swift],
+    [tr('ui.PaymentStep.banque'), bank.bankName],
+    [tr('ui.PaymentStep.titulaire'), bank.accountName],
+    [tr('ui.PaymentStep.ibanNDeCompte'), bank.accountNumber, true],
+    [tr('ui.PaymentStep.swiftBic'), bank.swift],
   ];
   return (
     <div className="rounded-xl bg-surface-2 p-4 text-sm ring-1 ring-line">
@@ -288,7 +287,7 @@ export function BankCard({ bank, amount }: { bank: BankDetails; amount: string }
           </div>
         ))}
       <div className="mt-2 flex justify-between border-t border-line pt-2">
-        <span className="text-content-muted">Montant à virer</span>
+        <span className="text-content-muted">{tr('ui.PaymentStep.montantAVirer')}</span>
         <span className="font-display font-bold text-content">{amount}</span>
       </div>
     </div>
@@ -324,17 +323,15 @@ export function BankTransferSent({
   const link = transferReceiptLink({ invoiceNumber: request.invoiceNumber, establishment, amount });
 
   return (
-    <ActivationShell title="Virement enregistré" subtitle="Dernière étape : envoyez-nous votre reçu.">
+    <ActivationShell title={tr('ui.PaymentStep.virementEnregistre')} subtitle={tr('ui.PaymentStep.derniereEtapeEnvoyezNousVotre')}>
       <div className="rounded-2xl border border-line bg-surface p-5">
         <p className="flex items-center gap-2 font-medium text-content">
           <CheckCircle2 className="h-5 w-5 text-success" aria-hidden="true" />
-          Facture {request.invoiceNumber} — {amount}
+          {tr('ui.PaymentStep.facture')} {request.invoiceNumber} — {amount}
         </p>
         <p className="mt-2 text-sm text-content-muted">
-          Envoyez la capture d'écran ou le reçu de votre virement sur WhatsApp au{' '}
-          <span className="font-semibold text-content">{TEAM_WHATSAPP_DISPLAY}</span>. Nous vérifions
-          le virement puis activons votre compte : vous vous connecterez alors avec votre e-mail et
-          votre mot de passe.
+          {tr('ui.PaymentStep.envoyezLaCaptureDEcran')}{' '}
+          <span className="font-semibold text-content">{TEAM_WHATSAPP_DISPLAY}</span>{tr('ui.PaymentStep.nousVerifionsLeVirementPuis')}
         </p>
         <a
           href={link}
@@ -342,26 +339,26 @@ export function BankTransferSent({
           rel="noopener noreferrer"
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 font-semibold text-white shadow-sm hover:brightness-95"
         >
-          <MessageCircle className="h-5 w-5" /> Envoyer mon reçu sur WhatsApp
+          <MessageCircle className="h-5 w-5" /> {tr('ui.PaymentStep.envoyerMonRecuSurWhatsapp')}
         </a>
       </div>
 
       {bank && (
         <div className="mt-4">
-          <p className="mb-2 text-sm font-medium text-content">Rappel des coordonnées bancaires</p>
+          <p className="mb-2 text-sm font-medium text-content">{tr('ui.PaymentStep.rappelDesCoordonneesBancaires')}</p>
           <BankCard bank={bank} amount={amount} />
         </div>
       )}
 
       {trialMinutes > 0 && (
         <div className="mt-5 rounded-2xl border border-primary/40 bg-primary-soft/40 p-5">
-          <p className="font-medium text-content">En attendant la vérification</p>
+          <p className="font-medium text-content">{tr('ui.PaymentStep.enAttendantLaVerification')}</p>
           <p className="mt-1 text-sm text-content-muted">
-            Découvrez le logiciel gratuitement pendant {formatTrialDuration(trialMinutes)}.
+            {tr('ui.PaymentStep.decouvrezLeLogicielGratuitementPendant')} {formatTrialDuration(trialMinutes)}.
           </p>
           <Button className="mt-3 w-full justify-center" disabled={submitting} onClick={onTrial}>
             <PlayCircle className="h-4 w-4" />
-            {submitting ? 'Ouverture de votre espace…' : "Commencer l'essai gratuit"}
+            {submitting ? tr('ui.PaymentStep.ouvertureDeVotreEspace') : tr('ui.PaymentStep.commencerLEssaiGratuit')}
           </Button>
         </div>
       )}

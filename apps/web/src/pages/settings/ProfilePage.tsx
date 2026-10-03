@@ -27,6 +27,7 @@ import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_OPT
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 function ImagePicker({
   onPick,
@@ -191,16 +192,16 @@ export function ProfilePage() {
   // aux gestionnaires). L'onglet actif est mémorisé dans l'URL (?tab=…).
   const [params, setParams] = useSearchParams();
   const TABS = [
-    { key: 'profil', label: 'Mon profil', icon: User, show: true },
-    { key: 'marque', label: 'Image de marque', icon: Building2, show: canBranding },
-    { key: 'documents', label: 'Personnalisation des documents', icon: FileText, show: canBranding },
+    { key: 'profil', label: tr('ui.ProfilePage.monProfil'), icon: User, show: true },
+    { key: 'marque', label: tr('ui.ProfilePage.imageDeMarque'), icon: Building2, show: canBranding },
+    { key: 'documents', label: tr('ui.ProfilePage.personnalisationDesDocuments'), icon: FileText, show: canBranding },
   ].filter((tb) => tb.show);
   const requested = params.get('tab') ?? 'profil';
   const active = TABS.some((tb) => tb.key === requested) ? requested : 'profil';
 
   return (
     <div>
-      <PageHeader title="Réglages" subtitle={t('nav.profile')} />
+      <PageHeader title={tr('ui.ProfilePage.reglages')} subtitle={t('nav.profile')} />
 
       <div className="mb-5 flex flex-wrap gap-1 border-b">
         {TABS.map((tb) => (
@@ -243,7 +244,7 @@ export function ProfilePage() {
                     onClick={open}
                     disabled={photoBusy}
                     className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-xl border-2 border-surface bg-primary text-white shadow-card transition hover:bg-primary-hover disabled:opacity-50"
-                    title="Changer la photo"
+                    title={tr('ui.ProfilePage.changerLaPhoto')}
                   >
                     <ImagePlus className="h-4 w-4" />
                   </button>
@@ -263,11 +264,11 @@ export function ProfilePage() {
                 disabled={photoBusy}
                 className="mt-3 inline-flex items-center gap-1 text-xs text-content-muted hover:text-danger"
               >
-                <Trash2 className="h-3 w-3" /> Retirer la photo
+                <Trash2 className="h-3 w-3" /> {tr('ui.ProfilePage.retirerLaPhoto')}
               </button>
             )}
             <p className="mt-3 text-xs text-content-faint">
-              PNG ou JPEG — redimensionnée automatiquement.
+              {tr('ui.ProfilePage.pngOuJpegRedimensionneeAutomatiquement')}
             </p>
           </div>
         </div>
@@ -309,7 +310,7 @@ export function ProfilePage() {
 
           <div className="mt-6 flex items-center gap-2">
             <LifeBuoy className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-bold text-content">Bouton d'aide</h3>
+            <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.boutonDAide')}</h3>
           </div>
           <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-content-muted">
             <input
@@ -317,7 +318,7 @@ export function ProfilePage() {
               checked={!supportHidden}
               onChange={(e) => setSupportHidden(!e.target.checked)}
             />
-            Afficher le bouton « Besoin d'aide ? » flottant
+            {tr('ui.ProfilePage.afficherLeBoutonBesoinD')}
           </label>
         </div>
 
@@ -338,7 +339,7 @@ export function ProfilePage() {
           <div className="card p-5">
             <div className="mb-4 flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              <h3 className="font-display font-bold text-content">Image de marque</h3>
+              <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.imageDeMarque')}</h3>
             </div>
             <div className="flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-4">
@@ -353,7 +354,7 @@ export function ProfilePage() {
                   <ImagePicker onPick={pickLogo} busy={logoBusy}>
                     {(open) => (
                       <Button variant="outline" onClick={open} loading={logoBusy}>
-                        <ImagePlus className="h-4 w-4" /> Changer le logo
+                        <ImagePlus className="h-4 w-4" /> {tr('ui.ProfilePage.changerLeLogo')}
                       </Button>
                     )}
                   </ImagePicker>
@@ -366,11 +367,11 @@ export function ProfilePage() {
               </div>
 
               <div className="min-w-[220px] flex-1">
-                <Field label="Nom de l'établissement">
+                <Field label={tr('ui.ProfilePage.nomDeLEtablissement')}>
                   <div className="flex gap-2">
                     <input
                       className="input"
-                      placeholder={branding?.name ?? "Nom de l'établissement"}
+                      placeholder={branding?.name ?? tr('ui.ProfilePage.nomDeLEtablissement')}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -382,17 +383,17 @@ export function ProfilePage() {
               </div>
 
               <div className="rounded-xl border bg-surface-2 p-3">
-                <p className="mb-2 text-xs text-content-faint">Aperçu</p>
+                <p className="mb-2 text-xs text-content-faint">{tr('ui.ProfilePage.apercu')}</p>
                 <Logo />
               </div>
             </div>
 
             <div className="mt-4 max-w-2xl">
-              <Field label="Situation géographique">
+              <Field label={tr('ui.ProfilePage.situationGeographique')}>
                 <div className="flex gap-2">
                   <input
                     className="input"
-                    placeholder="Adresse ou lien Google Maps (ex : Cocody, Rue des Jardins, Abidjan)"
+                    placeholder={tr('ui.ProfilePage.adresseOuLienGoogleMaps')}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                   />
@@ -406,10 +407,10 @@ export function ProfilePage() {
             <div className="mt-4 max-w-2xl border-t pt-4">
               <div className="mb-3 flex items-center gap-2">
                 <Contact className="h-4 w-4 text-primary" />
-                <h4 className="font-semibold text-content">Contact de l'entreprise</h4>
+                <h4 className="font-semibold text-content">{tr('ui.ProfilePage.contactDeLEntreprise')}</h4>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Téléphone">
+                <Field label={tr('ui.ProfilePage.telephone')}>
                   <input
                     className="input"
                     type="tel"
@@ -430,13 +431,13 @@ export function ProfilePage() {
               </div>
               <div className="mt-3">
                 <Button onClick={saveContact} loading={contactBusy}>
-                  <Save className="h-4 w-4" /> Enregistrer le contact
+                  <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrerLeContact')}
                 </Button>
               </div>
             </div>
 
             <div className="mt-4 max-w-2xl border-t pt-4">
-              <Field label="Taux de TVA (%) — 0 = exonéré">
+              <Field label={tr('ui.ProfilePage.tauxDeTva0Exonere')}>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -449,17 +450,17 @@ export function ProfilePage() {
                   />
                   <span className="text-sm text-content-muted">%</span>
                   <Button onClick={saveVat} loading={vatBusy}>
-                    <Save className="h-4 w-4" /> Enregistrer
+                    <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrer')}
                   </Button>
                 </div>
               </Field>
               <p className="mt-1 text-xs text-content-faint">
-                Appliqué à la caisse, aux devis et aux factures. Défaut : 18 %.
+                {tr('ui.ProfilePage.appliqueALaCaisseAux')}
               </p>
             </div>
 
             <p className="mt-3 text-xs text-content-faint">
-              Le logo et le nom apparaissent dans la barre latérale et l'en-tête de votre espace.
+              {tr('ui.ProfilePage.leLogoEtLeNom')}
             </p>
           </div>
         </div>
@@ -541,46 +542,46 @@ function OpticalSettingsCard() {
     <div className="card p-5">
       <div className="mb-1 flex items-center gap-2">
         <Glasses className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Réglages du cabinet</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.reglagesDuCabinet')}</h3>
       </div>
       <p className="mb-3 text-xs text-content-faint">
-        Pilotent la validité des ordonnances, les relances clients, la garantie et la fidélité.
+        {tr('ui.ProfilePage.pilotentLaValiditeDesOrdonnances')}
       </p>
 
       <Row
-        label="Validité d'une ordonnance"
-        hint="Durée après laquelle une ordonnance est marquée expirée."
+        label={tr('ui.ProfilePage.validiteDUneOrdonnance')}
+        hint={tr('ui.ProfilePage.dureeApresLaquelleUneOrdonnance')}
         value={values.prescriptionValidityMonths}
         onChange={(n) => set({ prescriptionValidityMonths: n })}
         suffix="mois"
         min={1}
       />
       <Row
-        label="Relance « nouvelle ordonnance »"
-        hint="Le client apparaît dans Renouvellements passé ce délai."
+        label={tr('ui.ProfilePage.relanceNouvelleOrdonnance')}
+        hint={tr('ui.ProfilePage.leClientApparaitDansRenouvellements')}
         value={values.prescriptionReminderMonths}
         onChange={(n) => set({ prescriptionReminderMonths: n })}
         suffix="mois"
         min={1}
       />
       <Row
-        label="Relance « sans achat »"
-        hint="Le client apparaît dans Renouvellements s'il n'a rien acheté depuis."
+        label={tr('ui.ProfilePage.relanceSansAchat')}
+        hint={tr('ui.ProfilePage.leClientApparaitDansRenouvellements2')}
         value={values.purchaseReminderMonths}
         onChange={(n) => set({ purchaseReminderMonths: n })}
         suffix="mois"
         min={1}
       />
       <Row
-        label="Garantie par défaut"
-        hint="Proposée automatiquement en caisse (0 = aucune)."
+        label={tr('ui.ProfilePage.garantieParDefaut')}
+        hint={tr('ui.ProfilePage.proposeeAutomatiquementEnCaisse0')}
         value={values.defaultWarrantyMonths}
         onChange={(n) => set({ defaultWarrantyMonths: n })}
         suffix="mois"
       />
       <Row
-        label="Valeur d'un point de fidélité"
-        hint="Remise obtenue par point utilisé en caisse."
+        label={tr('ui.ProfilePage.valeurDUnPointDe')}
+        hint={tr('ui.ProfilePage.remiseObtenueParPointUtilise')}
         value={values.loyaltyPointValue}
         onChange={(n) => set({ loyaltyPointValue: n })}
         suffix="FCFA"
@@ -588,9 +589,9 @@ function OpticalSettingsCard() {
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={() => mut.mutate()} loading={mut.isPending}>
-          <Save className="h-4 w-4" /> Enregistrer
+          <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrer')}
         </Button>
-        {saved && <span className="text-sm text-success">Enregistré ✓</span>}
+        {saved && <span className="text-sm text-success">{tr('ui.ProfilePage.enregistre')}</span>}
       </div>
     </div>
   );
@@ -634,16 +635,15 @@ function WhatsappTemplatesCard() {
     <div className="card p-5">
       <div className="mb-1 flex items-center gap-2">
         <MessageCircle className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Messages WhatsApp</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.messagesWhatsapp')}</h3>
       </div>
       <p className="mb-4 text-xs text-content-faint">
-        Message pré-rempli proposé à chaque étape de la vente. Variables disponibles :{' '}
+        {tr('ui.ProfilePage.messagePreRempliProposeA')}{' '}
         <code className="rounded bg-surface-2 px-1">{'{client}'}</code>{' '}
         <code className="rounded bg-surface-2 px-1">{'{etablissement}'}</code>{' '}
         <code className="rounded bg-surface-2 px-1">{'{numero}'}</code>{' '}
         <code className="rounded bg-surface-2 px-1">{'{montant}'}</code>{' '}
-        <code className="rounded bg-surface-2 px-1">{'{reste}'}</code>. L'envoi reste manuel
-        (WhatsApp s'ouvre avec le texte prêt, vous appuyez sur Envoyer).
+        <code className="rounded bg-surface-2 px-1">{'{reste}'}</code>{tr('ui.ProfilePage.lEnvoiResteManuelWhatsapp')}
       </p>
 
       <div className="space-y-3">
@@ -661,9 +661,9 @@ function WhatsappTemplatesCard() {
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={save} loading={busy}>
-          <Save className="h-4 w-4" /> Enregistrer
+          <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrer')}
         </Button>
-        {saved && <span className="text-sm text-success">Modèles enregistrés.</span>}
+        {saved && <span className="text-sm text-success">{tr('ui.ProfilePage.modelesEnregistres')}</span>}
       </div>
     </div>
   );
@@ -733,36 +733,34 @@ function LensPricingCard() {
     <div className="card p-5">
       <div className="mb-1 flex items-center gap-2">
         <Glasses className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Tarifs des verres</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.tarifsDesVerres')}</h3>
       </div>
       <p className="mb-4 text-xs text-content-faint">
-        Prix par verre utilisés par le configurateur de commandes. Le total facturé
-        est calculé pour une paire, avec l'indice d'amincissement choisi.
+        {tr('ui.ProfilePage.prixParVerreUtilisesPar')}
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {field('unifocal', 'Unifocal')}
         {field('progressif', 'Progressif')}
-        {field('degressif', 'Dégressif (bureau)')}
+        {field('degressif', tr('ui.ProfilePage.degressifBureau'))}
         {field('ar', 'Anti-reflet')}
-        {field('blue', 'Anti-lumière bleue')}
+        {field('blue', tr('ui.ProfilePage.antiLumiereBleue'))}
         {field('photo', 'Photochromique')}
-        {field('hard', 'Durci anti-rayures')}
+        {field('hard', tr('ui.ProfilePage.durciAntiRayures'))}
       </div>
 
       {/* Types de verres ajoutés manuellement par l'établissement. */}
       <div className="mt-5 border-t pt-4">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
-            Vos types de verres
+            {tr('ui.ProfilePage.vosTypesDeVerres')}
           </p>
           <Button variant="outline" onClick={addCustom} className="h-8 px-2.5 text-xs">
-            <Plus className="h-3.5 w-3.5" /> Ajouter un type
+            <Plus className="h-3.5 w-3.5" /> {tr('ui.ProfilePage.ajouterUnType')}
           </Button>
         </div>
         {custom.length === 0 ? (
           <p className="text-xs text-content-faint">
-            Ajoutez vos propres types de verres (ex : Bifocal, Mi-distance, Solaire correcteur…). Ils
-            apparaîtront à la caisse, en devis, dans le catalogue et sur les étiquettes.
+            {tr('ui.ProfilePage.ajoutezVosPropresTypesDe')}
           </p>
         ) : (
           <div className="space-y-2">
@@ -770,7 +768,7 @@ function LensPricingCard() {
               <div key={c.id} className="flex items-center gap-2">
                 <input
                   className="input flex-1"
-                  placeholder="Nom du type (ex : Bifocal)"
+                  placeholder={tr('ui.ProfilePage.nomDuTypeExBifocal')}
                   value={c.name}
                   onChange={(e) => updateCustom(c.id, { name: e.target.value })}
                 />
@@ -778,7 +776,7 @@ function LensPricingCard() {
                   type="number"
                   min={0}
                   className="input w-32 text-right"
-                  placeholder="Prix"
+                  placeholder={tr('ui.ProfilePage.prix')}
                   value={c.price}
                   onChange={(e) => updateCustom(c.id, { price: Number(e.target.value) || 0 })}
                 />
@@ -786,7 +784,7 @@ function LensPricingCard() {
                   type="button"
                   onClick={() => removeCustom(c.id)}
                   className="btn-ghost h-9 w-9 shrink-0 rounded-lg p-0 text-danger"
-                  title="Supprimer ce type"
+                  title={tr('ui.ProfilePage.supprimerCeType')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -798,9 +796,9 @@ function LensPricingCard() {
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={save} loading={busy}>
-          <Save className="h-4 w-4" /> Enregistrer
+          <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrer')}
         </Button>
-        {saved && <span className="text-sm text-success">Tarifs enregistrés.</span>}
+        {saved && <span className="text-sm text-success">{tr('ui.ProfilePage.tarifsEnregistres')}</span>}
       </div>
     </div>
   );
@@ -875,14 +873,14 @@ function InvoiceCustomizationCard() {
         { id: '1', productId: 'demo-1', quantity: 1, unitPrice: '75000', lineTotal: '75000', reference: null, product: { name: 'Monture Ray-Ban RB5154', sku: 'RB-5154' } },
         { id: '2', productId: 'demo-2', quantity: 2, unitPrice: '10000', lineTotal: '20000', reference: null, product: { name: 'Verre unifocal anti-reflet', sku: 'VERR-UNI' } },
       ],
-      customer: { firstName: 'Awa', lastName: 'Diop', phone: '+225 07 00 00 00 00', email: null },
+      customer: { firstName: tr('ui.ProfilePage.awa'), lastName: tr('ui.ProfilePage.diop'), phone: '+225 07 00 00 00 00', email: null },
       branch: {
         name: branding?.name || user?.tenantName || 'Optique Vision Plus',
-        city: 'Abidjan',
-        address: 'Cocody, Rue des Jardins',
+        city: tr('ui.ProfilePage.abidjan'),
+        address: tr('ui.ProfilePage.cocodyRueDesJardins'),
         phone: '+225 27 22 00 00 00',
       },
-      cashier: { firstName: 'Koffi', lastName: "N'Guessan" },
+      cashier: { firstName: tr('ui.ProfilePage.koffi'), lastName: "N'Guessan" },
     };
     printSaleDocument(sample, {
       name: branding?.name || user?.tenantName || 'Votre établissement',
@@ -898,17 +896,17 @@ function InvoiceCustomizationCard() {
     <div className="card p-5">
       <div className="mb-1 flex items-center gap-2">
         <FileText className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Personnalisation des documents</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.personnalisationDesDocuments')}</h3>
       </div>
       <p className="mb-4 text-sm text-content-muted">
-        S'applique à toutes vos factures et devis imprimés (le logo est géré ci-dessus).
+        {tr('ui.ProfilePage.sAppliqueAToutesVos')}
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Couleur d'accent">
+        <Field label={tr('ui.ProfilePage.couleurDAccent')}>
           <label className="mb-2 flex items-center gap-2 text-sm text-content-muted">
             <input type="checkbox" checked={useColor} onChange={(e) => setUseColor(e.target.checked)} />
-            Utiliser une couleur personnalisée
+            {tr('ui.ProfilePage.utiliserUneCouleurPersonnalisee')}
           </label>
           {useColor && (
             <div className="flex items-center gap-3">
@@ -928,7 +926,7 @@ function InvoiceCustomizationCard() {
           )}
         </Field>
 
-        <Field label="Validité des devis (jours)">
+        <Field label={tr('ui.ProfilePage.validiteDesDevisJours')}>
           <input
             type="number"
             min={1}
@@ -939,33 +937,33 @@ function InvoiceCustomizationCard() {
           />
         </Field>
 
-        <Field label="Mentions légales (RCCM, NINEA/IFU…)">
+        <Field label={tr('ui.ProfilePage.mentionsLegalesRccmNineaIfu')}>
           <textarea
             className="input min-h-[80px]"
             value={legalInfo}
             maxLength={300}
             onChange={(e) => setLegalInfo(e.target.value)}
-            placeholder="RCCM CI-ABJ-2024-B-12345 · NINEA 001234567"
+            placeholder={tr('ui.ProfilePage.rccmCiAbj2024B')}
           />
         </Field>
 
-        <Field label="Note de bas de page">
+        <Field label={tr('ui.ProfilePage.noteDeBasDePage')}>
           <textarea
             className="input min-h-[80px]"
             value={footerNote}
             maxLength={300}
             onChange={(e) => setFooterNote(e.target.value)}
-            placeholder="Merci de votre confiance. Aucun échange après 7 jours sans le ticket."
+            placeholder={tr('ui.ProfilePage.merciDeVotreConfianceAucun')}
           />
         </Field>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button onClick={save} loading={busy}>
-          <Save className="h-4 w-4" /> Enregistrer
+          <Save className="h-4 w-4" /> {tr('ui.ProfilePage.enregistrer')}
         </Button>
         <Button variant="outline" onClick={preview}>
-          <Eye className="h-4 w-4" /> Aperçu (devis)
+          <Eye className="h-4 w-4" /> {tr('ui.ProfilePage.apercuDevis')}
         </Button>
       </div>
     </div>
@@ -981,17 +979,17 @@ function ChangePasswordCard() {
   async function submit() {
     setMsg({});
     if (next.length < 8) {
-      setMsg({ err: 'Le nouveau mot de passe doit faire au moins 8 caractères.' });
+      setMsg({ err: tr('ui.ProfilePage.leNouveauMotDePasse') });
       return;
     }
     if (next !== confirm) {
-      setMsg({ err: 'La confirmation ne correspond pas.' });
+      setMsg({ err: tr('ui.ProfilePage.laConfirmationNeCorrespondPas') });
       return;
     }
     setBusy(true);
     try {
       await changePassword(next);
-      setMsg({ ok: 'Mot de passe modifié. Vos autres appareils ont été déconnectés.' });
+      setMsg({ ok: tr('ui.ProfilePage.motDePasseModifieVos') });
       setNext('');
       setConfirm('');
     } catch (e) {
@@ -1005,22 +1003,21 @@ function ChangePasswordCard() {
     <div className="card p-5">
       <div className="mb-4 flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Mot de passe</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.motDePasse')}</h3>
       </div>
       <p className="mb-3 max-w-sm text-sm text-content-muted">
-        Saisissez simplement votre nouveau mot de passe et confirmez-le. Pratique si vous vous êtes
-        connecté avec un mot de passe temporaire.
+        {tr('ui.ProfilePage.saisissezSimplementVotreNouveauMot')}
       </p>
       <div className="max-w-sm space-y-3">
-        <Field label="Nouveau mot de passe">
+        <Field label={tr('ui.ProfilePage.nouveauMotDePasse')}>
           <PasswordInput
             autoComplete="new-password"
-            placeholder="Au moins 8 caractères"
+            placeholder={tr('ui.ProfilePage.auMoins8Caracteres')}
             value={next}
             onChange={(e) => setNext(e.target.value)}
           />
         </Field>
-        <Field label="Confirmer le nouveau mot de passe">
+        <Field label={tr('ui.ProfilePage.confirmerLeNouveauMotDe')}>
           <PasswordInput
             autoComplete="new-password"
             value={confirm}
@@ -1030,7 +1027,7 @@ function ChangePasswordCard() {
         {msg.err && <p className="text-sm text-danger">{msg.err}</p>}
         {msg.ok && <p className="text-sm text-success">{msg.ok}</p>}
         <Button onClick={submit} loading={busy} disabled={!next || !confirm}>
-          Changer le mot de passe
+          {tr('ui.ProfilePage.changerLeMotDePasse')}
         </Button>
       </div>
     </div>
@@ -1072,23 +1069,22 @@ function TwoFactorCard() {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
-          <h3 className="font-display font-bold text-content">Double authentification (2FA)</h3>
+          <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.doubleAuthentification2fa')}</h3>
         </div>
-        <Badge tone={enabled ? 'success' : 'neutral'}>{enabled ? 'Activée' : 'Désactivée'}</Badge>
+        <Badge tone={enabled ? 'success' : 'neutral'}>{enabled ? tr('ui.ProfilePage.activee') : tr('ui.ProfilePage.desactivee')}</Badge>
       </div>
 
       {phase === 'idle' && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-xl text-sm text-content-muted">
-            Ajoutez une couche de sécurité : un code à 6 chiffres généré par une application
-            (Google Authenticator, Authy…) sera demandé à chaque connexion.
+            {tr('ui.ProfilePage.ajoutezUneCoucheDeSecurite')}
           </p>
           {enabled ? (
             <Button variant="outline" className="text-danger" onClick={() => setPhase('disable')}>
-              Désactiver
+              {tr('ui.ProfilePage.desactiver')}
             </Button>
           ) : (
-            <Button onClick={startSetup} loading={busy}>Activer la 2FA</Button>
+            <Button onClick={startSetup} loading={busy}>{tr('ui.ProfilePage.activerLa2fa')}</Button>
           )}
         </div>
       )}
@@ -1096,15 +1092,15 @@ function TwoFactorCard() {
       {phase === 'setup' && (
         <div className="flex flex-wrap gap-6">
           <div className="text-center">
-            {qr && <img src={qr} alt="QR 2FA" className="h-44 w-44 rounded-xl bg-white p-2" />}
+            {qr && <img src={qr} alt={tr('ui.ProfilePage.qr2fa')} className="h-44 w-44 rounded-xl bg-white p-2" />}
             <p className="mt-2 max-w-[200px] text-xs text-content-faint">
-              Scannez ce QR avec votre application d'authentification.
+              {tr('ui.ProfilePage.scannezCeQrAvecVotre')}
             </p>
           </div>
           <div className="min-w-[240px] flex-1">
-            <p className="text-sm text-content-muted">Ou saisie manuelle de la clé :</p>
+            <p className="text-sm text-content-muted">{tr('ui.ProfilePage.ouSaisieManuelleDeLa')}</p>
             <code className="mt-1 block break-all rounded-lg bg-surface-2 p-2 text-xs text-content">{secret}</code>
-            <Field label="Code de vérification">
+            <Field label={tr('ui.ProfilePage.codeDeVerification')}>
               <input
                 className="input text-center text-xl tracking-[0.3em]"
                 inputMode="numeric" maxLength={6} placeholder="······"
@@ -1113,8 +1109,8 @@ function TwoFactorCard() {
             </Field>
             {err && <p className="mt-1 text-sm text-danger">{err}</p>}
             <div className="mt-3 flex gap-2">
-              <Button onClick={confirmEnable} loading={busy} disabled={code.length !== 6}>Activer</Button>
-              <Button variant="ghost" onClick={reset}>Annuler</Button>
+              <Button onClick={confirmEnable} loading={busy} disabled={code.length !== 6}>{tr('ui.ProfilePage.activer')}</Button>
+              <Button variant="ghost" onClick={reset}>{tr('ui.ProfilePage.annuler')}</Button>
             </div>
           </div>
         </div>
@@ -1122,11 +1118,11 @@ function TwoFactorCard() {
 
       {phase === 'disable' && (
         <div className="max-w-sm space-y-3">
-          <p className="text-sm text-content-muted">Confirmez avec votre mot de passe et un code 2FA.</p>
-          <Field label="Mot de passe">
+          <p className="text-sm text-content-muted">{tr('ui.ProfilePage.confirmezAvecVotreMotDe')}</p>
+          <Field label={tr('ui.ProfilePage.motDePasse')}>
             <input className="input" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
           </Field>
-          <Field label="Code 2FA">
+          <Field label={tr('ui.ProfilePage.code2fa')}>
             <input
               className="input text-center text-xl tracking-[0.3em]"
               inputMode="numeric" maxLength={6} placeholder="······"
@@ -1136,9 +1132,9 @@ function TwoFactorCard() {
           {err && <p className="text-sm text-danger">{err}</p>}
           <div className="flex gap-2">
             <Button className="text-danger" variant="outline" onClick={confirmDisable} loading={busy} disabled={!pwd || code.length !== 6}>
-              Désactiver la 2FA
+              {tr('ui.ProfilePage.desactiverLa2fa')}
             </Button>
-            <Button variant="ghost" onClick={reset}>Annuler</Button>
+            <Button variant="ghost" onClick={reset}>{tr('ui.ProfilePage.annuler')}</Button>
           </div>
         </div>
       )}

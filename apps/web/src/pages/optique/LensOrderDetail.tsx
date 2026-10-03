@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Badge, Button } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /** Étape WhatsApp la plus pertinente selon l'avancement de la commande. */
 function stageForStatus(status: LensOrderStatus): SaleWaStage {
@@ -96,20 +97,20 @@ export function LensOrderDetail({
   const flowSteps = LENS_ORDER_BOARD_STATUSES.filter((s) => s !== 'TO_ORDER');
 
   return (
-    <Modal open onClose={onClose} title={`Commande ${order.number}`} size="lg">
+    <Modal open onClose={onClose} title={tr('ui.LensOrderDetail.commandeNumber', { number: order.number })} size="lg">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
         {/* Timeline */}
         <div>
           <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-content-faint">
-            Suivi de la commande
+            {tr('ui.LensOrderDetail.suiviDeLaCommande')}
           </h4>
           {isLoading ? (
-            <p className="text-sm text-content-muted">Chargement…</p>
+            <p className="text-sm text-content-muted">{tr('ui.LensOrderDetail.chargement')}</p>
           ) : (
             <ol className="space-y-0">
               {/* Création : toujours la première étape. */}
               <TimelineItem
-                label="Commande créée"
+                label={tr('ui.LensOrderDetail.commandeCreee')}
                 done
                 at={order.createdAt}
                 userName={null}
@@ -132,7 +133,7 @@ export function LensOrderDetail({
               })}
               {showNotifiedStep && (
                 <TimelineItem
-                  label="Client informé"
+                  label={tr('ui.LensOrderDetail.clientInforme')}
                   done
                   at={notifiedEvent?.createdAt ?? order.notifiedAt ?? undefined}
                   userName={notifiedEvent?.userName ?? null}
@@ -154,7 +155,7 @@ export function LensOrderDetail({
               />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-content">
-                  {order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'Client de passage'}
+                  {order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : tr('ui.LensOrderDetail.clientDePassage')}
                 </p>
                 {order.customer?.phone && (
                   <p className="text-xs text-content-faint">{order.customer.phone}</p>
@@ -182,7 +183,7 @@ export function LensOrderDetail({
                   {order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}
                   {order.frameProduct.name}
                 </p>
-                <p className="text-xs text-content-faint">Monture associée</p>
+                <p className="text-xs text-content-faint">{tr('ui.LensOrderDetail.montureAssociee')}</p>
               </div>
             </div>
           )}
@@ -190,7 +191,7 @@ export function LensOrderDetail({
           {(order.odLens || order.ogLens || order.lensConfig) && (
             <div className="rounded-xl border p-3 text-sm">
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content-faint">
-                <Glasses className="h-3.5 w-3.5" /> Verres
+                <Glasses className="h-3.5 w-3.5" /> {tr('ui.LensOrderDetail.verres')}
               </p>
               {order.lensConfig && (
                 <p className="mb-1 flex flex-wrap gap-1">
@@ -199,16 +200,16 @@ export function LensOrderDetail({
                   </span>
                   {order.lensConfig.index && (
                     <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold text-content-muted">
-                      Indice {order.lensConfig.index}
+                      {tr('ui.LensOrderDetail.indice')} {order.lensConfig.index}
                     </span>
                   )}
                 </p>
               )}
-              {order.odLens && <p className="text-content">OD — {order.odLens}</p>}
-              {order.ogLens && <p className="text-content">OG — {order.ogLens}</p>}
+              {order.odLens && <p className="text-content">{tr('ui.LensOrderDetail.od')} {order.odLens}</p>}
+              {order.ogLens && <p className="text-content">{tr('ui.LensOrderDetail.og')} {order.ogLens}</p>}
               {order.lensConfig?.priceBreakdown && (
                 <p className="mt-1.5 flex items-center gap-1 border-t pt-1.5 text-xs text-content-muted">
-                  <Receipt className="h-3 w-3" /> Verres {formatCurrency(order.lensConfig.priceBreakdown.base)} + traitements{' '}
+                  <Receipt className="h-3 w-3" /> {tr('ui.LensOrderDetail.verres')} {formatCurrency(order.lensConfig.priceBreakdown.base)} {tr('ui.LensOrderDetail.traitements')}{' '}
                   {formatCurrency(order.lensConfig.priceBreakdown.treatments)}
                 </p>
               )}
@@ -218,23 +219,23 @@ export function LensOrderDetail({
           <dl className="space-y-1.5 rounded-xl border p-3 text-sm">
             {order.supplierName && (
               <div className="flex justify-between gap-3">
-                <dt className="text-content-muted">Laboratoire</dt>
+                <dt className="text-content-muted">{tr('ui.LensOrderDetail.laboratoire')}</dt>
                 <dd className="text-right font-medium text-content">{order.supplierName}</dd>
               </div>
             )}
             <div className="flex justify-between gap-3">
-              <dt className="text-content-muted">Commandé le</dt>
+              <dt className="text-content-muted">{tr('ui.LensOrderDetail.commandeLe')}</dt>
               <dd className="font-medium text-content">{formatDate(order.createdAt)}</dd>
             </div>
             {order.expectedAt && (
               <div className="flex justify-between gap-3">
-                <dt className="text-content-muted">Prévu le</dt>
+                <dt className="text-content-muted">{tr('ui.LensOrderDetail.prevuLe')}</dt>
                 <dd className="font-medium text-content">{formatDate(order.expectedAt)}</dd>
               </div>
             )}
             {order.cost != null && (
               <div className="flex justify-between gap-3 border-t pt-1.5">
-                <dt className="text-content-muted">Montant</dt>
+                <dt className="text-content-muted">{tr('ui.LensOrderDetail.montant')}</dt>
                 <dd className="font-display font-bold text-content">{formatCurrency(Number(order.cost))}</dd>
               </div>
             )}
@@ -252,13 +253,13 @@ export function LensOrderDetail({
               onClick={notifyClient}
             >
               <MessageCircle className="h-4 w-4" />
-              {notified ? 'Prévenir à nouveau' : 'Notifier le client'}
+              {notified ? tr('ui.LensOrderDetail.prevenirANouveau') : tr('ui.LensOrderDetail.notifierLeClient')}
             </Button>
           )}
 
           {canManage && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
             <div>
-              <label className="label" htmlFor="lo-status">Faire avancer</label>
+              <label className="label" htmlFor="lo-status">{tr('ui.LensOrderDetail.faireAvancer')}</label>
               <select
                 id="lo-status"
                 className="input"

@@ -11,11 +11,13 @@ import {
 } from '@oculo/shared-types';
 import { useAuthStore } from '../../store/auth';
 import { Logo } from '../../components/Logo';
+import { tr } from '../../lib/tr';
+import { displayLocale } from '../../lib/format';
 
 const CYCLES: BillingCycle[] = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL'];
 
 function formatPrice(value: number): string {
-  return new Intl.NumberFormat('fr-FR').format(value);
+  return new Intl.NumberFormat(displayLocale()).format(value);
 }
 
 /**
@@ -55,14 +57,13 @@ export function ActivateSubscriptionPage() {
             <Logo />
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Activation de votre abonnement
+            <Sparkles className="h-3.5 w-3.5" /> {tr('ui.ActivateSubscriptionPage.activationDeVotreAbonnement')}
           </span>
           <h1 className="mt-4 text-balance font-display text-3xl font-extrabold text-content sm:text-4xl">
-            Choisissez l'offre qui correspond à votre boutique
+            {tr('ui.ActivateSubscriptionPage.choisissezLOffreQuiCorrespond')}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-content-muted">
-            Activez votre abonnement en quelques minutes par Mobile Money. Nous configurons ensuite
-            votre boutique ensemble, en visioconférence.
+            {tr('ui.ActivateSubscriptionPage.activezVotreAbonnementEnQuelques')}
           </p>
         </div>
 
@@ -72,7 +73,7 @@ export function ActivateSubscriptionPage() {
             {CYCLES.map((c) => {
               const active = cycle === c;
               const label =
-                c === 'MONTHLY' ? 'Mensuel' : c === 'QUARTERLY' ? '3 mois' : '6 mois';
+                c === 'MONTHLY' ? tr('ui.ActivateSubscriptionPage.mensuel') : c === 'QUARTERLY' ? tr('ui.ActivateSubscriptionPage.n3Mois') : tr('ui.ActivateSubscriptionPage.n6Mois');
               return (
                 <button
                   key={c}
@@ -116,7 +117,7 @@ export function ActivateSubscriptionPage() {
               >
                 {highlighted && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white shadow-card">
-                    Recommandé
+                    {tr('ui.ActivateSubscriptionPage.recommande')}
                   </span>
                 )}
                 <div>
@@ -133,16 +134,16 @@ export function ActivateSubscriptionPage() {
                       {formatPrice(total)}
                     </span>
                     <span className="text-sm text-content-muted">
-                      FCFA {cycle === 'MONTHLY' ? '/ mois' : cycle === 'QUARTERLY' ? '/ 3 mois' : '/ 6 mois'}
+                      FCFA {tr(cycle === 'MONTHLY' ? 'units.perMonth' : cycle === 'QUARTERLY' ? 'units.per3Months' : 'units.per6Months')}
                     </span>
                   </div>
                   {cycle !== 'MONTHLY' && (
                     <>
                       <p className="mt-1 text-sm text-content-muted">
-                        ≈ {formatPrice(Math.round(total / months))} FCFA / mois
+                        ≈ {formatPrice(Math.round(total / months))} {tr('ui.ActivateSubscriptionPage.fcfaMois')}
                       </p>
                       <p className="mt-1.5 inline-flex rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
-                        Vous économisez {formatPrice(savings)} FCFA
+                        {tr('ui.ActivateSubscriptionPage.vousEconomisez')} {formatPrice(savings)} FCFA
                       </p>
                     </>
                   )}
@@ -166,7 +167,7 @@ export function ActivateSubscriptionPage() {
                     highlighted ? 'btn-primary' : 'btn-outline',
                   )}
                 >
-                  Activer {plan.name}
+                  {tr('ui.ActivateSubscriptionPage.activer')} {plan.name}
                 </Link>
               </div>
             );
@@ -177,25 +178,25 @@ export function ActivateSubscriptionPage() {
           <div className="flex items-start gap-3 rounded-xl border bg-surface-2/60 p-4">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <p className="text-sm text-content-muted">
-              Paiement sécurisé par Mobile Money. Votre accès s'ouvre dès la confirmation.
+              {tr('ui.ActivateSubscriptionPage.paiementSecuriseParMobileMoney')}
             </p>
           </div>
           <div className="flex items-start gap-3 rounded-xl border bg-surface-2/60 p-4">
             <Video className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <p className="text-sm text-content-muted">
-              Configuration de votre boutique accompagnée en visioconférence, juste après.
+              {tr('ui.ActivateSubscriptionPage.configurationDeVotreBoutiqueAccompagnee')}
             </p>
           </div>
         </div>
 
         {status !== 'authenticated' && (
           <p className="mt-8 text-center text-sm text-content-muted">
-            Vous avez déjà un compte ?{' '}
+            {tr('ui.ActivateSubscriptionPage.vousAvezDejaUnCompte')}{' '}
             <Link
               to={`/login?next=${encodeURIComponent(`/parametres/abonnement?plan=${suggested}&cycle=${cycle}`)}`}
               className="font-semibold text-primary hover:underline"
             >
-              Se connecter
+              {tr('ui.ActivateSubscriptionPage.seConnecter')}
             </Link>
           </p>
         )}

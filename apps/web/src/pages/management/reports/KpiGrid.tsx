@@ -4,6 +4,7 @@ import type { ReportTotals } from '../../../features/optique/api';
 import { formatCurrency } from '../../../lib/format';
 import { Skeleton, computeDelta, formatDelta, formatPercent } from './shared';
 import type { Delta } from './shared';
+import { tr } from '../../../lib/tr';
 
 /**
  * Six indicateurs, tous issus du même agrégat serveur que le tableau.
@@ -12,7 +13,7 @@ import type { Delta } from './shared';
  * obtenir la liste des ventes concernées.
  */
 
-function DeltaBadge({ delta, suffix = 'vs période précédente' }: { delta: Delta; suffix?: string }) {
+function DeltaBadge({ delta, suffix = tr('ui.KpiGrid.vsPeriodePrecedente') }: { delta: Delta; suffix?: string }) {
   const tone =
     delta.percent === null
       ? 'text-content-faint'
@@ -103,23 +104,23 @@ export function KpiGrid({
     <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
       <KpiCard
         icon={TrendingUp}
-        label="Chiffre d'affaires"
+        label={tr('ui.KpiGrid.chiffreDAffaires')}
         value={formatCurrency(summary.revenue)}
         onClick={onShowAll}
-        hint="Montant facturé sur la période. Voir toutes les ventes."
+        hint={tr('ui.KpiGrid.montantFactureSurLaPeriode')}
       >
         <DeltaBadge delta={computeDelta(summary.revenue, previous.revenue)} />
       </KpiCard>
 
       <KpiCard
         icon={Wallet}
-        label="Encaissements"
+        label={tr('ui.KpiGrid.encaissements')}
         value={formatCurrency(summary.collected)}
         onClick={onShowAll}
-        hint="Montant réellement encaissé, part assurance comprise."
+        hint={tr('ui.KpiGrid.montantReellementEncaissePartAssurance')}
       >
         <p className="mt-1 text-xs text-content-faint">
-          {formatPercent(summary.collectionRate)} du CA encaissé
+          {formatPercent(summary.collectionRate)} {tr('ui.KpiGrid.duCaEncaisse')}
         </p>
         <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
           <div
@@ -131,33 +132,33 @@ export function KpiGrid({
 
       <KpiCard
         icon={Banknote}
-        label="Reste à encaisser"
+        label={tr('ui.KpiGrid.resteAEncaisser')}
         value={formatCurrency(summary.outstanding)}
         onClick={onShowUnpaid}
-        hint="Filtrer sur les ventes partielles et impayées."
+        hint={tr('ui.KpiGrid.filtrerSurLesVentesPartielles')}
       >
         <p className="mt-1 text-xs text-content-faint">
-          {summary.unpaidCount} {summary.unpaidCount > 1 ? 'ventes concernées' : 'vente concernée'}
+          {summary.unpaidCount} {summary.unpaidCount > 1 ? tr('ui.KpiGrid.ventesConcernees') : tr('ui.KpiGrid.venteConcernee')}
         </p>
       </KpiCard>
 
       <KpiCard
         icon={ShoppingBag}
-        label="Ventes"
+        label={tr('ui.KpiGrid.ventes')}
         value={String(summary.count)}
         onClick={onShowAll}
-        hint="Voir toutes les ventes de la période."
+        hint={tr('ui.KpiGrid.voirToutesLesVentesDe')}
       >
         <DeltaBadge delta={computeDelta(summary.count, previous.count)} />
       </KpiCard>
 
-      <KpiCard icon={Receipt} label="Panier moyen" value={formatCurrency(summary.avgBasket)}>
-        <p className="mt-1 text-xs text-content-faint">par vente</p>
+      <KpiCard icon={Receipt} label={tr('ui.KpiGrid.panierMoyen')} value={formatCurrency(summary.avgBasket)}>
+        <p className="mt-1 text-xs text-content-faint">{tr('ui.KpiGrid.parVente')}</p>
         <DeltaBadge delta={computeDelta(summary.avgBasket, previous.avgBasket)} suffix="" />
       </KpiCard>
 
-      <KpiCard icon={Percent} label="Taux d'encaissement" value={formatPercent(summary.collectionRate)}>
-        <p className="mt-1 text-xs text-content-faint">sur la période</p>
+      <KpiCard icon={Percent} label={tr('ui.KpiGrid.tauxDEncaissement')} value={formatPercent(summary.collectionRate)}>
+        <p className="mt-1 text-xs text-content-faint">{tr('ui.KpiGrid.surLaPeriode')}</p>
         <DeltaBadge
           delta={computeDelta(summary.collectionRate, previous.collectionRate)}
           suffix=""

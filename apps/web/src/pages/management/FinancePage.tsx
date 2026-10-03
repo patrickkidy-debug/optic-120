@@ -16,21 +16,22 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
-import { formatCurrency, formatDate } from '../../lib/format';
+import { formatCurrency, formatDate, displayLocale } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const CATEGORIES = [
-  { value: 'RENT', label: 'Loyer' },
-  { value: 'SALARIES', label: 'Salaires' },
-  { value: 'ELECTRICITY', label: 'Électricité' },
-  { value: 'WATER', label: 'Eau' },
+  { value: 'RENT', get label() { return tr('ui.FinancePage.loyer'); } },
+  { value: 'SALARIES', get label() { return tr('ui.FinancePage.salaires'); } },
+  { value: 'ELECTRICITY', get label() { return tr('ui.FinancePage.electricite'); } },
+  { value: 'WATER', get label() { return tr('ui.FinancePage.eau'); } },
   { value: 'INTERNET', label: 'Internet' },
   { value: 'MARKETING', label: 'Marketing' },
   { value: 'TRANSPORT', label: 'Transport' },
-  { value: 'SUPPLIES', label: 'Fournitures' },
+  { value: 'SUPPLIES', get label() { return tr('ui.FinancePage.fournitures'); } },
   { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'TAXES', label: 'Impôts & taxes' },
-  { value: 'OTHER', label: 'Divers' },
+  { value: 'TAXES', get label() { return tr('ui.FinancePage.impotsTaxes'); } },
+  { value: 'OTHER', get label() { return tr('ui.FinancePage.divers'); } },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -52,16 +53,16 @@ export function FinancePage() {
   return (
     <div>
       <PageHeader
-        title="Finance"
-        subtitle="Recettes, dépenses et résultat du mois"
-        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nouvelle dépense</Button>}
+        title={tr('ui.FinancePage.finance')}
+        subtitle={tr('ui.FinancePage.recettesDepensesEtResultatDu')}
+        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr('ui.FinancePage.nouvelleDepense')}</Button>}
       />
 
       {summary && (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard icon={TrendingUp} label="Recettes du mois" value={formatCurrency(summary.monthRevenue)} tone="success" />
-          <StatCard icon={TrendingDown} label="Dépenses du mois" value={formatCurrency(summary.monthExpenses)} tone="danger" />
-          <StatCard icon={Wallet} label="Résultat net" value={formatCurrency(summary.net)} tone={summary.net >= 0 ? 'primary' : 'danger'} />
+          <StatCard icon={TrendingUp} label={tr('ui.FinancePage.recettesDuMois')} value={formatCurrency(summary.monthRevenue)} tone="success" />
+          <StatCard icon={TrendingDown} label={tr('ui.FinancePage.depensesDuMois')} value={formatCurrency(summary.monthExpenses)} tone="danger" />
+          <StatCard icon={Wallet} label={tr('ui.FinancePage.resultatNet')} value={formatCurrency(summary.net)} tone={summary.net >= 0 ? 'primary' : 'danger'} />
         </div>
       )}
 
@@ -70,16 +71,16 @@ export function FinancePage() {
       {isLoading ? (
         <PageLoader />
       ) : !expenses || expenses.length === 0 ? (
-        <EmptyState icon={Banknote} title="Aucune dépense enregistrée" />
+        <EmptyState icon={Banknote} title={tr('ui.FinancePage.aucuneDepenseEnregistree')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Libellé</th>
-                <th className="table-cell font-semibold">Catégorie</th>
+                <th className="table-cell font-semibold">{tr('ui.FinancePage.libelle')}</th>
+                <th className="table-cell font-semibold">{tr('ui.FinancePage.categorie')}</th>
                 <th className="table-cell font-semibold">Date</th>
-                <th className="table-cell text-right font-semibold">Montant</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.FinancePage.montant')}</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -92,7 +93,7 @@ export function FinancePage() {
                   <td className="table-cell text-right font-semibold text-content">{formatCurrency(Number(x.amount))}</td>
                   <td className="table-cell text-right">
                     {canDelete && (
-                      <button onClick={() => { if (confirm('Supprimer cette dépense ?')) removeMut.mutate(x.id); }} className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger">
+                      <button onClick={() => { if (confirm(tr('ui.FinancePage.supprimerCetteDepense'))) removeMut.mutate(x.id); }} className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
@@ -151,40 +152,39 @@ function PaybackCard({ monthlyNet }: { monthlyNet: number }) {
     <div className="card mb-6 p-5">
       <div className="mb-1 flex items-center gap-2">
         <Target className="h-5 w-5 text-primary" />
-        <h3 className="font-display font-bold text-content">Amortissement de l'investissement</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.FinancePage.amortissementDeLInvestissement')}</h3>
       </div>
       <p className="mb-4 text-xs text-content-faint">
-        Estimation du temps nécessaire pour récupérer votre investissement de départ,
-        au rythme du résultat net actuel.
+        {tr('ui.FinancePage.estimationDuTempsNecessairePour')}
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Investissement initial">
+        <Field label={tr('ui.FinancePage.investissementInitial')}>
           <div className="flex items-center gap-2">
             <input
               type="number"
               min={0}
               className="input text-right"
-              placeholder="Ex : 5 000 000"
+              placeholder={tr('ui.FinancePage.ex5000000')}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
-            <Button onClick={save} loading={busy}>Enregistrer</Button>
+            <Button onClick={save} loading={busy}>{tr('ui.FinancePage.enregistrer')}</Button>
           </div>
         </Field>
 
         <div className="flex flex-col justify-center rounded-xl bg-surface-2 p-4">
           {investment <= 0 ? (
             <p className="text-sm text-content-muted">
-              Saisissez votre investissement pour voir la projection.
+              {tr('ui.FinancePage.saisissezVotreInvestissementPourVoir')}
             </p>
           ) : monthlyNet <= 0 ? (
             <p className="text-sm text-danger">
-              Résultat net négatif ce mois : amortissement non calculable au rythme actuel.
+              {tr('ui.FinancePage.resultatNetNegatifCeMois')}
             </p>
           ) : (
             <>
-              <div className="text-sm text-content-muted">Récupéré dans environ</div>
+              <div className="text-sm text-content-muted">{tr('ui.FinancePage.recupereDansEnviron')}</div>
               <div className="font-display text-2xl font-extrabold text-content">
                 {Math.ceil(months!)} mois
                 <span className="ml-2 text-sm font-normal text-content-muted">
@@ -193,11 +193,11 @@ function PaybackCard({ monthlyNet }: { monthlyNet: number }) {
               </div>
               {recoupDate && (
                 <div className="mt-1 text-xs text-content-faint">
-                  soit vers {recoupDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  {tr('ui.FinancePage.soitVers')} {recoupDate.toLocaleDateString(displayLocale(), { month: 'long', year: 'numeric' })}
                 </div>
               )}
               <div className="mt-2 text-xs text-content-faint">
-                Au rythme de {formatCurrency(monthlyNet)} de résultat net par mois.
+                {tr('ui.FinancePage.auRythmeDe')} {formatCurrency(monthlyNet)} {tr('ui.FinancePage.deResultatNetParMois')}
               </div>
             </>
           )}
@@ -228,22 +228,22 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle dépense" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.FinancePage.nouvelleDepense')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Libellé"><input className="input" {...register('label')} />{errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}</Field>
-        <Field label="Catégorie">
+        <Field label={tr('ui.FinancePage.libelle')}><input className="input" {...register('label')} />{errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}</Field>
+        <Field label={tr('ui.FinancePage.categorie')}>
           <select className="input" {...register('category')}>
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Montant (FCFA)"><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}</Field>
+          <Field label={tr('ui.FinancePage.montantFcfa')}><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}</Field>
           <Field label="Date"><input className="input" type="date" {...register('date')} /></Field>
         </div>
         {branches && branches.length > 1 && (
-          <Field label="Boutique">
+          <Field label={tr('ui.FinancePage.boutique')}>
             <select className="input" {...register('branchId')}>
-              <option value="">— Toutes / non précisé —</option>
+              <option value="">{tr('ui.FinancePage.toutesNonPrecise')}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -255,8 +255,8 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
         <Field label="Note"><input className="input" {...register('notes')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.FinancePage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.FinancePage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

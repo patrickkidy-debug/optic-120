@@ -5,6 +5,7 @@ import { Badge, Button, DropdownMenu, EmptyState } from '../../../components/ui'
 import { Skeleton, STATUS_META, STATUS_ORDER, methodLabel } from './shared';
 import type { StatusKey } from './shared';
 import { FileText } from 'lucide-react';
+import { tr } from '../../../lib/tr';
 
 type SortBy = NonNullable<SalesReportParams['sortBy']>;
 
@@ -12,12 +13,12 @@ const COLUMNS: { key: SortBy | null; label: string; align?: 'right'; sortable: b
   { key: 'number', label: 'N°', sortable: true },
   { key: 'customer', label: 'Client', sortable: true },
   { key: 'date', label: 'Date', sortable: true },
-  { key: null, label: 'Vendeur', sortable: false },
+  { key: null, get label() { return tr('ui.SalesTable.vendeur'); }, sortable: false },
   { key: 'total', label: 'Total', align: 'right', sortable: true },
-  { key: 'paid', label: 'Payé', align: 'right', sortable: true },
-  { key: 'balance', label: 'Reste', align: 'right', sortable: true },
-  { key: null, label: 'Statut', sortable: false },
-  { key: null, label: 'Mode de paiement', sortable: false },
+  { key: 'paid', get label() { return tr('ui.SalesTable.paye'); }, align: 'right', sortable: true },
+  { key: 'balance', get label() { return tr('ui.SalesTable.reste'); }, align: 'right', sortable: true },
+  { key: null, get label() { return tr('ui.SalesTable.statut'); }, sortable: false },
+  { key: null, get label() { return tr('ui.SalesTable.modeDePaiement'); }, sortable: false },
 ];
 
 export function SalesTableSkeleton() {
@@ -66,18 +67,18 @@ export function SalesTable({
   const localSort = sortBy === 'balance' || sortBy === 'customer';
 
   return (
-    <section className="card mb-4" aria-label="Ventes de la période">
+    <section className="card mb-4" aria-label={tr('ui.SalesTable.ventesDeLaPeriode')}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
         <div>
-          <h3 className="font-display text-base font-bold text-content">Ventes</h3>
+          <h3 className="font-display text-base font-bold text-content">{tr('ui.SalesTable.ventes')}</h3>
           <p className="text-xs text-content-faint">
             {total === 0
-              ? 'Aucune vente'
-              : `${total} vente${total > 1 ? 's' : ''} correspondant aux filtres`}
+              ? tr('ui.SalesTable.aucuneVente')
+              : tr('ui.SalesTable.totalVenteVCorrespondantAux', { total: total, v: total > 1 ? 's' : '' })}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtre rapide par statut">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('ui.SalesTable.filtreRapideParStatut')}>
           <button
             type="button"
             onClick={() => onPickStatus([])}
@@ -88,7 +89,7 @@ export function SalesTable({
                 : 'bg-surface-2 text-content-muted hover:bg-surface-3'
             }`}
           >
-            Toutes
+            {tr('ui.SalesTable.toutes')}
           </button>
           {STATUS_ORDER.map((key) => (
             <button
@@ -112,11 +113,11 @@ export function SalesTable({
         <div className="p-4">
           <EmptyState
             icon={FileText}
-            title="Aucune donnée disponible"
-            hint="Aucune vente ne correspond à la période ou aux filtres sélectionnés."
+            title={tr('ui.SalesTable.aucuneDonneeDisponible')}
+            hint={tr('ui.SalesTable.aucuneVenteNeCorrespondA')}
             action={
               <Button variant="outline" onClick={onReset}>
-                Réinitialiser les filtres
+                {tr('ui.SalesTable.reinitialiserLesFiltres')}
               </Button>
             }
           />
@@ -165,7 +166,7 @@ export function SalesTable({
                   return (
                     <tr key={r.id} className="border-b last:border-0 hover:bg-surface-2/50">
                       <td className="table-cell font-medium text-content">{r.number}</td>
-                      <td className="table-cell text-content-muted">{r.customer || 'Client de passage'}</td>
+                      <td className="table-cell text-content-muted">{r.customer || tr('ui.SalesTable.clientDePassage')}</td>
                       <td className="table-cell text-content-muted">
                         {new Date(r.date).toLocaleDateString('fr-FR')}
                       </td>
@@ -194,7 +195,7 @@ export function SalesTable({
                       </td>
                       <td className="table-cell text-right">
                         <DropdownMenu
-                          items={[{ label: 'Voir le détail', onClick: () => onOpen(r) }]}
+                          items={[{ label: tr('ui.SalesTable.voirLeDetail'), onClick: () => onOpen(r) }]}
                         />
                       </td>
                     </tr>
@@ -206,8 +207,8 @@ export function SalesTable({
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3">
             <p className="text-xs text-content-faint">
-              Affichage de {first} à {last} sur {total} vente{total > 1 ? 's' : ''}
-              {localSort && ' — tri appliqué à la page affichée'}
+              {tr('reports.pageRange', { first, last, total })}
+              {localSort && tr('ui.SalesTable.triAppliqueALaPage')}
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -215,19 +216,19 @@ export function SalesTable({
                 className="btn-ghost h-8 w-8 rounded-lg p-0 disabled:opacity-40"
                 onClick={() => onPage(page - 1)}
                 disabled={page <= 1}
-                aria-label="Page précédente"
+                aria-label={tr('ui.SalesTable.pagePrecedente')}
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="px-2 text-sm text-content-muted">
-                Page {page} / {pageCount}
+                {tr('ui.SalesTable.page')} {page} / {pageCount}
               </span>
               <button
                 type="button"
                 className="btn-ghost h-8 w-8 rounded-lg p-0 disabled:opacity-40"
                 onClick={() => onPage(page + 1)}
                 disabled={page >= pageCount}
-                aria-label="Page suivante"
+                aria-label={tr('ui.SalesTable.pageSuivante')}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

@@ -1,3 +1,4 @@
+import { tr } from './tr';
 /** Formats matriciels acceptés (le SVG est refusé : risque de script embarqué). */
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 /** Taille max du fichier source AVANT redimensionnement. */
@@ -40,25 +41,25 @@ export async function fileToResizedDataUrl(
   maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
 ): Promise<string> {
   if (!ACCEPTED_TYPES.includes(file.type)) {
-    throw new Error('Format non supporté. Utilisez une image PNG, JPEG ou WebP.');
+    throw new Error(tr('ui.image.formatNonSupporteUtilisezUne'));
   }
   if (file.size > MAX_INPUT_BYTES) {
     throw new Error(
-      `Image trop lourde : ${formatBytes(file.size)} (maximum ${formatBytes(MAX_INPUT_BYTES)}). Réduisez-la avant de l'importer.`,
+      tr('ui.image.imageTropLourdeSizeMaximum', { size: formatBytes(file.size), MAX_INPUT_BYTES: formatBytes(MAX_INPUT_BYTES) }),
     );
   }
 
   const source = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.onerror = () => reject(new Error(tr('ui.image.lectureDuFichierImpossible')));
     reader.readAsDataURL(file);
   });
 
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
     i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error('Image invalide ou illisible'));
+    i.onerror = () => reject(new Error(tr('ui.image.imageInvalideOuIllisible')));
     i.src = source;
   });
 
@@ -105,7 +106,7 @@ export async function fileToResizedDataUrl(
   }
 
   throw new Error(
-    `Image trop lourde après compression (${formatBytes(dataUrlBytes(out))}, maximum ${formatBytes(maxOutputBytes)}). Utilisez une photo moins détaillée.`,
+    tr('ui.image.imageTropLourdeApresCompression', { value: formatBytes(dataUrlBytes(out)), maxOutputBytes: formatBytes(maxOutputBytes) }),
   );
 }
 
@@ -140,13 +141,13 @@ export type UploadFallbackReason =
 export function describeUploadFallback(r: UploadFallbackReason): string {
   switch (r.kind) {
     case 'not-configured':
-      return "L'hébergement d'images n'est pas configuré sur ce site : les variables VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY manquent. Elles sont figées à la construction du site — après les avoir ajoutées, il faut relancer un déploiement.";
+      return tr('ui.image.lHebergementDImagesN');
     case 'upload-refused':
-      return `L'hébergement d'images a refusé l'envoi : ${r.message}. Vérifiez que le bucket existe, qu'il est public, et qu'il autorise l'envoi.`;
+      return tr('ui.image.lHebergementDImagesA', { message: r.message });
     case 'no-public-url':
-      return "L'image a été envoyée mais aucune adresse publique n'a été renvoyée : le bucket n'est probablement pas public.";
+      return tr('ui.image.lImageAEteEnvoyee');
     default:
-      return `L'hébergement d'images est injoignable : ${r.message}.`;
+      return tr('ui.image.lHebergementDImagesEst', { message: r.message });
   }
 }
 

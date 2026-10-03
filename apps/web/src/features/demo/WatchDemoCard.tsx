@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PlayCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getVideoProgress } from './api';
 import { DEMO_VIDEO_COUNT } from './videos';
+import { tr } from '../../lib/tr';
 
 /**
  * Point d'entrée vers la démonstration vidéo. Affiché sur le tableau de bord,
@@ -30,10 +31,10 @@ export function WatchDemoCard({ compact = false, mini = false }: { compact?: boo
       <Link to="/demo/videos" className="btn-outline h-9 rounded-xl px-3.5 text-sm">
         <PlayCircle className="h-4 w-4" />
         {allDone
-          ? 'Revoir la démonstration'
+          ? tr('ui.WatchDemoCard.revoirLaDemonstration')
           : started
-            ? `Démonstration — ${completed}/${DEMO_VIDEO_COUNT}`
-            : 'Voir la démonstration'}
+            ? tr('ui.WatchDemoCard.demonstrationCompletedDemoVideoCount', { completed: completed, DEMO_VIDEO_COUNT: DEMO_VIDEO_COUNT })
+            : tr('ui.WatchDemoCard.voirLaDemonstration')}
       </Link>
     );
   }
@@ -48,13 +49,13 @@ export function WatchDemoCard({ compact = false, mini = false }: { compact?: boo
           {allDone ? <CheckCircle2 className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-content">Démonstration du logiciel</p>
+          <p className="font-medium text-content">{tr('ui.WatchDemoCard.demonstrationDuLogiciel')}</p>
           <p className="text-xs text-content-muted">
             {allDone
-              ? 'Revoir les vidéos quand vous voulez'
+              ? tr('ui.WatchDemoCard.revoirLesVideosQuandVous')
               : started
-                ? `Reprendre — ${completed}/${DEMO_VIDEO_COUNT} vidéos vues`
-                : `${DEMO_VIDEO_COUNT} vidéos pour tout comprendre`}
+                ? tr('ui.WatchDemoCard.reprendreCompletedDemoVideoCount', { completed: completed, DEMO_VIDEO_COUNT: DEMO_VIDEO_COUNT })
+                : tr('ui.WatchDemoCard.demoVideoCountVideosPour', { DEMO_VIDEO_COUNT: DEMO_VIDEO_COUNT })}
           </p>
         </div>
         <ArrowRight className="h-4 w-4 shrink-0 text-content-faint" />
@@ -74,12 +75,12 @@ export function WatchDemoCard({ compact = false, mini = false }: { compact?: boo
         </span>
         <div>
           <p className="font-display text-lg font-bold text-content">
-            {started ? 'Reprenez la démonstration' : 'Regardez la démonstration du logiciel'}
+            {started ? tr('ui.WatchDemoCard.reprenezLaDemonstration') : tr('ui.WatchDemoCard.regardezLaDemonstrationDuLogiciel')}
           </p>
           <p className="mt-0.5 text-sm text-content-muted">
             {started
-              ? `Vous en êtes à ${completed}/${DEMO_VIDEO_COUNT} vidéos (${globalPercent} %). Reprenez où vous vous étiez arrêté.`
-              : `${DEMO_VIDEO_COUNT} courtes vidéos pour maîtriser OculoSaaS : caisse, stock, patients et pilotage.`}
+              ? tr('ui.WatchDemoCard.vousEnEtesACompleted', { completed: completed, DEMO_VIDEO_COUNT: DEMO_VIDEO_COUNT, globalPercent: globalPercent })
+              : tr('ui.WatchDemoCard.demoVideoCountCourtesVideos', { DEMO_VIDEO_COUNT: DEMO_VIDEO_COUNT })}
           </p>
           {started && (
             <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-surface-3">
@@ -89,7 +90,7 @@ export function WatchDemoCard({ compact = false, mini = false }: { compact?: boo
         </div>
       </div>
       <Link to="/demo/videos" className="btn-primary shrink-0 rounded-xl px-6 py-3">
-        {started ? 'Reprendre' : 'Regarder'} <ArrowRight className="h-4 w-4" />
+        {started ? tr('ui.WatchDemoCard.reprendre') : tr('ui.WatchDemoCard.regarder')} <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
   );

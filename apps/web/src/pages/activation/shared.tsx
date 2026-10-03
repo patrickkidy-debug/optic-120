@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { ACTIVATION_STEP_COUNT, ACTIVATION_STEP_ORDER, type ActivationStep } from '@oculo/shared-types';
+import { tr } from '../../lib/tr';
 
 /**
  * Briques communes du tunnel d'activation.
@@ -65,7 +66,7 @@ export function Brand() {
     <Link
       to="/activation"
       state={{ intro: true }}
-      aria-label="OculoSaaS — revenir à la présentation"
+      aria-label={tr('ui.shared.oculosaasRevenirALaPresentation')}
       className="mb-6 inline-flex items-center gap-2 rounded-xl transition-opacity hover:opacity-80"
     >
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-sm">
@@ -92,7 +93,7 @@ export function StepBar({ current }: { current: ActivationStep }) {
         ))}
       </div>
       <p className="text-xs font-medium text-content-muted">
-        Étape {index + 1} sur {ACTIVATION_STEP_COUNT}
+        {tr('activationUi.stepOf', { step: index + 1, total: ACTIVATION_STEP_COUNT })}
       </p>
     </div>
   );

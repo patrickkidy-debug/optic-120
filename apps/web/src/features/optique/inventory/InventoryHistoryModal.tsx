@@ -5,11 +5,12 @@ import { listInventoryCounts, type InventoryCount } from './api';
 import { formatCurrency, formatDateTime } from '../../../lib/format';
 import { Modal, Badge, PageLoader, EmptyState } from '../../../components/ui';
 import { InventoryLinesTable } from './InventoryLinesTable';
+import { tr } from '../../../lib/tr';
 
 const STATUS_LABEL: Record<InventoryCount['status'], { label: string; tone: 'success' | 'warning' | 'danger' }> = {
-  DRAFT: { label: 'En cours', tone: 'warning' },
-  COMPLETED: { label: 'Terminé', tone: 'success' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
+  DRAFT: { get label() { return tr('ui.InventoryHistoryModal.enCours'); }, tone: 'warning' },
+  COMPLETED: { get label() { return tr('ui.InventoryHistoryModal.termine'); }, tone: 'success' },
+  CANCELLED: { get label() { return tr('ui.InventoryHistoryModal.annule'); }, tone: 'danger' },
 };
 
 export function InventoryHistoryModal({ branchId, onClose }: { branchId: string; onClose: () => void }) {
@@ -21,29 +22,29 @@ export function InventoryHistoryModal({ branchId, onClose }: { branchId: string;
 
   if (detailId) {
     return (
-      <Modal open onClose={() => setDetailId(null)} title="Détail de l'inventaire" size="xl">
+      <Modal open onClose={() => setDetailId(null)} title={tr('ui.InventoryHistoryModal.detailDeLInventaire')} size="xl">
         <InventoryLinesTable countId={detailId} />
       </Modal>
     );
   }
 
   return (
-    <Modal open onClose={onClose} title="Historique des inventaires" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.InventoryHistoryModal.historiqueDesInventaires')} size="lg">
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={History} title="Aucun inventaire réalisé" hint="Les sessions d'inventaire passées apparaîtront ici." />
+        <EmptyState icon={History} title={tr('ui.InventoryHistoryModal.aucunInventaireRealise')} hint={tr('ui.InventoryHistoryModal.lesSessionsDInventairePassees')} />
       ) : (
         <div className="max-h-[520px] overflow-y-auto rounded-xl border">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-surface">
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">Date</th>
-                <th className="table-cell font-semibold">Réalisé par</th>
+                <th className="table-cell font-semibold">{tr('ui.InventoryHistoryModal.realisePar')}</th>
                 <th className="table-cell text-center font-semibold">Articles</th>
-                <th className="table-cell text-center font-semibold">Écarts</th>
-                <th className="table-cell text-right font-semibold">Valeur</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell text-center font-semibold">{tr('ui.InventoryHistoryModal.ecarts')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.InventoryHistoryModal.valeur')}</th>
+                <th className="table-cell font-semibold">{tr('ui.InventoryHistoryModal.statut')}</th>
               </tr>
             </thead>
             <tbody>

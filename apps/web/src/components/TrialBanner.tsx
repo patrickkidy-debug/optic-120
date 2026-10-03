@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getPlanStatus } from '../features/billing/api';
+import { tr } from '../lib/tr';
 
 /**
  * Bandeau d'essai gratuit : pendant les 2 h offertes à l'inscription (accès
@@ -28,15 +29,14 @@ export function TrialBanner() {
 
   const hours = Math.floor(remaining / 3_600_000);
   const mins = Math.floor((remaining % 3_600_000) / 60_000);
-  const label = hours > 0 ? `${hours} h ${mins.toString().padStart(2, '0')} min` : `${mins} min`;
+  const label = hours > 0 ? tr('ui.TrialBanner.hoursHValueMin', { hours: hours, value: mins.toString().padStart(2, '0') }) : `${mins} min`;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/20 bg-primary-soft px-4 py-2 text-sm sm:px-6">
       <div className="flex items-center gap-2 text-content">
         <Clock className="h-4 w-4 shrink-0 text-primary" />
         <span>
-          Essai gratuit — il vous reste <b>{label}</b> d'accès complet. Activez votre abonnement pour
-          continuer sans interruption.
+          {tr('ui.TrialBanner.essaiGratuitIlVousReste')} <b>{label}</b> {tr('ui.TrialBanner.dAccesCompletActivezVotre')}
         </span>
       </div>
       {/* `?pay=1` ouvre directement le choix du moyen de paiement : sans ce
@@ -45,7 +45,7 @@ export function TrialBanner() {
         to="/parametres/abonnement?pay=1"
         className="btn-primary h-8 shrink-0 rounded-lg px-3 text-xs"
       >
-        Activer l'abonnement
+        {tr('ui.TrialBanner.activerLAbonnement')}
       </Link>
     </div>
   );

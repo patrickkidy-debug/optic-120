@@ -1,33 +1,34 @@
 import { InsuranceClaimStatus, ProductCategory, GUARANTEE_ALL_CATEGORIES } from '@oculo/shared-types';
 import { Badge } from '../../../components/ui';
+import { tr } from '../../../lib/tr';
 
 export const INSURER_TYPES = [
-  { value: 'HEALTH_INSURANCE', label: 'Assurance maladie' },
-  { value: 'MUTUAL', label: 'Mutuelle' },
-  { value: 'PRIVATE', label: 'Assurance privée' },
-  { value: 'THIRD_PARTY', label: 'Tiers payant' },
+  { value: 'HEALTH_INSURANCE', get label() { return tr('ui.shared.assuranceMaladie'); } },
+  { value: 'MUTUAL', get label() { return tr('ui.shared.mutuelle'); } },
+  { value: 'PRIVATE', get label() { return tr('ui.shared.assurancePrivee'); } },
+  { value: 'THIRD_PARTY', get label() { return tr('ui.shared.tiersPayant'); } },
 ];
 export const insurerTypeLabel = (v: string) =>
   INSURER_TYPES.find((t) => t.value === v)?.label ?? v;
 
 export const CONTRACT_STATUSES = [
-  { value: 'ACTIVE', label: 'Actif' },
-  { value: 'SUSPENDED', label: 'Suspendu' },
-  { value: 'EXPIRED', label: 'Expiré' },
+  { value: 'ACTIVE', get label() { return tr('ui.shared.actif'); } },
+  { value: 'SUSPENDED', get label() { return tr('ui.shared.suspendu'); } },
+  { value: 'EXPIRED', get label() { return tr('ui.shared.expire'); } },
 ];
 export const contractStatusLabel = (v: string) =>
   CONTRACT_STATUSES.find((s) => s.value === v)?.label ?? v;
 
 /** Catégories couvrables : les familles produit, plus « toutes catégories ». */
 export const GUARANTEE_CATEGORY_OPTIONS = [
-  { value: GUARANTEE_ALL_CATEGORIES, label: 'Toutes catégories' },
-  { value: ProductCategory.MONTURE, label: 'Montures' },
-  { value: ProductCategory.VERRE, label: 'Verres' },
-  { value: ProductCategory.LENTILLE, label: 'Lentilles' },
-  { value: ProductCategory.ACCESSOIRE, label: 'Accessoires' },
-  { value: ProductCategory.ENTRETIEN, label: "Produits d'entretien" },
+  { value: GUARANTEE_ALL_CATEGORIES, get label() { return tr('ui.shared.toutesCategories'); } },
+  { value: ProductCategory.MONTURE, get label() { return tr('ui.shared.montures'); } },
+  { value: ProductCategory.VERRE, get label() { return tr('ui.shared.verres'); } },
+  { value: ProductCategory.LENTILLE, get label() { return tr('ui.shared.lentilles'); } },
+  { value: ProductCategory.ACCESSOIRE, get label() { return tr('ui.shared.accessoires'); } },
+  { value: ProductCategory.ENTRETIEN, get label() { return tr('ui.shared.produitsDEntretien'); } },
   { value: ProductCategory.SERVICE, label: 'Services' },
-  { value: ProductCategory.AUTRE, label: 'Autres' },
+  { value: ProductCategory.AUTRE, get label() { return tr('ui.shared.autres'); } },
 ];
 export const guaranteeCategoryLabel = (v: string) =>
   GUARANTEE_CATEGORY_OPTIONS.find((c) => c.value === v)?.label ?? v;
@@ -36,14 +37,14 @@ type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
 
 /** Étapes d'un dossier, dans l'ordre où elles se produisent. */
 export const CLAIM_STATUSES: { value: string; label: string; tone: Tone }[] = [
-  { value: InsuranceClaimStatus.DRAFT, label: 'Brouillon', tone: 'neutral' },
-  { value: InsuranceClaimStatus.PENDING, label: 'En attente', tone: 'warning' },
-  { value: InsuranceClaimStatus.ACCEPTED, label: 'Acceptée', tone: 'info' },
-  { value: InsuranceClaimStatus.PARTIALLY_ACCEPTED, label: 'Partiellement acceptée', tone: 'info' },
-  { value: InsuranceClaimStatus.REJECTED, label: 'Refusée', tone: 'danger' },
-  { value: InsuranceClaimStatus.INVOICED, label: 'Facturée', tone: 'accent' },
-  { value: InsuranceClaimStatus.PARTIALLY_PAID, label: 'Partiellement payée', tone: 'warning' },
-  { value: InsuranceClaimStatus.PAID, label: 'Payée', tone: 'success' },
+  { value: InsuranceClaimStatus.DRAFT, get label() { return tr('ui.shared.brouillon'); }, tone: 'neutral' },
+  { value: InsuranceClaimStatus.PENDING, get label() { return tr('ui.shared.enAttente'); }, tone: 'warning' },
+  { value: InsuranceClaimStatus.ACCEPTED, get label() { return tr('ui.shared.acceptee'); }, tone: 'info' },
+  { value: InsuranceClaimStatus.PARTIALLY_ACCEPTED, get label() { return tr('ui.shared.partiellementAcceptee'); }, tone: 'info' },
+  { value: InsuranceClaimStatus.REJECTED, get label() { return tr('ui.shared.refusee'); }, tone: 'danger' },
+  { value: InsuranceClaimStatus.INVOICED, get label() { return tr('ui.shared.facturee'); }, tone: 'accent' },
+  { value: InsuranceClaimStatus.PARTIALLY_PAID, get label() { return tr('ui.shared.partiellementPayee'); }, tone: 'warning' },
+  { value: InsuranceClaimStatus.PAID, get label() { return tr('ui.shared.payee'); }, tone: 'success' },
 ];
 
 export const claimStatusLabel = (v: string) =>

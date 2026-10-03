@@ -31,8 +31,10 @@ import { listBranches } from '../../features/optique/api';
 import { logout } from '../../features/auth/api';
 import { Avatar } from '../Avatar';
 import i18n, { LOCALES } from '../../lib/i18n';
+import { trFr } from '../../lib/sharedLabels';
 import type { ThemeMode } from '../../lib/theme';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { tr } from '../../lib/tr';
 
 function ThemeToggle() {
   const theme = useUIStore((s) => s.theme);
@@ -42,7 +44,7 @@ function ThemeToggle() {
   return (
     <button
       className="btn-ghost h-9 w-9 rounded-xl p-0"
-      title={`Thème : ${theme}`}
+      title={tr('ui.Topbar.themeTheme', { theme: theme })}
       onClick={() => setTheme(order[(order.indexOf(theme) + 1) % order.length])}
     >
       <Icon className="h-[18px] w-[18px]" />
@@ -80,7 +82,7 @@ function LanguageToggle() {
         className="btn-ghost h-9 rounded-xl px-2.5 text-xs font-bold uppercase"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Langue"
+        aria-label={tr('ui.Topbar.langue')}
       >
         {current.short}
       </button>
@@ -189,7 +191,7 @@ function UserMenu() {
           <span className="block text-sm font-semibold leading-tight text-content">
             {user?.firstName} {user?.lastName}
           </span>
-          <span className="block text-[11px] leading-tight text-content-muted">{user?.roleName}</span>
+          <span className="block text-[11px] leading-tight text-content-muted">{trFr(user?.roleName)}</span>
         </span>
         <ChevronDown className="h-3.5 w-3.5 text-content-faint" />
       </button>
@@ -202,13 +204,13 @@ function UserMenu() {
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-content hover:bg-surface-2"
           >
-            <UserCircle className="h-4 w-4" /> Mon profil
+            <UserCircle className="h-4 w-4" /> {tr('ui.Topbar.monProfil')}
           </button>
           <button
             onClick={() => void logout()}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-[color:var(--danger)]/10"
           >
-            <LogOut className="h-4 w-4" /> Déconnexion
+            <LogOut className="h-4 w-4" /> {tr('ui.Topbar.deconnexion')}
           </button>
         </div>
       )}

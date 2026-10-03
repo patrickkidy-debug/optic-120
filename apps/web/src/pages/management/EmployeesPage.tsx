@@ -9,11 +9,12 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, initials } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
-  ACTIVE: { label: 'Actif', tone: 'success' },
-  ON_LEAVE: { label: 'En congé', tone: 'warning' },
-  TERMINATED: { label: 'Parti', tone: 'danger' },
+  ACTIVE: { get label() { return tr('ui.EmployeesPage.actif'); }, tone: 'success' },
+  ON_LEAVE: { get label() { return tr('ui.EmployeesPage.enConge'); }, tone: 'warning' },
+  TERMINATED: { get label() { return tr('ui.EmployeesPage.parti'); }, tone: 'danger' },
 };
 
 export function EmployeesPage() {
@@ -27,25 +28,25 @@ export function EmployeesPage() {
   return (
     <div>
       <PageHeader
-        title="Personnel"
-        subtitle="Gestion des ressources humaines"
-        actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nouvel employé</Button>}
+        title={tr('ui.EmployeesPage.personnel')}
+        subtitle={tr('ui.EmployeesPage.gestionDesRessourcesHumaines')}
+        actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> {tr('ui.EmployeesPage.nouvelEmploye')}</Button>}
       />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={UserCog} title="Aucun employé" />
+        <EmptyState icon={UserCog} title={tr('ui.EmployeesPage.aucunEmploye')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Employé</th>
-                <th className="table-cell font-semibold">Poste</th>
-                <th className="table-cell text-right font-semibold">Salaire</th>
-                <th className="table-cell font-semibold">Embauche</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell font-semibold">{tr('ui.EmployeesPage.employe')}</th>
+                <th className="table-cell font-semibold">{tr('ui.EmployeesPage.poste')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.EmployeesPage.salaire')}</th>
+                <th className="table-cell font-semibold">{tr('ui.EmployeesPage.embauche')}</th>
+                <th className="table-cell font-semibold">{tr('ui.EmployeesPage.statut')}</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -112,32 +113,32 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
   });
 
   return (
-    <Modal open onClose={onClose} title={employee ? 'Modifier l\'employé' : 'Nouvel employé'}>
+    <Modal open onClose={onClose} title={employee ? tr('ui.EmployeesPage.modifierLEmploye') : tr('ui.EmployeesPage.nouvelEmploye')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prénom"><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
-          <Field label="Nom"><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
+          <Field label={tr('ui.EmployeesPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
+          <Field label={tr('ui.EmployeesPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
         </div>
-        <Field label="Poste"><input className="input" {...register('position')} />{errors.position && <p className="mt-1 text-xs text-danger">{errors.position.message}</p>}</Field>
+        <Field label={tr('ui.EmployeesPage.poste')}><input className="input" {...register('position')} />{errors.position && <p className="mt-1 text-xs text-danger">{errors.position.message}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
+          <Field label={tr('ui.EmployeesPage.telephone')}><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Salaire (FCFA)"><input className="input" type="number" {...register('salary', { valueAsNumber: true })} /></Field>
-          <Field label="Embauche"><input className="input" type="date" {...register('hireDate')} /></Field>
-          <Field label="Statut">
+          <Field label={tr('ui.EmployeesPage.salaireFcfa')}><input className="input" type="number" {...register('salary', { valueAsNumber: true })} /></Field>
+          <Field label={tr('ui.EmployeesPage.embauche')}><input className="input" type="date" {...register('hireDate')} /></Field>
+          <Field label={tr('ui.EmployeesPage.statut')}>
             <select className="input" {...register('status')}>
-              <option value="ACTIVE">Actif</option>
-              <option value="ON_LEAVE">En congé</option>
-              <option value="TERMINATED">Parti</option>
+              <option value="ACTIVE">{tr('ui.EmployeesPage.actif')}</option>
+              <option value="ON_LEAVE">{tr('ui.EmployeesPage.enConge')}</option>
+              <option value="TERMINATED">{tr('ui.EmployeesPage.parti')}</option>
             </select>
           </Field>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.EmployeesPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.EmployeesPage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

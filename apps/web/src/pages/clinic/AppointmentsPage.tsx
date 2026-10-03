@@ -8,13 +8,14 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const STATUS: Record<string, { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
-  SCHEDULED: { label: 'Planifié', tone: 'info' },
-  CONFIRMED: { label: 'Confirmé', tone: 'success' },
-  COMPLETED: { label: 'Terminé', tone: 'neutral' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
-  NO_SHOW: { label: 'Absent', tone: 'warning' },
+  SCHEDULED: { get label() { return tr('ui.AppointmentsPage.planifie'); }, tone: 'info' },
+  CONFIRMED: { get label() { return tr('ui.AppointmentsPage.confirme'); }, tone: 'success' },
+  COMPLETED: { get label() { return tr('ui.AppointmentsPage.termine'); }, tone: 'neutral' },
+  CANCELLED: { get label() { return tr('ui.AppointmentsPage.annule'); }, tone: 'danger' },
+  NO_SHOW: { get label() { return tr('ui.AppointmentsPage.absent'); }, tone: 'warning' },
 };
 
 export function AppointmentsPage() {
@@ -34,15 +35,15 @@ export function AppointmentsPage() {
   return (
     <div>
       <PageHeader
-        title="Rendez-vous"
-        subtitle="Agenda des consultations"
-        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nouveau rendez-vous</Button>}
+        title={tr('ui.AppointmentsPage.rendezVous')}
+        subtitle={tr('ui.AppointmentsPage.agendaDesConsultations')}
+        actions={canCreate && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr('ui.AppointmentsPage.nouveauRendezVous')}</Button>}
       />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={CalendarDays} title="Aucun rendez-vous" />
+        <EmptyState icon={CalendarDays} title={tr('ui.AppointmentsPage.aucunRendezVous')} />
       ) : (
         <div className="space-y-2">
           {data.map((a) => (
@@ -56,7 +57,7 @@ export function AppointmentsPage() {
                     {a.patient ? `${a.patient.firstName} ${a.patient.lastName}` : 'Patient'}
                   </div>
                   <div className="text-sm text-content-muted">
-                    {formatDateTime(a.scheduledAt)} · {a.reason ?? 'Consultation'}
+                    {formatDateTime(a.scheduledAt)} · {a.reason ?? tr('ui.AppointmentsPage.consultation')}
                   </div>
                 </div>
               </div>
@@ -64,13 +65,13 @@ export function AppointmentsPage() {
                 <Badge tone={STATUS[a.status]?.tone ?? 'neutral'}>{STATUS[a.status]?.label ?? a.status}</Badge>
                 {canUpdate && a.status !== 'COMPLETED' && a.status !== 'CANCELLED' && (
                   <>
-                    <button onClick={() => setEditing(a)} className="btn-ghost h-8 w-8 rounded-lg p-0" title="Modifier le rendez-vous">
+                    <button onClick={() => setEditing(a)} className="btn-ghost h-8 w-8 rounded-lg p-0" title={tr('ui.AppointmentsPage.modifierLeRendezVous')}>
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => statusMut.mutate({ id: a.id, status: 'COMPLETED' })} className="btn-ghost h-8 w-8 rounded-lg p-0 text-success" title="Marquer terminé">
+                    <button onClick={() => statusMut.mutate({ id: a.id, status: 'COMPLETED' })} className="btn-ghost h-8 w-8 rounded-lg p-0 text-success" title={tr('ui.AppointmentsPage.marquerTermine')}>
                       <Check className="h-4 w-4" />
                     </button>
-                    <button onClick={() => statusMut.mutate({ id: a.id, status: 'CANCELLED' })} className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger" title="Annuler">
+                    <button onClick={() => statusMut.mutate({ id: a.id, status: 'CANCELLED' })} className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger" title={tr('ui.AppointmentsPage.annuler')}>
                       <X className="h-4 w-4" />
                     </button>
                   </>
@@ -103,13 +104,13 @@ function EditAppointmentModal({ appointment, onClose }: { appointment: import('.
     onError: (e) => setError(apiErrorMessage(e)),
   });
   return (
-    <Modal open onClose={onClose} title="Modifier le rendez-vous" size="md">
+    <Modal open onClose={onClose} title={tr('ui.AppointmentsPage.modifierLeRendezVous')} size="md">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Date et heure"><input className="input" type="datetime-local" {...register('scheduledAt', { required: true })} /></Field>
-        <Field label="Motif"><input className="input" {...register('reason')} /></Field>
-        <Field label="Praticien"><input className="input" {...register('practitionerName')} /></Field>
+        <Field label={tr('ui.AppointmentsPage.dateEtHeure')}><input className="input" type="datetime-local" {...register('scheduledAt', { required: true })} /></Field>
+        <Field label={tr('ui.AppointmentsPage.motif')}><input className="input" {...register('reason')} /></Field>
+        <Field label={tr('ui.AppointmentsPage.praticien')}><input className="input" {...register('practitionerName')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>Annuler</Button><Button type="submit" loading={mut.isPending}>Enregistrer</Button></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onClose}>{tr('ui.AppointmentsPage.annuler')}</Button><Button type="submit" loading={mut.isPending}>{tr('ui.AppointmentsPage.enregistrer')}</Button></div>
       </form>
     </Modal>
   );
@@ -128,24 +129,24 @@ function NewAppointmentModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouveau rendez-vous" size="md">
+    <Modal open onClose={onClose} title={tr('ui.AppointmentsPage.nouveauRendezVous')} size="md">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <Field label="Patient">
           <select className="input" {...register('patientId', { required: true })}>
-            <option value="">— Choisir —</option>
+            <option value="">{tr('ui.AppointmentsPage.choisir')}</option>
             {patients?.map((p) => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
           </select>
         </Field>
-        <Field label="Date et heure">
+        <Field label={tr('ui.AppointmentsPage.dateEtHeure')}>
           <input className="input" type="datetime-local" {...register('scheduledAt', { required: true })} />
-          {errors.scheduledAt && <p className="mt-1 text-xs text-danger">Date requise</p>}
+          {errors.scheduledAt && <p className="mt-1 text-xs text-danger">{tr('ui.AppointmentsPage.dateRequise')}</p>}
         </Field>
-        <Field label="Motif"><input className="input" placeholder="Contrôle de la vue" {...register('reason')} /></Field>
-        <Field label="Praticien"><input className="input" {...register('practitionerName')} /></Field>
+        <Field label={tr('ui.AppointmentsPage.motif')}><input className="input" placeholder={tr('ui.AppointmentsPage.controleDeLaVue')} {...register('reason')} /></Field>
+        <Field label={tr('ui.AppointmentsPage.praticien')}><input className="input" {...register('practitionerName')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Planifier</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.AppointmentsPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.AppointmentsPage.planifier')}</Button>
         </div>
       </form>
     </Modal>

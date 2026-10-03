@@ -2,12 +2,18 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { LENS_ORDER_STATUS_LABELS, type LensOrderStatus } from '@oculo/shared-types';
 import type { LensOrder } from '../../features/optique/api';
+import { tr } from '../../lib/tr';
+import i18n from 'i18next';
 
-const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-const MONTHS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-];
+/** Jours (lundi en premier) et mois dans la langue active, via Intl. */
+const weekdays = () =>
+  Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }).format(new Date(2024, 0, 1 + i)),
+  );
+const monthTitle = (d: Date) => {
+  const s = new Intl.DateTimeFormat(i18n.language, { month: 'long' }).format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -57,7 +63,7 @@ export function LensOrderCalendar({
     <div>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-lg font-bold text-content">
-          {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
+          {monthTitle(cursor)} {cursor.getFullYear()}
         </h3>
         <div className="flex items-center gap-1">
           <button
@@ -70,7 +76,7 @@ export function LensOrderCalendar({
             onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
             className="btn-outline h-8 rounded-lg px-2.5 text-xs"
           >
-            Aujourd'hui
+            {tr('ui.LensOrderCalendar.aujourdHui')}
           </button>
           <button
             onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
@@ -82,7 +88,7 @@ export function LensOrderCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border bg-line">
-        {WEEKDAYS.map((w) => (
+        {weekdays().map((w) => (
           <div key={w} className="bg-surface-2 px-2 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-content-faint">
             {w}
           </div>

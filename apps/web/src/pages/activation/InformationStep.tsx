@@ -8,6 +8,7 @@ import {
 import { Button, Field } from '../../components/ui';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
 import { formatTrialDuration } from './PaymentStep';
+import { tr } from '../../lib/tr';
 
 /**
  * Étape 4 — coordonnées, et création de l'espace.
@@ -66,7 +67,7 @@ export function InformationStep({
 
   function submit() {
     if (!dial) {
-      setLocalError('Choisissez votre pays : il fixe l’indicatif de vos numéros.');
+      setLocalError(tr('ui.InformationStep.choisissezVotrePaysIlFixe'));
       return;
     }
     const parsed = activationInformationSchema.safeParse({
@@ -82,7 +83,7 @@ export function InformationStep({
       hasExistingData: hasExistingData ?? false,
     });
     if (!parsed.success) {
-      setLocalError(parsed.error.issues[0]?.message ?? 'Vérifiez les informations saisies');
+      setLocalError(parsed.error.issues[0]?.message ?? tr('ui.InformationStep.verifiezLesInformationsSaisies'));
       return;
     }
     setLocalError('');
@@ -92,14 +93,14 @@ export function InformationStep({
   return (
     <ActivationShell
       step="INFORMATION"
-      title="Créons votre espace OculoSaaS"
-      subtitle="Ces informations servent à créer votre espace et à vous accompagner ensuite."
+      title={tr('ui.InformationStep.creonsVotreEspaceOculosaas')}
+      subtitle={tr('ui.InformationStep.cesInformationsServentACreer')}
     >
       <div className="space-y-3">
-        <Field label="Nom complet">
+        <Field label={tr('ui.InformationStep.nomComplet')}>
           <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
-        <Field label="Nom de l'optique">
+        <Field label={tr('ui.InformationStep.nomDeLOptique')}>
           <input
             className="input"
             value={establishmentName}
@@ -108,9 +109,9 @@ export function InformationStep({
         </Field>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Pays">
+          <Field label={tr('ui.InformationStep.pays')}>
             <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
-              <option value="">Choisissez votre pays</option>
+              <option value="">{tr('ui.InformationStep.choisissezVotrePays')}</option>
               {SUPPORTED_COUNTRIES.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.flag} {c.name}
@@ -118,13 +119,13 @@ export function InformationStep({
               ))}
             </select>
           </Field>
-          <Field label="Ville">
+          <Field label={tr('ui.InformationStep.ville')}>
             <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Téléphone">
+          <Field label={tr('ui.InformationStep.telephone')}>
             <DialInput dial={dial} value={phone} onChange={(v) => typeNumber(v, setPhone)} />
           </Field>
           <Field label="WhatsApp">
@@ -135,7 +136,7 @@ export function InformationStep({
               onChange={(v) => typeNumber(v, setWhatsapp)}
             />
             <p className="mt-1 text-xs text-content-faint">
-              C'est par ce numéro que nous vous rappellerons.
+              {tr('ui.InformationStep.cEstParCeNumero')}
             </p>
           </Field>
         </div>
@@ -151,7 +152,7 @@ export function InformationStep({
           />
         </Field>
 
-        <Field label="Mot de passe">
+        <Field label={tr('ui.InformationStep.motDePasse')}>
           <div className="relative">
             <input
               className="input pr-10"
@@ -164,7 +165,7 @@ export function InformationStep({
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-content-faint hover:text-content"
-              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              aria-label={showPassword ? tr('ui.InformationStep.masquerLeMotDePasse') : tr('ui.InformationStep.afficherLeMotDePasse')}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -172,12 +173,12 @@ export function InformationStep({
         </Field>
 
         <YesNo
-          label="Souhaitez-vous que nous vous aidions à importer votre stock ?"
+          label={tr('ui.InformationStep.souhaitezVousQueNousVous')}
           value={wantsStockImport}
           onChange={setWantsStockImport}
         />
         <YesNo
-          label="Possédez-vous déjà des données à importer ?"
+          label={tr('ui.InformationStep.possedezVousDejaDesDonnees')}
           value={hasExistingData}
           onChange={setHasExistingData}
         />
@@ -186,8 +187,8 @@ export function InformationStep({
       <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs text-content-muted ring-1 ring-line">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         {trialMinutes > 0
-          ? `Votre espace est créé à l'étape suivante. Vous pourrez le tester gratuitement pendant ${formatTrialDuration(trialMinutes)} ou activer directement votre abonnement.`
-          : "Votre espace est créé à l'étape suivante et s'ouvrira dès la confirmation de votre paiement."}
+          ? tr('ui.InformationStep.votreEspaceEstCreeA', { trialMinutes: formatTrialDuration(trialMinutes) })
+          : tr('ui.InformationStep.votreEspaceEstCreeA2')}
       </p>
 
       {(localError || error) && (
@@ -203,7 +204,7 @@ export function InformationStep({
           </Button>
           <div className="flex-1">
             <PrimaryAction onClick={submit} disabled={submitting}>
-              {submitting ? 'Création en cours…' : trialMinutes > 0 ? 'Continuer' : 'Continuer vers le paiement'}
+              {submitting ? tr('ui.InformationStep.creationEnCours') : trialMinutes > 0 ? tr('ui.InformationStep.continuer') : tr('ui.InformationStep.continuerVersLePaiement')}
               <ArrowRight className="h-4 w-4" />
             </PrimaryAction>
           </div>
@@ -261,7 +262,7 @@ function DialInput({
     <div className="flex">
       <span
         className="inline-flex min-w-[3.5rem] items-center justify-center rounded-l-xl border border-r-0 border-line bg-surface-2 px-2.5 text-sm font-medium text-content-muted"
-        aria-label={dial ? `Indicatif ${dial}` : 'Indicatif : choisissez un pays'}
+        aria-label={dial ? tr('ui.InformationStep.indicatifDial', { dial: dial }) : tr('ui.InformationStep.indicatifChoisissezUnPays')}
       >
         {dial || '+…'}
       </span>
@@ -291,8 +292,8 @@ function YesNo({
     <div>
       <p className="mb-2 text-sm font-medium text-content">{label}</p>
       <div className="grid grid-cols-2 gap-2">
-        <ChoiceCard label="Oui" selected={value === true} onSelect={() => onChange(true)} />
-        <ChoiceCard label="Non" selected={value === false} onSelect={() => onChange(false)} />
+        <ChoiceCard label={tr('ui.InformationStep.oui')} selected={value === true} onSelect={() => onChange(true)} />
+        <ChoiceCard label={tr('ui.InformationStep.non')} selected={value === false} onSelect={() => onChange(false)} />
       </div>
     </div>
   );

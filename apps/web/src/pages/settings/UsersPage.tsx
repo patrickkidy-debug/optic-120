@@ -10,6 +10,8 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate, initials } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 export function UsersPage() {
   const qc = useQueryClient();
@@ -36,12 +38,12 @@ export function UsersPage() {
   return (
     <div>
       <PageHeader
-        title="Utilisateurs"
-        subtitle="Gérez les comptes employés et leurs accès"
+        title={tr('ui.UsersPage.utilisateurs')}
+        subtitle={tr('ui.UsersPage.gerezLesComptesEmployesEt')}
         actions={
           canCreate && (
             <Button onClick={() => setModalOpen(true)}>
-              <Plus className="h-4 w-4" /> Nouvel utilisateur
+              <Plus className="h-4 w-4" /> {tr('ui.UsersPage.nouvelUtilisateur')}
             </Button>
           )
         }
@@ -50,16 +52,16 @@ export function UsersPage() {
       {isLoading ? (
         <PageLoader />
       ) : !users || users.length === 0 ? (
-        <EmptyState icon={UsersIcon} title="Aucun utilisateur" />
+        <EmptyState icon={UsersIcon} title={tr('ui.UsersPage.aucunUtilisateur')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Employé</th>
-                <th className="table-cell font-semibold">Rôle</th>
-                <th className="table-cell font-semibold">Magasins</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell font-semibold">{tr('ui.UsersPage.employe')}</th>
+                <th className="table-cell font-semibold">{tr('ui.UsersPage.role')}</th>
+                <th className="table-cell font-semibold">{tr('ui.UsersPage.magasins')}</th>
+                <th className="table-cell font-semibold">{tr('ui.UsersPage.statut')}</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -78,21 +80,21 @@ export function UsersPage() {
                     </div>
                   </td>
                   <td className="table-cell">
-                    <Badge tone="info">{u.role.name}</Badge>
+                    <Badge tone="info">{trFr(u.role.name)}</Badge>
                   </td>
                   <td className="table-cell text-sm text-content-muted">
                     {u.branches.map((b) => b.name).join(', ') || '—'}
                   </td>
                   <td className="table-cell">
-                    {u.isActive ? <Badge tone="success">Actif</Badge> : <Badge tone="danger">Inactif</Badge>}
+                    {u.isActive ? <Badge tone="success">{tr('ui.UsersPage.actif')}</Badge> : <Badge tone="danger">{tr('ui.UsersPage.inactif')}</Badge>}
                   </td>
                   <td className="table-cell text-right text-xs text-content-faint">
-                    <span className="align-middle">{u.lastLoginAt ? formatDate(u.lastLoginAt) : 'Jamais connecté'}</span>
+                    <span className="align-middle">{u.lastLoginAt ? formatDate(u.lastLoginAt) : tr('ui.UsersPage.jamaisConnecte')}</span>
                     {canUpdate && (
                       <button
                         onClick={() => setEditUser(u)}
                         className="btn-ghost ml-2 h-8 w-8 rounded-lg p-0 text-content-muted"
-                        title="Modifier le rôle / les magasins"
+                        title={tr('ui.UsersPage.modifierLeRoleLesMagasins')}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -100,14 +102,14 @@ export function UsersPage() {
                     {canUpdate && u.isActive && (
                       <button
                         onClick={() => {
-                          if (confirm(`Générer un nouveau mot de passe temporaire pour ${u.firstName} ${u.lastName} ? Ses sessions actives seront déconnectées.`)) {
+                          if (confirm(tr('ui.UsersPage.genererUnNouveauMotDe', { firstName: u.firstName, lastName: u.lastName }))) {
                             resetPasswordMut.mutate(u.id, {
                               onSuccess: (res) => setResetResult({ user: u, tempPassword: res.tempPassword }),
                             });
                           }
                         }}
                         className="btn-ghost ml-1 h-8 w-8 rounded-lg p-0 text-content-muted"
-                        title="Réinitialiser le mot de passe (sans email)"
+                        title={tr('ui.UsersPage.reinitialiserLeMotDePasse')}
                       >
                         <KeyRound className="h-4 w-4" />
                       </button>
@@ -115,10 +117,10 @@ export function UsersPage() {
                     {canDeactivate && u.isActive && (
                       <button
                         onClick={() => {
-                          if (confirm(`Désactiver ${u.firstName} ${u.lastName} ?`)) deactivateMut.mutate(u.id);
+                          if (confirm(tr('ui.UsersPage.desactiverFirstnameLastname', { firstName: u.firstName, lastName: u.lastName }))) deactivateMut.mutate(u.id);
                         }}
                         className="btn-ghost ml-1 h-8 w-8 rounded-lg p-0 text-danger"
-                        title="Désactiver"
+                        title={tr('ui.UsersPage.desactiver')}
                       >
                         <UserX className="h-4 w-4" />
                       </button>
@@ -171,15 +173,14 @@ function ResetPasswordResultModal({
   }
 
   return (
-    <Modal open onClose={onClose} title="Mot de passe temporaire" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.UsersPage.motDePasseTemporaire')} size="sm">
       <p className="text-sm text-content-muted">
-        Nouveau mot de passe pour <b className="text-content">{user.firstName} {user.lastName}</b>{' '}
-        ({user.email}). Transmettez-le vous-même (WhatsApp, SMS, en personne…) — il ne sera plus
-        affiché après fermeture de cette fenêtre.
+        {tr('ui.UsersPage.nouveauMotDePassePour')} <b className="text-content">{user.firstName} {user.lastName}</b>{' '}
+        ({user.email}{tr('ui.UsersPage.transmettezLeVousMemeWhatsapp')}
       </p>
       <div className="mt-4 flex items-center gap-2 rounded-xl border bg-surface-2 p-3">
         <span className="flex-1 select-all font-mono text-lg font-bold tracking-wider text-content">{tempPassword}</span>
-        <button onClick={copy} className="btn-ghost h-9 w-9 rounded-lg p-0" title="Copier">
+        <button onClick={copy} className="btn-ghost h-9 w-9 rounded-lg p-0" title={tr('ui.UsersPage.copier')}>
           {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
         </button>
       </div>
@@ -187,7 +188,7 @@ function ResetPasswordResultModal({
         Ses sessions actives ont été déconnectées ; il devra se reconnecter avec ce mot de passe.
       </p>
       <Button className="mt-5 w-full" onClick={onClose}>
-        J'ai noté le mot de passe
+        {tr('ui.UsersPage.jAiNoteLeMot')}
       </Button>
     </Modal>
   );
@@ -221,22 +222,22 @@ function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }
   });
 
   return (
-    <Modal open onClose={onClose} title={`Modifier — ${user.firstName} ${user.lastName}`}>
+    <Modal open onClose={onClose} title={tr('ui.UsersPage.modifierFirstnameLastname', { firstName: user.firstName, lastName: user.lastName })}>
       <div className="space-y-4">
-        <Field label="Email (identifiant de connexion)">
+        <Field label={tr('ui.UsersPage.emailIdentifiantDeConnexion')}>
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <p className="mt-1 text-xs text-content-faint">
-            Corriger une faute de frappe ne touche à aucune donnée : seul l'identifiant change.
+            {tr('ui.UsersPage.corrigerUneFauteDeFrappe')}
           </p>
         </Field>
-        <Field label="Rôle">
+        <Field label={tr('ui.UsersPage.role')}>
           <select className="input" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
             {roles?.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+              <option key={r.id} value={r.id}>{trFr(r.name)}</option>
             ))}
           </select>
         </Field>
-        <Field label="Magasins assignés">
+        <Field label={tr('ui.UsersPage.magasinsAssignes')}>
           <div className="space-y-1.5 rounded-xl bg-surface-2 p-2">
             {branches?.map((b) => (
               <label key={b.id} className="flex items-center gap-2 px-1 text-sm text-content">
@@ -251,13 +252,13 @@ function EditUserModal({ user, onClose }: { user: UserDto; onClose: () => void }
             ))}
           </div>
           <p className="mt-1 text-xs text-content-faint">
-            Sans effet pour les rôles « tous magasins » (admin, gestionnaire…).
+            {tr('ui.UsersPage.sansEffetPourLesRoles')}
           </p>
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button onClick={() => mut.mutate()} loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.UsersPage.annuler')}</Button>
+          <Button onClick={() => mut.mutate()} loading={mut.isPending}>{tr('ui.UsersPage.enregistrer')}</Button>
         </div>
       </div>
     </Modal>
@@ -289,14 +290,14 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvel utilisateur">
+    <Modal open onClose={onClose} title={tr('ui.UsersPage.nouvelUtilisateur')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prénom">
+          <Field label={tr('ui.UsersPage.prenom')}>
             <input className="input" {...register('firstName')} />
             {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
           </Field>
-          <Field label="Nom">
+          <Field label={tr('ui.UsersPage.nom')}>
             <input className="input" {...register('lastName')} />
             {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
           </Field>
@@ -305,7 +306,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
           <input className="input" type="email" {...register('email')} />
           {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
         </Field>
-        <Field label="Téléphone WhatsApp">
+        <Field label={tr('ui.UsersPage.telephoneWhatsapp')}>
           <input
             className="input"
             type="tel"
@@ -314,20 +315,20 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
           />
           {errors.phone && <p className="mt-1 text-xs text-danger">{errors.phone.message}</p>}
         </Field>
-        <Field label="Mot de passe temporaire">
-          <input className="input" type="text" {...register('password')} placeholder="Au moins 8 caractères" />
+        <Field label={tr('ui.UsersPage.motDePasseTemporaire')}>
+          <input className="input" type="text" {...register('password')} placeholder={tr('ui.UsersPage.auMoins8Caracteres')} />
           {errors.password && <p className="mt-1 text-xs text-danger">{errors.password.message}</p>}
         </Field>
-        <Field label="Rôle">
+        <Field label={tr('ui.UsersPage.role')}>
           <select className="input" {...register('roleId')}>
-            <option value="">— Choisir —</option>
+            <option value="">{tr('ui.UsersPage.choisir')}</option>
             {roles?.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+              <option key={r.id} value={r.id}>{trFr(r.name)}</option>
             ))}
           </select>
           {errors.roleId && <p className="mt-1 text-xs text-danger">{errors.roleId.message}</p>}
         </Field>
-        <Field label="Magasins assignés">
+        <Field label={tr('ui.UsersPage.magasinsAssignes')}>
           <div className="space-y-1.5 rounded-xl bg-surface-2 p-2">
             {branches?.map((b) => (
               <label key={b.id} className="flex items-center gap-2 px-1 text-sm text-content">
@@ -339,8 +340,8 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Créer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.UsersPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.UsersPage.creer')}</Button>
         </div>
       </form>
     </Modal>

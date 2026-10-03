@@ -1,3 +1,5 @@
+import { tr } from '../../../lib/tr';
+import { displayLocale } from '../../../lib/format';
 export interface ExportRow {
   sku: string;
   name: string;
@@ -9,7 +11,16 @@ export interface ExportRow {
   stock?: number | null;
 }
 
-const HEADERS = ['Référence', 'Nom', 'Catégorie', 'Marque', "Prix d'achat", 'Prix de vente', 'Stock'];
+/** En-têtes dans la langue active (fonction : lue à chaque export, pas à l'import du module). */
+const headers = () => [
+  tr('ui.exportProducts.reference'),
+  tr('ui.exportProducts.nom'),
+  tr('ui.exportProducts.categorie'),
+  tr('ui.exportProducts.marque'),
+  tr('ui.exportProducts.prixDAchat'),
+  tr('ui.exportProducts.prixDeVente'),
+  'Stock',
+];
 
 function toTableRows(rows: ExportRow[]): (string | number)[][] {
   return rows.map((r) => [
@@ -30,7 +41,7 @@ function toTableRows(rows: ExportRow[]): (string | number)[][] {
  */
 export async function exportProductsExcel(rows: ExportRow[], filename: string): Promise<void> {
   const XLSX = await import('xlsx');
-  const data = [HEADERS, ...toTableRows(rows)];
+  const data = [headers(), ...toTableRows(rows)];
   const sheet = XLSX.utils.aoa_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, 'Produits');
@@ -65,13 +76,13 @@ export function exportProductsPdf(rows: ExportRow[], title: string): void {
     </style>
   </head><body>
     <h1>${title}</h1>
-    <p>${rows.length} article(s) — généré le ${new Date().toLocaleDateString('fr-FR')}</p>
-    <table><thead><tr>${HEADERS.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
+    <p>${rows.length} article(s) — généré le ${new Date().toLocaleDateString(displayLocale())}</p>
+    <table><thead><tr>${headers().map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
   </body></html>`;
 
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) {
-    alert("Veuillez autoriser les fenêtres pop-up pour générer le PDF.");
+    alert(tr('ui.exportProducts.veuillezAutoriserLesFenetresPop'));
     return;
   }
   win.document.open();

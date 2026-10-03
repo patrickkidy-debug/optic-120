@@ -20,12 +20,13 @@ import { formatCurrency } from '../../../lib/format';
 import { downloadCsv } from '../../../lib/csv';
 import { Modal, Button, Field, PageLoader } from '../../../components/ui';
 import { InventoryLinesTable } from './InventoryLinesTable';
+import { tr } from '../../../lib/tr';
 
 const CATEGORIES = [
-  { value: 'MONTURE', label: 'Montures' },
-  { value: 'VERRE', label: 'Verres' },
-  { value: 'LENTILLE', label: 'Lentilles' },
-  { value: 'ACCESSOIRE', label: 'Accessoires' },
+  { value: 'MONTURE', get label() { return tr('ui.InventoryCountModal.montures'); } },
+  { value: 'VERRE', get label() { return tr('ui.InventoryCountModal.verres'); } },
+  { value: 'LENTILLE', get label() { return tr('ui.InventoryCountModal.lentilles'); } },
+  { value: 'ACCESSOIRE', get label() { return tr('ui.InventoryCountModal.accessoires'); } },
   { value: 'SERVICE', label: 'Services' },
 ];
 
@@ -140,7 +141,7 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
     if (!summary) return;
     downloadCsv(
       `inventaire-${countId}.csv`,
-      ['Article', 'Référence', 'Théorique', 'Compté', 'Écart', 'Valeur', 'Statut'],
+      ['Article', tr('ui.InventoryCountModal.reference'), tr('ui.InventoryCountModal.theorique'), tr('ui.InventoryCountModal.compte'), tr('ui.InventoryCountModal.ecart'), tr('ui.InventoryCountModal.valeur'), tr('ui.InventoryCountModal.statut')],
       reviewLines.map((l) => [
         l.product.name,
         l.product.sku,
@@ -148,14 +149,14 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
         l.countedQty ?? '',
         l.deltaQty ?? '',
         l.deltaValue ?? '',
-        l.regularized ? 'Régularisé' : 'Non régularisé',
+        l.regularized ? tr('ui.InventoryCountModal.regularise') : tr('ui.InventoryCountModal.nonRegularise'),
       ]),
     );
   }
 
   if (currentPhase === 'loading') {
     return (
-      <Modal open onClose={onClose} title="Inventaire physique" size="xl">
+      <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.inventairePhysique')} size="xl">
         <PageLoader />
       </Modal>
     );
@@ -163,17 +164,16 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
 
   if (currentPhase === 'start') {
     return (
-      <Modal open onClose={onClose} title="Inventaire physique" size="lg">
+      <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.inventairePhysique')} size="lg">
         {canCreate ? (
           <div className="space-y-3">
             <p className="text-sm text-content-muted">
-              Comptez physiquement vos articles puis saisissez les quantités constatées. OculoSaaS
-              détectera automatiquement les écarts et vous permettra de les régulariser.
+              {tr('ui.InventoryCountModal.comptezPhysiquementVosArticlesPuis')}
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Field label="Catégorie (optionnel)">
+              <Field label={tr('ui.InventoryCountModal.categorieOptionnel')}>
                 <select className="input" value={scopeCategory} onChange={(e) => setScopeCategory(e.target.value)}>
-                  <option value="">Toutes</option>
+                  <option value="">{tr('ui.InventoryCountModal.toutes')}</option>
                   {CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>
                       {c.label}
@@ -181,9 +181,9 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
                   ))}
                 </select>
               </Field>
-              <Field label="Marque (optionnel)">
+              <Field label={tr('ui.InventoryCountModal.marqueOptionnel')}>
                 <select className="input" value={scopeBrand} onChange={(e) => setScopeBrand(e.target.value)}>
-                  <option value="">Toutes</option>
+                  <option value="">{tr('ui.InventoryCountModal.toutes')}</option>
                   {brands.map((b) => (
                     <option key={b} value={b}>
                       {b}
@@ -191,19 +191,19 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
                   ))}
                 </select>
               </Field>
-              <Field label="Emplacement (optionnel)">
+              <Field label={tr('ui.InventoryCountModal.emplacementOptionnel')}>
                 <input
                   className="input"
-                  placeholder="Vitrine A, Réserve…"
+                  placeholder={tr('ui.InventoryCountModal.vitrineAReserve')}
                   value={scopeLocation}
                   onChange={(e) => setScopeLocation(e.target.value)}
                 />
               </Field>
             </div>
-            <Field label="Note (optionnel)">
+            <Field label={tr('ui.InventoryCountModal.noteOptionnel')}>
               <input
                 className="input"
-                placeholder="Inventaire trimestriel, contrôle après casse…"
+                placeholder={tr('ui.InventoryCountModal.inventaireTrimestrielControleApresCasse')}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
@@ -211,16 +211,16 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
             {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2 border-t pt-3">
               <Button variant="ghost" onClick={onClose}>
-                Annuler
+                {tr('ui.InventoryCountModal.annuler')}
               </Button>
               <Button loading={createMut.isPending} onClick={() => createMut.mutate()}>
-                <PackageSearch className="h-4 w-4" /> Démarrer l'inventaire
+                <PackageSearch className="h-4 w-4" /> {tr('ui.InventoryCountModal.demarrerLInventaire')}
               </Button>
             </div>
           </div>
         ) : (
           <p className="rounded-xl bg-surface-2 p-4 text-sm text-content-muted">
-            Aucun inventaire en cours pour ce magasin. Demandez à un responsable d'en démarrer un.
+            {tr('ui.InventoryCountModal.aucunInventaireEnCoursPour')}
           </p>
         )}
       </Modal>
@@ -229,25 +229,24 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
 
   if (currentPhase === 'count') {
     return (
-      <Modal open onClose={onClose} title="Inventaire physique" size="xl">
+      <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.inventairePhysique')} size="xl">
         <div className="space-y-4">
           <p className="text-sm text-content-muted">
-            Comptez physiquement vos articles puis saisissez les quantités constatées. OculoSaaS
-            détectera automatiquement les écarts et vous permettra de les régulariser.
+            {tr('ui.InventoryCountModal.comptezPhysiquementVosArticlesPuis')}
           </p>
           <InventoryLinesTable countId={countId!} editable onSummary={setSummary} />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex items-center justify-between gap-2 border-t pt-3">
             <Button variant="ghost" onClick={() => cancelMut.mutate()} loading={cancelMut.isPending}>
-              Abandonner l'inventaire
+              {tr('ui.InventoryCountModal.abandonnerLInventaire')}
             </Button>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={onClose}>
-                Fermer (reprendre plus tard)
+                {tr('ui.InventoryCountModal.fermerReprendrePlusTard')}
               </Button>
               {canValidate && (
                 <Button loading={validateMut.isPending} onClick={() => validateMut.mutate()}>
-                  <ClipboardCheck className="h-4 w-4" /> Terminer le comptage
+                  <ClipboardCheck className="h-4 w-4" /> {tr('ui.InventoryCountModal.terminerLeComptage')}
                 </Button>
               )}
             </div>
@@ -259,10 +258,10 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
 
   if (currentPhase === 'review-select') {
     return (
-      <Modal open onClose={onClose} title="Revue des écarts" size="xl">
+      <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.revueDesEcarts')} size="xl">
         <div className="space-y-4">
           <p className="text-sm text-content-muted">
-            Sélectionnez les écarts à régulariser. Les lignes non sélectionnées restent inchangées.
+            {tr('ui.InventoryCountModal.selectionnezLesEcartsARegulariser')}
           </p>
           <InventoryLinesTable
             countId={countId!}
@@ -275,17 +274,17 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex items-center justify-between gap-2 border-t pt-3">
             <span className="text-sm text-content-muted">
-              {selected.size === 0 ? 'Aucune ligne sélectionnée' : `${selected.size} ligne(s) sélectionnée(s)`}
+              {selected.size === 0 ? tr('ui.InventoryCountModal.aucuneLigneSelectionnee') : tr('ui.InventoryCountModal.sizeLigneSSelectionneeS', { size: selected.size })}
             </span>
             <div className="flex gap-2">
               {canRegularize && (
                 <Button variant="outline" loading={regularizeMut.isPending} onClick={() => regularizeMut.mutate([])}>
-                  Terminer sans régulariser
+                  {tr('ui.InventoryCountModal.terminerSansRegulariser')}
                 </Button>
               )}
               {canRegularize && (
                 <Button disabled={selected.size === 0} onClick={() => void goToConfirm()}>
-                  Continuer
+                  {tr('ui.InventoryCountModal.continuer')}
                 </Button>
               )}
             </div>
@@ -297,15 +296,14 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
 
   if (currentPhase === 'review-confirm') {
     return (
-      <Modal open onClose={onClose} title="Confirmer la régularisation" size="lg">
+      <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.confirmerLaRegularisation')} size="lg">
         <div className="space-y-4">
           <p className="text-sm text-content-muted">
-            Vous êtes sur le point de régulariser {reviewLines.length} article(s). Valeur nette de
-            l'ajustement : <strong>{formatCurrency(reviewNet)}</strong>.
+            {tr('ui.InventoryCountModal.vousEtesSurLePoint')} {reviewLines.length} {tr('ui.InventoryCountModal.articleSValeurNetteDe')} <strong>{formatCurrency(reviewNet)}</strong>.
           </p>
 
           <div className="flex items-center gap-2 rounded-xl bg-surface-2 p-3">
-            <span className="text-xs text-content-muted">Motif pour tous :</span>
+            <span className="text-xs text-content-muted">{tr('ui.InventoryCountModal.motifPourTous')}</span>
             <select
               className="input h-8 flex-1 text-sm"
               value={bulkReason}
@@ -357,7 +355,7 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
                   </select>
                   <input
                     className="input h-8 text-xs"
-                    placeholder="Note (optionnel)"
+                    placeholder={tr('ui.InventoryCountModal.noteOptionnel')}
                     value={reasons[l.id]?.note ?? ''}
                     onChange={(e) =>
                       setReasons((prev) => ({
@@ -374,7 +372,7 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end gap-2 border-t pt-3">
             <Button variant="ghost" onClick={() => setPhase('review-select')}>
-              Annuler
+              {tr('ui.InventoryCountModal.annuler')}
             </Button>
             <Button
               loading={regularizeMut.isPending}
@@ -388,7 +386,7 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
                 )
               }
             >
-              Confirmer la régularisation
+              {tr('ui.InventoryCountModal.confirmerLaRegularisation')}
             </Button>
           </div>
         </div>
@@ -398,34 +396,34 @@ export function InventoryCountModal({ branchId, onClose }: { branchId: string; o
 
   // report
   return (
-    <Modal open onClose={onClose} title="Inventaire terminé" size="md">
+    <Modal open onClose={onClose} title={tr('ui.InventoryCountModal.inventaireTermine')} size="md">
       <div className="space-y-4 text-center">
         <p className="font-display text-lg font-bold text-content">
-          {summary?.total ?? report?.total ?? 0} article(s) contrôlé(s)
+          {summary?.total ?? report?.total ?? 0} {tr('ui.InventoryCountModal.articleSControleS')}
         </p>
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
             <p className="font-display text-xl font-bold text-success">{summary?.conforme ?? '—'}</p>
-            <p className="text-content-muted">Conformes</p>
+            <p className="text-content-muted">{tr('ui.InventoryCountModal.conformes')}</p>
           </div>
           <div>
             <p className="font-display text-xl font-bold text-danger">{summary?.manquant ?? '—'}</p>
-            <p className="text-content-muted">Manquants</p>
+            <p className="text-content-muted">{tr('ui.InventoryCountModal.manquants')}</p>
           </div>
           <div>
             <p className="font-display text-xl font-bold text-primary">{summary?.surplus ?? '—'}</p>
-            <p className="text-content-muted">Surplus</p>
+            <p className="text-content-muted">{tr('ui.InventoryCountModal.surplus')}</p>
           </div>
         </div>
         <p className="text-sm text-content-muted">
-          {report?.regularized ?? 0} ligne(s) régularisée(s) — valeur nette{' '}
+          {report?.regularized ?? 0} {tr('ui.InventoryCountModal.ligneSRegulariseeSValeur')}{' '}
           <strong>{formatCurrency(report?.net ?? 0)}</strong>
         </p>
         <div className="flex flex-col justify-center gap-2 border-t pt-4 sm:flex-row">
           <Button variant="outline" onClick={exportCsv} disabled={reviewLines.length === 0}>
-            <Download className="h-4 w-4" /> Exporter le rapport
+            <Download className="h-4 w-4" /> {tr('ui.InventoryCountModal.exporterLeRapport')}
           </Button>
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{tr('ui.InventoryCountModal.fermer')}</Button>
         </div>
       </div>
     </Modal>

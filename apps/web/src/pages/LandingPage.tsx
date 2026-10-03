@@ -26,6 +26,8 @@ import clsx from 'clsx';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { displayLocale } from '../lib/format';
+import { tr } from '../lib/tr';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -115,8 +117,8 @@ const PAYMENTS = [
   { label: 'M-Pesa', short: 'M-P', bg: '#E30613', fg: '#ffffff' },
   { label: 'Multicaixa', short: 'MCX', bg: '#0B3D91', fg: '#ffffff' },
   { label: 'Vinti4', short: 'V4', bg: '#0F7B3E', fg: '#ffffff' },
-  { label: 'Moov Money', short: 'Moov', bg: '#0A56A5', fg: '#ffffff' },
-  { label: 'Free Money', short: 'Free', bg: '#E4032E', fg: '#ffffff' },
+  { label: 'Moov Money', get short() { return tr('ui.LandingPage.moov'); }, bg: '#0A56A5', fg: '#ffffff' },
+  { label: 'Free Money', get short() { return tr('ui.LandingPage.free'); }, bg: '#E4032E', fg: '#ffffff' },
 ];
 
 const SECURITY = [
@@ -146,7 +148,7 @@ const TONE_SOFT: Record<'primary' | 'accent' | 'cyan', string> = {
 };
 
 function formatPrice(value: number): string {
-  return new Intl.NumberFormat('fr-FR').format(value);
+  return new Intl.NumberFormat(displayLocale()).format(value);
 }
 
 /** Détecte l'entrée d'un élément dans le viewport (une seule fois). */
@@ -212,7 +214,7 @@ function DashboardMock() {
           <div className="grid grid-cols-3 gap-4 p-6">
             <div className="col-span-3 rounded-xl border border-primary/10 bg-primary/5 p-4">
               <div className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
-                Flux patients hebdomadaire
+                {tr('ui.LandingPage.fluxPatientsHebdomadaire')}
               </div>
               <div className="flex h-24 items-end gap-2">
                 {bars.map((h, i) => (
@@ -225,19 +227,19 @@ function DashboardMock() {
               </div>
             </div>
             <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">Ventes / jour</div>
+              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.ventesJour')}</div>
               <div className="mt-1 text-xl font-bold text-content">450k</div>
-              <div className="text-[10px] text-cyan">+12% vs hier</div>
+              <div className="text-[10px] text-cyan">{tr('ui.LandingPage.n12VsHier')}</div>
             </div>
             <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">Consultations</div>
+              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.consultations')}</div>
               <div className="mt-1 text-xl font-bold text-content">18</div>
-              <div className="text-[10px] text-accent">8 complétées</div>
+              <div className="text-[10px] text-accent">{tr('ui.LandingPage.n8Completees')}</div>
             </div>
             <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">Alertes stock</div>
+              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.alertesStock')}</div>
               <div className="mt-1 text-xl font-bold text-danger">3</div>
-              <div className="text-[10px] text-content-muted">Lentilles CR39</div>
+              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.lentillesCr39')}</div>
             </div>
           </div>
         </div>
@@ -248,11 +250,11 @@ function DashboardMock() {
 }
 
 const CATALOG_ITEMS = [
-  { brand: 'Arnette Sun', name: 'Arnette Sun', ref: 'MON-942HZ', price: '0 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/sunglasses-red-tortoise.jpg' },
-  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', price: '180 000 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/tortoiseshell-browline.jpg' },
-  { brand: '—', name: 'Dolce et Gabbana', ref: 'PLK 13', price: '59 000 FCFA', badge: 'Disponible · 11', ok: true, img: '/images/montures/tortoiseshell-oval.jpg' },
-  { brand: 'Ray Ban', name: 'Henry Queen', ref: 'H4156LK', price: '30 000 FCFA', badge: 'Rupture', ok: false, img: '/images/montures/black-rectangular.jpg' },
-  { brand: 'Arnette', name: 'Arnette', ref: 'ARN789', price: '196 000 FCFA', badge: 'Disponible · 32', ok: true, img: '/images/montures/two-eyewear-white.jpg' },
+  { get brand() { return tr('ui.LandingPage.arnetteSun'); }, name: 'Arnette Sun', ref: 'MON-942HZ', get price() { return tr('ui.LandingPage.n0Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/sunglasses-red-tortoise.jpg' },
+  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', get price() { return tr('ui.LandingPage.n180000Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/tortoiseshell-browline.jpg' },
+  { brand: '—', name: 'Dolce et Gabbana', get ref() { return tr('ui.LandingPage.plk13'); }, get price() { return tr('ui.LandingPage.n59000Fcfa'); }, badge: 'Disponible · 11', ok: true, img: '/images/montures/tortoiseshell-oval.jpg' },
+  { get brand() { return tr('ui.LandingPage.rayBan'); }, name: 'Henry Queen', ref: 'H4156LK', get price() { return tr('ui.LandingPage.n30000Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/black-rectangular.jpg' },
+  { get brand() { return tr('ui.LandingPage.arnette'); }, name: 'Arnette', ref: 'ARN789', get price() { return tr('ui.LandingPage.n196000Fcfa'); }, badge: 'Disponible · 32', ok: true, img: '/images/montures/two-eyewear-white.jpg' },
 ];
 
 function CatalogMock() {
@@ -271,7 +273,7 @@ function CatalogMock() {
           </div>
           <div className="p-5">
             <div className="mb-3 flex flex-wrap gap-1.5">
-              {['Tous', 'Montures', 'Verres', 'Lentilles', 'Accessoires'].map((tab) => (
+              {[tr('ui.LandingPage.tous'), tr('ui.LandingPage.montures'), tr('ui.LandingPage.verres'), tr('ui.LandingPage.lentilles'), tr('ui.LandingPage.accessoires')].map((tab) => (
                 <span
                   key={tab}
                   className={clsx(
@@ -284,10 +286,10 @@ function CatalogMock() {
               ))}
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-content-muted">
-              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes marques ⌄</span>
-              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">Toutes formes ⌄</span>
-              <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">En stock</span>
-              <span className="ml-auto text-content-faint">5 monture(s)</span>
+              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">{tr('ui.LandingPage.toutesMarques')}</span>
+              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">{tr('ui.LandingPage.toutesFormes')}</span>
+              <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">{tr('ui.LandingPage.enStock')}</span>
+              <span className="ml-auto text-content-faint">{tr('ui.LandingPage.n5MontureS')}</span>
             </div>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {CATALOG_ITEMS.map((it, i) => (
@@ -399,7 +401,7 @@ export function LandingPage() {
             <button
               className="btn-ghost"
               onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Menu"
+              aria-label={tr('ui.LandingPage.menu')}
               aria-expanded={menuOpen}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -920,13 +922,13 @@ export function LandingPage() {
           <div className="flex flex-col gap-3">
             <h5 className="mb-1 font-bold text-content">{t('landing.footerProduct')}</h5>
             <a href="#fonctionnalites" className="text-sm text-content-muted hover:text-primary">
-              Fonctionnalités
+              {tr('ui.LandingPage.fonctionnalites')}
             </a>
             <a href="#tarifs" className="text-sm text-content-muted hover:text-primary">
-              Tarifs
+              {tr('ui.LandingPage.tarifs')}
             </a>
             <a href="#apercu" className="text-sm text-content-muted hover:text-primary">
-              Aperçu
+              {tr('ui.LandingPage.apercu')}
             </a>
           </div>
           <div className="flex flex-col gap-3">
@@ -938,7 +940,7 @@ export function LandingPage() {
               {t('landing.footerCreate')}
             </Link>
             <a href="#securite" className="text-sm text-content-muted hover:text-primary">
-              Sécurité
+              {tr('ui.LandingPage.securite')}
             </a>
           </div>
           <div className="flex flex-col gap-3">

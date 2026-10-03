@@ -6,6 +6,7 @@ import { logout } from '../features/auth/api';
 import { PageLoader } from './ui';
 import { named } from '../lib/lazyChunk';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
+import { tr } from '../lib/tr';
 
 const SubscriptionPage = lazy(() => named(import('../pages/settings/SubscriptionPage'), 'SubscriptionPage'));
 
@@ -23,7 +24,7 @@ export function SuspensionGate() {
       <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-bg/80 px-4 backdrop-blur-md sm:px-6">
         <Logo />
         <button onClick={() => void logout()} className="btn-ghost text-sm">
-          Déconnexion
+          {tr('ui.SuspensionGate.deconnexion')}
         </button>
       </header>
 
@@ -31,11 +32,11 @@ export function SuspensionGate() {
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/10 p-4">
           <AlertOctagon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
-            <h1 className="font-display text-lg font-bold text-content">Activez votre abonnement</h1>
+            <h1 className="font-display text-lg font-bold text-content">{tr('ui.SuspensionGate.activezVotreAbonnement')}</h1>
             <p className="text-sm text-content-muted">
               {canManage
-                ? "L'accès à votre espace est réservé aux comptes à jour de paiement. Choisissez une offre et payez ci-dessous pour débloquer immédiatement votre dashboard."
-                : "L'accès est en pause tant que l'abonnement n'est pas activé. Contactez l'administrateur de votre établissement."}
+                ? tr('ui.SuspensionGate.lAccesAVotreEspace')
+                : tr('ui.SuspensionGate.lAccesEstEnPause')}
             </p>
           </div>
         </div>

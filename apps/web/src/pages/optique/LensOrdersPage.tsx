@@ -14,6 +14,7 @@ import { LensOrderKanban } from './LensOrderKanban';
 import { LensOrderCalendar } from './LensOrderCalendar';
 import { LensOrderDetail } from './LensOrderDetail';
 import { LensOrderForm } from './LensOrderForm';
+import { tr } from '../../lib/tr';
 
 type View = 'board' | 'calendar';
 
@@ -46,8 +47,8 @@ export function LensOrdersPage() {
   return (
     <div>
       <PageHeader
-        title="Commandes de verres"
-        subtitle="Suivi Kanban des commandes au laboratoire, de la commande à la livraison"
+        title={tr('ui.LensOrdersPage.commandesDeVerres')}
+        subtitle={tr('ui.LensOrdersPage.suiviKanbanDesCommandesAu')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-xl border p-0.5">
@@ -65,12 +66,12 @@ export function LensOrdersPage() {
                   view === 'calendar' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
                 }`}
               >
-                <CalendarDays className="h-3.5 w-3.5" /> Calendrier
+                <CalendarDays className="h-3.5 w-3.5" /> {tr('ui.LensOrdersPage.calendrier')}
               </button>
             </div>
             {canManage && (
               <Button onClick={() => setOpen(true)}>
-                <Plus className="h-4 w-4" /> Nouvelle commande
+                <Plus className="h-4 w-4" /> {tr('ui.LensOrdersPage.nouvelleCommande')}
               </Button>
             )}
           </div>
@@ -80,16 +81,16 @@ export function LensOrdersPage() {
       {orders.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
           <span className="badge bg-surface-2 px-3 py-1.5 text-content-muted">
-            {activeOrders.length} commande(s) en cours
+            {activeOrders.length} {tr('ui.LensOrdersPage.commandeSEnCours')}
           </span>
           {lateCount > 0 && (
             <span className="badge bg-danger/10 px-3 py-1.5 text-danger">
-              <AlertTriangle className="h-3.5 w-3.5" /> {lateCount} en retard
+              <AlertTriangle className="h-3.5 w-3.5" /> {lateCount} {tr('ui.LensOrdersPage.enRetard')}
             </span>
           )}
           {cancelledCount > 0 && (
             <span className="badge bg-surface-2 px-3 py-1.5 text-content-faint">
-              {cancelledCount} annulée(s)
+              {cancelledCount} {tr('ui.LensOrdersPage.annuleeS')}
             </span>
           )}
         </div>
@@ -100,9 +101,9 @@ export function LensOrdersPage() {
       ) : orders.length === 0 ? (
         <EmptyState
           icon={Glasses}
-          title="Aucune commande de verres"
-          hint="Créez votre première commande pour démarrer le suivi."
-          action={canManage && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nouvelle commande</Button>}
+          title={tr('ui.LensOrdersPage.aucuneCommandeDeVerres')}
+          hint={tr('ui.LensOrdersPage.creezVotrePremiereCommandePour')}
+          action={canManage && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {tr('ui.LensOrdersPage.nouvelleCommande')}</Button>}
         />
       ) : view === 'board' ? (
         <LensOrderKanban
@@ -111,7 +112,7 @@ export function LensOrdersPage() {
           onOpen={setSelected}
           onMove={(id, status) => statusMut.mutate({ id, status })}
           onCancel={(o) => {
-            if (confirm(`Annuler la commande ${o.number} ?`)) statusMut.mutate({ id: o.id, status: 'CANCELLED' });
+            if (confirm(tr('ui.LensOrdersPage.annulerLaCommandeNumber', { number: o.number }))) statusMut.mutate({ id: o.id, status: 'CANCELLED' });
           }}
         />
       ) : (

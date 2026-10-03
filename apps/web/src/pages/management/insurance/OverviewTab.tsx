@@ -4,8 +4,12 @@ import { getInsuranceDashboard } from '../../../features/management/api';
 import { formatCurrency } from '../../../lib/format';
 import { StatCard, PageLoader, ProgressBar } from '../../../components/ui';
 import { CLAIM_STATUSES, ClaimStatusBadge } from './shared';
+import { tr } from '../../../lib/tr';
+import i18n from 'i18next';
 
-const MONTH_LABELS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+/** Mois abrégé dans la langue active (« févr. », « Feb », « fev. »). */
+const monthLabel = (index: number) =>
+  new Intl.DateTimeFormat(i18n.language, { month: 'short' }).format(new Date(2026, index, 1));
 
 /** Pilotage du module : où en sont les demandes, et ce qui rentre vraiment. */
 export function OverviewTab() {
@@ -22,45 +26,45 @@ export function OverviewTab() {
   return (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Send} label="Demandé" value={formatCurrency(t.requested)} tone="primary" />
-        <StatCard icon={CheckCircle2} label="Accepté" value={formatCurrency(t.accepted)} tone="accent" />
-        <StatCard icon={Wallet} label="Reçu" value={formatCurrency(t.received)} tone="success" />
+        <StatCard icon={Send} label={tr('ui.OverviewTab.demande')} value={formatCurrency(t.requested)} tone="primary" />
+        <StatCard icon={CheckCircle2} label={tr('ui.OverviewTab.accepte')} value={formatCurrency(t.accepted)} tone="accent" />
+        <StatCard icon={Wallet} label={tr('ui.OverviewTab.recu')} value={formatCurrency(t.received)} tone="success" />
         <StatCard
           icon={Coins}
-          label="Restant dû"
+          label={tr('ui.OverviewTab.restantDu')}
           value={formatCurrency(t.remaining)}
-          hint={`dont ${formatCurrency(t.late)} en retard`}
+          hint={tr('ui.OverviewTab.dontLateEnRetard', { late: formatCurrency(t.late) })}
           tone="danger"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Clock} label="En attente" value={formatCurrency(t.pending)} tone="accent" />
-        <StatCard icon={FileText} label="Facturé" value={formatCurrency(t.invoiced)} tone="primary" />
-        <StatCard icon={AlertTriangle} label="En retard" value={formatCurrency(t.late)} tone="danger" />
+        <StatCard icon={Clock} label={tr('ui.OverviewTab.enAttente')} value={formatCurrency(t.pending)} tone="accent" />
+        <StatCard icon={FileText} label={tr('ui.OverviewTab.facture')} value={formatCurrency(t.invoiced)} tone="primary" />
+        <StatCard icon={AlertTriangle} label={tr('ui.OverviewTab.enRetard')} value={formatCurrency(t.late)} tone="danger" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* --------------------------- Évolution --------------------------- */}
         <div className="card p-5">
-          <h3 className="font-display font-bold text-content">Évolution sur 12 mois</h3>
+          <h3 className="font-display font-bold text-content">{tr('ui.OverviewTab.evolutionSur12Mois')}</h3>
           <p className="mt-0.5 text-xs text-content-muted">
-            En bleu ce qui a été demandé, en vert ce qui a été encaissé.
+            {tr('ui.OverviewTab.enBleuCeQuiA')}
           </p>
           <div className="mt-4 flex h-40 items-end gap-1.5">
             {data.months.map((m) => {
-              const label = MONTH_LABELS[Number(m.month.slice(5, 7)) - 1];
+              const label = monthLabel(Number(m.month.slice(5, 7)) - 1);
               return (
                 <div key={m.month} className="flex flex-1 flex-col items-center gap-1">
                   <div className="flex h-32 w-full items-end justify-center gap-0.5">
                     <div
                       className="w-1/2 rounded-t bg-primary/70"
                       style={{ height: `${Math.round((m.requested / peak) * 100)}%` }}
-                      title={`Demandé : ${formatCurrency(m.requested)}`}
+                      title={tr('ui.OverviewTab.demandeRequested', { requested: formatCurrency(m.requested) })}
                     />
                     <div
                       className="w-1/2 rounded-t bg-[color:var(--success)]/70"
                       style={{ height: `${Math.round((m.received / peak) * 100)}%` }}
-                      title={`Reçu : ${formatCurrency(m.received)}`}
+                      title={tr('ui.OverviewTab.recuReceived', { received: formatCurrency(m.received) })}
                     />
                   </div>
                   <span className="text-[10px] text-content-faint">{label}</span>
@@ -72,9 +76,9 @@ export function OverviewTab() {
 
         {/* ------------------------ Répartition statuts ------------------------ */}
         <div className="card p-5">
-          <h3 className="font-display font-bold text-content">Répartition des statuts</h3>
+          <h3 className="font-display font-bold text-content">{tr('ui.OverviewTab.repartitionDesStatuts')}</h3>
           {statusTotal === 0 ? (
-            <p className="mt-3 text-sm text-content-faint">Aucun dossier sur la période.</p>
+            <p className="mt-3 text-sm text-content-faint">{tr('ui.OverviewTab.aucunDossierSurLaPeriode')}</p>
           ) : (
             <div className="mt-4 space-y-3">
               {CLAIM_STATUSES.filter((s) => data.byStatus.some((x) => x.status === s.value)).map((s) => {
@@ -84,7 +88,7 @@ export function OverviewTab() {
                     <div className="mb-1 flex items-center justify-between gap-2 text-xs">
                       <ClaimStatusBadge status={s.value} />
                       <span className="text-content-muted">
-                        {row.count} dossier(s) · {formatCurrency(row.amount)}
+                        {row.count} {tr('ui.OverviewTab.dossierS')} {formatCurrency(row.amount)}
                       </span>
                     </div>
                     <ProgressBar value={row.count} max={statusTotal} />
@@ -98,22 +102,22 @@ export function OverviewTab() {
 
       {/* ----------------------- Assureurs et créances ----------------------- */}
       <div className="card p-5">
-        <h3 className="font-display font-bold text-content">Assureurs</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.OverviewTab.assureurs')}</h3>
         <p className="mt-0.5 text-xs text-content-muted">
-          Ce qui a été demandé à chacun, ce qu'il a versé, ce qu'il doit encore.
+          {tr('ui.OverviewTab.ceQuiAEteDemande')}
         </p>
         {data.byInsurer.length === 0 ? (
-          <p className="mt-3 text-sm text-content-faint">Aucun dossier sur la période.</p>
+          <p className="mt-3 text-sm text-content-faint">{tr('ui.OverviewTab.aucunDossierSurLaPeriode')}</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-muted">
-                  <th className="table-cell font-semibold">Assureur</th>
-                  <th className="table-cell text-right font-semibold">Dossiers</th>
-                  <th className="table-cell text-right font-semibold">Demandé</th>
-                  <th className="table-cell text-right font-semibold">Reçu</th>
-                  <th className="table-cell text-right font-semibold">Créance</th>
+                  <th className="table-cell font-semibold">{tr('ui.OverviewTab.assureur')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.OverviewTab.dossiers')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.OverviewTab.demande')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.OverviewTab.recu')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.OverviewTab.creance')}</th>
                 </tr>
               </thead>
               <tbody>

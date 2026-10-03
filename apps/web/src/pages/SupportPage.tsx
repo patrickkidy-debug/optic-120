@@ -7,15 +7,16 @@ import { createSupportTicket } from '../features/support/api';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
 import { apiErrorMessage } from '../lib/api';
 import { PageHeader, Button, Field } from '../components/ui';
+import { tr } from '../lib/tr';
 
 const SUPPORT_EMAIL = 'oculossaas@gmail.com';
 const WHATSAPP = '221768881739'; // numéro de support (format international, sans +)
 
 const FAQ = [
-  { q: 'Comment encaisser par Mobile Money ?', a: 'À la caisse, choisissez le moyen Mobile Money ; le client est redirigé vers PayTech pour valider le paiement.' },
-  { q: 'Comment ajouter un employé ?', a: 'Paramètres → Utilisateurs → Nouvel utilisateur, puis choisissez son rôle (caissier, opticien…).' },
-  { q: 'Comment activer la double authentification ?', a: 'Paramètres → Profil → section Sécurité → Activer la 2FA, puis scannez le QR code.' },
-  { q: 'Comment gérer plusieurs magasins ?', a: 'L’offre Standard et Premium permettent de gérer plusieurs magasins depuis un seul compte.' },
+  { get q() { return tr('ui.SupportPage.commentEncaisserParMobileMoney'); }, a: 'À la caisse, choisissez le moyen Mobile Money ; le client est redirigé vers PayTech pour valider le paiement.' },
+  { get q() { return tr('ui.SupportPage.commentAjouterUnEmploye'); }, get a() { return tr('ui.SupportPage.parametresUtilisateursNouvelUtilisateurP'); } },
+  { get q() { return tr('ui.SupportPage.commentActiverLaDoubleAuthentification'); }, get a() { return tr('ui.SupportPage.parametresProfilSectionSecuriteActiver'); } },
+  { get q() { return tr('ui.SupportPage.commentGererPlusieursMagasins'); }, get a() { return tr('ui.SupportPage.lOffreStandardEtPremium'); } },
 ];
 
 export function SupportPage() {
@@ -35,13 +36,13 @@ export function SupportPage() {
       setSent(true);
       reset();
     } catch (e) {
-      setError(apiErrorMessage(e, 'Envoi impossible'));
+      setError(apiErrorMessage(e, tr('ui.SupportPage.envoiImpossible')));
     }
   }
 
   return (
     <div>
-      <PageHeader title="Aide & support" subtitle="Une question ? Un problème ? Nous sommes là." />
+      <PageHeader title={tr('ui.SupportPage.aideSupport')} subtitle={tr('ui.SupportPage.uneQuestionUnProblemeNous')} />
 
       <div className="mb-4">
         <WatchDemoCard compact />
@@ -61,7 +62,7 @@ export function SupportPage() {
             </span>
             <div>
               <div className="font-semibold text-content">WhatsApp</div>
-              <div className="text-xs text-content-muted">Réponse rapide</div>
+              <div className="text-xs text-content-muted">{tr('ui.SupportPage.reponseRapide')}</div>
             </div>
           </a>
           <a
@@ -82,29 +83,29 @@ export function SupportPage() {
         <div className="card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <LifeBuoy className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-bold text-content">Envoyer une demande</h3>
+            <h3 className="font-display font-bold text-content">{tr('ui.SupportPage.envoyerUneDemande')}</h3>
           </div>
 
           {sent ? (
             <div className="grid place-items-center py-10 text-center">
               <CheckCircle2 className="h-12 w-12 text-success" />
-              <p className="mt-3 font-display text-lg font-bold text-content">Demande envoyée !</p>
-              <p className="mt-1 text-sm text-content-muted">Notre équipe vous répondra dans les meilleurs délais.</p>
-              <Button variant="outline" className="mt-5" onClick={() => setSent(false)}>Nouvelle demande</Button>
+              <p className="mt-3 font-display text-lg font-bold text-content">{tr('ui.SupportPage.demandeEnvoyee')}</p>
+              <p className="mt-1 text-sm text-content-muted">{tr('ui.SupportPage.notreEquipeVousRepondraDans')}</p>
+              <Button variant="outline" className="mt-5" onClick={() => setSent(false)}>{tr('ui.SupportPage.nouvelleDemande')}</Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Field label="Sujet">
-                <input className="input" placeholder="Ex : Problème d'encaissement" {...register('subject')} />
+              <Field label={tr('ui.SupportPage.sujet')}>
+                <input className="input" placeholder={tr('ui.SupportPage.exProblemeDEncaissement')} {...register('subject')} />
                 {errors.subject && <p className="mt-1 text-xs text-danger">{errors.subject.message}</p>}
               </Field>
               <Field label="Message">
-                <textarea className="input min-h-[140px]" placeholder="Décrivez votre demande…" {...register('message')} />
+                <textarea className="input min-h-[140px]" placeholder={tr('ui.SupportPage.decrivezVotreDemande')} {...register('message')} />
                 {errors.message && <p className="mt-1 text-xs text-danger">{errors.message.message}</p>}
               </Field>
               {error && <p className="text-sm text-danger">{error}</p>}
               <Button type="submit" loading={isSubmitting}>
-                <Send className="h-4 w-4" /> Envoyer
+                <Send className="h-4 w-4" /> {tr('ui.SupportPage.envoyer')}
               </Button>
             </form>
           )}
@@ -113,7 +114,7 @@ export function SupportPage() {
 
       {/* FAQ */}
       <div className="card mt-4 p-5">
-        <h3 className="mb-3 font-display font-bold text-content">Questions fréquentes</h3>
+        <h3 className="mb-3 font-display font-bold text-content">{tr('ui.SupportPage.questionsFrequentes')}</h3>
         <div className="space-y-2">
           {FAQ.map((f) => (
             <details key={f.q} className="group rounded-xl bg-surface-2 p-4">

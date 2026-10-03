@@ -5,6 +5,7 @@ import { LENS_ORDER_BOARD_STATUSES, LENS_ORDER_STATUS_LABELS, type LensOrderStat
 import { listLensOrders, type LensOrder } from '../../features/optique/api';
 import { Modal } from '../ui';
 import { formatDate } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 /** Couleur de tête de colonne, cohérente avec le plateau Kanban complet. */
 const COLUMN_TONE: Record<LensOrderStatus, string> = {
@@ -50,9 +51,9 @@ export function WorkflowKanbanWidget({ enabled }: { enabled: boolean }) {
   return (
     <div className="card p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="font-display font-bold text-content">Commandes de verres — workflow</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.WorkflowKanban.commandesDeVerresWorkflow')}</h3>
         <Link to="/optique/commandes-verres" className="shrink-0 text-xs font-semibold text-primary hover:underline">
-          Voir toutes les commandes
+          {tr('ui.WorkflowKanban.voirToutesLesCommandes')}
         </Link>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -80,11 +81,11 @@ export function WorkflowKanbanWidget({ enabled }: { enabled: boolean }) {
             {(byColumn.get(openStatus) ?? []).map((o) => (
               <div key={o.id} className="rounded-lg bg-surface-2 px-3 py-2 text-sm">
                 <p className="truncate font-medium text-content">
-                  {o.customer ? `${o.customer.firstName} ${o.customer.lastName}` : 'Client de passage'}
+                  {o.customer ? `${o.customer.firstName} ${o.customer.lastName}` : tr('ui.WorkflowKanban.clientDePassage')}
                 </p>
                 <p className="text-xs text-content-faint">
                   {o.number}
-                  {o.expectedAt ? ` · prévu ${formatDate(o.expectedAt)}` : ''}
+                  {o.expectedAt ? tr('ui.WorkflowKanban.prevuExpectedat', { expectedAt: formatDate(o.expectedAt) }) : ''}
                 </p>
               </div>
             ))}
@@ -94,7 +95,7 @@ export function WorkflowKanbanWidget({ enabled }: { enabled: boolean }) {
             onClick={() => setOpenStatus(null)}
             className="btn-outline mt-4 w-full justify-center"
           >
-            Voir toutes les commandes
+            {tr('ui.WorkflowKanban.voirToutesLesCommandes')}
           </Link>
         </Modal>
       )}

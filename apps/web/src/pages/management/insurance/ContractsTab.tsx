@@ -26,6 +26,7 @@ import {
   guaranteeCategoryLabel,
   num,
 } from './shared';
+import { tr } from '../../../lib/tr';
 
 export function ContractsTab({
   insurers,
@@ -49,12 +50,12 @@ export function ContractsTab({
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
-          aria-label="Filtrer par assureur"
+          aria-label={tr('ui.ContractsTab.filtrerParAssureur')}
           className="input h-9 w-auto"
           value={insurerId}
           onChange={(e) => setInsurerId(e.target.value)}
         >
-          <option value="">Tous les assureurs</option>
+          <option value="">{tr('ui.ContractsTab.tousLesAssureurs')}</option>
           {insurers.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -63,7 +64,7 @@ export function ContractsTab({
         </select>
         {canCreate && insurers.length > 0 && (
           <Button onClick={() => { setEditing(null); setCreating(true); }}>
-            <Plus className="h-4 w-4" /> Nouveau contrat
+            <Plus className="h-4 w-4" /> {tr('ui.ContractsTab.nouveauContrat')}
           </Button>
         )}
       </div>
@@ -73,11 +74,11 @@ export function ContractsTab({
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Aucun contrat"
+          title={tr('ui.ContractsTab.aucunContrat')}
           hint={
             insurers.length === 0
-              ? "Créez d'abord un assureur."
-              : 'Un contrat porte les garanties : catégorie, taux, plafond et franchise.'
+              ? tr('ui.ContractsTab.creezDAbordUnAssureur')
+              : tr('ui.ContractsTab.unContratPorteLesGaranties')
           }
         />
       ) : (
@@ -98,14 +99,14 @@ export function ContractsTab({
                   <p className="truncate font-display font-bold text-content">{c.name}</p>
                   <p className="truncate text-xs text-content-muted">
                     {c.insurer?.name}
-                    {c.reference ? ` · Réf. ${c.reference}` : ''}
-                    {c.startsAt ? ` · du ${formatDate(c.startsAt)}` : ''}
+                    {c.reference ? tr('ui.ContractsTab.refReference', { reference: c.reference }) : ''}
+                    {c.startsAt ? tr('ui.ContractsTab.duStartsat', { startsAt: formatDate(c.startsAt) }) : ''}
                     {c.endsAt ? ` au ${formatDate(c.endsAt)}` : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="hidden text-xs text-content-faint sm:inline">
-                    {c.guarantees.length} garantie(s) · {c._count?.beneficiaries ?? 0} bénéficiaire(s)
+                    {c.guarantees.length} {tr('ui.ContractsTab.garantieS')} {c._count?.beneficiaries ?? 0} {tr('ui.ContractsTab.beneficiaireS')}
                   </span>
                   <Badge tone={c.status === 'ACTIVE' ? 'success' : c.status === 'SUSPENDED' ? 'warning' : 'neutral'}>
                     {contractStatusLabel(c.status)}
@@ -180,20 +181,20 @@ function ContractDetail({
         {/* ------------------------------ Garanties ------------------------------ */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-content">Garanties</h4>
+            <h4 className="text-sm font-semibold text-content">{tr('ui.ContractsTab.garanties')}</h4>
             {canUpdate && (
               <button
                 type="button"
                 onClick={() => { setEditingGuarantee(null); setAddingGuarantee(true); }}
                 className="btn-outline h-7 rounded-md px-2 text-xs"
               >
-                <Plus className="h-3.5 w-3.5" /> Ajouter
+                <Plus className="h-3.5 w-3.5" /> {tr('ui.ContractsTab.ajouter')}
               </button>
             )}
           </div>
           {data.guarantees.length === 0 ? (
             <p className="rounded-lg border border-dashed p-3 text-xs text-content-faint">
-              Aucune garantie : ce contrat ne couvre rien pour l'instant.
+              {tr('ui.ContractsTab.aucuneGarantieCeContratNe')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -206,9 +207,9 @@ function ContractDetail({
                         <span className="text-success">{g.coveragePercent} %</span>
                       </p>
                       <p className="mt-0.5 text-xs text-content-muted">
-                        {g.ceilingAmount ? `Plafond ${formatCurrency(num(g.ceilingAmount))}` : 'Sans plafond'}
-                        {g.deductibleAmount ? ` · Franchise ${formatCurrency(num(g.deductibleAmount))}` : ''}
-                        {g.maxAmount ? ` · Max contrat ${formatCurrency(num(g.maxAmount))}` : ''}
+                        {g.ceilingAmount ? tr('ui.ContractsTab.plafondValue', { value: formatCurrency(num(g.ceilingAmount)) }) : tr('ui.ContractsTab.sansPlafond')}
+                        {g.deductibleAmount ? tr('ui.ContractsTab.franchiseValue', { value: formatCurrency(num(g.deductibleAmount)) }) : ''}
+                        {g.maxAmount ? tr('ui.ContractsTab.maxContratValue', { value: formatCurrency(num(g.maxAmount)) }) : ''}
                       </p>
                       {g.conditions && <p className="mt-1 text-xs text-content-faint">{g.conditions}</p>}
                     </div>
@@ -216,7 +217,7 @@ function ContractDetail({
                       <div className="flex shrink-0 gap-1">
                         <button
                           type="button"
-                          aria-label="Modifier la garantie"
+                          aria-label={tr('ui.ContractsTab.modifierLaGarantie')}
                           onClick={() => { setEditingGuarantee(g); setAddingGuarantee(true); }}
                           className="rounded-md p-1.5 text-content-faint transition hover:bg-surface-2 hover:text-content"
                         >
@@ -224,9 +225,9 @@ function ContractDetail({
                         </button>
                         <button
                           type="button"
-                          aria-label="Supprimer la garantie"
+                          aria-label={tr('ui.ContractsTab.supprimerLaGarantie')}
                           onClick={() => {
-                            if (confirm(`Supprimer la garantie « ${guaranteeCategoryLabel(g.category)} » ?`)) {
+                            if (confirm(tr('ui.ContractsTab.supprimerLaGarantieCategory', { category: guaranteeCategoryLabel(g.category) }))) {
                               removeGuarantee.mutate(g.id);
                             }
                           }}
@@ -246,20 +247,20 @@ function ContractDetail({
         {/* --------------------------- Bénéficiaires --------------------------- */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-content">Bénéficiaires</h4>
+            <h4 className="text-sm font-semibold text-content">{tr('ui.ContractsTab.beneficiaires')}</h4>
             {canUpdate && (
               <button
                 type="button"
                 onClick={() => setAddingBeneficiary(true)}
                 className="btn-outline h-7 rounded-md px-2 text-xs"
               >
-                <Plus className="h-3.5 w-3.5" /> Rattacher un client
+                <Plus className="h-3.5 w-3.5" /> {tr('ui.ContractsTab.rattacherUnClient')}
               </button>
             )}
           </div>
           {!data.beneficiaries || data.beneficiaries.length === 0 ? (
             <p className="rounded-lg border border-dashed p-3 text-xs text-content-faint">
-              Aucun client rattaché. En caisse, ce contrat ne s'appliquera à personne.
+              {tr('ui.ContractsTab.aucunClientRattacheEnCaisse')}
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -270,16 +271,16 @@ function ContractDetail({
                       {b.customer?.firstName} {b.customer?.lastName}
                     </p>
                     <p className="truncate text-xs text-content-faint">
-                      {b.membershipNumber ? `N° ${b.membershipNumber}` : 'Sans numéro d’assuré'}
+                      {b.membershipNumber ? `N° ${b.membershipNumber}` : tr('ui.ContractsTab.sansNumeroDAssure')}
                       {b.customer?.phone ? ` · ${b.customer.phone}` : ''}
                     </p>
                   </div>
                   {canUpdate && (
                     <button
                       type="button"
-                      aria-label="Retirer le bénéficiaire"
+                      aria-label={tr('ui.ContractsTab.retirerLeBeneficiaire')}
                       onClick={() => {
-                        if (confirm('Retirer ce client du contrat ?')) removeBenef.mutate(b.id);
+                        if (confirm(tr('ui.ContractsTab.retirerCeClientDuContrat'))) removeBenef.mutate(b.id);
                       }}
                       className="shrink-0 rounded-md p-1.5 text-content-faint transition hover:bg-surface-2 hover:text-danger"
                     >
@@ -295,7 +296,7 @@ function ContractDetail({
 
       {canUpdate && (
         <button type="button" onClick={onEdit} className="btn-outline mt-4 h-8 rounded-lg text-xs">
-          <Pencil className="h-3.5 w-3.5" /> Modifier le contrat
+          <Pencil className="h-3.5 w-3.5" /> {tr('ui.ContractsTab.modifierLeContrat')}
         </button>
       )}
 
@@ -359,7 +360,7 @@ function ContractModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={contract ? 'Modifier le contrat' : 'Nouveau contrat'}>
+    <Modal open onClose={onClose} title={contract ? tr('ui.ContractsTab.modifierLeContrat') : tr('ui.ContractsTab.nouveauContrat')}>
       <form
         className="space-y-3"
         onSubmit={(e) => {
@@ -368,7 +369,7 @@ function ContractModal({
         }}
       >
         {!contract && (
-          <Field label="Assureur">
+          <Field label={tr('ui.ContractsTab.assureur')}>
             <select
               className="input"
               value={form.insurerId}
@@ -382,24 +383,24 @@ function ContractModal({
             </select>
           </Field>
         )}
-        <Field label="Nom du contrat">
+        <Field label={tr('ui.ContractsTab.nomDuContrat')}>
           <input
             className="input"
             autoFocus
-            placeholder="Ex. Convention entreprise 2026"
+            placeholder={tr('ui.ContractsTab.exConventionEntreprise2026')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Référence">
+          <Field label={tr('ui.ContractsTab.reference')}>
             <input
               className="input"
               value={form.reference}
               onChange={(e) => setForm({ ...form, reference: e.target.value })}
             />
           </Field>
-          <Field label="Statut">
+          <Field label={tr('ui.ContractsTab.statut')}>
             <select
               className="input"
               value={form.status}
@@ -414,7 +415,7 @@ function ContractModal({
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date de début">
+          <Field label={tr('ui.ContractsTab.dateDeDebut')}>
             <input
               className="input"
               type="date"
@@ -422,7 +423,7 @@ function ContractModal({
               onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
             />
           </Field>
-          <Field label="Date de fin">
+          <Field label={tr('ui.ContractsTab.dateDeFin')}>
             <input
               className="input"
               type="date"
@@ -441,10 +442,10 @@ function ContractModal({
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ContractsTab.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={form.name.trim().length === 0}>
-            Enregistrer
+            {tr('ui.ContractsTab.enregistrer')}
           </Button>
         </div>
       </form>
@@ -500,10 +501,10 @@ function GuaranteeModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={guarantee ? 'Modifier la garantie' : 'Nouvelle garantie'} size="sm">
+    <Modal open onClose={onClose} title={guarantee ? tr('ui.ContractsTab.modifierLaGarantie') : tr('ui.ContractsTab.nouvelleGarantie')} size="sm">
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); mut.mutate(); }}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Catégorie">
+          <Field label={tr('ui.ContractsTab.categorie')}>
             <select
               className="input"
               value={form.category}
@@ -517,7 +518,7 @@ function GuaranteeModal({
               ))}
             </select>
           </Field>
-          <Field label="Prise en charge (%)">
+          <Field label={tr('ui.ContractsTab.priseEnCharge')}>
             <input
               className="input"
               type="number"
@@ -529,41 +530,41 @@ function GuaranteeModal({
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Plafond par vente">
+          <Field label={tr('ui.ContractsTab.plafondParVente')}>
             <input
               className="input"
               type="number"
               min="0"
-              placeholder="Sans plafond"
+              placeholder={tr('ui.ContractsTab.sansPlafond')}
               value={form.ceilingAmount}
               onChange={(e) => setForm({ ...form, ceilingAmount: e.target.value })}
             />
           </Field>
-          <Field label="Franchise">
+          <Field label={tr('ui.ContractsTab.franchise')}>
             <input
               className="input"
               type="number"
               min="0"
-              placeholder="Aucune"
+              placeholder={tr('ui.ContractsTab.aucune')}
               value={form.deductibleAmount}
               onChange={(e) => setForm({ ...form, deductibleAmount: e.target.value })}
             />
           </Field>
         </div>
-        <Field label="Montant maximum sur la durée du contrat">
+        <Field label={tr('ui.ContractsTab.montantMaximumSurLaDuree')}>
           <input
             className="input"
             type="number"
             min="0"
-            placeholder="Non limité"
+            placeholder={tr('ui.ContractsTab.nonLimite')}
             value={form.maxAmount}
             onChange={(e) => setForm({ ...form, maxAmount: e.target.value })}
           />
         </Field>
-        <Field label="Conditions">
+        <Field label={tr('ui.ContractsTab.conditions')}>
           <textarea
             className="input min-h-[60px]"
-            placeholder="Ex. une monture tous les deux ans"
+            placeholder={tr('ui.ContractsTab.exUneMontureTousLes')}
             value={form.conditions}
             onChange={(e) => setForm({ ...form, conditions: e.target.value })}
           />
@@ -571,10 +572,10 @@ function GuaranteeModal({
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ContractsTab.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending}>
-            Enregistrer
+            {tr('ui.ContractsTab.enregistrer')}
           </Button>
         </div>
       </form>
@@ -600,30 +601,30 @@ function BeneficiaryModal({ contractId, onClose }: { contractId: string; onClose
   });
 
   return (
-    <Modal open onClose={onClose} title="Rattacher un client au contrat" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.ContractsTab.rattacherUnClientAuContrat')} size="sm">
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (customerId) mut.mutate(); }}>
         <Field label="Client">
           <CustomerSearch value={customerId} onChange={(id) => setCustomerId(id)} />
         </Field>
-        <Field label="Numéro d'assuré">
+        <Field label={tr('ui.ContractsTab.numeroDAssure')}>
           <input
             className="input"
-            placeholder="Tel qu'il figure sur la carte"
+            placeholder={tr('ui.ContractsTab.telQuIlFigureSur')}
             value={membershipNumber}
             onChange={(e) => setMembershipNumber(e.target.value)}
           />
         </Field>
         <p className="flex items-start gap-2 rounded-lg bg-surface-2 p-3 text-xs text-content-muted">
           <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          En caisse, la part assurance de ce client sera calculée avec les garanties de ce contrat.
+          {tr('ui.ContractsTab.enCaisseLaPartAssurance')}
         </p>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ContractsTab.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={!customerId}>
-            Rattacher
+            {tr('ui.ContractsTab.rattacher')}
           </Button>
         </div>
       </form>

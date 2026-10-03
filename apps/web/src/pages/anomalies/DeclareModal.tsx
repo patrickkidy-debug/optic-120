@@ -26,6 +26,8 @@ import {
   CORRECTION_TYPE_LABELS,
 } from './shared';
 import { TargetPicker, type PickedTarget } from './TargetPicker';
+import { displayLocale } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 interface SaleLine {
   productId: string;
@@ -52,7 +54,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
   // main. On affiche donc un vrai choix, et le nom au lieu de l'identifiant.
   const canSeeInsurers = usePermission('insurance.view');
   const { data: insurers } = useQuery({ queryKey: ['insurers'], queryFn: listInsurers, enabled: canSeeInsurers });
-  const insurerName = (id: string) => insurers?.find((i) => i.id === id)?.name ?? (id ? 'Assureur inconnu' : '');
+  const insurerName = (id: string) => insurers?.find((i) => i.id === id)?.name ?? (id ? tr('ui.DeclareModal.assureurInconnu') : '');
   // Même problème pour le vendeur : `cashierId` est un UUID. Le catalogue des
   // utilisateurs demande `rbac.users.view`, que n'ont pas les profils de vente —
   // d'où le repli sur une saisie libre plutôt qu'une liste vide et bloquante.
@@ -75,7 +77,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
 
   /** Valeur actuelle en clair : un UUID brut n'apprend rien à l'utilisateur. */
   function currentLabel(field: string, value: string): string {
-    if (!value) return field === 'insurerId' ? 'Aucun' : '—';
+    if (!value) return field === 'insurerId' ? tr('ui.DeclareModal.aucun') : '—';
     if (field === 'insurerId') return insurerName(value);
     if (field === 'cashierId') return userName(value);
     if (field === 'customerId') return customerName(value);
@@ -151,7 +153,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
 
   const mut = useMutation({
     mutationFn: async () => {
-      if (!target) throw new Error('Sélectionnez un élément');
+      if (!target) throw new Error(tr('ui.DeclareModal.selectionnezUnElement'));
       const changes = computeChanges();
       const anomaly = await declareAnomaly({
         category,
@@ -181,7 +183,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
   const canSubmit = Boolean(target) && description.trim().length > 0;
 
   return (
-    <Modal open onClose={onClose} title="Déclarer une anomalie" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.DeclareModal.declarerUneAnomalie')} size="lg">
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -190,7 +192,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Catégorie">
+          <Field label={tr('ui.DeclareModal.categorie')}>
             <select className="input" value={category} onChange={(e) => pickCategory(e.target.value as AnomalyCategory)}>
               {ANOMALY_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -200,7 +202,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
             </select>
           </Field>
           {correctionOptions.length > 1 && (
-            <Field label="Type de correction">
+            <Field label={tr('ui.DeclareModal.typeDeCorrection')}>
               <select
                 className="input"
                 value={correctionType}
@@ -219,12 +221,12 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <Field label="Élément concerné">
+        <Field label={tr('ui.DeclareModal.elementConcerne')}>
           {target ? (
             <div className="flex items-center justify-between rounded-lg border bg-surface-2 px-3 py-2">
               <span className="text-sm font-medium text-content">{target.reference}</span>
               <button type="button" onClick={resetTarget} className="text-xs text-content-muted hover:text-content">
-                <ArrowLeft className="mr-1 inline h-3 w-3" /> Changer
+                <ArrowLeft className="mr-1 inline h-3 w-3" /> {tr('ui.DeclareModal.changer')}
               </button>
             </div>
           ) : (
@@ -235,7 +237,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
         {target && !isWholeSaleAction && (
           <div className="rounded-xl border p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-muted">
-              Valeur actuelle → valeur souhaitée
+              {tr('ui.DeclareModal.valeurActuelleValeurSouhaitee')}
             </p>
             <div className="space-y-2">
               {fields.map((f) =>
@@ -255,7 +257,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
                         value={fieldValues.insurerId ?? ''}
                         onChange={(e) => setFieldValues((v) => ({ ...v, insurerId: e.target.value }))}
                       >
-                        <option value="">Aucun (le client paie tout)</option>
+                        <option value="">{tr('ui.DeclareModal.aucunLeClientPaieTout')}</option>
                         {(insurers ?? []).map((ins) => (
                           <option key={ins.id} value={ins.id}>
                             {ins.name} — {ins.coveragePercent}%
@@ -285,7 +287,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
                         type={f.kind === 'money' || f.kind === 'int' ? 'number' : f.kind === 'date' ? 'datetime-local' : 'text'}
                         value={fieldValues[f.name] ?? ''}
                         onChange={(e) => setFieldValues((v) => ({ ...v, [f.name]: e.target.value }))}
-                        placeholder="Nouvelle valeur"
+                        placeholder={tr('ui.DeclareModal.nouvelleValeur')}
                       />
                     )}
                   </div>
@@ -296,7 +298,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
         )}
 
         {target && correctionType === AnomalyCorrectionType.PRODUCT_RETURN && (
-          <Field label="Remboursement en espèces (facultatif)">
+          <Field label={tr('ui.DeclareModal.remboursementEnEspecesFacultatif')}>
             <input className="input" type="number" min="0" value={cashRefund} onChange={(e) => setCashRefund(e.target.value)} />
           </Field>
         )}
@@ -305,7 +307,7 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
           <textarea className="input min-h-[60px]" value={description} onChange={(e) => setDescription(e.target.value)} required />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Motif">
+          <Field label={tr('ui.DeclareModal.motif')}>
             <select className="input" value={reasonCode} onChange={(e) => setReasonCode(e.target.value)}>
               {ANOMALY_REASON_CODES.map((r) => (
                 <option key={r} value={r}>
@@ -314,40 +316,39 @@ export function DeclareModal({ onClose }: { onClose: () => void }) {
               ))}
             </select>
           </Field>
-          <Field label="Précision sur le motif">
+          <Field label={tr('ui.DeclareModal.precisionSurLeMotif')}>
             <input className="input" value={reasonNote} onChange={(e) => setReasonNote(e.target.value)} />
           </Field>
         </div>
-        <Field label="Commentaire">
+        <Field label={tr('ui.DeclareModal.commentaire')}>
           <textarea className="input min-h-[50px]" value={comment} onChange={(e) => setComment(e.target.value)} />
         </Field>
 
         {financiallySensitive && (
           <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm font-medium text-danger">
-            Cette action modifiera les données financières.
+            {tr('ui.DeclareModal.cetteActionModifieraLesDonnees')}
           </p>
         )}
 
         {target && isReportOnly && (
           <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
-            Aucune valeur n'a été modifiée : cette anomalie sera enregistrée comme{' '}
-            <strong>signalement</strong>. Elle est traçable et peut être validée, mais il n'y a rien à
-            appliquer — aucune donnée ne sera changée automatiquement.
+            {tr('ui.DeclareModal.aucuneValeurNAEte')}{' '}
+            <strong>signalement</strong>{tr('ui.DeclareModal.elleEstTracableEtPeut')}
           </p>
         )}
 
         <label className="flex items-center gap-2 text-sm text-content-muted">
           <input type="checkbox" checked={submitNow} onChange={(e) => setSubmitNow(e.target.checked)} />
-          Soumettre immédiatement pour validation (sinon reste en brouillon)
+          {tr('ui.DeclareModal.soumettreImmediatementPourValidationSino')}
         </label>
 
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.DeclareModal.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={!canSubmit}>
-            Déclarer
+            {tr('ui.DeclareModal.declarer')}
           </Button>
         </div>
       </form>
@@ -362,7 +363,7 @@ function SaleLinesEditor({ lines, onChange }: { lines: SaleLine[]; onChange: (li
 
   return (
     <div>
-      <p className="mb-1 text-xs text-content-faint">Articles (produit, quantité, prix)</p>
+      <p className="mb-1 text-xs text-content-faint">{tr('ui.DeclareModal.articlesProduitQuantitePrix')}</p>
       <div className="space-y-1.5">
         {lines.map((l, idx) => (
           <div key={idx} className="grid grid-cols-[1fr_80px_110px_32px] items-center gap-1.5">
@@ -383,7 +384,7 @@ function SaleLinesEditor({ lines, onChange }: { lines: SaleLine[]; onChange: (li
             />
             <button
               type="button"
-              aria-label="Retirer la ligne"
+              aria-label={tr('ui.DeclareModal.retirerLaLigne')}
               onClick={() => onChange(lines.filter((_, i) => i !== idx))}
               className="grid h-8 w-8 place-items-center rounded-md text-content-faint hover:bg-surface-2 hover:text-danger"
             >
@@ -396,7 +397,7 @@ function SaleLinesEditor({ lines, onChange }: { lines: SaleLine[]; onChange: (li
         <div className="mt-2 rounded-lg border p-2">
           <input
             className="input mb-2 h-8 text-sm"
-            placeholder="Rechercher un produit à ajouter…"
+            placeholder={tr('ui.DeclareModal.rechercherUnProduitAAjouter')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
@@ -412,7 +413,7 @@ function SaleLinesEditor({ lines, onChange }: { lines: SaleLine[]; onChange: (li
         </div>
       ) : (
         <button type="button" onClick={() => setShowPicker(true)} className="btn-outline mt-2 h-7 rounded-md px-2 text-xs">
-          <Plus className="h-3.5 w-3.5" /> Ajouter un article
+          <Plus className="h-3.5 w-3.5" /> {tr('ui.DeclareModal.ajouterUnArticle')}
         </button>
       )}
     </div>
@@ -444,7 +445,7 @@ function ProductQuickList({ search, onPick }: { search: string; onPick: (p: { id
           onClick={() => onPick(p)}
           className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-surface-2"
         >
-          {p.name} — {Number(p.sellPrice).toLocaleString('fr-FR')} FCFA
+          {p.name} — {Number(p.sellPrice).toLocaleString(displayLocale())} FCFA
         </button>
       ))}
     </div>

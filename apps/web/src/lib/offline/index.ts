@@ -7,6 +7,7 @@ import { getDeviceId } from './device';
 import { startNetworkWatch, useNetworkStore } from './network';
 import { counts, enqueue } from './outbox';
 import { createSyncEngine, refreshCounters, type PushOutcome } from './sync';
+import { tr } from '../tr';
 
 /**
  * Point d'entrée du hors-ligne pour le reste de l'application.
@@ -31,9 +32,9 @@ async function push(body: SyncPushInput): Promise<PushOutcome> {
       if (!e.response || e.code === 'ECONNABORTED') return { kind: 'offline' };
       if (e.response.status === 401) return { kind: 'unauthorized' };
       const msg = (e.response.data as { error?: { message?: string } })?.error?.message;
-      return { kind: 'error', message: msg ?? `Erreur serveur (${e.response.status})` };
+      return { kind: 'error', message: msg ?? tr('ui.index.erreurServeurStatus', { status: e.response.status }) };
     }
-    return { kind: 'error', message: 'Erreur inconnue' };
+    return { kind: 'error', message: tr('ui.index.erreurInconnue') };
   }
 }
 
@@ -59,7 +60,7 @@ export async function recordOperation(op: {
 }) {
   const db = currentOfflineDb();
   const user = useAuthStore.getState().user;
-  if (!db || !user) throw new Error('Aucune session ouverte sur cet appareil');
+  if (!db || !user) throw new Error(tr('ui.index.aucuneSessionOuverteSurCet'));
   const row = await enqueue(db, { ...op, userId: user.id });
   await refreshCounters(db);
   void syncNow();

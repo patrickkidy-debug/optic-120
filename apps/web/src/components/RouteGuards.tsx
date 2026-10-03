@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth';
 import { LockScreen } from './LockScreen';
 import { SuspensionGate } from './SuspensionGate';
 import { BrandSplash } from './BrandSplash';
+import { tr } from '../lib/tr';
 
 /**
  * Écrans accessibles MÊME quand l'abonnement n'est pas payé. La démonstration
@@ -55,9 +56,9 @@ export function RequirePermission({
         <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[color:var(--danger)]/15 text-danger">
           <ShieldAlert className="h-6 w-6" />
         </div>
-        <p className="mt-4 font-display text-lg font-bold text-content">Accès refusé</p>
+        <p className="mt-4 font-display text-lg font-bold text-content">{tr('ui.RouteGuards.accesRefuse')}</p>
         <p className="mt-1 max-w-sm text-sm text-content-muted">
-          Vous n'avez pas la permission requise pour cette section.
+          {tr('ui.RouteGuards.vousNAvezPasLa')}
         </p>
       </div>
     );

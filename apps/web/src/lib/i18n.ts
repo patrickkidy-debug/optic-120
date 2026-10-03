@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { localizeShared } from './sharedLabels';
 import {
   LOCALES,
   DEFAULT_LOCALE,
@@ -75,6 +76,12 @@ export async function initI18n(): Promise<LocaleCode> {
   });
 
   await loadLocale(locale);
+
+  // Libellés du code partagé (statuts, catégories, pays…) : traduits en place
+  // maintenant, puis à chaque changement de langue ou arrivée d'un bundle.
+  localizeShared();
+  i18n.on('languageChanged', localizeShared);
+  i18n.on('loaded', localizeShared);
 
   document.documentElement.lang = locale;
   return locale;

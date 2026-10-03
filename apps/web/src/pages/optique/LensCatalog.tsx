@@ -11,6 +11,7 @@ import { LensVisual } from '../../features/optique/LensVisual';
 import { formatCurrency } from '../../lib/format';
 import { Badge, Button, EmptyState, Modal } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 /** Attributs verre d'un produit, sûrs même si le JSON est vide. */
 export function lensAttrs(p: Product): LensAttributes {
@@ -302,11 +303,11 @@ export function LensCatalog({
                         LENS_FAMILIES.find((f) => f.key === lensAttrs(p).family)?.label || '—',
                     ],
                     [tr('ui.LensCatalog.indice'), (p: Product) => lensAttrs(p).index || '—'],
-                    [tr('ui.LensCatalog.materiau'), (p: Product) => lensAttrs(p).material || '—'],
+                    [tr('ui.LensCatalog.materiau'), (p: Product) => trFr(lensAttrs(p).material) || '—'],
                     [tr('ui.LensCatalog.traitements'), (p: Product) => (lensAttrs(p).treatments ?? []).join(', ') || '—'],
-                    [tr('ui.LensCatalog.teinte'), (p: Product) => lensAttrs(p).tint || '—'],
-                    [tr('ui.LensCatalog.design'), (p: Product) => lensAttrs(p).design || '—'],
-                    [tr('ui.LensCatalog.usage'), (p: Product) => lensAttrs(p).usage || '—'],
+                    [tr('ui.LensCatalog.teinte'), (p: Product) => trFr(lensAttrs(p).tint) || '—'],
+                    [tr('ui.LensCatalog.design'), (p: Product) => trFr(lensAttrs(p).design) || '—'],
+                    [tr('ui.LensCatalog.usage'), (p: Product) => trFr(lensAttrs(p).usage) || '—'],
                   ] as [string, (p: Product) => string][]
                 ).map(([label, get]) => (
                   <tr key={label} className="border-b last:border-0">

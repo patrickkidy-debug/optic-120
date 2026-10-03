@@ -8,6 +8,7 @@ import { listSuppliers, createSupplier, updateSupplier, type Supplier } from '..
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 export function SuppliersPage() {
   const canCreate = usePermission('suppliers.create');
@@ -19,15 +20,15 @@ export function SuppliersPage() {
   return (
     <div>
       <PageHeader
-        title="Fournisseurs"
-        subtitle="Partenaires locaux et internationaux"
-        actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> Nouveau fournisseur</Button>}
+        title={tr('ui.SuppliersPage.fournisseurs')}
+        subtitle={tr('ui.SuppliersPage.partenairesLocauxEtInternationaux')}
+        actions={canCreate && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" /> {tr('ui.SuppliersPage.nouveauFournisseur')}</Button>}
       />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={Truck} title="Aucun fournisseur" />
+        <EmptyState icon={Truck} title={tr('ui.SuppliersPage.aucunFournisseur')} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((s) => (
@@ -37,7 +38,7 @@ export function SuppliersPage() {
                   <Truck className="h-5 w-5" />
                 </span>
                 <Badge tone={s.type === 'INTERNATIONAL' ? 'accent' : 'info'}>
-                  {s.type === 'INTERNATIONAL' ? 'International' : 'Local'}
+                  {s.type === 'INTERNATIONAL' ? tr('ui.SuppliersPage.international') : tr('ui.SuppliersPage.local')}
                 </Badge>
               </div>
               <h3 className="mt-3 font-display font-bold text-content">{s.name}</h3>
@@ -49,7 +50,7 @@ export function SuppliersPage() {
               </div>
               {canUpdate && (
                 <button onClick={() => { setEditing(s); setOpen(true); }} className="btn-outline mt-3 h-8 w-full rounded-lg text-xs">
-                  <Pencil className="h-3.5 w-3.5" /> Modifier
+                  <Pencil className="h-3.5 w-3.5" /> {tr('ui.SuppliersPage.modifier')}
                 </button>
               )}
             </div>
@@ -87,27 +88,27 @@ function SupplierModal({ supplier, onClose }: { supplier: Supplier | null; onClo
   });
 
   return (
-    <Modal open onClose={onClose} title={supplier ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}>
+    <Modal open onClose={onClose} title={supplier ? tr('ui.SuppliersPage.modifierLeFournisseur') : tr('ui.SuppliersPage.nouveauFournisseur')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Nom"><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
+        <Field label={tr('ui.SuppliersPage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Type">
+          <Field label={tr('ui.SuppliersPage.type')}>
             <select className="input" {...register('type')}>
-              <option value="LOCAL">Local</option>
-              <option value="INTERNATIONAL">International</option>
+              <option value="LOCAL">{tr('ui.SuppliersPage.local')}</option>
+              <option value="INTERNATIONAL">{tr('ui.SuppliersPage.international')}</option>
             </select>
           </Field>
           <Field label="Contact"><input className="input" {...register('contactName')} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
+          <Field label={tr('ui.SuppliersPage.telephone')}><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
-        <Field label="Adresse"><input className="input" {...register('address')} /></Field>
+        <Field label={tr('ui.SuppliersPage.adresse')}><input className="input" {...register('address')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.SuppliersPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.SuppliersPage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

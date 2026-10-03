@@ -8,6 +8,7 @@ import { usePermission } from '../../store/auth';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { PageHeader, PageLoader, EmptyState, Button } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 export function ReceivablesPage() {
   const qc = useQueryClient();
@@ -35,33 +36,33 @@ export function ReceivablesPage() {
 
   return (
     <div>
-      <PageHeader title="Créances & Assurances" subtitle="Suivi des solde clients restant dus et des prises en charge assurances" />
+      <PageHeader title={tr('ui.ReceivablesPage.creancesAssurances')} subtitle={tr('ui.ReceivablesPage.suiviDesSoldeClientsRestant')} />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Coins}
-          title="Aucune créance en attente"
-          hint="Toutes les ventes sont soldeés et toutes les prises en charge assurances ont été réglées."
+          title={tr('ui.ReceivablesPage.aucuneCreanceEnAttente')}
+          hint={tr('ui.ReceivablesPage.toutesLesVentesSontSoldees')}
         />
       ) : (
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">Créances Clients (Solde dû)</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">{tr('ui.ReceivablesPage.creancesClientsSoldeDu')}</p>
               <p className="mt-1 font-display text-3xl font-bold text-danger">
                 {formatCurrency(totalClientOutstanding)}
               </p>
             </div>
             <div className="card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">Prises en charge Assurances</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">{tr('ui.ReceivablesPage.prisesEnChargeAssurances')}</p>
               <p className="mt-1 font-display text-3xl font-bold text-warning">
                 {formatCurrency(totalInsuranceOutstanding)}
               </p>
             </div>
             <div className="card p-5 bg-hero">
-              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">Total Global Attendu</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-content-muted">{tr('ui.ReceivablesPage.totalGlobalAttendu')}</p>
               <p className="mt-1 font-display text-3xl font-bold text-primary">
                 {formatCurrency(totalCombined)}
               </p>
@@ -77,7 +78,7 @@ export function ReceivablesPage() {
                   filterTab === 'ALL' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
                 }`}
               >
-                Toutes ({items.length})
+                {tr('ui.ReceivablesPage.toutes')}{items.length})
               </button>
               <button
                 type="button"
@@ -86,7 +87,7 @@ export function ReceivablesPage() {
                   filterTab === 'CLIENT' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
                 }`}
               >
-                Solde Client ({items.filter((i) => i.balance > 0).length})
+                {tr('ui.ReceivablesPage.soldeClient')}{items.filter((i) => i.balance > 0).length})
               </button>
               <button
                 type="button"
@@ -95,7 +96,7 @@ export function ReceivablesPage() {
                   filterTab === 'INSURANCE' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
                 }`}
               >
-                Assurances ({items.filter((i) => (i.insuranceRemaining ?? i.insuranceAmount ?? 0) > 0).length})
+                {tr('ui.ReceivablesPage.assurances')}{items.filter((i) => (i.insuranceRemaining ?? i.insuranceAmount ?? 0) > 0).length})
               </button>
             </div>
           </div>
@@ -104,12 +105,12 @@ export function ReceivablesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">N° Vente</th>
+                  <th className="table-cell font-semibold">{tr('ui.ReceivablesPage.nVente')}</th>
                   <th className="table-cell font-semibold">Client</th>
-                  <th className="table-cell font-semibold">Assurance</th>
-                  <th className="table-cell text-right font-semibold">Total Vente</th>
-                  <th className="table-cell text-right font-semibold">Part Assurance</th>
-                  <th className="table-cell text-right font-semibold">Reste Client</th>
+                  <th className="table-cell font-semibold">{tr('ui.ReceivablesPage.assurance')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesPage.totalVente')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesPage.partAssurance')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ReceivablesPage.resteClient')}</th>
                   <th className="table-cell text-right font-semibold">Date</th>
                   <th className="table-cell text-right font-semibold">Actions</th>
                 </tr>
@@ -119,7 +120,7 @@ export function ReceivablesPage() {
                   <tr key={r.id} className="border-b last:border-0 hover:bg-surface-2/50">
                     <td className="table-cell font-medium text-content">{r.number}</td>
                     <td className="table-cell text-content-muted">
-                      <div>{r.customer ?? 'Client comptant'}</div>
+                      <div>{r.customer ?? tr('ui.ReceivablesPage.clientComptant')}</div>
                       {r.customerPhone && (
                         <div className="flex items-center gap-1 text-xs text-content-faint">
                           <Phone className="h-3 w-3" /> {r.customerPhone}
@@ -132,10 +133,10 @@ export function ReceivablesPage() {
                           <span className="font-semibold text-content">{r.insurerName}</span>
                           <span className={`text-[11px] font-medium ${r.insurerPaidAt ? 'text-success' : 'text-warning'}`}>
                             {r.insurerPaidAt
-                              ? '✓ Réglé'
+                              ? tr('ui.ReceivablesPage.regle')
                               : (r.insurerPaidAmount ?? 0) > 0
-                                ? `Partiel : ${formatCurrency(r.insurerPaidAmount ?? 0)} reçu`
-                                : 'En attente de remboursement'}
+                                ? tr('ui.ReceivablesPage.partielValueRecu', { value: formatCurrency(r.insurerPaidAmount ?? 0) })
+                                : tr('ui.ReceivablesPage.enAttenteDeRemboursement')}
                           </span>
                         </div>
                       ) : (
@@ -156,7 +157,7 @@ export function ReceivablesPage() {
                       ) : '—'}
                     </td>
                     <td className="table-cell text-right font-semibold text-danger">
-                      {r.balance > 0 ? formatCurrency(r.balance) : '0 FCFA'}
+                      {r.balance > 0 ? formatCurrency(r.balance) : tr('ui.ReceivablesPage.n0Fcfa')}
                     </td>
                     <td className="table-cell text-right text-content-muted">{formatDateTime(r.createdAt)}</td>
                     <td className="table-cell">
@@ -165,9 +166,9 @@ export function ReceivablesPage() {
                           <button
                             onClick={() => setPaySale({ id: r.id, due: r.balance, number: r.number })}
                             className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
-                            title="Encaisser le solde client"
+                            title={tr('ui.ReceivablesPage.encaisserLeSoldeClient')}
                           >
-                            <Banknote className="h-3.5 w-3.5" /> Encaisser
+                            <Banknote className="h-3.5 w-3.5" /> {tr('ui.ReceivablesPage.encaisser')}
                           </button>
                         )}
                       </div>
@@ -183,7 +184,7 @@ export function ReceivablesPage() {
       {paySale && (
         <PaymentModal
           sale={paySale}
-          onPaidLabel="Terminer"
+          onPaidLabel={tr('ui.ReceivablesPage.terminer')}
           onClose={() => setPaySale(null)}
           onPaid={() => {
             setPaySale(null);

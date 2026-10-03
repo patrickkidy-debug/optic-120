@@ -25,6 +25,7 @@ import { usePermission } from '../../store/auth';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader } from '../../components/ui';
 import { PatientRecord } from './PatientRecord';
+import { tr } from '../../lib/tr';
 
 const STAT_TONES: Record<string, string> = {
   primary: 'bg-primary/10 text-primary',
@@ -106,18 +107,18 @@ export function ClinicDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Tableau de bord clinique"
-        subtitle="Patients, chirurgies, ordonnances et suivi ophtalmologique"
+        title={tr('ui.ClinicDashboardPage.tableauDeBordClinique')}
+        subtitle={tr('ui.ClinicDashboardPage.patientsChirurgiesOrdonnancesEtSuivi')}
         actions={
           <div className="flex flex-wrap gap-2">
             {canPatients && (
               <Button variant="outline" onClick={() => navigate('/clinique/patients')}>
-                <Plus className="h-4 w-4" /> Nouveau patient
+                <Plus className="h-4 w-4" /> {tr('ui.ClinicDashboardPage.nouveauPatient')}
               </Button>
             )}
             {canSurgery && (
               <Button onClick={() => navigate('/clinique/chirurgies')}>
-                <CalendarPlus className="h-4 w-4" /> Planifier une chirurgie
+                <CalendarPlus className="h-4 w-4" /> {tr('ui.ClinicDashboardPage.planifierUneChirurgie')}
               </Button>
             )}
           </div>
@@ -126,16 +127,16 @@ export function ClinicDashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Users} label="Patients" value={patientsList.length} tone="primary" />
-        <StatCard icon={Scissors} label="Chirurgies" value={surgeriesList.length} tone="accent" />
-        <StatCard icon={ClipboardCheck} label="Pré-op (planifiées)" value={planned.length} tone="warning" />
-        <StatCard icon={HeartPulse} label="Post-op (à suivre)" value={done.length} tone="success" />
-        <StatCard icon={Pill} label="Ordonnances" value={rxCount} tone="info" />
+        <StatCard icon={Scissors} label={tr('ui.ClinicDashboardPage.chirurgies')} value={surgeriesList.length} tone="accent" />
+        <StatCard icon={ClipboardCheck} label={tr('ui.ClinicDashboardPage.preOpPlanifiees')} value={planned.length} tone="warning" />
+        <StatCard icon={HeartPulse} label={tr('ui.ClinicDashboardPage.postOpASuivre')} value={done.length} tone="success" />
+        <StatCard icon={Pill} label={tr('ui.ClinicDashboardPage.ordonnances')} value={rxCount} tone="info" />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Panel icon={Stethoscope} title={`Chirurgies à venir (${activeSurgeries.length})`}>
+        <Panel icon={Stethoscope} title={tr('ui.ClinicDashboardPage.chirurgiesAVenirLength', { length: activeSurgeries.length })}>
           {activeSurgeries.length === 0 ? (
-            <EmptyPanel text="Aucune chirurgie planifiée." />
+            <EmptyPanel text={tr('ui.ClinicDashboardPage.aucuneChirurgiePlanifiee')} />
           ) : (
             <div className="space-y-2">
               {activeSurgeries.slice(0, 8).map((s: Surgery) => (
@@ -148,16 +149,16 @@ export function ClinicDashboardPage() {
                       {s.type} ({s.eye}){s.scheduledAt ? ` · ${formatDateTime(s.scheduledAt)}` : ''}
                     </p>
                   </div>
-                  <Badge tone="warning">Planifiée</Badge>
+                  <Badge tone="warning">{tr('ui.ClinicDashboardPage.planifiee')}</Badge>
                 </div>
               ))}
             </div>
           )}
         </Panel>
 
-        <Panel icon={Users} title="Dossiers patients récents">
+        <Panel icon={Users} title={tr('ui.ClinicDashboardPage.dossiersPatientsRecents')}>
           {recentPatients.length === 0 ? (
-            <EmptyPanel text="Aucun patient enregistré." />
+            <EmptyPanel text={tr('ui.ClinicDashboardPage.aucunPatientEnregistre')} />
           ) : (
             <div className="space-y-2">
               {recentPatients.map((p: Patient) => (
@@ -171,10 +172,10 @@ export function ClinicDashboardPage() {
                       {p.firstName} {p.lastName}
                     </p>
                     <p className="text-xs text-content-muted">
-                      {p.dateOfBirth ? `Né(e) le ${formatDate(p.dateOfBirth)}` : p.phone ?? '—'}
+                      {p.dateOfBirth ? tr('ui.ClinicDashboardPage.neELeDateofbirth', { dateOfBirth: formatDate(p.dateOfBirth) }) : p.phone ?? '—'}
                     </p>
                   </div>
-                  <span className="text-xs text-primary">Ouvrir</span>
+                  <span className="text-xs text-primary">{tr('ui.ClinicDashboardPage.ouvrir')}</span>
                 </button>
               ))}
             </div>

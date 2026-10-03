@@ -17,11 +17,12 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { PatientRecord } from './PatientRecord';
+import { tr } from '../../lib/tr';
 
 const GENDERS = [
-  { value: 'MALE', label: 'Homme' },
-  { value: 'FEMALE', label: 'Femme' },
-  { value: 'OTHER', label: 'Autre' },
+  { value: 'MALE', get label() { return tr('ui.PatientsPage.homme'); } },
+  { value: 'FEMALE', get label() { return tr('ui.PatientsPage.femme'); } },
+  { value: 'OTHER', get label() { return tr('ui.PatientsPage.autre'); } },
 ];
 
 export function PatientsPage() {
@@ -55,11 +56,11 @@ export function PatientsPage() {
     <div>
       <PageHeader
         title="Patients"
-        subtitle="Dossier médical électronique"
+        subtitle={tr('ui.PatientsPage.dossierMedicalElectronique')}
         actions={
           canCreate && (
             <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
-              <Plus className="h-4 w-4" /> Nouveau patient
+              <Plus className="h-4 w-4" /> {tr('ui.PatientsPage.nouveauPatient')}
             </Button>
           )
         }
@@ -67,21 +68,21 @@ export function PatientsPage() {
 
       <div className="relative mb-4 sm:max-w-xs">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-        <input className="input pl-9" placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="input pl-9" placeholder={tr('ui.PatientsPage.rechercher')} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {isLoading ? (
         <PageLoader />
       ) : !patients || patients.length === 0 ? (
-        <EmptyState icon={UserRound} title="Aucun patient" hint="Enregistrez votre premier patient." />
+        <EmptyState icon={UserRound} title={tr('ui.PatientsPage.aucunPatient')} hint={tr('ui.PatientsPage.enregistrezVotrePremierPatient')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">Patient</th>
-                <th className="table-cell font-semibold">Téléphone</th>
-                <th className="table-cell font-semibold">Naissance</th>
+                <th className="table-cell font-semibold">{tr('ui.PatientsPage.telephone')}</th>
+                <th className="table-cell font-semibold">{tr('ui.PatientsPage.naissance')}</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -106,7 +107,7 @@ export function PatientsPage() {
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => setRecordId(p.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                        <FileText className="h-3.5 w-3.5" /> Dossier
+                        <FileText className="h-3.5 w-3.5" /> {tr('ui.PatientsPage.dossier')}
                       </button>
                       {canUpdate && (
                         <button onClick={() => { setEditing(p); setModalOpen(true); }} className="btn-ghost h-8 w-8 rounded-lg p-0">
@@ -115,7 +116,7 @@ export function PatientsPage() {
                       )}
                       {canDelete && (
                         <button
-                          onClick={() => { if (confirm(`Supprimer ${p.firstName} ${p.lastName} ?`)) removeMut.mutate(p.id); }}
+                          onClick={() => { if (confirm(tr('ui.PatientsPage.supprimerFirstnameLastname', { firstName: p.firstName, lastName: p.lastName }))) removeMut.mutate(p.id); }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -168,53 +169,53 @@ function PatientModal({ patient, onClose }: { patient: Patient | null; onClose: 
   });
 
   return (
-    <Modal open onClose={onClose} title={patient ? 'Modifier le patient' : 'Nouveau patient'} size="lg">
+    <Modal open onClose={onClose} title={patient ? tr('ui.PatientsPage.modifierLePatient') : tr('ui.PatientsPage.nouveauPatient')} size="lg">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prénom">
+          <Field label={tr('ui.PatientsPage.prenom')}>
             <input className="input" {...register('firstName')} />
             {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
           </Field>
-          <Field label="Nom">
+          <Field label={tr('ui.PatientsPage.nom')}>
             <input className="input" {...register('lastName')} />
             {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
           </Field>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Sexe">
+          <Field label={tr('ui.PatientsPage.sexe')}>
             <select className="input" {...register('gender')}>
               <option value="">—</option>
               {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
             </select>
           </Field>
-          <Field label="Date de naissance">
+          <Field label={tr('ui.PatientsPage.dateDeNaissance')}>
             <input className="input" type="date" {...register('dateOfBirth')} />
           </Field>
-          <Field label="Groupe sanguin">
+          <Field label={tr('ui.PatientsPage.groupeSanguin')}>
             <input className="input" placeholder="O+" {...register('bloodGroup')} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Téléphone">
+          <Field label={tr('ui.PatientsPage.telephone')}>
             <input className="input" {...register('phone')} />
           </Field>
           <Field label="Email">
             <input className="input" type="email" {...register('email')} />
           </Field>
         </div>
-        <Field label="Adresse">
+        <Field label={tr('ui.PatientsPage.adresse')}>
           <input className="input" {...register('address')} />
         </Field>
-        <Field label="Allergies">
+        <Field label={tr('ui.PatientsPage.allergies')}>
           <input className="input" {...register('allergies')} />
         </Field>
-        <Field label="Antécédents médicaux">
+        <Field label={tr('ui.PatientsPage.antecedentsMedicaux')}>
           <textarea className="input min-h-[80px]" {...register('medicalHistory')} />
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.PatientsPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.PatientsPage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

@@ -16,6 +16,7 @@ import {
 import type { LensOrder } from '../../features/optique/api';
 import { Avatar } from '../../components/Avatar';
 import { formatCurrency, formatDate } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 const DAY = 24 * 60 * 60 * 1000;
 function daysBetween(a: string | number | Date, b: string | number | Date) {
@@ -42,7 +43,7 @@ function DelayBadge({ order }: { order: LensOrder }) {
   if (order.deliveredAt) {
     return (
       <span className="inline-flex items-center gap-1 rounded-lg bg-success/10 px-1.5 py-0.5 text-[11px] font-semibold text-success">
-        Livré en {daysBetween(order.createdAt, order.deliveredAt)} j
+        {tr('ui.LensOrderKanban.livreEn')} {daysBetween(order.createdAt, order.deliveredAt)} j
       </span>
     );
   }
@@ -53,7 +54,7 @@ function DelayBadge({ order }: { order: LensOrder }) {
   if (late > 0) {
     return (
       <span className="inline-flex items-center gap-1 rounded-lg bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger">
-        <AlertTriangle className="h-3 w-3" /> Retard de {late} j
+        <AlertTriangle className="h-3 w-3" /> {tr('ui.LensOrderKanban.retardDe')} {late} j
       </span>
     );
   }
@@ -61,9 +62,9 @@ function DelayBadge({ order }: { order: LensOrder }) {
 }
 
 const LENS_TYPE_SHORT: Record<string, string> = {
-  unifocal: 'Unifocal',
-  progressif: 'Progressif',
-  degressif: 'Dégressif',
+  get unifocal() { return tr('ui.LensOrderKanban.unifocal'); },
+  get progressif() { return tr('ui.LensOrderKanban.progressif'); },
+  get degressif() { return tr('ui.LensOrderKanban.degressif'); },
 };
 
 /** Badges courts (type, indice, traitement) : d'un coup d'œil, sans surcharger la carte. */
@@ -102,7 +103,7 @@ function OrderCard({
   onCancel: () => void;
   draggable: boolean;
 }) {
-  const clientName = order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'Client de passage';
+  const clientName = order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : tr('ui.LensOrderKanban.clientDePassage');
 
   return (
     <div
@@ -132,7 +133,7 @@ function OrderCard({
               </summary>
               <div className="absolute right-0 top-7 z-20 w-44 rounded-xl border bg-surface p-1 shadow-card-lg">
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-content-faint">
-                  Déplacer vers
+                  {tr('ui.LensOrderKanban.deplacerVers')}
                 </p>
                 {LENS_ORDER_BOARD_STATUSES.filter((s) => s !== order.status).map((s) => (
                   <button
@@ -148,7 +149,7 @@ function OrderCard({
                   onClick={onCancel}
                   className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs text-danger hover:bg-danger/10"
                 >
-                  <Ban className="h-3.5 w-3.5" /> Annuler la commande
+                  <Ban className="h-3.5 w-3.5" /> {tr('ui.LensOrderKanban.annulerLaCommande')}
                 </button>
               </div>
             </details>

@@ -3,26 +3,27 @@ import { useQuery } from '@tanstack/react-query';
 import { Line } from 'react-chartjs-2';
 import type { Chart as ChartJS } from 'chart.js';
 import { getDashboardSeries, type DashboardRange, type SeriesPoint } from '../../features/optique/api';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, displayLocale } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 const RANGES: { key: DashboardRange; label: string }[] = [
-  { key: '7d', label: '7 jours' },
-  { key: '30d', label: '30 jours' },
-  { key: '3m', label: '3 mois' },
-  { key: '12m', label: '12 mois' },
+  { key: '7d', get label() { return tr('ui.PerformanceChart.n7Jours'); } },
+  { key: '30d', get label() { return tr('ui.PerformanceChart.n30Jours'); } },
+  { key: '3m', get label() { return tr('ui.PerformanceChart.n3Mois'); } },
+  { key: '12m', get label() { return tr('ui.PerformanceChart.n12Mois'); } },
 ];
 type Metric = 'revenue' | 'sales' | 'collected' | 'margin';
 const METRICS: { key: Metric; label: string; color: string }[] = [
   { key: 'revenue', label: 'CA', color: '#7c3aed' },
-  { key: 'sales', label: 'Ventes', color: '#0d9488' },
-  { key: 'collected', label: 'Encaissé', color: '#2563eb' },
-  { key: 'margin', label: 'Marge', color: '#f59e0b' },
+  { key: 'sales', get label() { return tr('ui.PerformanceChart.ventes'); }, color: '#0d9488' },
+  { key: 'collected', get label() { return tr('ui.PerformanceChart.encaisse'); }, color: '#2563eb' },
+  { key: 'margin', get label() { return tr('ui.PerformanceChart.marge'); }, color: '#f59e0b' },
 ];
 
 function formatLabel(date: string, range: DashboardRange): string {
   if (range === '12m') {
     const [y, m] = date.split('-');
-    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
+    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(displayLocale(), { month: 'short' });
   }
   return date.slice(5);
 }
@@ -72,7 +73,7 @@ export function PerformanceChart({ branchId }: { branchId?: string | null }) {
   return (
     <div className="card p-5 lg:col-span-2">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display font-bold text-content">Performance</h3>
+        <h3 className="font-display font-bold text-content">{tr('ui.PerformanceChart.performance')}</h3>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border p-0.5">
             {METRICS.map((m) => (
@@ -104,7 +105,7 @@ export function PerformanceChart({ branchId }: { branchId?: string | null }) {
       </div>
       <div className="h-64">
         {isLoading ? (
-          <div className="grid h-full place-items-center text-sm text-content-muted">Chargement…</div>
+          <div className="grid h-full place-items-center text-sm text-content-muted">{tr('ui.PerformanceChart.chargement')}</div>
         ) : (
           <Line
             data={chartData}
@@ -144,7 +145,7 @@ export function PerformanceChart({ branchId }: { branchId?: string | null }) {
                     callback: (v: string | number) =>
                       metric === 'sales'
                         ? String(v)
-                        : new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(
+                        : new Intl.NumberFormat(displayLocale(), { notation: 'compact', maximumFractionDigits: 1 }).format(
                             Number(v),
                           ),
                   },

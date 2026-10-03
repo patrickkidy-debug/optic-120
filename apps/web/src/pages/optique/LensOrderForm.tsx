@@ -39,13 +39,15 @@ import { apiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
 import { formatCurrency } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
+import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> = {
-  VERRES: { label: 'Verres', icon: Glasses },
-  LENTILLES: { label: 'Lentilles de contact', icon: CircleDot },
-  ACCESSOIRE: { label: 'Accessoire', icon: Package },
-  MONTURE: { label: 'Monture', icon: Glasses },
-  AUTRE: { label: 'Autre', icon: Tag },
+  VERRES: { get label() { return tr('ui.LensOrderForm.verres'); }, icon: Glasses },
+  LENTILLES: { get label() { return tr('ui.LensOrderForm.lentillesDeContact'); }, icon: CircleDot },
+  ACCESSOIRE: { get label() { return tr('ui.LensOrderForm.accessoire'); }, icon: Package },
+  MONTURE: { get label() { return tr('ui.LensOrderForm.monture'); }, icon: Glasses },
+  AUTRE: { get label() { return tr('ui.LensOrderForm.autre'); }, icon: Tag },
 };
 
 interface EyeRx {
@@ -111,7 +113,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
             {value.name}
           </p>
           <p className="truncate text-[11px] text-content-faint">
-            Réf. {value.sku} · {formatCurrency(Number(value.sellPrice))}
+            {tr('ui.LensOrderForm.ref')} {value.sku} · {formatCurrency(Number(value.sellPrice))}
           </p>
         </div>
         <button type="button" onClick={() => onChange(null)} className="btn-ghost h-7 w-7 shrink-0 rounded-lg p-0">
@@ -127,7 +129,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
         <input
           className="input pl-9"
-          placeholder="Rechercher une monture à associer…"
+          placeholder={tr('ui.LensOrderForm.rechercherUneMontureAAssocier')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -135,7 +137,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
       {search.trim() && (
         <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto">
           {(data?.items ?? []).length === 0 ? (
-            <p className="p-2 text-xs text-content-muted">Aucune monture trouvée.</p>
+            <p className="p-2 text-xs text-content-muted">{tr('ui.LensOrderForm.aucuneMontureTrouvee')}</p>
           ) : (
             data!.items.map((p) => (
               <button
@@ -179,7 +181,7 @@ function SupplierSearch({ value, onChange }: { value: string; onChange: (name: s
         <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
         <input
           className="input pl-9"
-          placeholder="Rechercher ou saisir un laboratoire…"
+          placeholder={tr('ui.LensOrderForm.rechercherOuSaisirUnLaboratoire')}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -261,7 +263,7 @@ function EyeRxFields({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <input
           className="input text-sm"
-          placeholder="Sphère"
+          placeholder={tr('ui.LensOrderForm.sphere')}
           type="number"
           step="0.25"
           disabled={disabled}
@@ -270,7 +272,7 @@ function EyeRxFields({
         />
         <input
           className="input text-sm"
-          placeholder="Cylindre"
+          placeholder={tr('ui.LensOrderForm.cylindre')}
           type="number"
           step="0.25"
           disabled={disabled}
@@ -279,7 +281,7 @@ function EyeRxFields({
         />
         <input
           className="input text-sm"
-          placeholder="Axe"
+          placeholder={tr('ui.LensOrderForm.axe')}
           type="number"
           min={0}
           max={180}
@@ -289,7 +291,7 @@ function EyeRxFields({
         />
         <input
           className="input text-sm"
-          placeholder="Addition"
+          placeholder={tr('ui.LensOrderForm.addition')}
           type="number"
           step="0.25"
           disabled={disabled}
@@ -301,7 +303,7 @@ function EyeRxFields({
         <div className="mt-2 grid grid-cols-2 gap-2">
           <input
             className="input text-sm"
-            placeholder="Prisme"
+            placeholder={tr('ui.LensOrderForm.prisme')}
             type="number"
             step="0.25"
             disabled={disabled}
@@ -310,7 +312,7 @@ function EyeRxFields({
           />
           <input
             className="input text-sm"
-            placeholder="Base (ex : IN, OUT)"
+            placeholder={tr('ui.LensOrderForm.baseExInOut')}
             disabled={disabled}
             value={rx.prismBase ?? ''}
             onChange={(e) => set({ prismBase: e.target.value })}
@@ -447,12 +449,12 @@ export function LensOrderForm({
   // pas ralentir une commande simple.
   const checks = [
     { label: 'Client', ok: !!customerId, required: false },
-    { label: 'Laboratoire', ok: !!supplierName.trim(), required: false },
+    { label: tr('ui.LensOrderForm.laboratoire'), ok: !!supplierName.trim(), required: false },
     ...(isVerres
       ? [
-          { label: 'Type de verre', ok: !!ltype, required: true },
-          { label: 'Indice', ok: !!lindex, required: true },
-          { label: 'Prescription', ok: hasAnyRx, required: false },
+          { label: tr('ui.LensOrderForm.typeDeVerre'), ok: !!ltype, required: true },
+          { label: tr('ui.LensOrderForm.indice'), ok: !!lindex, required: true },
+          { label: tr('ui.LensOrderForm.prescription'), ok: hasAnyRx, required: false },
         ]
       : [{ label: 'Description', ok: description.trim().length >= 2, required: true }]),
   ];
@@ -475,27 +477,27 @@ export function LensOrderForm({
         lensConfig,
       }),
     onSuccess: (order) => setCreatedOrder(order),
-    onError: (e) => setError(apiErrorMessage(e, 'Création impossible')),
+    onError: (e) => setError(apiErrorMessage(e, tr('ui.LensOrderForm.creationImpossible'))),
   });
 
   if (createdOrder) {
     const name = createdOrder.customer ? `${createdOrder.customer.firstName} ${createdOrder.customer.lastName}` : customerLabel;
     return (
-      <Modal open onClose={() => onCreated(createdOrder, 'close')} title="Nouvelle commande" size="lg">
+      <Modal open onClose={() => onCreated(createdOrder, 'close')} title={tr('ui.LensOrderForm.nouvelleCommande')} size="lg">
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[color:var(--success)]/15 text-success">
             <CheckCircle className="h-7 w-7" />
           </span>
-          <p className="font-display text-lg font-bold text-content">Commande créée avec succès</p>
+          <p className="font-display text-lg font-bold text-content">{tr('ui.LensOrderForm.commandeCreeeAvecSucces')}</p>
           <p className="text-sm text-content-muted">
             {createdOrder.number}
             {name ? ` — ${name}` : ''}
           </p>
           <div className="mt-2 flex gap-2">
             <Button variant="outline" onClick={() => onCreated(createdOrder, 'close')}>
-              Retour aux commandes
+              {tr('ui.LensOrderForm.retourAuxCommandes')}
             </Button>
-            <Button onClick={() => onCreated(createdOrder, 'view')}>Voir la commande</Button>
+            <Button onClick={() => onCreated(createdOrder, 'view')}>{tr('ui.LensOrderForm.voirLaCommande')}</Button>
           </div>
         </div>
       </Modal>
@@ -503,10 +505,10 @@ export function LensOrderForm({
   }
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle commande" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.LensOrderForm.nouvelleCommande')} size="lg">
       <div className="space-y-5">
         <div>
-          <p className="mb-2 text-sm font-medium text-content">Type d'article</p>
+          <p className="mb-2 text-sm font-medium text-content">{tr('ui.LensOrderForm.typeDArticle')}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {LENS_ORDER_CATEGORIES.map((c) => {
               const Icon = LENS_CAT[c].icon;
@@ -532,9 +534,9 @@ export function LensOrderForm({
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_20rem]">
           <div className="space-y-5">
             <div className="space-y-3">
-              <SectionTitle icon={SlidersHorizontal}>① Informations générales</SectionTitle>
+              <SectionTitle icon={SlidersHorizontal}>{tr('ui.LensOrderForm.informationsGenerales')}</SectionTitle>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Client (optionnel)">
+                <Field label={tr('ui.LensOrderForm.clientOptionnel')}>
                   <CustomerSearch
                     value={customerId}
                     onChange={(id, c) => {
@@ -543,11 +545,11 @@ export function LensOrderForm({
                     }}
                   />
                 </Field>
-                <Field label="Laboratoire / fournisseur">
+                <Field label={tr('ui.LensOrderForm.laboratoireFournisseur')}>
                   <SupplierSearch value={supplierName} onChange={setSupplierName} />
                 </Field>
               </div>
-              <Field label="Date prévue">
+              <Field label={tr('ui.LensOrderForm.datePrevue')}>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative max-w-[10rem]">
                     <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
@@ -559,26 +561,26 @@ export function LensOrderForm({
                     />
                   </div>
                   <button type="button" onClick={() => setExpectedShortcut(0)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    Aujourd'hui
+                    {tr('ui.LensOrderForm.aujourdHui')}
                   </button>
                   <button type="button" onClick={() => setExpectedShortcut(1)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    Demain
+                    {tr('ui.LensOrderForm.demain')}
                   </button>
                   <button type="button" onClick={() => setExpectedShortcut(3)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    Dans 3 jours
+                    {tr('ui.LensOrderForm.dans3Jours')}
                   </button>
                 </div>
               </Field>
-              <Field label="Monture associée (optionnel — vignette sur la carte Kanban)">
+              <Field label={tr('ui.LensOrderForm.montureAssocieeOptionnelVignetteSur')}>
                 <FramePicker value={frame} onChange={handleFrameChange} />
               </Field>
             </div>
 
             {isVerres ? (
               <div className="space-y-3">
-                <SectionTitle icon={Glasses}>② Configuration des verres</SectionTitle>
+                <SectionTitle icon={Glasses}>{tr('ui.LensOrderForm.configurationDesVerres')}</SectionTitle>
                 <div>
-                  <span className="label">Type de verre</span>
+                  <span className="label">{tr('ui.LensOrderForm.typeDeVerre')}</span>
                   <div className="grid grid-cols-3 gap-2">
                     {typeOptions.map((t) => {
                       const active = ltype === t.key;
@@ -599,15 +601,15 @@ export function LensOrderForm({
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="Matériau">
+                  <Field label={tr('ui.LensOrderForm.materiau')}>
                     <select className="input" value={lmaterial} onChange={(e) => handleMaterialChange(e.target.value)}>
                       <option value="">—</option>
                       {LENS_MATERIALS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
+                        <option key={m} value={m}>{trFr(m)}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Indice (amincissement)">
+                  <Field label={tr('ui.LensOrderForm.indiceAmincissement')}>
                     <select
                       className="input"
                       value={lindex}
@@ -622,7 +624,7 @@ export function LensOrderForm({
                 </div>
 
                 <div>
-                  <span className="label flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> Traitements</span>
+                  <span className="label flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.traitements')}</span>
                   <div className="grid grid-cols-2 gap-2">
                     {LENS_TREATMENTS.map((t) => (
                       <TreatmentChip
@@ -638,23 +640,23 @@ export function LensOrderForm({
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="label mb-0 flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" /> Prescription</span>
+                    <span className="label mb-0 flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.prescription')}</span>
                     <div className="flex items-center gap-3 text-xs">
                       <label className="flex cursor-pointer items-center gap-1.5 text-content-muted">
                         <input type="checkbox" checked={sameForBoth} onChange={(e) => setSameForBoth(e.target.checked)} />
-                        Même prescription pour les deux yeux
+                        {tr('ui.LensOrderForm.memePrescriptionPourLesDeux')}
                       </label>
                       {!sameForBoth && (
                         <button type="button" onClick={copyOdToOg} className="flex items-center gap-1 font-medium text-primary hover:underline">
-                          <Copy className="h-3.5 w-3.5" /> Copier OD → OG
+                          <Copy className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.copierOdOg')}
                         </button>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <EyeRxFields label="OD — Œil droit" rx={odRx} onChange={setOdRx} showAdvanced={showAdvancedRx} />
+                    <EyeRxFields label={tr('ui.LensOrderForm.odIlDroit')} rx={odRx} onChange={setOdRx} showAdvanced={showAdvancedRx} />
                     <EyeRxFields
-                      label="OG — Œil gauche"
+                      label={tr('ui.LensOrderForm.ogIlGauche')}
                       rx={effectiveOg}
                       onChange={setOgRx}
                       disabled={sameForBoth}
@@ -667,31 +669,31 @@ export function LensOrderForm({
                     className="flex items-center gap-1 text-xs font-medium text-content-muted hover:text-content"
                   >
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedRx ? 'rotate-180' : ''}`} />
-                    Paramètres avancés (prisme)
+                    {tr('ui.LensOrderForm.parametresAvancesPrisme')}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                <SectionTitle icon={FileText}>Détail</SectionTitle>
+                <SectionTitle icon={FileText}>{tr('ui.LensOrderForm.detail')}</SectionTitle>
                 <Field label="Description">
                   <input
                     className="input"
-                    placeholder="Ex : Lentilles mensuelles, étui, cordon…"
+                    placeholder={tr('ui.LensOrderForm.exLentillesMensuellesEtuiCordon')}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </Field>
-                <Field label="Coût (FCFA)">
-                  <input className="input" type="number" min={0} placeholder="Prix" value={cost} onChange={(e) => setCost(e.target.value)} />
+                <Field label={tr('ui.LensOrderForm.coutFcfa')}>
+                  <input className="input" type="number" min={0} placeholder={tr('ui.LensOrderForm.prix')} value={cost} onChange={(e) => setCost(e.target.value)} />
                 </Field>
               </div>
             )}
 
-            <Field label="Notes / instructions spéciales">
+            <Field label={tr('ui.LensOrderForm.notesInstructionsSpeciales')}>
               <input
                 className="input"
-                placeholder="Ajouter une note ou une instruction spéciale…"
+                placeholder={tr('ui.LensOrderForm.ajouterUneNoteOuUne')}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -701,41 +703,41 @@ export function LensOrderForm({
           {/* Résumé + prix : colonne latérale sur desktop, sous la config sur mobile. */}
           <div className="space-y-3">
             <div className="rounded-2xl border p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-content-faint">Résumé</p>
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-content-faint">{tr('ui.LensOrderForm.resume')}</p>
               <dl className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-2">
                   <dt className="flex items-center gap-1.5 text-content-muted"><User className="h-3.5 w-3.5" /> Client</dt>
                   <dd className="truncate text-right font-medium text-content">{customerLabel || '—'}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <dt className="text-content-muted">Type</dt>
+                  <dt className="text-content-muted">{tr('ui.LensOrderForm.type')}</dt>
                   <dd className="truncate text-right font-medium text-content">{isVerres ? typeLabel : LENS_CAT[category].label}</dd>
                 </div>
                 {isVerres && (
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-content-muted">Indice</dt>
+                    <dt className="text-content-muted">{tr('ui.LensOrderForm.indice')}</dt>
                     <dd className="font-medium text-content">{lindex}</dd>
                   </div>
                 )}
                 {isVerres && treatLabels.length > 0 && (
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-content-muted">Traitement</dt>
+                    <dt className="text-content-muted">{tr('ui.LensOrderForm.traitement')}</dt>
                     <dd className="truncate text-right font-medium text-content">{treatLabels.join(', ')}</dd>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2">
-                  <dt className="flex items-center gap-1.5 text-content-muted"><Glasses className="h-3.5 w-3.5" /> Monture</dt>
+                  <dt className="flex items-center gap-1.5 text-content-muted"><Glasses className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.monture')}</dt>
                   <dd className="truncate text-right font-medium text-content">{frame ? frame.name : '—'}</dd>
                 </div>
               </dl>
               <div className="mt-3 border-t pt-3">
                 <div className="flex items-center justify-between">
                   <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-faint">
-                    <Receipt className="h-3.5 w-3.5" /> Prix estimé
+                    <Receipt className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.prixEstime')}
                   </p>
                   {isVerres && (
                     <button type="button" onClick={() => setShowPriceDetail((v) => !v)} className="text-[11px] font-medium text-primary hover:underline">
-                      Voir le détail
+                      {tr('ui.LensOrderForm.voirLeDetail')}
                     </button>
                   )}
                 </div>
@@ -744,8 +746,8 @@ export function LensOrderForm({
                 </p>
                 {isVerres && showPriceDetail && (
                   <div className="mt-1.5 space-y-1 text-xs text-content-muted">
-                    <div className="flex justify-between"><span>Prix verres</span><span>{formatCurrency(price.base)}</span></div>
-                    <div className="flex justify-between"><span>Traitements</span><span>+{formatCurrency(price.treatments)}</span></div>
+                    <div className="flex justify-between"><span>{tr('ui.LensOrderForm.prixVerres')}</span><span>{formatCurrency(price.base)}</span></div>
+                    <div className="flex justify-between"><span>{tr('ui.LensOrderForm.traitements')}</span><span>+{formatCurrency(price.treatments)}</span></div>
                   </div>
                 )}
               </div>
@@ -753,7 +755,7 @@ export function LensOrderForm({
 
             {/* Validation : jamais bloquant sauf le strict nécessaire. */}
             <div className="rounded-2xl border p-4 text-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-content-faint">Validation</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-content-faint">{tr('ui.LensOrderForm.validation')}</p>
               <ul className="space-y-1.5">
                 {checks.map((c) => (
                   <li key={c.label} className={`flex items-center gap-1.5 ${c.ok ? 'text-content' : 'text-content-faint'}`}>
@@ -769,7 +771,7 @@ export function LensOrderForm({
               </ul>
               {missingRequired.length > 0 && (
                 <p className="mt-2 flex items-center gap-1 text-xs font-medium text-danger">
-                  <AlertCircle className="h-3.5 w-3.5" /> Il manque {missingRequired.length} information{missingRequired.length > 1 ? 's' : ''}
+                  <AlertCircle className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.ilManque')} {missingRequired.length} information{missingRequired.length > 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -778,9 +780,9 @@ export function LensOrderForm({
 
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2 border-t pt-3">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.LensOrderForm.annuler')}</Button>
           <Button onClick={() => mut.mutate()} loading={mut.isPending} disabled={!canSubmit}>
-            {mut.isPending ? 'Création en cours…' : 'Créer la commande →'}
+            {mut.isPending ? tr('ui.LensOrderForm.creationEnCours') : tr('ui.LensOrderForm.creerLaCommande')}
           </Button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   type WhatsappTemplates,
 } from '@oculo/shared-types';
 import { useAuthStore } from '../store/auth';
+import { tr } from './tr';
 
 /** Lien wa.me à partir d'un numéro (chiffres uniquement). */
 export function waLink(phone?: string | null): string | null {
@@ -25,10 +26,10 @@ export const TEAM_WHATSAPP_DISPLAY = '+238 593 65 98';
  */
 export function transferReceiptLink(info: { invoiceNumber?: string; establishment?: string | null; amount?: string }): string {
   const lines = [
-    'Bonjour, voici la capture / le reçu de mon virement pour mon abonnement OculoSaaS.',
-    info.invoiceNumber ? `Facture : ${info.invoiceNumber}` : '',
-    info.establishment ? `Établissement : ${info.establishment}` : '',
-    info.amount ? `Montant : ${info.amount}` : '',
+    tr('ui.whatsapp.bonjourVoiciLaCaptureLe'),
+    info.invoiceNumber ? tr('ui.whatsapp.factureInvoicenumber', { invoiceNumber: info.invoiceNumber }) : '',
+    info.establishment ? tr('ui.whatsapp.etablissementEstablishment', { establishment: info.establishment }) : '',
+    info.amount ? tr('ui.whatsapp.montantAmount', { amount: info.amount }) : '',
   ].filter(Boolean);
   return `https://wa.me/${DEMO_WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
 }
@@ -52,7 +53,7 @@ export function sendWhatsappForStage(
 ): boolean {
   const link = waLink(phone);
   if (!link) {
-    alert("Ce client n'a pas de numéro WhatsApp enregistré.");
+    alert(tr('ui.whatsapp.ceClientNAPas'));
     return false;
   }
   const templates: WhatsappTemplates =

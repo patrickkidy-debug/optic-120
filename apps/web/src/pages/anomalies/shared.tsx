@@ -9,6 +9,7 @@ import {
   type AnomalyCorrectionType,
 } from '@oculo/shared-types';
 import { Badge } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
 
@@ -30,57 +31,57 @@ export function AnomalyCategoryBadge({ category }: { category: AnomalyCategory }
 }
 
 export const CORRECTION_TYPE_LABELS: Record<AnomalyCorrectionType, string> = {
-  FIELD_CORRECTION: 'Correction de champ',
-  STOCK_ADJUSTMENT: 'Ajustement de stock',
-  SALE_CANCELLATION: 'Annulation de vente',
-  PRODUCT_RETURN: 'Retour produit',
-  PAYMENT_REVERSAL: 'Correction de paiement',
-  REFUND_CORRECTION: 'Correction de remboursement',
+  get FIELD_CORRECTION() { return tr('ui.shared.correctionDeChamp'); },
+  get STOCK_ADJUSTMENT() { return tr('ui.shared.ajustementDeStock'); },
+  get SALE_CANCELLATION() { return tr('ui.shared.annulationDeVente'); },
+  get PRODUCT_RETURN() { return tr('ui.shared.retourProduit'); },
+  get PAYMENT_REVERSAL() { return tr('ui.shared.correctionDePaiement'); },
+  get REFUND_CORRECTION() { return tr('ui.shared.correctionDeRemboursement'); },
 };
 
 export const ANOMALY_ACTION_LABELS: Record<string, string> = {
-  ANOMALY_DECLARED: 'Déclaration',
-  ANOMALY_MODIFIED: 'Modification',
-  ANOMALY_SUBMITTED: 'Soumission pour validation',
-  ANOMALY_APPROVED: 'Approbation',
-  ANOMALY_REJECTED: 'Rejet',
-  ANOMALY_CORRECTION_APPLIED: 'Correction appliquée',
-  ANOMALY_CANCELLED: 'Annulation',
+  get ANOMALY_DECLARED() { return tr('ui.shared.declaration'); },
+  get ANOMALY_MODIFIED() { return tr('ui.shared.modification'); },
+  get ANOMALY_SUBMITTED() { return tr('ui.shared.soumissionPourValidation'); },
+  get ANOMALY_APPROVED() { return tr('ui.shared.approbation'); },
+  get ANOMALY_REJECTED() { return tr('ui.shared.rejet'); },
+  get ANOMALY_CORRECTION_APPLIED() { return tr('ui.shared.correctionAppliquee'); },
+  get ANOMALY_CANCELLED() { return tr('ui.shared.annulation'); },
 };
 
 export const ANOMALY_FIELD_LABEL_MAP: Record<string, string> = {
-  items: 'Articles (produit, quantité, prix)',
-  discountAmount: 'Remise',
-  insuranceAmount: 'Prise en charge assurance',
-  insurerId: 'Assureur',
+  get items() { return tr('ui.shared.articlesProduitQuantitePrix'); },
+  get discountAmount() { return tr('ui.shared.remise'); },
+  get insuranceAmount() { return tr('ui.shared.priseEnChargeAssurance'); },
+  get insurerId() { return tr('ui.shared.assureur'); },
   customerId: 'Client',
-  vatRate: 'Taux de TVA',
-  createdAt: 'Date de la vente',
-  cashierId: 'Vendeur',
+  get vatRate() { return tr('ui.shared.tauxDeTva'); },
+  get createdAt() { return tr('ui.shared.dateDeLaVente'); },
+  get cashierId() { return tr('ui.shared.vendeur'); },
   sku: 'Référence / SKU',
   category: 'Catégorie',
-  brand: 'Marque',
+  get brand() { return tr('ui.shared.marque'); },
   name: 'Nom / Modèle',
-  buyPrice: "Prix d'achat",
-  sellPrice: 'Prix de vente',
-  quantity: 'Quantité',
-  openingAmount: 'Fond de caisse',
-  closingAmount: 'Montant de clôture',
+  get buyPrice() { return tr('ui.shared.prixDAchat'); },
+  get sellPrice() { return tr('ui.shared.prixDeVente'); },
+  get quantity() { return tr('ui.shared.quantite'); },
+  get openingAmount() { return tr('ui.shared.fondDeCaisse'); },
+  get closingAmount() { return tr('ui.shared.montantDeCloture'); },
   method: 'Moyen de paiement',
-  amount: 'Montant',
-  supplierName: 'Fournisseur',
+  get amount() { return tr('ui.shared.montant'); },
+  get supplierName() { return tr('ui.shared.fournisseur'); },
   description: 'Description',
-  cost: 'Coût',
+  get cost() { return tr('ui.shared.cout'); },
   notes: 'Notes',
-  firstName: 'Prénom',
-  lastName: 'Nom',
-  phone: 'Téléphone',
+  get firstName() { return tr('ui.shared.prenom'); },
+  get lastName() { return tr('ui.shared.nom'); },
+  get phone() { return tr('ui.shared.telephone'); },
   email: 'Email',
-  loyaltyPoints: 'Points de fidélité',
-  requestedAmount: 'Montant demandé',
-  acceptedAmount: 'Montant accepté',
-  receivedAmount: 'Montant reçu',
-  cashRefund: 'Remboursement espèces',
+  get loyaltyPoints() { return tr('ui.shared.pointsDeFidelite'); },
+  get requestedAmount() { return tr('ui.shared.montantDemande'); },
+  get acceptedAmount() { return tr('ui.shared.montantAccepte'); },
+  get receivedAmount() { return tr('ui.shared.montantRecu'); },
+  get cashRefund() { return tr('ui.shared.remboursementEspeces'); },
 };
 
 export { ANOMALY_STATUS_LABELS, ANOMALY_CATEGORY_LABELS, ANOMALY_REASON_LABELS, ANOMALY_FIELDS_BY_CATEGORY, ANOMALY_CORRECTION_TYPES_BY_CATEGORY };

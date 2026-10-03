@@ -11,6 +11,8 @@ import {
   type Announcement,
 } from '../../features/announcements/api';
 import { Badge, Button } from '../ui';
+import { tr } from '../../lib/tr';
+import { displayLocale } from '../../lib/format';
 
 /**
  * Nouveautés produit, côté utilisateur.
@@ -136,11 +138,11 @@ export function WhatsNewBell() {
                         <Badge tone={a.kind === 'FIX' ? 'success' : a.kind === 'IMPROVEMENT' ? 'accent' : 'info'}>
                           {i18n.exists(`announcementKinds.${a.kind}`) ? t(`announcementKinds.${a.kind}`) : ANNOUNCEMENT_KIND_LABELS[a.kind]}
                         </Badge>
-                        {!a.read && <span className="h-2 w-2 rounded-full bg-danger" aria-label="Non lue" />}
+                        {!a.read && <span className="h-2 w-2 rounded-full bg-danger" aria-label={tr('ui.WhatsNewBell.nonLue')} />}
                       </span>
                       <span className="block font-medium text-content">{a.title}</span>
                       <span className="block text-xs text-content-faint">
-                        {a.publishedAt && new Date(a.publishedAt).toLocaleDateString('fr-FR')}
+                        {a.publishedAt && new Date(a.publishedAt).toLocaleDateString(displayLocale())}
                       </span>
                     </span>
                   </button>

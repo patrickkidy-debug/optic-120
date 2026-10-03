@@ -4,13 +4,14 @@ import { Check, ArrowRight, MessageCircle, PartyPopper } from 'lucide-react';
 import { PageHeader, Button } from '../../components/ui';
 import { demoWhatsappLink } from '../../lib/whatsapp';
 import { trackDemoEvent } from '../../features/demo/api';
+import { tr } from '../../lib/tr';
 
-const RECAP = [
-  'Gestion des stocks',
-  'Gestion des patients',
-  'Gestion des ventes',
-  "Suivi de l'activité",
-  'Gestion multi-boutiques',
+const RECAP = () => [
+  tr('ui.DemoCompletePage.gestionDesStocks'),
+  tr('ui.DemoCompletePage.gestionDesPatients'),
+  tr('ui.DemoCompletePage.gestionDesVentes'),
+  tr('ui.DemoCompletePage.suiviDeLActivite'),
+  tr('ui.DemoCompletePage.gestionMultiBoutiques'),
 ];
 
 /**
@@ -27,12 +28,12 @@ export function DemoCompletePage() {
   }, []);
 
   const demoLink = demoWhatsappLink(
-    "Bonjour, je viens de terminer la visite guidée d'OculoSaaS et j'aimerais une démonstration personnalisée.",
+    tr('ui.DemoCompletePage.bonjourJeViensDeTerminer'),
   );
 
   return (
     <div>
-      <PageHeader title="Vous êtes prêt à utiliser OculoSaaS" subtitle="Voici ce que vous venez de découvrir" />
+      <PageHeader title={tr('ui.DemoCompletePage.vousEtesPretAUtiliser')} subtitle={tr('ui.DemoCompletePage.voiciCeQueVousVenez')} />
 
       <div className="mx-auto max-w-2xl">
         <div className="card flex flex-col items-center gap-4 p-8 text-center">
@@ -40,7 +41,7 @@ export function DemoCompletePage() {
             <PartyPopper className="h-7 w-7" />
           </span>
           <ul className="grid w-full grid-cols-1 gap-2 text-left sm:grid-cols-2">
-            {RECAP.map((item) => (
+            {RECAP().map((item) => (
               <li key={item} className="flex items-center gap-2 text-sm text-content">
                 <Check className="h-4 w-4 shrink-0 text-success" />
                 {item}
@@ -57,7 +58,7 @@ export function DemoCompletePage() {
               navigate('/parametres/abonnement');
             }}
           >
-            Choisir mon abonnement <ArrowRight className="h-4 w-4" />
+            {tr('ui.DemoCompletePage.choisirMonAbonnement')} <ArrowRight className="h-4 w-4" />
           </Button>
           <a
             href={demoLink}
@@ -66,11 +67,11 @@ export function DemoCompletePage() {
             onClick={() => trackDemoEvent('custom_demo_requested')}
             className="btn-outline flex-1 items-center justify-center gap-2"
           >
-            <MessageCircle className="h-4 w-4" /> Démonstration personnalisée
+            <MessageCircle className="h-4 w-4" /> {tr('ui.DemoCompletePage.demonstrationPersonnalisee')}
           </a>
         </div>
         <p className="mt-3 text-center text-xs text-content-faint">
-          Les données d'exemple utilisées pendant la visite viennent d'être effacées : votre tableau de bord est prêt à recevoir vos vraies données.
+          {tr('ui.DemoCompletePage.lesDonneesDExempleUtilisees')}
         </p>
       </div>
     </div>

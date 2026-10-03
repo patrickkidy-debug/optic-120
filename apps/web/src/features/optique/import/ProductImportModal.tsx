@@ -5,21 +5,22 @@ import { previewProductImport, commitProductImport, type ImportPreviewRow } from
 import { apiErrorMessage } from '../../../lib/api';
 import { invalidateProductViews } from '../../../lib/invalidate';
 import { Modal, Button, Badge, PageLoader } from '../../../components/ui';
+import { tr } from '../../../lib/tr';
 
 const CATEGORIES = [
-  { value: 'MONTURE', label: 'Montures' },
-  { value: 'VERRE', label: 'Verres' },
-  { value: 'LENTILLE', label: 'Lentilles' },
-  { value: 'ACCESSOIRE', label: 'Accessoires' },
-  { value: 'ENTRETIEN', label: "Produits d'entretien" },
+  { value: 'MONTURE', get label() { return tr('ui.ProductImportModal.montures'); } },
+  { value: 'VERRE', get label() { return tr('ui.ProductImportModal.verres'); } },
+  { value: 'LENTILLE', get label() { return tr('ui.ProductImportModal.lentilles'); } },
+  { value: 'ACCESSOIRE', get label() { return tr('ui.ProductImportModal.accessoires'); } },
+  { value: 'ENTRETIEN', get label() { return tr('ui.ProductImportModal.produitsDEntretien'); } },
   { value: 'SERVICE', label: 'Services' },
-  { value: 'AUTRE', label: 'Autres' },
+  { value: 'AUTRE', get label() { return tr('ui.ProductImportModal.autres'); } },
 ];
 
 const STATUS_BADGE: Record<ImportPreviewRow['status'], { label: string; tone: 'success' | 'info' | 'danger' }> = {
-  create: { label: 'Nouveau', tone: 'success' },
-  update: { label: 'Mise à jour', tone: 'info' },
-  error: { label: 'Erreur', tone: 'danger' },
+  create: { get label() { return tr('ui.ProductImportModal.nouveau'); }, tone: 'success' },
+  update: { get label() { return tr('ui.ProductImportModal.miseAJour'); }, tone: 'info' },
+  error: { get label() { return tr('ui.ProductImportModal.erreur'); }, tone: 'danger' },
 };
 
 type Phase = 'choose' | 'review' | 'confirm' | 'result';
@@ -48,7 +49,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
       setRows(preview.map((r) => ({ ...r, category: defaultCategory })));
       setPhase('review');
     } catch (err) {
-      setError(apiErrorMessage(err, "Impossible de lire ce fichier"));
+      setError(apiErrorMessage(err, tr('ui.ProductImportModal.impossibleDeLireCeFichier')));
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
       setResult(res);
       setPhase('result');
     } catch (err) {
-      setError(apiErrorMessage(err, "Échec de l'import"));
+      setError(apiErrorMessage(err, tr('ui.ProductImportModal.echecDeLImport')));
     } finally {
       setLoading(false);
     }
@@ -91,16 +92,14 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
 
   if (phase === 'choose') {
     return (
-      <Modal open onClose={onClose} title="Importer des produits" size="md">
+      <Modal open onClose={onClose} title={tr('ui.ProductImportModal.importerDesProduits')} size="md">
         <div className="space-y-4">
           <p className="text-sm text-content-muted">
-            Importez un fichier Excel (.xlsx) ou CSV. OculoSaaS détecte automatiquement les colonnes
-            (référence, nom, catégorie, marque, prix, stock) et vous permet de tout vérifier avant
-            d'enregistrer quoi que ce soit.
+            {tr('ui.ProductImportModal.importezUnFichierExcelXlsx')}
           </p>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-content-muted">
-              Dans quelle catégorie importer ces produits ?
+              {tr('ui.ProductImportModal.dansQuelleCategorieImporterCes')}
             </label>
             <select
               className="input"
@@ -114,19 +113,19 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
               ))}
             </select>
             <p className="mt-1 text-xs text-content-faint">
-              Appliquée à toutes les lignes du fichier — modifiable ensuite ligne par ligne si besoin.
+              {tr('ui.ProductImportModal.appliqueeAToutesLesLignes')}
             </p>
           </div>
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition hover:border-primary">
             <FileUp className="h-8 w-8 text-content-faint" />
-            <span className="text-sm font-medium text-content">Choisir un fichier .xlsx ou .csv</span>
+            <span className="text-sm font-medium text-content">{tr('ui.ProductImportModal.choisirUnFichierXlsxOu')}</span>
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onFileChange} />
           </label>
           {loading && <PageLoader />}
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-end border-t pt-3">
             <Button variant="ghost" onClick={onClose}>
-              Annuler
+              {tr('ui.ProductImportModal.annuler')}
             </Button>
           </div>
         </div>
@@ -136,28 +135,28 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
 
   if (phase === 'review') {
     return (
-      <Modal open onClose={onClose} title="Vérifier avant import" size="xl">
+      <Modal open onClose={onClose} title={tr('ui.ProductImportModal.verifierAvantImport')} size="xl">
         <div className="space-y-4">
           <p className="text-sm text-content-muted">
-            Corrigez ce qui doit l'être avant de valider — rien n'est encore enregistré.
+            {tr('ui.ProductImportModal.corrigezCeQuiDoitL')}
           </p>
           {rows.some((r) => r.status === 'error') && (
             <div className="rounded-xl bg-[color:var(--danger)]/10 px-3 py-2 text-xs text-danger">
-              Certaines lignes ne peuvent pas être importées. Survolez « Erreur » pour voir la cause, ou corrigez les champs.
+              {tr('ui.ProductImportModal.certainesLignesNePeuventPas')}
             </div>
           )}
           <div className="max-h-[420px] overflow-y-auto rounded-xl border">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-surface">
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Référence</th>
-                  <th className="table-cell font-semibold">Nom</th>
-                  <th className="table-cell font-semibold">Catégorie</th>
-                  <th className="table-cell font-semibold">Marque</th>
-                  <th className="table-cell text-right font-semibold">Achat</th>
-                  <th className="table-cell text-right font-semibold">Vente</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductImportModal.reference')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductImportModal.nom')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductImportModal.categorie')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductImportModal.marque')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ProductImportModal.achat')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ProductImportModal.vente')}</th>
                   <th className="table-cell text-center font-semibold">Stock</th>
-                  <th className="table-cell font-semibold">Statut</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductImportModal.statut')}</th>
                   <th className="table-cell w-8" />
                 </tr>
               </thead>
@@ -227,7 +226,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                     </td>
                     <td className="table-cell">
                       <Badge tone={STATUS_BADGE[r.status].tone}>
-                        <span title={r.error}>{r.status === 'error' && r.error ? `Erreur : ${r.error}` : STATUS_BADGE[r.status].label}</span>
+                        <span title={r.error}>{r.status === 'error' && r.error ? tr('ui.ProductImportModal.erreurError', { error: r.error }) : STATUS_BADGE[r.status].label}</span>
                       </Badge>
                     </td>
                     <td className="table-cell">
@@ -245,10 +244,10 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
             <span className="text-sm text-content-muted">{rows.length} ligne(s)</span>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={onClose}>
-                Annuler
+                {tr('ui.ProductImportModal.annuler')}
               </Button>
               <Button disabled={usable.length === 0} onClick={() => setPhase('confirm')}>
-                Continuer
+                {tr('ui.ProductImportModal.continuer')}
               </Button>
             </div>
           </div>
@@ -259,29 +258,29 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
 
   if (phase === 'confirm') {
     return (
-      <Modal open onClose={onClose} title="Confirmer l'import" size="sm">
+      <Modal open onClose={onClose} title={tr('ui.ProductImportModal.confirmerLImport')} size="sm">
         <div className="space-y-4 text-center">
-          <p className="text-sm text-content-muted">Vous êtes sur le point d'importer :</p>
+          <p className="text-sm text-content-muted">{tr('ui.ProductImportModal.vousEtesSurLePoint')}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-surface-2 p-3">
               <p className="font-display text-xl font-bold text-success">{toCreate}</p>
-              <p className="text-xs text-content-muted">Nouveaux produits</p>
+              <p className="text-xs text-content-muted">{tr('ui.ProductImportModal.nouveauxProduits')}</p>
             </div>
             <div className="rounded-xl bg-surface-2 p-3">
               <p className="font-display text-xl font-bold text-primary">{toUpdate}</p>
-              <p className="text-xs text-content-muted">Mis à jour</p>
+              <p className="text-xs text-content-muted">{tr('ui.ProductImportModal.misAJour')}</p>
             </div>
           </div>
           {rows.length - usable.length > 0 && (
-            <p className="text-xs text-content-faint">{rows.length - usable.length} ligne(s) en erreur ignorée(s).</p>
+            <p className="text-xs text-content-faint">{rows.length - usable.length} {tr('ui.ProductImportModal.ligneSEnErreurIgnoree')}</p>
           )}
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex justify-center gap-2 border-t pt-4">
             <Button variant="ghost" onClick={() => setPhase('review')}>
-              Retour
+              {tr('ui.ProductImportModal.retour')}
             </Button>
             <Button loading={loading} onClick={() => void confirmImport()}>
-              <Upload className="h-4 w-4" /> Confirmer l'import
+              <Upload className="h-4 w-4" /> {tr('ui.ProductImportModal.confirmerLImport')}
             </Button>
           </div>
         </div>
@@ -291,10 +290,10 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
 
   // result
   return (
-    <Modal open onClose={onClose} title="Import terminé" size="sm">
+    <Modal open onClose={onClose} title={tr('ui.ProductImportModal.importTermine')} size="sm">
       <div className="space-y-4 text-center">
         <p className="font-display text-lg font-bold text-content">
-          {result?.created ?? 0} créé(s), {result?.updated ?? 0} mis à jour
+          {result?.created ?? 0} {tr('ui.ProductImportModal.creeS')} {result?.updated ?? 0} {tr('ui.ProductImportModal.misAJour2')}
         </p>
         {result && result.errors.length > 0 && (
           <div className="max-h-32 overflow-y-auto rounded-xl bg-[color:var(--danger)]/10 p-3 text-left text-xs text-danger">
@@ -304,7 +303,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
           </div>
         )}
         <div className="border-t pt-4">
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{tr('ui.ProductImportModal.fermer')}</Button>
         </div>
       </div>
     </Modal>

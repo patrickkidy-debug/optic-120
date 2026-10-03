@@ -5,6 +5,7 @@ import { listBranches, createBranch } from '../../features/optique/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 export function BranchesPage() {
   const qc = useQueryClient();
@@ -30,12 +31,12 @@ export function BranchesPage() {
   return (
     <div>
       <PageHeader
-        title="Magasins & succursales"
-        subtitle="Architecture multi-magasins de votre établissement"
+        title={tr('ui.BranchesPage.magasinsSuccursales')}
+        subtitle={tr('ui.BranchesPage.architectureMultiMagasinsDeVotre')}
         actions={
           canCreate && (
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" /> Nouveau magasin
+              <Plus className="h-4 w-4" /> {tr('ui.BranchesPage.nouveauMagasin')}
             </Button>
           )
         }
@@ -44,7 +45,7 @@ export function BranchesPage() {
       {isLoading ? (
         <PageLoader />
       ) : !branches || branches.length === 0 ? (
-        <EmptyState icon={Store} title="Aucun magasin" />
+        <EmptyState icon={Store} title={tr('ui.BranchesPage.aucunMagasin')} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {branches.map((b) => (
@@ -53,7 +54,7 @@ export function BranchesPage() {
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary">
                   <Store className="h-5 w-5" />
                 </span>
-                {b.isActive ? <Badge tone="success">Actif</Badge> : <Badge tone="neutral">Inactif</Badge>}
+                {b.isActive ? <Badge tone="success">{tr('ui.BranchesPage.actif')}</Badge> : <Badge tone="neutral">{tr('ui.BranchesPage.inactif')}</Badge>}
               </div>
               <h3 className="mt-3 font-display font-bold text-content">{b.name}</h3>
               <p className="text-sm text-content-muted">{b.city || '—'}</p>
@@ -63,19 +64,19 @@ export function BranchesPage() {
       )}
 
       {open && (
-        <Modal open onClose={() => setOpen(false)} title="Nouveau magasin" size="sm">
+        <Modal open onClose={() => setOpen(false)} title={tr('ui.BranchesPage.nouveauMagasin')} size="sm">
           <div className="space-y-4">
-            <Field label="Nom du magasin">
+            <Field label={tr('ui.BranchesPage.nomDuMagasin')}>
               <input className="input" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="Ville">
+            <Field label={tr('ui.BranchesPage.ville')}>
               <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
             </Field>
             {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)}>{tr('ui.BranchesPage.annuler')}</Button>
               <Button onClick={() => mut.mutate()} loading={mut.isPending} disabled={name.trim().length < 2}>
-                Créer
+                {tr('ui.BranchesPage.creer')}
               </Button>
             </div>
           </div>

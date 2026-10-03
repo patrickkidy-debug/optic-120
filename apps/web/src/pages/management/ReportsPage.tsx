@@ -30,6 +30,7 @@ import {
   type ReportFilters,
   type StatusKey,
 } from './reports/shared';
+import { tr } from '../../lib/tr';
 
 const PAGE_SIZE = 20;
 const FILTERS_KEY = 'oculo_reports_filters';
@@ -151,14 +152,13 @@ export function ReportsPage() {
     <div className="print:bg-white">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-content">Rapports &amp; Analyses</h1>
+          <h1 className="font-display text-2xl font-extrabold text-content">{tr('ui.ReportsPage.rapportsAnalyses')}</h1>
           <p className="mt-0.5 max-w-2xl text-sm text-content-muted">
-            Analysez les performances de votre magasin et suivez vos ventes, encaissements et
-            paiements.
+            {tr('ui.ReportsPage.analysezLesPerformancesDeVotre')}
           </p>
           {refreshedAt && (
             <p className="mt-1 text-xs text-content-faint">
-              Dernière mise à jour : aujourd'hui à{' '}
+              {tr('ui.ReportsPage.derniereMiseAJourAujourd')}{' '}
               {refreshedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
             </p>
           )}
@@ -172,10 +172,10 @@ export function ReportsPage() {
               void refetch();
             }}
           >
-            <RefreshCw className="h-4 w-4" /> Actualiser
+            <RefreshCw className="h-4 w-4" /> {tr('ui.ReportsPage.actualiser')}
           </Button>
           <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> Imprimer le rapport
+            <Printer className="h-4 w-4" /> {tr('ui.ReportsPage.imprimerLeRapport')}
           </Button>
         </div>
       </header>
@@ -196,10 +196,10 @@ export function ReportsPage() {
       {isError ? (
         <section className="card grid place-items-center p-10 text-center">
           <AlertTriangle className="h-8 w-8 text-danger" aria-hidden="true" />
-          <p className="mt-3 font-medium text-content">Impossible de charger les rapports</p>
+          <p className="mt-3 font-medium text-content">{tr('ui.ReportsPage.impossibleDeChargerLesRapports')}</p>
           <p className="mt-1 max-w-md text-sm text-content-muted">{apiErrorMessage(error)}</p>
           <Button className="mt-4" onClick={() => void refetch()}>
-            Réessayer
+            {tr('ui.ReportsPage.reessayer')}
           </Button>
         </section>
       ) : isLoading || !report ? (
@@ -279,16 +279,16 @@ function Synthesis({
   };
 }) {
   const lines = [
-    ["Chiffre d'affaires", formatCurrency(summary.revenue)],
-    ['Encaissements', formatCurrency(summary.collected)],
-    ['Reste à encaisser', formatCurrency(summary.outstanding)],
-    ['Ventes', String(summary.count)],
-    ['Panier moyen', formatCurrency(summary.avgBasket)],
-    ["Taux d'encaissement", formatPercent(summary.collectionRate)],
+    [tr('ui.ReportsPage.chiffreDAffaires'), formatCurrency(summary.revenue)],
+    [tr('ui.ReportsPage.encaissements'), formatCurrency(summary.collected)],
+    [tr('ui.ReportsPage.resteAEncaisser'), formatCurrency(summary.outstanding)],
+    [tr('ui.ReportsPage.ventes'), String(summary.count)],
+    [tr('ui.ReportsPage.panierMoyen'), formatCurrency(summary.avgBasket)],
+    [tr('ui.ReportsPage.tauxDEncaissement'), formatPercent(summary.collectionRate)],
   ];
   return (
-    <section className="card mb-4 hidden p-4 print:block" aria-label="Synthèse de la période">
-      <h2 className="font-display text-lg font-bold text-content">Synthèse de la période</h2>
+    <section className="card mb-4 hidden p-4 print:block" aria-label={tr('ui.ReportsPage.syntheseDeLaPeriode')}>
+      <h2 className="font-display text-lg font-bold text-content">{tr('ui.ReportsPage.syntheseDeLaPeriode')}</h2>
       <p className="mb-3 text-sm text-content-muted">{period}</p>
       <dl className="grid grid-cols-2 gap-3">
         {lines.map(([label, value]) => (
@@ -310,7 +310,7 @@ function SaleDetail({ saleId, onClose }: { saleId: string; onClose: () => void }
   });
 
   return (
-    <Modal open onClose={onClose} title={sale ? `Vente ${sale.number}` : 'Vente'} size="lg">
+    <Modal open onClose={onClose} title={sale ? tr('ui.ReportsPage.venteNumber', { number: sale.number }) : tr('ui.ReportsPage.vente')} size="lg">
       {isError ? (
         <p className="text-sm text-danger">{apiErrorMessage(error)}</p>
       ) : isLoading || !sale ? (
@@ -321,7 +321,7 @@ function SaleDetail({ saleId, onClose }: { saleId: string; onClose: () => void }
             <p className="font-medium text-content">
               {sale.customer
                 ? `${sale.customer.firstName} ${sale.customer.lastName}`
-                : 'Client de passage'}
+                : tr('ui.ReportsPage.clientDePassage')}
               {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
             </p>
             <p className="text-xs text-content-muted">
@@ -347,9 +347,9 @@ function SaleDetail({ saleId, onClose }: { saleId: string; onClose: () => void }
 
           <div className="rounded-xl bg-surface-2 p-3">
             <Line label="Total" value={formatCurrency(Number(sale.totalAmount))} strong />
-            <Line label="Déjà encaissé" value={formatCurrency(Number(sale.paidAmount))} />
+            <Line label={tr('ui.ReportsPage.dejaEncaisse')} value={formatCurrency(Number(sale.paidAmount))} />
             <Line
-              label="Reste à payer"
+              label={tr('ui.ReportsPage.resteAPayer')}
               value={formatCurrency(
                 Math.max(0, Number(sale.totalAmount) - Number(sale.paidAmount)),
               )}
@@ -358,10 +358,10 @@ function SaleDetail({ saleId, onClose }: { saleId: string; onClose: () => void }
           </div>
 
           <div>
-            <h4 className="mb-1.5 font-semibold text-content">Historique des encaissements</h4>
+            <h4 className="mb-1.5 font-semibold text-content">{tr('ui.ReportsPage.historiqueDesEncaissements')}</h4>
             {(sale.payments ?? []).length === 0 ? (
               <p className="rounded-lg bg-surface-2 p-3 text-content-muted">
-                Aucun encaissement enregistré pour cette vente.
+                {tr('ui.ReportsPage.aucunEncaissementEnregistrePourCette')}
               </p>
             ) : (
               <ul className="space-y-1">

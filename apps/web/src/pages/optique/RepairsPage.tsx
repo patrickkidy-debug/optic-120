@@ -9,22 +9,23 @@ import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { usePermission } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 const STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
-  RECEIVED: { label: 'Reçu', tone: 'info' },
-  IN_PROGRESS: { label: 'En cours', tone: 'warning' },
-  READY: { label: 'Prêt', tone: 'success' },
-  DELIVERED: { label: 'Livré', tone: 'success' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
+  RECEIVED: { get label() { return tr('ui.RepairsPage.recu'); }, tone: 'info' },
+  IN_PROGRESS: { get label() { return tr('ui.RepairsPage.enCours'); }, tone: 'warning' },
+  READY: { get label() { return tr('ui.RepairsPage.pret'); }, tone: 'success' },
+  DELIVERED: { get label() { return tr('ui.RepairsPage.livre'); }, tone: 'success' },
+  CANCELLED: { get label() { return tr('ui.RepairsPage.annule'); }, tone: 'danger' },
 };
 
 const REPAIR_CAT: Record<RepairCategory, { label: string; icon: LucideIcon }> = {
-  MONTURE: { label: 'Monture', icon: Frame },
-  VERRE: { label: 'Verre', icon: Glasses },
-  VIS: { label: 'Vis / charnière', icon: Wrench },
-  PLAQUETTES: { label: 'Plaquettes', icon: CircleDot },
-  NETTOYAGE: { label: 'Nettoyage', icon: Sparkles },
-  AUTRE: { label: 'Autre', icon: Tag },
+  MONTURE: { get label() { return tr('ui.RepairsPage.monture'); }, icon: Frame },
+  VERRE: { get label() { return tr('ui.RepairsPage.verre'); }, icon: Glasses },
+  VIS: { get label() { return tr('ui.RepairsPage.visCharniere'); }, icon: Wrench },
+  PLAQUETTES: { get label() { return tr('ui.RepairsPage.plaquettes'); }, icon: CircleDot },
+  NETTOYAGE: { get label() { return tr('ui.RepairsPage.nettoyage'); }, icon: Sparkles },
+  AUTRE: { get label() { return tr('ui.RepairsPage.autre'); }, icon: Tag },
 };
 
 function CatIcon({ category }: { category: string | null }) {
@@ -72,12 +73,12 @@ export function RepairsPage() {
   return (
     <div>
       <PageHeader
-        title="SAV & réparations"
-        subtitle="Suivi des réparations de montures et équipements"
+        title={tr('ui.RepairsPage.savReparations')}
+        subtitle={tr('ui.RepairsPage.suiviDesReparationsDeMontures')}
         actions={
           canManage && (
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" /> Nouvelle réparation
+              <Plus className="h-4 w-4" /> {tr('ui.RepairsPage.nouvelleReparation')}
             </Button>
           )
         }
@@ -86,7 +87,7 @@ export function RepairsPage() {
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={Wrench} title="Aucune réparation" />
+        <EmptyState icon={Wrench} title={tr('ui.RepairsPage.aucuneReparation')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
@@ -95,7 +96,7 @@ export function RepairsPage() {
                 <th className="table-cell font-semibold">N°</th>
                 <th className="table-cell font-semibold">Client</th>
                 <th className="table-cell font-semibold">Description</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell font-semibold">{tr('ui.RepairsPage.statut')}</th>
               </tr>
             </thead>
             <tbody>
@@ -150,33 +151,33 @@ function RepairModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const mut = useMutation({
     mutationFn: (v: RepairCreateInput) => createRepair(v),
     onSuccess: onCreated,
-    onError: (e) => setError(apiErrorMessage(e, 'Création impossible')),
+    onError: (e) => setError(apiErrorMessage(e, tr('ui.RepairsPage.creationImpossible'))),
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle réparation">
+    <Modal open onClose={onClose} title={tr('ui.RepairsPage.nouvelleReparation')}>
       <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, category }))} className="space-y-3">
         <div>
-          <span className="label">Type de réparation</span>
+          <span className="label">{tr('ui.RepairsPage.typeDeReparation')}</span>
           <CategoryChips value={category} onChange={setCategory} />
         </div>
-        <Field label="Client (optionnel)">
+        <Field label={tr('ui.RepairsPage.clientOptionnel')}>
           <select className="input" {...register('customerId')}>
-            <option value="">— Aucun —</option>
+            <option value="">{tr('ui.RepairsPage.aucun')}</option>
             {customers?.map((c) => (
               <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
             ))}
           </select>
         </Field>
-        <Field label="Description du problème">
-          <input className="input" placeholder="Ex : Branche cassée, changement de vis…" {...register('description')} />
+        <Field label={tr('ui.RepairsPage.descriptionDuProbleme')}>
+          <input className="input" placeholder={tr('ui.RepairsPage.exBrancheCasseeChangementDe')} {...register('description')} />
         </Field>
-        <Field label="Coût estimé (FCFA)"><input className="input" type="number" min={0} {...register('cost')} /></Field>
+        <Field label={tr('ui.RepairsPage.coutEstimeFcfa')}><input className="input" type="number" min={0} {...register('cost')} /></Field>
         <Field label="Notes"><input className="input" {...register('notes')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Créer la réparation</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.RepairsPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.RepairsPage.creerLaReparation')}</Button>
         </div>
       </form>
     </Modal>

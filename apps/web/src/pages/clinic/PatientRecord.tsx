@@ -10,6 +10,7 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Button, Badge, PageLoader, Field } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 export function PatientRecord({ patientId, onClose }: { patientId: string; onClose: () => void }) {
   const qc = useQueryClient();
@@ -32,7 +33,7 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
   };
 
   return (
-    <Modal open onClose={onClose} title="Dossier médical" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.PatientRecord.dossierMedical')} size="lg">
       {isLoading || !patient ? (
         <PageLoader />
       ) : (
@@ -44,21 +45,21 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
                   {patient.firstName} {patient.lastName}
                 </h3>
                 <p className="text-sm text-content-muted">
-                  {patient.dateOfBirth ? `Né(e) le ${formatDate(patient.dateOfBirth)}` : 'Date de naissance non renseignée'}
+                  {patient.dateOfBirth ? tr('ui.PatientRecord.neELeDateofbirth', { dateOfBirth: formatDate(patient.dateOfBirth) }) : tr('ui.PatientRecord.dateDeNaissanceNonRenseignee')}
                   {patient.bloodGroup ? ` · ${patient.bloodGroup}` : ''}
                 </p>
               </div>
               {canConsult && !adding && (
                 <Button onClick={() => setAdding(true)}>
-                  <Plus className="h-4 w-4" /> Consultation
+                  <Plus className="h-4 w-4" /> {tr('ui.PatientRecord.consultation')}
                 </Button>
               )}
             </div>
             {patient.allergies && (
-              <p className="mt-2 text-sm text-danger">⚠ Allergies : {patient.allergies}</p>
+              <p className="mt-2 text-sm text-danger">{tr('ui.PatientRecord.allergies')} {patient.allergies}</p>
             )}
             {patient.medicalHistory && (
-              <p className="mt-1 text-sm text-content-muted">Antécédents : {patient.medicalHistory}</p>
+              <p className="mt-1 text-sm text-content-muted">{tr('ui.PatientRecord.antecedents')} {patient.medicalHistory}</p>
             )}
           </div>
 
@@ -74,9 +75,9 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
             />
           )}
 
-          <Section icon={Stethoscope} title={`Consultations (${patient.consultations.length})`}>
+          <Section icon={Stethoscope} title={tr('ui.PatientRecord.consultationsLength', { length: patient.consultations.length })}>
             {patient.consultations.length === 0 ? (
-              <p className="text-sm text-content-muted">Aucune consultation.</p>
+              <p className="text-sm text-content-muted">{tr('ui.PatientRecord.aucuneConsultation')}</p>
             ) : (
               patient.consultations.map((c) => (
                 <div key={c.id} className="rounded-lg border p-3">
@@ -87,20 +88,20 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
                       <button
                         onClick={() => printMedicalPrescription(c, patient, company)}
                         className="btn-ghost h-7 w-7 rounded-lg p-0"
-                        title="Imprimer l'ordonnance"
+                        title={tr('ui.PatientRecord.imprimerLOrdonnance')}
                       >
                         <Printer className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-content-muted">
-                    {c.visualAcuityRight && <span>AV OD : {c.visualAcuityRight}</span>}
-                    {c.visualAcuityLeft && <span>AV OG : {c.visualAcuityLeft}</span>}
-                    {c.tonometryRight && <span>TO OD : {c.tonometryRight}</span>}
-                    {c.tonometryLeft && <span>TO OG : {c.tonometryLeft}</span>}
+                    {c.visualAcuityRight && <span>{tr('ui.PatientRecord.avOd')} {c.visualAcuityRight}</span>}
+                    {c.visualAcuityLeft && <span>{tr('ui.PatientRecord.avOg')} {c.visualAcuityLeft}</span>}
+                    {c.tonometryRight && <span>{tr('ui.PatientRecord.toOd')} {c.tonometryRight}</span>}
+                    {c.tonometryLeft && <span>{tr('ui.PatientRecord.toOg')} {c.tonometryLeft}</span>}
                   </div>
                   {c.prescription && (
-                    <p className="mt-2 text-xs text-content"><strong>Prescription :</strong> {c.prescription}</p>
+                    <p className="mt-2 text-xs text-content"><strong>{tr('ui.PatientRecord.prescription')}</strong> {c.prescription}</p>
                   )}
                 </div>
               ))
@@ -109,22 +110,22 @@ export function PatientRecord({ patientId, onClose }: { patientId: string; onClo
 
           <IopSection consultations={patient.consultations} />
 
-          <Section icon={CalendarDays} title={`Rendez-vous (${patient.appointments.length})`}>
+          <Section icon={CalendarDays} title={tr('ui.PatientRecord.rendezVousLength', { length: patient.appointments.length })}>
             {patient.appointments.length === 0 ? (
-              <p className="text-sm text-content-muted">Aucun rendez-vous.</p>
+              <p className="text-sm text-content-muted">{tr('ui.PatientRecord.aucunRendezVous')}</p>
             ) : (
               patient.appointments.map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                  <span className="text-content">{formatDateTime(a.scheduledAt)} — {a.reason ?? 'Consultation'}</span>
+                  <span className="text-content">{formatDateTime(a.scheduledAt)} — {a.reason ?? tr('ui.PatientRecord.consultation')}</span>
                   <Badge tone="neutral">{a.status}</Badge>
                 </div>
               ))
             )}
           </Section>
 
-          <Section icon={Scissors} title={`Chirurgies (${patient.surgeries.length})`}>
+          <Section icon={Scissors} title={tr('ui.PatientRecord.chirurgiesLength', { length: patient.surgeries.length })}>
             {patient.surgeries.length === 0 ? (
-              <p className="text-sm text-content-muted">Aucune chirurgie.</p>
+              <p className="text-sm text-content-muted">{tr('ui.PatientRecord.aucuneChirurgie')}</p>
             ) : (
               patient.surgeries.map((s) => (
                 <div key={s.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
@@ -153,15 +154,15 @@ function IopSection({ consultations }: { consultations: Consultation[] }) {
     <div>
       <div className="mb-2 flex items-center gap-2">
         <Activity className="h-4 w-4 text-primary" />
-        <h4 className="font-semibold text-content">Suivi de la tension oculaire</h4>
+        <h4 className="font-semibold text-content">{tr('ui.PatientRecord.suiviDeLaTensionOculaire')}</h4>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase text-content-faint">
               <th className="px-3 py-2 font-semibold">Date</th>
-              <th className="px-3 py-2 text-center font-semibold">TO OD (mmHg)</th>
-              <th className="px-3 py-2 text-center font-semibold">TO OG (mmHg)</th>
+              <th className="px-3 py-2 text-center font-semibold">{tr('ui.PatientRecord.toOdMmhg')}</th>
+              <th className="px-3 py-2 text-center font-semibold">{tr('ui.PatientRecord.toOgMmhg')}</th>
             </tr>
           </thead>
           <tbody>
@@ -224,28 +225,28 @@ function ConsultationForm({
   return (
     <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3 rounded-xl border border-primary/30 bg-primary-soft/40 p-4">
       <h4 className="flex items-center gap-2 font-semibold text-content">
-        <Eye className="h-4 w-4 text-primary" /> Nouvelle consultation ophtalmologique
+        <Eye className="h-4 w-4 text-primary" /> {tr('ui.PatientRecord.nouvelleConsultationOphtalmologique')}
       </h4>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Acuité visuelle OD"><input className="input" placeholder="10/10" {...register('visualAcuityRight')} /></Field>
-        <Field label="Acuité visuelle OG"><input className="input" placeholder="10/10" {...register('visualAcuityLeft')} /></Field>
-        <Field label="Réfraction OD"><input className="input" placeholder="-1.25 (180°)" {...register('refractionRight')} /></Field>
-        <Field label="Réfraction OG"><input className="input" placeholder="-1.00 (175°)" {...register('refractionLeft')} /></Field>
-        <Field label="Tonométrie OD (mmHg)"><input className="input" placeholder="15" {...register('tonometryRight')} /></Field>
-        <Field label="Tonométrie OG (mmHg)"><input className="input" placeholder="16" {...register('tonometryLeft')} /></Field>
+        <Field label={tr('ui.PatientRecord.acuiteVisuelleOd')}><input className="input" placeholder="10/10" {...register('visualAcuityRight')} /></Field>
+        <Field label={tr('ui.PatientRecord.acuiteVisuelleOg')}><input className="input" placeholder="10/10" {...register('visualAcuityLeft')} /></Field>
+        <Field label={tr('ui.PatientRecord.refractionOd')}><input className="input" placeholder="-1.25 (180°)" {...register('refractionRight')} /></Field>
+        <Field label={tr('ui.PatientRecord.refractionOg')}><input className="input" placeholder="-1.00 (175°)" {...register('refractionLeft')} /></Field>
+        <Field label={tr('ui.PatientRecord.tonometrieOdMmhg')}><input className="input" placeholder="15" {...register('tonometryRight')} /></Field>
+        <Field label={tr('ui.PatientRecord.tonometrieOgMmhg')}><input className="input" placeholder="16" {...register('tonometryLeft')} /></Field>
       </div>
-      <Field label="Biomicroscopie"><textarea className="input min-h-[60px]" {...register('biomicroscopy')} /></Field>
-      <Field label="Fond d'œil"><textarea className="input min-h-[60px]" {...register('fundus')} /></Field>
+      <Field label={tr('ui.PatientRecord.biomicroscopie')}><textarea className="input min-h-[60px]" {...register('biomicroscopy')} /></Field>
+      <Field label={tr('ui.PatientRecord.fondDIl')}><textarea className="input min-h-[60px]" {...register('fundus')} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="OCT"><input className="input" {...register('oct')} /></Field>
-        <Field label="Champ visuel"><input className="input" {...register('visualField')} /></Field>
+        <Field label={tr('ui.PatientRecord.champVisuel')}><input className="input" {...register('visualField')} /></Field>
       </div>
-      <Field label="Diagnostic"><input className="input" {...register('diagnosis')} /></Field>
-      <Field label="Prescription"><textarea className="input min-h-[60px]" {...register('prescription')} /></Field>
+      <Field label={tr('ui.PatientRecord.diagnostic')}><input className="input" {...register('diagnosis')} /></Field>
+      <Field label={tr('ui.PatientRecord.prescription2')}><textarea className="input min-h-[60px]" {...register('prescription')} /></Field>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button type="submit" loading={mut.isPending}>Enregistrer la consultation</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.PatientRecord.annuler')}</Button>
+        <Button type="submit" loading={mut.isPending}>{tr('ui.PatientRecord.enregistrerLaConsultation')}</Button>
       </div>
     </form>
   );

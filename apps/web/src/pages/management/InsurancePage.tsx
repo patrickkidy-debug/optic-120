@@ -22,16 +22,17 @@ import { ContractsTab } from './insurance/ContractsTab';
 import { ClaimsTab, ClaimDetailModal } from './insurance/ClaimsTab';
 import { RefundsTab } from './insurance/RefundsTab';
 import { ReceivablesTab } from './insurance/ReceivablesTab';
+import { tr } from '../../lib/tr';
 
 type Tab = 'overview' | 'insurers' | 'contracts' | 'claims' | 'refunds' | 'receivables';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'overview', label: 'Tableau de bord' },
-  { value: 'insurers', label: 'Assureurs' },
-  { value: 'contracts', label: 'Contrats' },
-  { value: 'claims', label: 'Prises en charge' },
-  { value: 'refunds', label: 'Remboursements' },
-  { value: 'receivables', label: 'Créances' },
+  { value: 'overview', get label() { return tr('ui.InsurancePage.tableauDeBord'); } },
+  { value: 'insurers', get label() { return tr('ui.InsurancePage.assureurs'); } },
+  { value: 'contracts', get label() { return tr('ui.InsurancePage.contrats'); } },
+  { value: 'claims', get label() { return tr('ui.InsurancePage.prisesEnCharge'); } },
+  { value: 'refunds', get label() { return tr('ui.InsurancePage.remboursements'); } },
+  { value: 'receivables', get label() { return tr('ui.InsurancePage.creances'); } },
 ];
 
 export function InsurancePage() {
@@ -51,12 +52,12 @@ export function InsurancePage() {
   return (
     <div>
       <PageHeader
-        title="Assurances"
-        subtitle="Contrats, garanties, prises en charge et remboursements"
+        title={tr('ui.InsurancePage.assurances')}
+        subtitle={tr('ui.InsurancePage.contratsGarantiesPrisesEnCharge')}
         actions={
           canCreate && (
             <Button onClick={() => { setEditing(null); setOpen(true); }}>
-              <Plus className="h-4 w-4" /> Nouvelle assurance
+              <Plus className="h-4 w-4" /> {tr('ui.InsurancePage.nouvelleAssurance')}
             </Button>
           )
         }
@@ -66,13 +67,13 @@ export function InsurancePage() {
           réellement enregistrés, plus aucun montant ne se saisit ici. */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
         <div>
-          <p className="text-sm font-semibold text-content">Remboursements assurance par mois</p>
+          <p className="text-sm font-semibold text-content">{tr('ui.InsurancePage.remboursementsAssuranceParMois')}</p>
           <p className="text-xs text-content-muted">
-            Calculé à partir des versements enregistrés sur les dossiers.
+            {tr('ui.InsurancePage.calculeAPartirDesVersements')}
           </p>
         </div>
         <input
-          aria-label="Mois de remboursement"
+          aria-label={tr('ui.InsurancePage.moisDeRemboursement')}
           className="input h-9 w-auto"
           type="month"
           value={month}
@@ -80,11 +81,11 @@ export function InsurancePage() {
         />
         {upcoming && (
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="success">Reçu ce mois : {formatCurrency(upcoming.receivedThisMonth ?? 0)}</Badge>
-            <Badge tone="info">En attente : {formatCurrency(upcoming.pendingTotal ?? 0)}</Badge>
-            <Badge tone="danger">En retard : {formatCurrency(upcoming.lateTotal ?? 0)}</Badge>
+            <Badge tone="success">{tr('ui.InsurancePage.recuCeMois')} {formatCurrency(upcoming.receivedThisMonth ?? 0)}</Badge>
+            <Badge tone="info">{tr('ui.InsurancePage.enAttente')} {formatCurrency(upcoming.pendingTotal ?? 0)}</Badge>
+            <Badge tone="danger">{tr('ui.InsurancePage.enRetard')} {formatCurrency(upcoming.lateTotal ?? 0)}</Badge>
             <Badge tone="neutral">
-              Prochaine échéance : {upcoming.nextDueDate ? formatDate(upcoming.nextDueDate) : '—'}
+              {tr('ui.InsurancePage.prochaineEcheance')} {upcoming.nextDueDate ? formatDate(upcoming.nextDueDate) : '—'}
             </Badge>
           </div>
         )}
@@ -134,8 +135,8 @@ function InsurersTab({
     return (
       <EmptyState
         icon={ShieldCheck}
-        title="Aucune assurance"
-        hint="Créez un assureur, puis son contrat et ses garanties."
+        title={tr('ui.InsurancePage.aucuneAssurance')}
+        hint={tr('ui.InsurancePage.creezUnAssureurPuisSon')}
       />
     );
   }
@@ -155,7 +156,7 @@ function InsurersTab({
           <div className="mt-2 flex items-baseline gap-1">
             <span className="font-display text-2xl font-bold text-success">{i.coveragePercent}%</span>
             <span className="text-xs text-content-muted">
-              {(i.contractCount ?? 0) > 0 ? 'taux par défaut' : 'de prise en charge'}
+              {(i.contractCount ?? 0) > 0 ? tr('ui.InsurancePage.tauxParDefaut') : tr('ui.InsurancePage.dePriseEnCharge')}
             </span>
           </div>
 
@@ -166,17 +167,17 @@ function InsurersTab({
 
           <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-surface-2 p-2.5 text-center text-xs">
             <Counter icon={FileText} value={i.contractCount ?? 0} label="contrats" />
-            <Counter icon={Users} value={i.beneficiaryCount ?? 0} label="assurés" />
+            <Counter icon={Users} value={i.beneficiaryCount ?? 0} label={tr('ui.InsurancePage.assures')} />
             <Counter icon={ClipboardList} value={i.claimCount ?? 0} label="dossiers" />
           </div>
 
           <div className="mt-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs">
             <div className="flex justify-between gap-2">
-              <span className="text-content-muted">En attente</span>
+              <span className="text-content-muted">{tr('ui.InsurancePage.enAttente2')}</span>
               <span className="font-semibold text-warning">{formatCurrency(i.pendingAmount ?? 0)}</span>
             </div>
             <div className="mt-1 flex justify-between gap-2">
-              <span className="text-content-muted">Remboursé</span>
+              <span className="text-content-muted">{tr('ui.InsurancePage.rembourse')}</span>
               <span className="font-semibold text-success">{formatCurrency(i.refundedAmount ?? 0)}</span>
             </div>
           </div>
@@ -186,7 +187,7 @@ function InsurersTab({
               onClick={() => onEdit(i)}
               className="btn-outline mt-3 h-8 w-full rounded-lg text-xs"
             >
-              <Pencil className="h-3.5 w-3.5" /> Modifier
+              <Pencil className="h-3.5 w-3.5" /> {tr('ui.InsurancePage.modifier')}
             </button>
           )}
         </div>
@@ -237,16 +238,16 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
   });
 
   return (
-    <Modal open onClose={onClose} title={insurer ? 'Modifier l\'assurance' : 'Nouvelle assurance'}>
+    <Modal open onClose={onClose} title={insurer ? tr('ui.InsurancePage.modifierLAssurance') : tr('ui.InsurancePage.nouvelleAssurance')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Nom"><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
+        <Field label={tr('ui.InsurancePage.nom')}><input className="input" {...register('name')} />{errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}</Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Type">
+          <Field label={tr('ui.InsurancePage.type')}>
             <select className="input" {...register('type')}>
               {INSURER_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </Field>
-          <Field label="Prise en charge par défaut (%)">
+          <Field label={tr('ui.InsurancePage.priseEnChargeParDefaut')}>
             <select className="input" {...register('coveragePercent', { valueAsNumber: true })}>
               {Array.from({ length: 101 }, (_, i) => (
                 <option key={i} value={i}>
@@ -257,17 +258,16 @@ function InsurerModal({ insurer, onClose }: { insurer: Insurer | null; onClose: 
           </Field>
         </div>
         <p className="rounded-lg bg-surface-2 p-2.5 text-xs text-content-muted">
-          Ce taux ne s'applique qu'aux clients sans contrat. Dès qu'un client est rattaché à un
-          contrat, ce sont ses garanties par catégorie qui décident.
+          {tr('ui.InsurancePage.ceTauxNeSApplique')}
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
+          <Field label={tr('ui.InsurancePage.telephone')}><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.InsurancePage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.InsurancePage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

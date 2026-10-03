@@ -30,11 +30,16 @@ function Root() {
   // Changement de langue : on remonte toute l'application. Les textes sont lus
   // au rendu via i18n.t, y compris dans des écrans qui ne s'abonnent pas à la
   // langue ; un remontage garantit qu'aucun ne reste dans l'ancienne langue.
+  // « loaded » : le bundle de la langue arrive parfois après le changement.
   const [lang, setLang] = useState(i18n.language);
   useEffect(() => {
-    const onChange = (l: string) => setLang(l);
+    const onChange = () => setLang(`${i18n.language}:${Date.now()}`);
     i18n.on('languageChanged', onChange);
-    return () => i18n.off('languageChanged', onChange);
+    i18n.on('loaded', onChange);
+    return () => {
+      i18n.off('languageChanged', onChange);
+      i18n.off('loaded', onChange);
+    };
   }, []);
 
   useEffect(() => {

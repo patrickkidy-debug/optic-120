@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BellRing, Phone, MessageCircle } from 'lucide-react';
 import { listRenewals } from '../../features/optique/api';
 import { PageHeader, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 function waLink(phone?: string | null) {
   if (!phone) return null;
@@ -19,7 +20,7 @@ function ageLabel(v?: string | null): string {
   const m = monthsAgo(v);
   if (m === null) return '—';
   if (m === 0) return 'ce mois-ci';
-  return `il y a ${m} mois`;
+  return tr('ui.RenewalsPage.ilYAMMois', { m: m });
 }
 
 export function RenewalsPage() {
@@ -28,22 +29,22 @@ export function RenewalsPage() {
   return (
     <div>
       <PageHeader
-        title="Rappels de renouvellement"
-        subtitle="Clients à recontacter : ordonnance à renouveler ou nouvel achat à proposer"
+        title={tr('ui.RenewalsPage.rappelsDeRenouvellement')}
+        subtitle={tr('ui.RenewalsPage.clientsARecontacterOrdonnanceA')}
       />
 
       {isLoading ? (
         <PageLoader />
       ) : !data || data.length === 0 ? (
-        <EmptyState icon={BellRing} title="Aucun rappel pour le moment" />
+        <EmptyState icon={BellRing} title={tr('ui.RenewalsPage.aucunRappelPourLeMoment')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                 <th className="table-cell font-semibold">Client</th>
-                <th className="table-cell font-semibold">Motif</th>
-                <th className="table-cell font-semibold">Renouvellement</th>
+                <th className="table-cell font-semibold">{tr('ui.RenewalsPage.motif')}</th>
+                <th className="table-cell font-semibold">{tr('ui.RenewalsPage.renouvellement')}</th>
                 <th className="table-cell font-semibold">Contact</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
@@ -58,13 +59,13 @@ export function RenewalsPage() {
                     </td>
                     <td className="table-cell">
                       <div className="flex flex-wrap gap-1.5">
-                        {c.renewPrescription && <Badge tone="warning">Ordonnance à renouveler</Badge>}
-                        {c.reorder && <Badge tone="info">Nouvel achat à proposer</Badge>}
+                        {c.renewPrescription && <Badge tone="warning">{tr('ui.RenewalsPage.ordonnanceARenouveler')}</Badge>}
+                        {c.reorder && <Badge tone="info">{tr('ui.RenewalsPage.nouvelAchatAProposer')}</Badge>}
                       </div>
                     </td>
                     <td className="table-cell text-xs text-content-muted">
-                      <div>Dernier achat : {ageLabel(c.lastPurchaseAt)}</div>
-                      <div>Ordonnance : {ageLabel(c.lastPrescriptionAt)}</div>
+                      <div>{tr('ui.RenewalsPage.dernierAchat')} {ageLabel(c.lastPurchaseAt)}</div>
+                      <div>{tr('ui.RenewalsPage.ordonnance')} {ageLabel(c.lastPrescriptionAt)}</div>
                     </td>
                     <td className="table-cell text-content-muted">
                       {c.phone || c.email || '—'}
@@ -73,7 +74,7 @@ export function RenewalsPage() {
                       <div className="flex justify-end gap-2">
                         {c.phone && (
                           <a href={`tel:${c.phone}`} className="btn-ghost h-8 rounded-lg px-2.5 text-xs">
-                            <Phone className="h-3.5 w-3.5" /> Appeler
+                            <Phone className="h-3.5 w-3.5" /> {tr('ui.RenewalsPage.appeler')}
                           </a>
                         )}
                         {wa && (

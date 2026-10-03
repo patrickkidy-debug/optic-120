@@ -26,6 +26,7 @@ import {
   ANOMALY_FIELD_LABEL_MAP,
   hasFinancialStake,
 } from './shared';
+import { tr } from '../../lib/tr';
 
 /**
  * Une transition d'anomalie ne change que l'anomalie… sauf l'application d'une
@@ -69,7 +70,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
 
   if (isLoading || !anomaly) {
     return (
-      <Modal open onClose={onClose} title="Anomalie">
+      <Modal open onClose={onClose} title={tr('ui.DetailModal.anomalie')}>
         <PageLoader />
       </Modal>
     );
@@ -83,7 +84,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
   const isReportOnly = !actsOnWholeRecord && anomaly.entries.length === 0;
 
   return (
-    <Modal open onClose={onClose} title={`Anomalie ${anomaly.number}`} size="lg">
+    <Modal open onClose={onClose} title={tr('ui.DetailModal.anomalieNumber', { number: anomaly.number })} size="lg">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <AnomalyCategoryBadge category={anomaly.category} />
@@ -93,25 +94,25 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
 
         <div className="rounded-xl bg-surface-2 p-3 text-sm">
           <div className="grid grid-cols-2 gap-2">
-            <Line label="Élément concerné" value={anomaly.targetReference} />
-            <Line label="Déclarée par" value={anomaly.declaredBy ? `${anomaly.declaredBy.firstName} ${anomaly.declaredBy.lastName}` : '—'} />
-            <Line label="Motif" value={`${ANOMALY_REASON_LABELS[anomaly.reasonCode]}${anomaly.reasonNote ? ` — ${anomaly.reasonNote}` : ''}`} />
-            <Line label="Déclarée le" value={formatDateTime(anomaly.declaredAt)} />
+            <Line label={tr('ui.DetailModal.elementConcerne')} value={anomaly.targetReference} />
+            <Line label={tr('ui.DetailModal.declareePar')} value={anomaly.declaredBy ? `${anomaly.declaredBy.firstName} ${anomaly.declaredBy.lastName}` : '—'} />
+            <Line label={tr('ui.DetailModal.motif')} value={`${ANOMALY_REASON_LABELS[anomaly.reasonCode]}${anomaly.reasonNote ? ` — ${anomaly.reasonNote}` : ''}`} />
+            <Line label={tr('ui.DetailModal.declareeLe')} value={formatDateTime(anomaly.declaredAt)} />
           </div>
           {anomaly.description && <p className="mt-2 text-content">{anomaly.description}</p>}
           {anomaly.comment && <p className="mt-1 text-xs text-content-faint">{anomaly.comment}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Impact label="Financier" value={anomaly.financialImpact} />
+          <Impact label={tr('ui.DetailModal.financier')} value={anomaly.financialImpact} />
           <Impact label="Stock" value={anomaly.stockImpact} isCount />
-          <Impact label="Caisse" value={anomaly.cashImpact} />
-          <Impact label="Assurance" value={anomaly.insuranceImpact} />
+          <Impact label={tr('ui.DetailModal.caisse')} value={anomaly.cashImpact} />
+          <Impact label={tr('ui.DetailModal.assurance')} value={anomaly.insuranceImpact} />
         </div>
 
         {anomaly.entries.length > 0 && (
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-content">Valeurs corrigées</h4>
+            <h4 className="mb-2 text-sm font-semibold text-content">{tr('ui.DetailModal.valeursCorrigees')}</h4>
             <div className="space-y-2">
               {anomaly.entries.map((e) => (
                 <div key={e.id} className="rounded-xl border bg-surface p-3 text-sm">
@@ -121,11 +122,11 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
                   </div>
                   <div className={`grid ${e.fieldName === 'items' ? 'grid-cols-1 gap-2' : 'grid-cols-1 sm:grid-cols-2 gap-2.5'}`}>
                     <div className="rounded-lg bg-surface-2/80 p-2.5 text-xs">
-                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-content-muted">Valeur initiale</p>
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-content-muted">{tr('ui.DetailModal.valeurInitiale')}</p>
                       <div className="text-content">{formatCorrectionValue(e.fieldName, e.oldValue)}</div>
                     </div>
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs">
-                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">Valeur corrigée souhaitée</p>
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">{tr('ui.DetailModal.valeurCorrigeeSouhaitee')}</p>
                       <div className="text-content font-medium">{formatCorrectionValue(e.fieldName, e.newValue)}</div>
                     </div>
                   </div>
@@ -137,26 +138,26 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
 
         {anomaly.status === 'REJECTED' && (
           <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
-            Rejetée{anomaly.rejectedBy ? ` par ${anomaly.rejectedBy.firstName} ${anomaly.rejectedBy.lastName}` : ''} —{' '}
+            {tr('ui.DetailModal.rejetee')}{anomaly.rejectedBy ? ` par ${anomaly.rejectedBy.firstName} ${anomaly.rejectedBy.lastName}` : ''} —{' '}
             {anomaly.rejectionReason}
           </p>
         )}
         {anomaly.status === 'CANCELLED' && (
           <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-content-muted">
-            Annulée{anomaly.cancelledBy ? ` par ${anomaly.cancelledBy.firstName} ${anomaly.cancelledBy.lastName}` : ''} —{' '}
+            {tr('ui.DetailModal.annulee')}{anomaly.cancelledBy ? ` par ${anomaly.cancelledBy.firstName} ${anomaly.cancelledBy.lastName}` : ''} —{' '}
             {anomaly.cancellationReason}
           </p>
         )}
         {anomaly.status === 'CORRECTED' && (
           <p className="rounded-lg bg-[color:var(--success)]/10 px-3 py-2 text-sm text-success">
-            Corrigée{anomaly.appliedBy ? ` par ${anomaly.appliedBy.firstName} ${anomaly.appliedBy.lastName}` : ''} le{' '}
+            {tr('ui.DetailModal.corrigee')}{anomaly.appliedBy ? ` par ${anomaly.appliedBy.firstName} ${anomaly.appliedBy.lastName}` : ''} le{' '}
             {anomaly.appliedAt ? formatDateTime(anomaly.appliedAt) : ''}
           </p>
         )}
 
         {financiallySensitive && ['PENDING_VALIDATION', 'APPROVED'].includes(anomaly.status) && (
           <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm font-medium text-danger">
-            Cette action modifiera les données financières.
+            {tr('ui.DetailModal.cetteActionModifieraLesDonnees')}
           </p>
         )}
 
@@ -166,13 +167,13 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
           <div className="rounded-lg border p-3">
             <textarea
               className="input min-h-[60px]"
-              placeholder="Motif du rejet (obligatoire)"
+              placeholder={tr('ui.DetailModal.motifDuRejetObligatoire')}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
             <div className="mt-2 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setShowReject(false)}>
-                Annuler
+                {tr('ui.DetailModal.annuler')}
               </Button>
               <Button
                 variant="danger"
@@ -180,7 +181,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
                 disabled={rejectReason.trim().length === 0}
                 onClick={() => run.mutate(() => rejectAnomaly(anomaly.id, rejectReason))}
               >
-                Confirmer le rejet
+                {tr('ui.DetailModal.confirmerLeRejet')}
               </Button>
             </div>
           </div>
@@ -189,13 +190,13 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
           <div className="rounded-lg border p-3">
             <textarea
               className="input min-h-[60px]"
-              placeholder="Motif de l'annulation (obligatoire)"
+              placeholder={tr('ui.DetailModal.motifDeLAnnulationObligatoire')}
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
             />
             <div className="mt-2 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setShowCancel(false)}>
-                Retour
+                {tr('ui.DetailModal.retour')}
               </Button>
               <Button
                 variant="danger"
@@ -203,7 +204,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
                 disabled={cancelReason.trim().length === 0}
                 onClick={() => run.mutate(() => cancelAnomaly(anomaly.id, cancelReason))}
               >
-                Confirmer l'annulation
+                {tr('ui.DetailModal.confirmerLAnnulation')}
               </Button>
             </div>
           </div>
@@ -212,51 +213,51 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
         <div className="flex flex-wrap justify-end gap-2">
           {anomaly.status === 'DECLARED' && canModify && (
             <Button loading={run.isPending} onClick={() => run.mutate(() => submitAnomaly(anomaly.id))}>
-              <Send className="h-4 w-4" /> Soumettre pour validation
+              <Send className="h-4 w-4" /> {tr('ui.DetailModal.soumettrePourValidation')}
             </Button>
           )}
           {anomaly.status === 'PENDING_VALIDATION' && canReject && !showReject && (
             <Button variant="outline" onClick={() => setShowReject(true)}>
-              <XCircle className="h-4 w-4" /> Rejeter
+              <XCircle className="h-4 w-4" /> {tr('ui.DetailModal.rejeter')}
             </Button>
           )}
           {anomaly.status === 'PENDING_VALIDATION' && canApprove && (
             <Button loading={run.isPending} onClick={() => run.mutate(() => approveAnomaly(anomaly.id))}>
-              <CheckCircle2 className="h-4 w-4" /> Approuver
+              <CheckCircle2 className="h-4 w-4" /> {tr('ui.DetailModal.approuver')}
             </Button>
           )}
           {anomaly.status === 'APPROVED' && isReportOnly && (
             <p className="text-xs text-content-faint">
-              Signalement : aucune valeur à corriger, rien à appliquer.
+              {tr('ui.DetailModal.signalementAucuneValeurACorriger')}
             </p>
           )}
           {anomaly.status === 'APPROVED' && !isReportOnly && canApply && canApplyHere && (
             <Button loading={run.isPending} onClick={() => run.mutate(() => applyAnomalyCorrection(anomaly.id))}>
-              <PlayCircle className="h-4 w-4" /> Appliquer la correction
+              <PlayCircle className="h-4 w-4" /> {tr('ui.DetailModal.appliquerLaCorrection')}
             </Button>
           )}
           {anomaly.status === 'APPROVED' && !isReportOnly && canApply && !canApplyHere && (
             <p className="text-xs text-content-faint">
-              Permission requise pour appliquer : {domainPermission}
+              {tr('ui.DetailModal.permissionRequisePourAppliquer')} {domainPermission}
             </p>
           )}
           {/* APPROVED inclus : sans issue de secours, une correction approuvée
               mais inapplicable bloque pour toujours la vente concernée. */}
           {['DECLARED', 'PENDING_VALIDATION', 'APPROVED'].includes(anomaly.status) && canCancel && !showCancel && (
             <Button variant="ghost" onClick={() => setShowCancel(true)}>
-              <Ban className="h-4 w-4" /> Annuler l'anomalie
+              <Ban className="h-4 w-4" /> {tr('ui.DetailModal.annulerLAnomalie')}
             </Button>
           )}
         </div>
 
         {timeline && timeline.length > 0 && (
           <div className="rounded-xl border bg-surface p-3">
-            <h4 className="mb-2 text-sm font-semibold text-content">Journal</h4>
+            <h4 className="mb-2 text-sm font-semibold text-content">{tr('ui.DetailModal.journal')}</h4>
             <div className="space-y-2 text-xs">
               {timeline.map((e) => (
                 <div key={e.id} className="flex items-center justify-between gap-2 border-b border-surface-2 pb-1.5 last:border-0 last:pb-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-content">{e.userName ?? 'Système'}</span>
+                    <span className="font-medium text-content">{e.userName ?? tr('ui.DetailModal.systeme')}</span>
                     <span className="text-content-faint">—</span>
                     <span className="rounded-md bg-surface-2 px-2 py-0.5 font-medium text-content-muted">
                       {ANOMALY_ACTION_LABELS[e.action] ?? e.action}
@@ -275,7 +276,7 @@ export function DetailModal({ anomalyId, onClose }: { anomalyId: string; onClose
 
 function formatCorrectionValue(fieldName: string, rawVal: string | null | undefined): React.ReactNode {
   if (rawVal == null || rawVal === '' || rawVal === '—') {
-    return <span className="text-content-faint italic">Non renseigné</span>;
+    return <span className="text-content-faint italic">{tr('ui.DetailModal.nonRenseigne')}</span>;
   }
 
   // 1. Articles / Lignes de vente (JSON)
@@ -289,7 +290,7 @@ function formatCorrectionValue(fieldName: string, rawVal: string | null | undefi
               const qty = Number(item.quantity) || 1;
               const unitPrice = Number(item.unitPrice) || 0;
               const total = qty * unitPrice;
-              const name = item.productName || item.reference || (item.productId ? `Article #${idx + 1}` : 'Article');
+              const name = item.productName || item.reference || (item.productId ? tr('ui.DetailModal.articleV', { v: idx + 1 }) : 'Article');
               return (
                 <div key={idx} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-xs shadow-xs">
                   <span className="font-medium text-content">{name}</span>
@@ -342,12 +343,12 @@ function formatCorrectionValue(fieldName: string, rawVal: string | null | undefi
   // 4. Taux TVA
   if (fieldName === 'vatRate') {
     const numVal = Number(rawVal);
-    return <span>{!isNaN(numVal) && numVal > 0 ? `${numVal} %` : '0 % (Exonéré)'}</span>;
+    return <span>{!isNaN(numVal) && numVal > 0 ? `${numVal} %` : tr('ui.DetailModal.n0Exonere')}</span>;
   }
 
   // 5. Client / Vendeur non renseigné
   if ((fieldName === 'customerId' || fieldName === 'cashierId') && (rawVal === '0' || rawVal === '')) {
-    return <span className="text-content-faint italic">Non assigné</span>;
+    return <span className="text-content-faint italic">{tr('ui.DetailModal.nonAssigne')}</span>;
   }
 
   return <span>{rawVal}</span>;

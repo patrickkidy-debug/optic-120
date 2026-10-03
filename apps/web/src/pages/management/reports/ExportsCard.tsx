@@ -13,6 +13,8 @@ import { apiErrorMessage } from '../../../lib/api';
 import { downloadCsv } from '../../../lib/csv';
 import { Button } from '../../../components/ui';
 import { iso, methodLabel, statusLabel } from './shared';
+import { tr } from '../../../lib/tr';
+import { displayLocale } from '../../../lib/format';
 
 /**
  * Exports CSV. Ceux qui portent sur les ventes rejouent la requête du rapport
@@ -55,19 +57,17 @@ export function ExportsCard({
     {
       key: 'sales',
       icon: Receipt,
-      title: 'Ventes',
-      description: `Toutes les ventes correspondant aux filtres — ${matchedCount} ligne${
-        matchedCount > 1 ? 's' : ''
-      } sera exportée${matchedCount > 1 ? 's' : ''}.`,
+      title: tr('ui.ExportsCard.ventes'),
+      description: tr('ui.ExportsCard.toutesLesVentesCorrespondantAux', { matchedCount: matchedCount, v: matchedCount > 1 ? 's' : '', v2: matchedCount > 1 ? 's' : '' }),
       visible: true,
       run: async () => {
         const full = await getSalesReport({ ...params, page: 1, pageSize: EXPORT_PAGE_SIZE });
         downloadCsv(
           `ventes_${params.from}_${params.to}.csv`,
-          ['N°', 'Date', 'Client', 'Téléphone', 'Magasin', 'Vendeur', 'Statut', 'Mode de paiement', 'Total', 'Payé', 'Reste'],
+          ['N°', 'Date', 'Client', tr('ui.ExportsCard.telephone'), tr('ui.ExportsCard.magasin'), tr('ui.ExportsCard.vendeur'), tr('ui.ExportsCard.statut'), tr('ui.ExportsCard.modeDePaiement'), 'Total', tr('ui.ExportsCard.paye'), tr('ui.ExportsCard.reste')],
           full.rows.map((r) => [
             r.number,
-            new Date(r.date).toLocaleString('fr-FR'),
+            new Date(r.date).toLocaleString(displayLocale()),
             r.customer,
             r.customerPhone ?? '',
             r.branch,
@@ -85,16 +85,16 @@ export function ExportsCard({
     {
       key: 'payments',
       icon: Wallet,
-      title: 'Paiements',
-      description: 'Les encaissements réellement enregistrés sur la période.',
+      title: tr('ui.ExportsCard.paiements'),
+      description: tr('ui.ExportsCard.lesEncaissementsReellementEnregistresSur'),
       visible: true,
       run: async () => {
         const payments = await getReportPayments(params);
         downloadCsv(
           `encaissements_${params.from}_${params.to}.csv`,
-          ['Date', 'Vente', 'Client', 'Mode', 'Montant'],
+          ['Date', tr('ui.ExportsCard.vente'), 'Client', 'Mode', tr('ui.ExportsCard.montant')],
           payments.map((p) => [
-            new Date(p.date).toLocaleString('fr-FR'),
+            new Date(p.date).toLocaleString(displayLocale()),
             p.saleNumber,
             p.customer,
             methodLabel(p.method),
@@ -108,13 +108,13 @@ export function ExportsCard({
       key: 'stock',
       icon: Package,
       title: 'Stock',
-      description: 'Le stock actuel du magasin sélectionné.',
+      description: tr('ui.ExportsCard.leStockActuelDuMagasin'),
       visible: canStock && Boolean(branchId),
       run: async () => {
         const rows = await getStock(branchId!);
         downloadCsv(
           `stock_${iso(new Date())}.csv`,
-          ['SKU', 'Produit', 'Catégorie', 'Quantité', 'Seuil', 'Prix vente'],
+          ['SKU', tr('ui.ExportsCard.produit'), tr('ui.ExportsCard.categorie'), tr('ui.ExportsCard.quantite'), tr('ui.ExportsCard.seuil'), tr('ui.ExportsCard.prixVente')],
           rows.map((r) => [r.sku, r.name, r.category, r.quantity, r.minAlert, r.sellPrice]),
         );
         return rows.length;
@@ -123,14 +123,14 @@ export function ExportsCard({
     {
       key: 'expenses',
       icon: Banknote,
-      title: 'Dépenses',
-      description: 'Les dépenses enregistrées pour ce magasin.',
+      title: tr('ui.ExportsCard.depenses'),
+      description: tr('ui.ExportsCard.lesDepensesEnregistreesPourCe'),
       visible: canExpenses,
       run: async () => {
         const rows = await listExpenses(branchId ?? undefined);
         downloadCsv(
           `depenses_${iso(new Date())}.csv`,
-          ['Date', 'Catégorie', 'Libellé', 'Montant', 'Notes'],
+          ['Date', tr('ui.ExportsCard.categorie'), tr('ui.ExportsCard.libelle'), tr('ui.ExportsCard.montant'), 'Notes'],
           rows.map((e) => [e.date.slice(0, 10), e.category, e.label, Number(e.amount), e.notes ?? '']),
         );
         return rows.length;
@@ -140,13 +140,13 @@ export function ExportsCard({
       key: 'customers',
       icon: Users,
       title: 'Clients',
-      description: 'Le fichier clients du magasin sélectionné.',
+      description: tr('ui.ExportsCard.leFichierClientsDuMagasin'),
       visible: canCustomers,
       run: async () => {
         const rows = await listCustomers(undefined, branchId ?? undefined);
         downloadCsv(
           `clients_${iso(new Date())}.csv`,
-          ['Nom', 'Prénom', 'Téléphone', 'Email', 'Points fidélité'],
+          [tr('ui.ExportsCard.nom'), tr('ui.ExportsCard.prenom'), tr('ui.ExportsCard.telephone'), 'Email', tr('ui.ExportsCard.pointsFidelite')],
           rows.map((c) => [c.lastName, c.firstName, c.phone ?? '', c.email ?? '', c.loyaltyPoints ?? 0]),
         );
         return rows.length;
@@ -162,8 +162,8 @@ export function ExportsCard({
       const count = await card.run();
       setDone(
         count === 0
-          ? `${card.title} : aucune ligne à exporter.`
-          : `${card.title} : ${count} ligne${count > 1 ? 's' : ''} exportée${count > 1 ? 's' : ''}.`,
+          ? tr('ui.ExportsCard.titleAucuneLigneAExporter', { title: card.title })
+          : tr('ui.ExportsCard.titleCountLigneVExportee', { title: card.title, count: count, v: count > 1 ? 's' : '', v2: count > 1 ? 's' : '' }),
       );
     } catch (e) {
       setError(apiErrorMessage(e));
@@ -173,11 +173,10 @@ export function ExportsCard({
   }
 
   return (
-    <section className="card mb-4 p-4" aria-label="Exports">
-      <h3 className="font-display text-base font-bold text-content">Exporter vos données</h3>
+    <section className="card mb-4 p-4" aria-label={tr('ui.ExportsCard.exports')}>
+      <h3 className="font-display text-base font-bold text-content">{tr('ui.ExportsCard.exporterVosDonnees')}</h3>
       <p className="mb-4 text-xs text-content-faint">
-        Téléchargez vos données au format CSV pour les analyser dans Excel ou Google Sheets.
-        Les exports de ventes et de paiements respectent les filtres actifs.
+        {tr('ui.ExportsCard.telechargezVosDonneesAuFormat')}
       </p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -195,14 +194,14 @@ export function ExportsCard({
                 <p className="mb-3 text-xs text-content-muted">{c.description}</p>
               </div>
               <Button variant="outline" loading={busy === c.key} onClick={() => run(c)}>
-                <Download className="h-4 w-4" /> Exporter CSV
+                <Download className="h-4 w-4" /> {tr('ui.ExportsCard.exporterCsv')}
               </Button>
             </div>
           ))}
       </div>
 
       <p className="mt-3 text-xs text-content-faint">
-        Fichiers CSV compatibles Excel (séparateur « ; », UTF-8).
+        {tr('reports.csvNote')}
       </p>
 
       <div aria-live="polite">

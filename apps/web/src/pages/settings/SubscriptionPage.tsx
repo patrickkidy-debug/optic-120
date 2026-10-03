@@ -25,6 +25,8 @@ import { trackPixelEvent } from '../../lib/pixel';
 import { formatCurrency, formatDate, getActiveCurrency } from '../../lib/format';
 import { PageHeader, Button, Modal, Badge, PageLoader } from '../../components/ui';
 import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
+import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 // Trace un paiement lancé en plein écran (redirection Moneroo) le temps que
 // l'utilisateur revienne sur la page, afin de pouvoir confirmer le Purchase
@@ -32,11 +34,11 @@ import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 const PENDING_PURCHASE_KEY = 'oculo-pending-purchase';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
-  TRIALING: { label: 'En attente de paiement', tone: 'warning' },
-  ACTIVE: { label: 'Actif', tone: 'success' },
-  PAST_DUE: { label: 'Paiement en retard', tone: 'warning' },
-  SUSPENDED: { label: 'Suspendu', tone: 'danger' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
+  TRIALING: { get label() { return tr('ui.SubscriptionPage.enAttenteDePaiement'); }, tone: 'warning' },
+  ACTIVE: { get label() { return tr('ui.SubscriptionPage.actif'); }, tone: 'success' },
+  PAST_DUE: { get label() { return tr('ui.SubscriptionPage.paiementEnRetard'); }, tone: 'warning' },
+  SUSPENDED: { get label() { return tr('ui.SubscriptionPage.suspendu'); }, tone: 'danger' },
+  CANCELLED: { get label() { return tr('ui.SubscriptionPage.annule'); }, tone: 'danger' },
 };
 
 /** Cycle choisi sur la landing : URL (?cycle=) d'abord, sinon mémorisé à l'inscription. */
@@ -48,7 +50,7 @@ function readSelectedCycle(params: URLSearchParams): BillingCycle {
 }
 
 function limitLabel(v: number | null): string {
-  return v == null ? 'Illimité' : String(v);
+  return v == null ? tr('ui.SubscriptionPage.illimite') : String(v);
 }
 
 function UsageBar({ label, used, max }: { label: string; used: number; max: number | null }) {
@@ -73,9 +75,9 @@ function UsageBar({ label, used, max }: { label: string; used: number; max: numb
 }
 
 const CYCLE_OPTIONS: { value: BillingCycle; label: string }[] = [
-  { value: 'MONTHLY', label: 'Mensuel' },
-  { value: 'QUARTERLY', label: '3 mois' },
-  { value: 'SEMIANNUAL', label: '6 mois' },
+  { value: 'MONTHLY', get label() { return tr('ui.SubscriptionPage.mensuel'); } },
+  { value: 'QUARTERLY', get label() { return tr('ui.SubscriptionPage.n3Mois'); } },
+  { value: 'SEMIANNUAL', get label() { return tr('ui.SubscriptionPage.n6Mois'); } },
 ];
 
 /** Sélecteur de cycle de facturation : mensuel, 3 mois ou 6 mois payés en une fois. */
@@ -134,7 +136,7 @@ function PlanPrice({ code, currency, cycle }: { code: string; currency: string; 
       </p>
       <p className="mt-0.5 text-xs text-content-muted">≈ {formatCurrency(Math.round(total / months))} / mois</p>
       <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-success">
-        <Tag className="h-3 w-3" /> Économisez {formatCurrency(savings)}
+        <Tag className="h-3 w-3" /> {tr('ui.SubscriptionPage.economisez')} {formatCurrency(savings)}
       </p>
     </div>
   );
@@ -280,7 +282,7 @@ export function SubscriptionPage() {
         <div>
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
           <p className="mt-3 text-sm text-content-muted">
-            Redirection vers le paiement sécurisé Moneroo…
+            {tr('ui.SubscriptionPage.redirectionVersLePaiementSecurise')}
           </p>
         </div>
       </div>
@@ -288,7 +290,7 @@ export function SubscriptionPage() {
 
   return (
     <div>
-      <PageHeader title="Abonnement" subtitle="Votre offre, votre consommation et vos factures" />
+      <PageHeader title={tr('ui.SubscriptionPage.abonnement')} subtitle={tr('ui.SubscriptionPage.votreOffreVotreConsommationEt')} />
 
       {sub && (
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -299,12 +301,12 @@ export function SubscriptionPage() {
               </span>
               <Badge tone={STATUS[sub.status]?.tone ?? 'neutral'}>{STATUS[sub.status]?.label ?? sub.status}</Badge>
             </div>
-            <h3 className="mt-3 font-display text-xl font-bold text-content">Offre {sub.plan.name}</h3>
+            <h3 className="mt-3 font-display text-xl font-bold text-content">{tr('ui.SubscriptionPage.offre')} {sub.plan.name}</h3>
             <p className="font-display text-2xl font-bold text-gradient">{formatCurrency(planPrice(sub.plan.code, currency))}<span className="text-sm font-normal text-content-muted"> / mois</span></p>
             <p className="mt-2 text-xs text-content-muted">
               {sub.status === 'TRIALING'
-                ? "Activez votre abonnement pour accéder à votre espace."
-                : `Période en cours jusqu'au ${formatDate(sub.currentPeriodEnd)}`}
+                ? tr('ui.SubscriptionPage.activezVotreAbonnementPourAcceder')
+                : tr('ui.SubscriptionPage.periodeEnCoursJusquAu', { currentPeriodEnd: formatDate(sub.currentPeriodEnd) })}
             </p>
             {/* Prolongation anticipée : tant que l'abonnement court encore, on
                 propose de payer d'avance plutôt que d'attendre la coupure. */}
@@ -317,7 +319,7 @@ export function SubscriptionPage() {
               return (
                 <div className="mt-3 border-t pt-3">
                   <p className={`text-xs font-semibold ${soon ? 'text-warning' : 'text-content-muted'}`}>
-                    {daysLeft === 1 ? 'Dernier jour' : `${daysLeft} jours restants`}
+                    {daysLeft === 1 ? tr('ui.SubscriptionPage.dernierJour') : tr('ui.SubscriptionPage.daysleftJoursRestants', { daysLeft: daysLeft })}
                   </p>
                   <Button
                     variant={soon ? undefined : 'outline'}
@@ -329,7 +331,7 @@ export function SubscriptionPage() {
                       );
                     }}
                   >
-                    Prolonger mon abonnement
+                    {tr('ui.SubscriptionPage.prolongerMonAbonnement')}
                   </Button>
                 </div>
               );
@@ -337,12 +339,12 @@ export function SubscriptionPage() {
           </div>
 
           <div className="card p-5 lg:col-span-2">
-            <h4 className="mb-3 font-display font-bold text-content">Consommation</h4>
+            <h4 className="mb-3 font-display font-bold text-content">{tr('ui.SubscriptionPage.consommation')}</h4>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <UsageBar label="Utilisateurs" used={sub.usage.users} max={sub.plan.maxUsers} />
-              <UsageBar label="Magasins" used={sub.usage.branches} max={sub.plan.maxBranches} />
+              <UsageBar label={tr('ui.SubscriptionPage.utilisateurs')} used={sub.usage.users} max={sub.plan.maxUsers} />
+              <UsageBar label={tr('ui.SubscriptionPage.magasins')} used={sub.usage.branches} max={sub.plan.maxBranches} />
               <UsageBar label="Patients" used={sub.usage.patients} max={sub.plan.maxPatients} />
-              <UsageBar label="Ventes" used={sub.usage.sales} max={sub.plan.maxSales} />
+              <UsageBar label={tr('ui.SubscriptionPage.ventes')} used={sub.usage.sales} max={sub.plan.maxSales} />
             </div>
           </div>
         </div>
@@ -364,17 +366,17 @@ export function SubscriptionPage() {
             className="mb-8 overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-primary-soft to-surface p-6 shadow-glow"
           >
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">
-              <Sparkles className="h-3.5 w-3.5" /> Choisissez votre offre
+              <Sparkles className="h-3.5 w-3.5" /> {tr('ui.SubscriptionPage.choisissezVotreOffre')}
             </span>
             <h3 className="mt-3 font-display text-2xl font-extrabold text-content">
-              {renewing ? 'Prolongez votre abonnement' : expired ? 'Réactivez votre espace' : 'Activez votre abonnement'}
+              {renewing ? tr('ui.SubscriptionPage.prolongezVotreAbonnement') : expired ? tr('ui.SubscriptionPage.reactivezVotreEspace') : tr('ui.SubscriptionPage.activezVotreAbonnement')}
             </h3>
             <p className="mt-1 max-w-2xl text-sm text-content-muted">
               {renewing
-                ? `Vous ne perdez aucun jour : la durée réglée s’ajoute à votre échéance actuelle du ${formatDate(sub!.currentPeriodEnd)}.`
+                ? tr('ui.SubscriptionPage.vousNePerdezAucunJour', { currentPeriodEnd: formatDate(sub!.currentPeriodEnd) })
                 : expired
-                  ? 'Votre période est terminée. Sélectionnez l’offre qui vous convient et réglez-la directement — vous retrouvez l’accès immédiatement.'
-                  : 'Sélectionnez librement l’offre qui vous convient pour continuer sans interruption.'}
+                  ? tr('ui.SubscriptionPage.votrePeriodeEstTermineeSelectionnez')
+                  : tr('ui.SubscriptionPage.selectionnezLibrementLOffreQui')}
             </p>
 
             <div className="mt-4">
@@ -391,13 +393,13 @@ export function SubscriptionPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="font-display font-bold text-content">{p.name}</h4>
-                      {isCurrent && <Badge tone="info">Offre actuelle</Badge>}
+                      {isCurrent && <Badge tone="info">{tr('ui.SubscriptionPage.offreActuelle')}</Badge>}
                     </div>
                     <PlanPrice code={p.code} currency={currency} cycle={cycle} />
                     <ul className="mt-2 flex-1 space-y-1">
                       {p.features.slice(0, 4).map((f) => (
                         <li key={f} className="flex items-start gap-1.5 text-xs text-content-muted">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {f}
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {trFr(f)}
                         </li>
                       ))}
                     </ul>
@@ -415,7 +417,7 @@ export function SubscriptionPage() {
                         })
                       }
                     >
-                      {renewing ? 'Prolonger avec' : 'Payer'} {p.name}
+                      {renewing ? tr('ui.SubscriptionPage.prolongerAvec') : tr('ui.SubscriptionPage.payer')} {p.name}
                     </Button>
                   </div>
                 );
@@ -426,7 +428,7 @@ export function SubscriptionPage() {
       })()}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-lg font-bold text-content">Nos offres</h3>
+        <h3 className="font-display text-lg font-bold text-content">{tr('ui.SubscriptionPage.nosOffres')}</h3>
         <CycleToggle cycle={cycle} onChange={setCycle} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -447,17 +449,17 @@ export function SubscriptionPage() {
       {invoices && invoices.length > 0 && (
         <div className="card mt-6 overflow-hidden">
           <div className="border-b px-5 py-4">
-            <h3 className="font-display font-bold text-content">Factures</h3>
+            <h3 className="font-display font-bold text-content">{tr('ui.SubscriptionPage.factures')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
                   <th className="table-cell font-semibold">N°</th>
-                  <th className="table-cell font-semibold">Période</th>
-                  <th className="table-cell text-right font-semibold">Montant</th>
-                  <th className="table-cell font-semibold">Statut</th>
-                  <th className="table-cell text-right font-semibold">Action</th>
+                  <th className="table-cell font-semibold">{tr('ui.SubscriptionPage.periode')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.SubscriptionPage.montant')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.SubscriptionPage.statut')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.SubscriptionPage.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -470,13 +472,13 @@ export function SubscriptionPage() {
                     <td className="table-cell text-right font-semibold text-content">{formatCurrency(Number(inv.amount), inv.currency)}</td>
                     <td className="table-cell">
                       <Badge tone={inv.status === 'PAID' ? 'success' : inv.status === 'FAILED' ? 'danger' : 'warning'}>
-                        {inv.status === 'PAID' ? 'Payée' : inv.status === 'FAILED' ? 'Échouée' : 'En attente'}
+                        {inv.status === 'PAID' ? tr('ui.SubscriptionPage.payee') : inv.status === 'FAILED' ? tr('ui.SubscriptionPage.echouee') : tr('ui.SubscriptionPage.enAttente')}
                       </Badge>
                     </td>
                     <td className="table-cell text-right">
                       {inv.status !== 'PAID' && canManage && (
                         <Button onClick={() => setPayFor({ kind: 'invoice', id: inv.id, label: inv.number, amount: Number(inv.amount), currency: inv.currency, cycle: 'MONTHLY' })} className="h-8 px-3 text-xs">
-                          Payer
+                          {tr('ui.SubscriptionPage.payer')}
                         </Button>
                       )}
                     </td>
@@ -527,44 +529,44 @@ function PlanCard({
     >
       {highlight && (
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-xs font-bold text-white shadow-card">
-          ⭐ LE PLUS POPULAIRE
+          {tr('ui.SubscriptionPage.lePlusPopulaire')}
         </span>
       )}
       <h4 className="mt-1 font-display text-lg font-bold text-content">{plan.name}</h4>
       {highlight && (
         <p className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
-          <Sparkles className="h-3 w-3" /> Recommandé pour les opticiens
+          <Sparkles className="h-3 w-3" /> {tr('ui.SubscriptionPage.recommandePourLesOpticiens')}
         </p>
       )}
-      <p className="mt-1 text-sm text-content-muted">{plan.description}</p>
+      <p className="mt-1 text-sm text-content-muted">{trFr(plan.description)}</p>
       <PlanPrice code={plan.code} currency={currency} cycle={cycle} />
       <ul className="mt-4 space-y-2">
         {plan.features.map((f) => (
           <li key={f} className="flex items-start gap-2 text-sm text-content">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {f}
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {trFr(f)}
           </li>
         ))}
       </ul>
       {highlight && (
         <p className="mt-4 rounded-xl bg-success/10 px-3 py-2 text-center text-xs font-semibold text-success">
-          Plus de 90&nbsp;% des établissements actifs choisissent cette offre.
+          {tr('ui.SubscriptionPage.plusDe90DesEtablissements')}
         </p>
       )}
       <div className="mt-5">
         {current ? (
           canManage ? (
             <Button variant="outline" className="w-full" onClick={onSubscribe}>
-              Reconduire cette offre
+              {tr('ui.SubscriptionPage.reconduireCetteOffre')}
             </Button>
           ) : (
             <Button variant="outline" className="w-full" disabled>
-              Offre actuelle
+              {tr('ui.SubscriptionPage.offreActuelle')}
             </Button>
           )
         ) : (
           canManage && (
             <Button variant={highlight ? 'accent' : 'primary'} className="w-full" onClick={onSubscribe}>
-              {highlight ? '🚀 Passer au plan Standard' : 'Choisir cette offre'}
+              {highlight ? tr('ui.SubscriptionPage.passerAuPlanStandard') : tr('ui.SubscriptionPage.choisirCetteOffre')}
             </Button>
           )
         )}
@@ -651,7 +653,7 @@ function BillingPaymentModal({
         setPhase('done');
         clearInterval(iv);
       } else if (s.status === 'FAILED') {
-        setError('Paiement échoué');
+        setError(tr('ui.SubscriptionPage.paiementEchoue'));
         setPhase('choose');
         clearInterval(iv);
       }
@@ -671,19 +673,19 @@ function BillingPaymentModal({
   }, [phase, target, paymentId]);
 
   return (
-    <Modal open onClose={onClose} title={`Paiement — ${target.label}`} size="sm">
+    <Modal open onClose={onClose} title={tr('ui.SubscriptionPage.paiementLabel', { label: target.label })} size="sm">
       <div className="mb-4 flex items-center justify-between rounded-xl bg-surface-2 px-3.5 py-2.5">
         <span className="text-sm text-content-muted">
-          Montant à régler{target.kind === 'plan' ? ` (${BILLING_CYCLE_MONTHS[target.cycle]} mois)` : ''}
+          {tr('ui.SubscriptionPage.montantARegler')}{target.kind === 'plan' ? tr('ui.SubscriptionPage.valueMois', { value: BILLING_CYCLE_MONTHS[target.cycle] }) : ''}
         </span>
         <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount, target.currency)}</span>
       </div>
       {/* Hors zone FCFA (Europe…) : réglé par virement, en francs CFA. */}
       {outsideCfa && (
         <p className="-mt-2 mb-4 text-xs text-content-muted">
-          Réglé par virement bancaire en francs CFA
+          {tr('ui.SubscriptionPage.regleParVirementBancaireEn')}
           {target.xof ? ` : ${formatCurrency(target.xof, 'XOF')}` : ''}
-          {getActiveCurrency() === 'EUR' ? ' (1 € = 655,957 FCFA, parité fixe).' : ' ; le montant dans votre devise est indicatif.'}
+          {getActiveCurrency() === 'EUR' ? tr('ui.SubscriptionPage.n1655957FcfaParite') : ' ; le montant dans votre devise est indicatif.'}
         </p>
       )}
       {phase === 'choose' && (
@@ -700,7 +702,7 @@ function BillingPaymentModal({
                 disabled={payMut.isPending || manualMut.isPending}
                 onClick={() => payMut.mutate('WAVE')}
               >
-                S'abonner maintenant
+                {tr('ui.SubscriptionPage.sAbonnerMaintenant')}
               </Button>
               <div className="mt-3 border-t pt-3">
                 {/* Pas de nom de passerelle : elle est choisie côté serveur
@@ -708,7 +710,7 @@ function BillingPaymentModal({
                     L'écrire en dur affichait « Moneroo » alors que GeniusPay
                     encaissait déjà. */}
                 <p className="mb-2 text-center text-xs text-content-faint">
-                  Paiement sécurisé — choisissez votre moyen à l&apos;étape suivante
+                  {tr('ui.SubscriptionPage.paiementSecuriseChoisissezVotreMoyen')}
                 </p>
                 <PaymentMethodLogos />
               </div>
@@ -720,27 +722,27 @@ function BillingPaymentModal({
           {target.kind === 'plan' && payInfo?.manual && !outsideCfa && (
             <div className={payInfo.gateway ? 'mt-4 border-t pt-3' : ''}>
               <p className="text-sm font-medium text-content">
-                {payInfo.gateway ? 'Ou payer directement par Mobile Money' : 'Payer par Mobile Money'}
+                {payInfo.gateway ? tr('ui.SubscriptionPage.ouPayerDirectementParMobile') : tr('ui.SubscriptionPage.payerParMobileMoney')}
               </p>
               <div className="mt-2 rounded-xl bg-surface-2 p-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-content-muted">Numéro</span>
+                  <span className="text-content-muted">{tr('ui.SubscriptionPage.numero')}</span>
                   <span className="font-bold text-content">{payInfo.manual.number}</span>
                 </div>
                 {payInfo.manual.name && (
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Nom</span>
+                    <span className="text-content-muted">{tr('ui.SubscriptionPage.nom')}</span>
                     <span className="font-semibold text-content">{payInfo.manual.name}</span>
                   </div>
                 )}
                 {payInfo.manual.network && (
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Réseau</span>
+                    <span className="text-content-muted">{tr('ui.SubscriptionPage.reseau')}</span>
                     <span className="text-content">{payInfo.manual.network}</span>
                   </div>
                 )}
                 <div className="mt-1 flex justify-between border-t pt-1">
-                  <span className="text-content-muted">Montant</span>
+                  <span className="text-content-muted">{tr('ui.SubscriptionPage.montant')}</span>
                   <span className="font-display font-bold text-content">
                     {formatCurrency(target.amount)}
                   </span>
@@ -753,11 +755,10 @@ function BillingPaymentModal({
                 disabled={manualMut.isPending}
                 onClick={() => manualMut.mutate('MOBILE_MONEY')}
               >
-                J'ai payé — enregistrer ma demande
+                {tr('ui.SubscriptionPage.jAiPayeEnregistrerMa')}
               </Button>
               <p className="mt-1.5 text-xs text-content-faint">
-                Envoyez le montant au numéro ci-dessus, puis cliquez : nous confirmons votre
-                paiement et votre abonnement s'active.
+                {tr('ui.SubscriptionPage.envoyezLeMontantAuNumero')}
               </p>
             </div>
           )}
@@ -767,33 +768,33 @@ function BillingPaymentModal({
           {target.kind === 'plan' && payInfo?.bank && (
             <div className={!outsideCfa && (payInfo.gateway || payInfo.manual) ? 'mt-4 border-t pt-3' : ''}>
               <p className="text-sm font-medium text-content">
-                {!outsideCfa && (payInfo.gateway || payInfo.manual) ? 'Ou payer par virement bancaire' : 'Payer par virement bancaire'}
+                {!outsideCfa && (payInfo.gateway || payInfo.manual) ? tr('ui.SubscriptionPage.ouPayerParVirementBancaire') : tr('ui.SubscriptionPage.payerParVirementBancaire')}
               </p>
               <div className="mt-2 rounded-xl bg-surface-2 p-3 text-sm">
                 {payInfo.bank.bankName && (
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Banque</span>
+                    <span className="text-content-muted">{tr('ui.SubscriptionPage.banque')}</span>
                     <span className="font-semibold text-content">{payInfo.bank.bankName}</span>
                   </div>
                 )}
                 {payInfo.bank.accountName && (
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Titulaire</span>
+                    <span className="text-content-muted">{tr('ui.SubscriptionPage.titulaire')}</span>
                     <span className="font-semibold text-content">{payInfo.bank.accountName}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-content-muted">Compte / IBAN</span>
+                  <span className="text-content-muted">{tr('ui.SubscriptionPage.compteIban')}</span>
                   <span className="font-bold text-content">{payInfo.bank.accountNumber}</span>
                 </div>
                 {payInfo.bank.swift && (
                   <div className="flex justify-between">
-                    <span className="text-content-muted">SWIFT / BIC</span>
+                    <span className="text-content-muted">{tr('ui.SubscriptionPage.swiftBic')}</span>
                     <span className="text-content">{payInfo.bank.swift}</span>
                   </div>
                 )}
                 <div className="mt-1 flex justify-between border-t pt-1">
-                  <span className="text-content-muted">Montant</span>
+                  <span className="text-content-muted">{tr('ui.SubscriptionPage.montant')}</span>
                   <span className="font-display font-bold text-content">
                     {target.xof ? formatCurrency(target.xof, 'XOF') : formatCurrency(target.amount, target.currency)}
                   </span>
@@ -806,12 +807,10 @@ function BillingPaymentModal({
                 disabled={manualMut.isPending}
                 onClick={() => manualMut.mutate('BANK_TRANSFER')}
               >
-                J'ai payé — enregistrer ma demande
+                {tr('ui.SubscriptionPage.jAiPayeEnregistrerMa')}
               </Button>
               <p className="mt-1.5 text-xs text-content-faint">
-                Effectuez le virement sur le compte ci-dessus, cliquez, puis envoyez la capture
-                d'écran ou le reçu sur WhatsApp au {TEAM_WHATSAPP_DISPLAY}. Nous vérifions le
-                virement et activons votre abonnement.
+                {tr('ui.SubscriptionPage.effectuezLeVirementSurLe')} {TEAM_WHATSAPP_DISPLAY}{tr('ui.SubscriptionPage.nousVerifionsLeVirementEt')}
               </p>
             </div>
           )}
@@ -819,8 +818,7 @@ function BillingPaymentModal({
           {/* Rien n'est disponible : on le dit clairement au lieu d'échouer. */}
           {payInfo && !payInfo.bank && (outsideCfa || (!payInfo.gateway && !payInfo.manual)) && (
             <p className="rounded-xl bg-[color:var(--warning)]/10 p-3 text-sm text-content">
-              Le paiement en ligne n'est pas encore disponible. Contactez-nous depuis la page Aide
-              pour activer votre abonnement.
+              {tr('ui.SubscriptionPage.lePaiementEnLigneN')}
             </p>
           )}
 
@@ -831,11 +829,11 @@ function BillingPaymentModal({
       {phase === 'manual' && (
         <div className="py-6 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-          <p className="mt-3 font-display text-lg font-bold text-content">Demande enregistrée</p>
+          <p className="mt-3 font-display text-lg font-bold text-content">{tr('ui.SubscriptionPage.demandeEnregistree')}</p>
           <p className="mt-1 text-sm text-content-muted">
             {manualChannel === 'BANK_TRANSFER'
-              ? `Envoyez maintenant la capture d'écran ou le reçu de votre virement sur WhatsApp au ${TEAM_WHATSAPP_DISPLAY}. Nous le vérifions puis activons votre abonnement.`
-              : "Dès que nous aurons vérifié votre versement, votre abonnement sera activé. Vous n'avez rien d'autre à faire."}
+              ? tr('ui.SubscriptionPage.envoyezMaintenantLaCaptureD', { TEAM_WHATSAPP_DISPLAY: TEAM_WHATSAPP_DISPLAY })
+              : tr('ui.SubscriptionPage.desQueNousAuronsVerifie')}
           </p>
           {manualChannel === 'BANK_TRANSFER' && (
             <a
@@ -848,11 +846,11 @@ function BillingPaymentModal({
               rel="noopener noreferrer"
               className="mx-auto mt-4 flex max-w-xs items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 font-semibold text-white hover:brightness-95"
             >
-              <MessageCircle className="h-4 w-4" /> Envoyer mon reçu sur WhatsApp
+              <MessageCircle className="h-4 w-4" /> {tr('ui.SubscriptionPage.envoyerMonRecuSurWhatsapp')}
             </a>
           )}
           <Button className="mt-5" onClick={onClose}>
-            Fermer
+            {tr('ui.SubscriptionPage.fermer')}
           </Button>
         </div>
       )}
@@ -861,12 +859,11 @@ function BillingPaymentModal({
         <div className="py-6 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
           <p className="mt-3 text-sm text-content-muted">
-            Finalisez le paiement dans l’onglet Moneroo, puis revenez ici. Confirmation
-            automatique en cours…
+            {tr('ui.SubscriptionPage.finalisezLePaiementDansL')}
           </p>
           {paymentId && isSimulation && (
             <Button variant="outline" className="mt-4" onClick={() => void simulateBillingPayment(paymentId)}>
-              Simuler la confirmation
+              {tr('ui.SubscriptionPage.simulerLaConfirmation')}
             </Button>
           )}
         </div>
@@ -875,8 +872,8 @@ function BillingPaymentModal({
       {phase === 'done' && (
         <div className="py-6 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-          <p className="mt-3 font-display text-lg font-bold text-content">Abonnement activé</p>
-          <Button className="mt-5" onClick={onPaid}>Continuer</Button>
+          <p className="mt-3 font-display text-lg font-bold text-content">{tr('ui.SubscriptionPage.abonnementActive')}</p>
+          <Button className="mt-5" onClick={onPaid}>{tr('ui.SubscriptionPage.continuer')}</Button>
         </div>
       )}
     </Modal>

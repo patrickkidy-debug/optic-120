@@ -10,6 +10,7 @@ import {
 import { Loader2, X, Eye, EyeOff, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { formatCurrency } from '../lib/format';
+import { tr } from '../lib/tr';
 
 export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={clsx('h-4 w-4 animate-spin', className)} />;
@@ -42,7 +43,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HT
           type="button"
           onClick={() => setShow((s) => !s)}
           tabIndex={-1}
-          aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          aria-label={show ? tr('ui.ui.masquerLeMotDePasse') : tr('ui.ui.afficherLeMotDePasse')}
           className="absolute inset-y-0 right-0 grid w-11 place-items-center text-content-muted transition-colors hover:text-content"
         >
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -171,7 +172,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b px-5 py-4">
           <h2 className="font-display text-lg font-bold text-content">{title}</h2>
-          <button onClick={onClose} className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label="Fermer">
+          <button onClick={onClose} className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label={tr('ui.ui.fermer')}>
             <X className="h-4 w-4" />
           </button>
         </div>

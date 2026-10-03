@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { CheckCircle2, CircleDashed, Clock3 } from 'lucide-react';
 import type { SalesReportParams } from '../../../features/optique/api';
+import { tr } from '../../../lib/tr';
 
 /**
  * Vocabulaire du module, aligné mot pour mot sur sales-report.service.ts.
@@ -15,9 +16,9 @@ export const STATUS_META: Record<
   StatusKey,
   { label: string; tone: 'success' | 'warning' | 'danger'; icon: typeof CheckCircle2; color: string }
 > = {
-  PAID: { label: 'Payée', tone: 'success', icon: CheckCircle2, color: '#0d9488' },
-  PARTIALLY_PAID: { label: 'Partielle', tone: 'warning', icon: Clock3, color: '#f59e0b' },
-  CONFIRMED: { label: 'Impayée', tone: 'danger', icon: CircleDashed, color: '#dc2626' },
+  PAID: { get label() { return tr('ui.shared.payee'); }, tone: 'success', icon: CheckCircle2, color: '#0d9488' },
+  PARTIALLY_PAID: { get label() { return tr('ui.shared.partielle'); }, tone: 'warning', icon: Clock3, color: '#f59e0b' },
+  CONFIRMED: { get label() { return tr('ui.shared.impayee'); }, tone: 'danger', icon: CircleDashed, color: '#dc2626' },
 };
 
 export const STATUS_ORDER: StatusKey[] = ['PAID', 'PARTIALLY_PAID', 'CONFIRMED'];
@@ -27,10 +28,10 @@ export function statusLabel(status: string): string {
 }
 
 export const METHOD_LABEL: Record<string, string> = {
-  INSURANCE: 'Assurance',
-  CASH: 'Espèces',
-  CARD: 'Carte',
-  CHEQUE: 'Chèque',
+  get INSURANCE() { return tr('ui.shared.assurance'); },
+  get CASH() { return tr('ui.shared.especes'); },
+  get CARD() { return tr('ui.shared.carte'); },
+  get CHEQUE() { return tr('ui.shared.cheque'); },
   WAVE: 'Wave',
   ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo',
@@ -59,14 +60,14 @@ export type RangeKey =
   | 'custom';
 
 export const RANGE_LABEL: Record<RangeKey, string> = {
-  today: "Aujourd'hui",
-  yesterday: 'Hier',
-  last7: '7 derniers jours',
-  last30: '30 derniers jours',
-  thisMonth: 'Ce mois',
-  lastMonth: 'Mois précédent',
-  thisYear: 'Cette année',
-  custom: 'Personnalisé',
+  get today() { return tr('ui.shared.aujourdHui'); },
+  get yesterday() { return tr('ui.shared.hier'); },
+  get last7() { return tr('ui.shared.n7DerniersJours'); },
+  get last30() { return tr('ui.shared.n30DerniersJours'); },
+  get thisMonth() { return tr('ui.shared.ceMois'); },
+  get lastMonth() { return tr('ui.shared.moisPrecedent'); },
+  get thisYear() { return tr('ui.shared.cetteAnnee'); },
+  get custom() { return tr('ui.shared.personnalise'); },
 };
 
 export const iso = (d: Date): string => d.toISOString().slice(0, 10);
@@ -112,7 +113,7 @@ export function describePeriod(from: string, to: string): string {
   const f = new Date(`${from}T12:00:00`);
   const t = new Date(`${to}T12:00:00`);
   if (from === to) return `Le ${LONG_DATE.format(f)}`;
-  return `Du ${LONG_DATE.format(f)} au ${LONG_DATE.format(t)}`;
+  return tr('ui.shared.duFAuT', { f: LONG_DATE.format(f), t: LONG_DATE.format(t) });
 }
 
 /** Libellé d'un point de la série, selon la granularité choisie par le serveur. */

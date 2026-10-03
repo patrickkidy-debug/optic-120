@@ -57,6 +57,7 @@ import { RenewalsWidget } from '../components/dashboard/RenewalsWidget';
 import { InsuranceWidget } from '../components/dashboard/InsuranceWidget';
 import { AlertsToday } from '../components/dashboard/AlertsToday';
 import { StoreSetupCard } from '../components/dashboard/StoreSetupCard';
+import { tr } from '../lib/tr';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Filler);
 
@@ -97,60 +98,60 @@ function getMotivationMessage(salesCount: number, revenue: number): Motivation {
   > = {
     morning: {
       empty: [
-        { text: "Une nouvelle journée commence ! Préparez le terrain pour le succès avec votre plus beau sourire. ☀️", icon: Sunrise, color: "text-amber-500" },
-        { text: "Chaque matin est une page blanche. Remplissons-la de belles réussites aujourd'hui ! 🚀", icon: Sparkles, color: "text-violet-500" },
-        { text: "Le café est chaud, l'énergie est là. Excellente journée de ventes à vous ! ☕", icon: Coffee, color: "text-amber-700" }
+        { text: tr('ui.DashboardPage.uneNouvelleJourneeCommencePreparez'), icon: Sunrise, color: "text-amber-500" },
+        { text: tr('ui.DashboardPage.chaqueMatinEstUnePage'), icon: Sparkles, color: "text-violet-500" },
+        { text: tr('ui.DashboardPage.leCafeEstChaudL'), icon: Coffee, color: "text-amber-700" }
       ],
       normal: [
-        { text: `Déjà de belles réalisations ce matin ! On continue sur ce rythme dynamique ! 🚀`, icon: Sparkles, color: "text-violet-500" },
-        { text: `La journée démarre bien avec déjà ${salesCount} vente(s) ! Continuez sur cette belle lancée ! ✨`, icon: Sunrise, color: "text-amber-500" }
+        { text: tr('ui.DashboardPage.dejaDeBellesRealisationsCe'), icon: Sparkles, color: "text-violet-500" },
+        { text: tr('ui.DashboardPage.laJourneeDemarreBienAvec', { salesCount: salesCount }), icon: Sunrise, color: "text-amber-500" }
       ],
       great: [
-        { text: `Quel départ foudroyant ! Déjà ${salesCount} ventes ce matin, vous êtes inarrêtables ! 🔥`, icon: Flame, color: "text-rose-500" },
-        { text: `Une matinée exceptionnelle avec ${salesCount} ventes ! L'équipe est en feu ! 🏆`, icon: Trophy, color: "text-yellow-500" }
+        { text: tr('ui.DashboardPage.quelDepartFoudroyantDejaSalescount', { salesCount: salesCount }), icon: Flame, color: "text-rose-500" },
+        { text: tr('ui.DashboardPage.uneMatineeExceptionnelleAvecSalescount', { salesCount: salesCount }), icon: Trophy, color: "text-yellow-500" }
       ]
     },
     afternoon: {
       empty: [
-        { text: "Gardez le sourire ! Le prochain client sera peut-être la plus belle surprise de la journée. 🎯", icon: Sparkles, color: "text-violet-500" },
-        { text: "La patience et la persévérance ouvrent toutes les portes. Restez concentrés, l'opportunité arrive ! 💪", icon: Sun, color: "text-amber-500" },
-        { text: "Une après-midi dynamique s'annonce. Votre énergie fait toute la différence ! 🌟", icon: Sparkles, color: "text-teal-500" }
+        { text: tr('ui.DashboardPage.gardezLeSourireLeProchain'), icon: Sparkles, color: "text-violet-500" },
+        { text: tr('ui.DashboardPage.laPatienceEtLaPerseverance'), icon: Sun, color: "text-amber-500" },
+        { text: tr('ui.DashboardPage.uneApresMidiDynamiqueS'), icon: Sparkles, color: "text-teal-500" }
       ],
       normal: [
-        { text: `Le compteur tourne ! Félicitations pour ces ${salesCount} ventes, la journée continue ! 🌟`, icon: Sparkles, color: "text-teal-500" },
-        { text: `Bon travail ! ${salesCount} ventes enregistrées aujourd'hui. On garde le cap ! 👍`, icon: Sun, color: "text-amber-500" }
+        { text: tr('ui.DashboardPage.leCompteurTourneFelicitationsPour', { salesCount: salesCount }), icon: Sparkles, color: "text-teal-500" },
+        { text: tr('ui.DashboardPage.bonTravailSalescountVentesEnregistrees', { salesCount: salesCount }), icon: Sun, color: "text-amber-500" }
       ],
       great: [
-        { text: `Quelle performance incroyable ! ${salesCount} ventes réalisées pour un chiffre d'affaires de ${formatCurrency(revenue)}. Bravo ! 🏆`, icon: Trophy, color: "text-yellow-500" },
-        { text: `Rien ne vous arrête aujourd'hui ! ${salesCount} ventes à votre actif. Continuez à briller ! 🔥`, icon: Flame, color: "text-rose-500" }
+        { text: tr('ui.DashboardPage.quellePerformanceIncroyableSalescountVen', { salesCount: salesCount, revenue: formatCurrency(revenue) }), icon: Trophy, color: "text-yellow-500" },
+        { text: tr('ui.DashboardPage.rienNeVousArreteAujourd', { salesCount: salesCount }), icon: Flame, color: "text-rose-500" }
       ]
     },
     evening: {
       empty: [
-        { text: "La journée se termine doucement. Prenez le temps de soigner vos derniers contacts, chaque détail compte. ✨", icon: Moon, color: "text-indigo-400" },
-        { text: "Même les journées calmes préparent les grands succès de demain. Bravo pour votre présence et votre constance ! 🧘", icon: Sparkles, color: "text-indigo-400" }
+        { text: tr('ui.DashboardPage.laJourneeSeTermineDoucement'), icon: Moon, color: "text-indigo-400" },
+        { text: tr('ui.DashboardPage.memeLesJourneesCalmesPreparent'), icon: Sparkles, color: "text-indigo-400" }
       ],
       normal: [
-        { text: `Une belle journée productive s'achève avec ${salesCount} ventes. Bravo pour vos efforts ! 👏`, icon: Moon, color: "text-indigo-400" },
-        { text: `Bravo pour cette journée de travail ! ${salesCount} ventes bien méritées au compteur. 🌟`, icon: Sparkles, color: "text-indigo-400" }
+        { text: tr('ui.DashboardPage.uneBelleJourneeProductiveS', { salesCount: salesCount }), icon: Moon, color: "text-indigo-400" },
+        { text: tr('ui.DashboardPage.bravoPourCetteJourneeDe', { salesCount: salesCount }), icon: Sparkles, color: "text-indigo-400" }
       ],
       great: [
-        { text: `Quelle magnifique moisson ! ${salesCount} ventes aujourd'hui, c'est une véritable réussite collective. Félicitations ! 🎉`, icon: Trophy, color: "text-yellow-500" },
-        { text: `Une journée mémorable se termine en beauté avec ${salesCount} ventes et un CA de ${formatCurrency(revenue)} ! Chapeau bas ! 👑`, icon: Flame, color: "text-rose-500" }
+        { text: tr('ui.DashboardPage.quelleMagnifiqueMoissonSalescountVentes', { salesCount: salesCount }), icon: Trophy, color: "text-yellow-500" },
+        { text: tr('ui.DashboardPage.uneJourneeMemorableSeTermine', { salesCount: salesCount, revenue: formatCurrency(revenue) }), icon: Flame, color: "text-rose-500" }
       ]
     },
     night: {
       empty: [
-        { text: "Le calme de la nuit est propice au repos. Rechargez vos batteries pour briller à nouveau demain ! 🔋", icon: Moon, color: "text-indigo-400" },
-        { text: "Une journée s'éteint, une autre se prépare. Reposez-vous bien ! 🌙", icon: Moon, color: "text-indigo-400" }
+        { text: tr('ui.DashboardPage.leCalmeDeLaNuit'), icon: Moon, color: "text-indigo-400" },
+        { text: tr('ui.DashboardPage.uneJourneeSEteintUne'), icon: Moon, color: "text-indigo-400" }
       ],
       normal: [
-        { text: `Les ventes tardives témoignent de votre dévouement. Chapeau bas pour l'effort fourni ! 🎖️`, icon: Moon, color: "text-indigo-400" },
-        { text: `Journée terminée avec ${salesCount} ventes. C'est l'heure de se reposer l'esprit tranquille. 🛌`, icon: Moon, color: "text-indigo-400" }
+        { text: tr('ui.DashboardPage.lesVentesTardivesTemoignentDe'), icon: Moon, color: "text-indigo-400" },
+        { text: tr('ui.DashboardPage.journeeTermineeAvecSalescountVentes', { salesCount: salesCount }), icon: Moon, color: "text-indigo-400" }
       ],
       great: [
-        { text: `Exceptionnel jusqu'au bout ! Une journée mémorable avec ${salesCount} ventes. Repos bien mérité pour des champions ! 👑`, icon: Trophy, color: "text-yellow-500" },
-        { text: `Victoire ! Une journée grandiose de ${salesCount} ventes. Dormez sur vos deux oreilles, vous avez assuré ! 🏆`, icon: Flame, color: "text-rose-500" }
+        { text: tr('ui.DashboardPage.exceptionnelJusquAuBoutUne', { salesCount: salesCount }), icon: Trophy, color: "text-yellow-500" },
+        { text: tr('ui.DashboardPage.victoireUneJourneeGrandioseDe', { salesCount: salesCount }), icon: Flame, color: "text-rose-500" }
       ]
     }
   };
@@ -161,14 +162,14 @@ function getMotivationMessage(salesCount: number, revenue: number): Motivation {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  CASH: 'Espèces',
+  get CASH() { return tr('ui.DashboardPage.especes'); },
   WAVE: 'Wave',
   ORANGE_MONEY: 'Orange Money',
   MTN_MOMO: 'MTN MoMo',
-  MOOV_MONEY: 'Moov',
-  FREE_MONEY: 'Free',
-  CARD: 'Carte',
-  CHEQUE: 'Chèque',
+  get MOOV_MONEY() { return tr('ui.DashboardPage.moov'); },
+  get FREE_MONEY() { return tr('ui.DashboardPage.free'); },
+  get CARD() { return tr('ui.DashboardPage.carte'); },
+  get CHEQUE() { return tr('ui.DashboardPage.cheque'); },
 };
 const METHOD_COLORS = ['#3b82f6', '#22d3ee', '#f97316', '#20c997', '#a855f7', '#f59e0b', '#ef4444'];
 
@@ -435,9 +436,9 @@ export function DashboardPage() {
         <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[color:var(--danger)]/15 text-danger">
           <AlertTriangle className="h-7 w-7" />
         </span>
-        <p className="font-display text-lg font-bold text-content">Impossible de charger le tableau de bord</p>
+        <p className="font-display text-lg font-bold text-content">{tr('ui.DashboardPage.impossibleDeChargerLeTableau')}</p>
         <p className="max-w-sm text-sm text-content-muted">{apiErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} loading={isFetching}>Réessayer</Button>
+        <Button onClick={() => refetch()} loading={isFetching}>{tr('ui.DashboardPage.reessayer')}</Button>
       </div>
     );
   }
@@ -478,10 +479,10 @@ export function DashboardPage() {
           <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link to="/optique/caisse" className="btn-primary h-9 rounded-xl px-3.5 text-sm">
-              <ShoppingCart className="h-4 w-4" /> Nouvelle vente
+              <ShoppingCart className="h-4 w-4" /> {tr('ui.DashboardPage.nouvelleVente')}
             </Link>
             <Link to="/optique/clients" className="btn-outline h-9 rounded-xl px-3.5 text-sm">
-              <UserPlus className="h-4 w-4" /> Nouveau client
+              <UserPlus className="h-4 w-4" /> {tr('ui.DashboardPage.nouveauClient')}
             </Link>
             <WatchDemoCard mini />
           </div>
@@ -491,7 +492,7 @@ export function DashboardPage() {
             <MotivationIcon className="h-5 w-5 animate-pulse" />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">Inspiration du moment</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">{tr('ui.DashboardPage.inspirationDuMoment')}</p>
             <p className="mt-0.5 text-xs md:text-sm font-medium text-content italic leading-relaxed">
               "{motivation.text}"
             </p>
@@ -523,22 +524,22 @@ export function DashboardPage() {
           value={String(data.todaySalesCount)}
           tone="accent"
           delta={pctDelta(data.todaySalesCount ?? 0, avgPrevDailySales)}
-          deltaLabel="vs moy. 6j"
+          deltaLabel={tr('ui.DashboardPage.vsMoy6j')}
           spark={salesByDay}
         />
         <KpiCard icon={ShoppingCart} label={t('dashboard.avgBasket')} value={<CurrencyDisplay amount={data.avgBasket ?? 0} />} tone="primary" />
         {data.activeCustomers !== undefined && (
           <KpiCard
             icon={Users}
-            label="Clients actifs (30j)"
+            label={tr('ui.DashboardPage.clientsActifs30j')}
             value={String(data.activeCustomers)}
             tone="accent"
             delta={pctDelta(data.activeCustomers ?? 0, data.activeCustomersPrev ?? 0)}
-            deltaLabel="vs 30j préc."
+            deltaLabel={tr('ui.DashboardPage.vs30jPrec')}
           />
         )}
         {canSeeOrders && (
-          <KpiCard icon={ClipboardList} label="Commandes en cours" value={String(ongoingOrders)} tone="success" />
+          <KpiCard icon={ClipboardList} label={tr('ui.DashboardPage.commandesEnCours')} value={String(ongoingOrders)} tone="success" />
         )}
       </div>
 
@@ -550,36 +551,36 @@ export function DashboardPage() {
       {/* Répartition du CA : encaissé auprès des clients vs pris en charge par les assurances. */}
       <div className="mt-6 card p-5">
         <h3 className="mb-4 font-display font-bold text-content">
-          Chiffre d'affaires — encaissé vs assurances
+          {tr('ui.DashboardPage.chiffreDAffairesEncaisseVs')}
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <MiniStat
             icon={HandCoins}
-            label="Encaissé clients (jour)"
+            label={tr('ui.DashboardPage.encaisseClientsJour')}
             value={formatCurrency(data.todayCollected ?? 0)}
             tone="success"
           />
           <MiniStat
             icon={ShieldCheck}
-            label="Part assurances (jour)"
+            label={tr('ui.DashboardPage.partAssurancesJour')}
             value={formatCurrency(data.todayInsurance ?? 0)}
             tone="accent"
           />
           <MiniStat
             icon={Receipt}
-            label="Dépenses (jour)"
+            label={tr('ui.DashboardPage.depensesJour')}
             value={`- ${formatCurrency(data.todayExpenses ?? 0)}`}
             tone="danger"
           />
           <MiniStat
             icon={HandCoins}
-            label="Encaissé clients (mois)"
+            label={tr('ui.DashboardPage.encaisseClientsMois')}
             value={formatCurrency(data.monthCollected ?? 0)}
             tone="success"
           />
           <MiniStat
             icon={ShieldCheck}
-            label="Part assurances (mois)"
+            label={tr('ui.DashboardPage.partAssurancesMois')}
             value={formatCurrency(data.monthInsurance ?? 0)}
             tone="accent"
           />
@@ -591,10 +592,10 @@ export function DashboardPage() {
         <div className="mt-6 card p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display font-bold text-content">
-              Paiements assurances à venir
+              {tr('ui.DashboardPage.paiementsAssurancesAVenir')}
             </h3>
             <Badge tone="info">
-              Échéance : {formatDate(insurerUpcoming.dueDate)}
+              {tr('ui.DashboardPage.echeance')} {formatDate(insurerUpcoming.dueDate)}
             </Badge>
           </div>
           <div className="space-y-2">
@@ -609,7 +610,7 @@ export function DashboardPage() {
                   </span>
                   <div>
                     <p className="text-sm font-medium text-content">{i.name}</p>
-                    <p className="text-xs text-content-faint">{i.salesCount} vente(s) ce mois</p>
+                    <p className="text-xs text-content-faint">{i.salesCount} {tr('ui.DashboardPage.venteSCeMois')}</p>
                   </div>
                 </div>
                 <span className="font-display font-bold text-content">{formatCurrency(i.amount)}</span>
@@ -617,7 +618,7 @@ export function DashboardPage() {
             ))}
           </div>
           <div className="mt-3 flex justify-between border-t pt-3 text-sm">
-            <span className="text-content-muted">Total attendu ce mois</span>
+            <span className="text-content-muted">{tr('ui.DashboardPage.totalAttenduCeMois')}</span>
             <span className="font-display font-bold text-content">{formatCurrency(insurerUpcoming.total)}</span>
           </div>
         </div>
@@ -733,7 +734,7 @@ export function DashboardPage() {
               <Building2 className="h-4 w-4" />
             </span>
             <h2 className="font-display text-lg font-bold text-content">{t('dashboard.adminView')}</h2>
-            <span className="text-xs text-content-faint">— mois en cours</span>
+            <span className="text-xs text-content-faint">{tr('ui.DashboardPage.moisEnCours')}</span>
           </div>
 
           {/* Finance du mois */}
@@ -752,7 +753,7 @@ export function DashboardPage() {
             {/* Par magasin */}
             <div className="card p-5">
               <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-content">
-                <Building2 className="h-4 w-4 text-primary" /> Par magasin
+                <Building2 className="h-4 w-4 text-primary" /> {tr('ui.DashboardPage.parMagasin')}
               </h3>
               {admin.branchBreakdown.length === 0 ? (
                 <p className="text-sm text-content-muted">{t('dashboard.noDataMonth')}</p>
@@ -782,7 +783,7 @@ export function DashboardPage() {
             {/* Top vendeurs */}
             <div className="card p-5">
               <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-content">
-                <Trophy className="h-4 w-4 text-accent" /> Meilleurs vendeurs
+                <Trophy className="h-4 w-4 text-accent" /> {tr('ui.DashboardPage.meilleursVendeurs')}
               </h3>
               {admin.topSellers.length === 0 ? (
                 <p className="text-sm text-content-muted">{t('dashboard.noSalesMonth')}</p>

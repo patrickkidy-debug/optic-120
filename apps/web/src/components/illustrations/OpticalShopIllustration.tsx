@@ -1,3 +1,4 @@
+import { tr } from '../../lib/tr';
 /**
  * Illustration plate d'une vitrine de magasin d'optique — dessinée en SVG
  * (pas une photo/asset externe) pour rester légère, nette à toute résolution,
@@ -12,7 +13,7 @@ export function OpticalShopIllustration({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Illustration d'une vitrine de magasin d'optique"
+      aria-label={tr('ui.OpticalShopIllustration.illustrationDUneVitrineDe')}
     >
       {/* Ombre au sol */}
       <ellipse cx="200" cy="272" rx="150" ry="12" className="fill-content/10" />

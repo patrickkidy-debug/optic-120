@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingBag, Wallet, Glasses, Stethoscope, PackagePlus, type LucideIcon } from 'lucide-react';
 import { getDashboardActivity, type ActivityItem } from '../../features/optique/api';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, displayLocale } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 const TYPE_ICON: Record<ActivityItem['type'], LucideIcon> = {
   sale: ShoppingBag,
@@ -19,7 +20,7 @@ const TYPE_TONE: Record<ActivityItem['type'], string> = {
 };
 
 function timeLabel(at: string): string {
-  return new Date(at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return new Date(at).toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Fil d'activité du jour : ventes, paiements, commandes labo, consultations, réceptions stock. */
@@ -32,11 +33,11 @@ export function ActivityFeed({ branchId }: { branchId?: string | null }) {
 
   return (
     <div className="card p-5">
-      <h3 className="mb-4 font-display font-bold text-content">Activité du jour</h3>
+      <h3 className="mb-4 font-display font-bold text-content">{tr('ui.ActivityFeed.activiteDuJour')}</h3>
       {isLoading ? (
-        <p className="text-sm text-content-muted">Chargement…</p>
+        <p className="text-sm text-content-muted">{tr('ui.ActivityFeed.chargement')}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-content-muted">Aucune activité aujourd'hui.</p>
+        <p className="text-sm text-content-muted">{tr('ui.ActivityFeed.aucuneActiviteAujourdHui')}</p>
       ) : (
         <div className="max-h-80 space-y-3 overflow-y-auto">
           {items.map((it) => {

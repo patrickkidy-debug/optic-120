@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Compass } from 'lucide-react';
+import { tr } from '../lib/tr';
 
 export function NotFound() {
   return (
@@ -8,9 +9,9 @@ export function NotFound() {
         <Compass className="h-7 w-7" />
       </div>
       <h1 className="mt-5 font-display text-3xl font-bold text-content">404</h1>
-      <p className="mt-2 text-content-muted">Cette page n'existe pas.</p>
+      <p className="mt-2 text-content-muted">{tr('ui.NotFound.cettePageNExistePas')}</p>
       <Link to="/dashboard" className="btn-primary mt-5">
-        Retour au tableau de bord
+        {tr('ui.NotFound.retourAuTableauDeBord')}
       </Link>
     </div>
   );

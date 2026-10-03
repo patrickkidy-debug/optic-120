@@ -1,3 +1,4 @@
+import { tr } from '../../lib/tr';
 export interface DemoVideo {
   key: string;
   title: string;
@@ -12,33 +13,33 @@ export interface DemoVideo {
 export const DEMO_VIDEOS: DemoVideo[] = [
   {
     key: '1',
-    title: 'Prise en main et tableau de bord',
-    benefit: 'Pilotez votre activité en un coup d’œil : recettes du jour, alertes et chiffres clés.',
-    durationLabel: '9 min',
+    get title() { return tr('ui.videos.priseEnMainEtTableau'); },
+    get benefit() { return tr('ui.videos.pilotezVotreActiviteEnUn'); },
+    get durationLabel() { return tr('ui.videos.n9Min'); },
     src: '/videos/demo/1.mp4',
     poster: '/videos/demo/1.jpg',
   },
   {
     key: '2',
-    title: 'Encaisser une vente',
-    benefit: 'De la sélection des articles au reçu imprimé, encaissez un client en moins d’une minute.',
-    durationLabel: '3 min',
+    get title() { return tr('ui.videos.encaisserUneVente'); },
+    get benefit() { return tr('ui.videos.deLaSelectionDesArticles'); },
+    get durationLabel() { return tr('ui.videos.n3Min'); },
     src: '/videos/demo/2.mp4',
     poster: '/videos/demo/2.jpg',
   },
   {
     key: '3',
-    title: 'Stock, produits et inventaire',
-    benefit: 'Ne soyez plus jamais en rupture : alertes automatiques et inventaire physique guidé.',
-    durationLabel: '7 min',
+    get title() { return tr('ui.videos.stockProduitsEtInventaire'); },
+    get benefit() { return tr('ui.videos.neSoyezPlusJamaisEn'); },
+    get durationLabel() { return tr('ui.videos.n7Min'); },
     src: '/videos/demo/3.mp4',
     poster: '/videos/demo/3.jpg',
   },
   {
     key: '4',
-    title: 'Clients, ordonnances et suivi',
-    benefit: 'Retrouvez l’historique complet de chaque client et relancez au bon moment.',
-    durationLabel: '7 min',
+    get title() { return tr('ui.videos.clientsOrdonnancesEtSuivi'); },
+    get benefit() { return tr('ui.videos.retrouvezLHistoriqueCompletDe'); },
+    get durationLabel() { return tr('ui.videos.n7Min'); },
     src: '/videos/demo/4.mp4',
     poster: '/videos/demo/4.jpg',
   },

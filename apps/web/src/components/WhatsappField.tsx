@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { SUPPORTED_COUNTRIES } from '@oculo/shared-types';
+import { tr } from '../lib/tr';
 
 /** Indicatif présélectionné : Sénégal. */
 const DEFAULT_DIAL = '+221';
@@ -63,7 +64,7 @@ export function WhatsappField({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          aria-label="Indicatif pays"
+          aria-label={tr('ui.WhatsappField.indicatifPays')}
           aria-haspopup="listbox"
           aria-expanded={open}
           className="input flex h-full w-[5.75rem] items-center justify-between gap-1 px-3"

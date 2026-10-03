@@ -6,6 +6,7 @@ import { formatDateTime } from '../../lib/format';
 import { PageLoader, EmptyState, Badge, Button } from '../../components/ui';
 
 import { ANOMALY_ACTION_LABELS } from './shared';
+import { tr } from '../../lib/tr';
 
 const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
   ANOMALY_DECLARED: 'info',
@@ -28,15 +29,15 @@ export function JournalTab() {
       {isLoading ? (
         <PageLoader />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={ScrollText} title="Aucune activité enregistrée" />
+        <EmptyState icon={ScrollText} title={tr('ui.JournalTab.aucuneActiviteEnregistree')} />
       ) : (
         <>
           <div className="card overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Action</th>
-                  <th className="table-cell font-semibold">Utilisateur</th>
+                  <th className="table-cell font-semibold">{tr('ui.JournalTab.action')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.JournalTab.utilisateur')}</th>
                   <th className="table-cell text-right font-semibold">Date</th>
                 </tr>
               </thead>
@@ -49,7 +50,7 @@ export function JournalTab() {
                         <p className="mt-0.5 text-xs text-content-faint">{JSON.stringify(log.metadata)}</p>
                       )}
                     </td>
-                    <td className="table-cell text-content-muted">{log.user ? `${log.user.firstName} ${log.user.lastName}` : 'Système'}</td>
+                    <td className="table-cell text-content-muted">{log.user ? `${log.user.firstName} ${log.user.lastName}` : tr('ui.JournalTab.systeme')}</td>
                     <td className="table-cell text-right text-content-muted">{formatDateTime(log.createdAt)}</td>
                   </tr>
                 ))}
@@ -57,16 +58,16 @@ export function JournalTab() {
             </table>
           </div>
           <div className="mt-4 flex items-center justify-between text-sm text-content-muted">
-            <span>{data.total} entrée(s)</span>
+            <span>{data.total} {tr('ui.JournalTab.entreeS')}</span>
             <div className="flex items-center gap-2">
               <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Précédent
+                {tr('ui.JournalTab.precedent')}
               </Button>
               <span>
                 {page} / {totalPages}
               </span>
               <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                Suivant
+                {tr('ui.JournalTab.suivant')}
               </Button>
             </div>
           </div>

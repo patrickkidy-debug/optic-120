@@ -1,4 +1,5 @@
 import { lensVisualFor } from '@oculo/shared-types';
+import { tr } from '../../lib/tr';
 
 /**
  * Illustration d'un verre, dérivée de sa famille. Un opticien reconnaît le
@@ -78,7 +79,7 @@ export function LensVisual({
           <path d="M30 58 Q60 54 90 58" fill="none" stroke="rgb(var(--accent-rgb) / 0.6)" strokeWidth="1" strokeDasharray="3 3" />
           <text x="60" y="28" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">loin</text>
           <text x="60" y="51" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">inter.</text>
-          <text x="60" y="72" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">près</text>
+          <text x="60" y="72" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">{tr('ui.LensVisual.pres')}</text>
         </>
       )}
 
@@ -92,7 +93,7 @@ export function LensVisual({
             strokeWidth="1"
           />
           <text x="60" y="40" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">loin</text>
-          <text x="60" y="72" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">près</text>
+          <text x="60" y="72" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">{tr('ui.LensVisual.pres')}</text>
         </>
       )}
 
@@ -101,7 +102,7 @@ export function LensVisual({
         <>
           <line x1="60" y1="11" x2="60" y2="79" stroke="rgb(var(--border-strong))" strokeWidth="1" strokeDasharray="2 3" />
           <text x="32" y="48" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">clair</text>
-          <text x="88" y="48" textAnchor="middle" fontSize="7" fill="#f1f5f9">foncé</text>
+          <text x="88" y="48" textAnchor="middle" fontSize="7" fill="#f1f5f9">{tr('ui.LensVisual.fonce')}</text>
         </>
       )}
 
@@ -114,7 +115,7 @@ export function LensVisual({
       {visual === 'computer' && (
         <>
           <rect x="30" y="34" width="60" height="22" rx="4" fill="rgb(var(--primary-rgb) / 0.16)" />
-          <text x="60" y="48" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">écran</text>
+          <text x="60" y="48" textAnchor="middle" fontSize="7" fill="rgb(var(--text-muted-rgb))">{tr('ui.LensVisual.ecran')}</text>
         </>
       )}
 

@@ -6,6 +6,7 @@ import { Sparkles, TrendingUp, TrendingDown, CalendarDays, PackageX, LineChart }
 import { getForecast } from '../features/optique/api';
 import { useUIStore } from '../store/ui';
 import { formatCurrency } from '../lib/format';
+import { tr } from '../lib/tr';
 
 const CHART_OPTIONS: ChartOptions<'line'> = {
   responsive: true,
@@ -35,7 +36,7 @@ export function ForecastPanel() {
     datasets: data
       ? [
           {
-            label: 'Réalisé',
+            label: tr('ui.ForecastPanel.realise'),
             data: [...data.history.map((d) => d.revenue), ...data.forecast.map(() => null)],
             borderColor: '#8b5cf6',
             backgroundColor: 'rgba(139,92,246,0.12)',
@@ -44,7 +45,7 @@ export function ForecastPanel() {
             pointRadius: 0,
           },
           {
-            label: 'Prévision',
+            label: tr('ui.ForecastPanel.prevision'),
             data: [
               ...data.history.map((_, i) => (i === data.history.length - 1 ? lastHist : null)),
               ...data.forecast.map((d) => d.revenue),
@@ -75,7 +76,7 @@ export function ForecastPanel() {
       <div className="p-5">
         {isLoading ? (
           <div className="grid h-40 place-items-center text-sm text-content-muted">
-            Analyse en cours…
+            {tr('ui.ForecastPanel.analyseEnCours')}
           </div>
         ) : !data || !data.hasEnoughData ? (
           <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-2/40 p-4">
@@ -91,7 +92,7 @@ export function ForecastPanel() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-primary/20 bg-primary-soft/40 p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-content-muted">
-                  CA projeté ce mois
+                  {tr('ui.ForecastPanel.caProjeteCeMois')}
                 </div>
                 <div className="mt-1 font-display text-2xl font-extrabold text-gradient">
                   {formatCurrency(data.projectedMonthRevenue)}
@@ -106,27 +107,27 @@ export function ForecastPanel() {
                     {up ? '+' : ''}
                     {data.trendPct}%
                   </span>
-                  <span className="text-content-muted">vs 14 jours précédents</span>
+                  <span className="text-content-muted">{tr('ui.ForecastPanel.vs14JoursPrecedents')}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-line bg-surface-2/40 p-3">
                   <div className="flex items-center gap-1.5 text-[11px] text-content-muted">
-                    <TrendingUp className="h-3.5 w-3.5" /> Prévision 7 jours
+                    <TrendingUp className="h-3.5 w-3.5" /> {tr('ui.ForecastPanel.prevision7Jours')}
                   </div>
                   <div className="mt-1 text-lg font-bold text-content">{formatCurrency(data.next7Total)}</div>
                 </div>
                 <div className="rounded-xl border border-line bg-surface-2/40 p-3">
                   <div className="flex items-center gap-1.5 text-[11px] text-content-muted">
-                    <CalendarDays className="h-3.5 w-3.5" /> Meilleur jour
+                    <CalendarDays className="h-3.5 w-3.5" /> {tr('ui.ForecastPanel.meilleurJour')}
                   </div>
                   <div className="mt-1 text-lg font-bold text-content">{data.bestWeekday?.label ?? '—'}</div>
                 </div>
               </div>
 
               <div className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-content-muted">
-                Mois précédent : <b className="text-content">{formatCurrency(data.lastMonthRevenue)}</b>
+                {tr('ui.ForecastPanel.moisPrecedent')} <b className="text-content">{formatCurrency(data.lastMonthRevenue)}</b>
               </div>
             </div>
 
@@ -134,10 +135,10 @@ export function ForecastPanel() {
             <div className="lg:col-span-2">
               <div className="mb-2 flex items-center gap-4 text-xs text-content-muted">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary" /> Réalisé (30 j)
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary" /> {tr('ui.ForecastPanel.realise30J')}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-4 rounded-full border-2 border-dashed border-cyan" /> Prévision (14 j)
+                  <span className="h-2.5 w-4 rounded-full border-2 border-dashed border-cyan" /> {tr('ui.ForecastPanel.prevision14J')}
                 </span>
               </div>
               <div className="h-56">
@@ -147,7 +148,7 @@ export function ForecastPanel() {
               {data.stockRisks.length > 0 && (
                 <div className="mt-3 rounded-xl border border-[color:var(--danger)]/25 bg-[color:var(--danger)]/5 p-3">
                   <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-danger">
-                    <PackageX className="h-4 w-4" /> Ruptures de stock à venir
+                    <PackageX className="h-4 w-4" /> {tr('ui.ForecastPanel.rupturesDeStockAVenir')}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {data.stockRisks.map((r) => (

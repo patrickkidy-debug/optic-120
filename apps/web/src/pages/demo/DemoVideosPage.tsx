@@ -20,6 +20,7 @@ import {
 } from '../../features/demo/api';
 import { demoWhatsappLink } from '../../lib/whatsapp';
 import { PageLoader, Button, Badge } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /** Fréquence d'envoi de la position : `timeupdate` tire ~4x/s, on ne garde qu'un envoi/15 s. */
 const SAVE_INTERVAL_MS = 15_000;
@@ -120,7 +121,7 @@ export function DemoVideosPage() {
   }
 
   const helpLink = demoWhatsappLink(
-    `Bonjour, je viens de regarder la vidéo « ${active.title} » d'OculoSaaS et j'aimerais une démonstration personnalisée.`,
+    tr('ui.DemoVideosPage.bonjourJeViensDeRegarder', { title: active.title }),
   );
 
   if (isLoading) return <PageLoader />;
@@ -130,14 +131,13 @@ export function DemoVideosPage() {
       {/* En-tête vendeur */}
       <div className="mb-6">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Démonstration
+          <Sparkles className="h-3.5 w-3.5" /> {tr('ui.DemoVideosPage.demonstration')}
         </span>
         <h1 className="mt-3 font-display text-2xl font-extrabold text-content sm:text-3xl">
-          Découvrez OculoSaaS en {DEMO_VIDEO_COUNT} vidéos
+          {tr('ui.DemoVideosPage.decouvrezOculosaasEn')} {DEMO_VIDEO_COUNT} {tr('ui.DemoVideosPage.videos')}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-content-muted">
-          Tout ce qu'il faut savoir pour gérer votre optique au quotidien. Vous pouvez arrêter et
-          reprendre à tout moment : votre progression est enregistrée.
+          {tr('ui.DemoVideosPage.toutCeQuIlFaut')}
         </p>
 
         <div className="mt-4 flex items-center gap-3">
@@ -148,7 +148,7 @@ export function DemoVideosPage() {
             />
           </div>
           <span className="shrink-0 text-sm font-semibold text-content">
-            {completedCount}/{DEMO_VIDEO_COUNT} vidéos — {globalPercent} %
+            {completedCount}/{DEMO_VIDEO_COUNT} {tr('ui.DemoVideosPage.videos2')} {globalPercent} %
           </span>
         </div>
       </div>
@@ -160,15 +160,15 @@ export function DemoVideosPage() {
             <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-success" />
             <div>
               <p className="font-display text-lg font-bold text-content">
-                Vous avez tout vu — prêt à démarrer ?
+                {tr('ui.DemoVideosPage.vousAvezToutVuPret')}
               </p>
               <p className="mt-0.5 text-sm text-content-muted">
-                Activez votre abonnement et commencez à gérer votre magasin dès aujourd'hui.
+                {tr('ui.DemoVideosPage.activezVotreAbonnementEtCommencez')}
               </p>
             </div>
           </div>
           <Button className="shrink-0" onClick={() => navigate('/onboarding/complete')}>
-            Activer mon abonnement <ArrowRight className="h-4 w-4" />
+            {tr('ui.DemoVideosPage.activerMonAbonnement')} <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       )}
@@ -204,25 +204,25 @@ export function DemoVideosPage() {
           <div className="mt-5 rounded-2xl border bg-surface p-4">
             {feedbackSent[activeKey] || activeProgress?.understood ? (
               <p className="text-sm text-content-muted">
-                Merci pour votre retour. {' '}
+                {tr('ui.DemoVideosPage.merciPourVotreRetour')} {' '}
                 <button onClick={() => setShowHelp(true)} className="font-semibold text-primary hover:underline">
-                  Besoin d'aide malgré tout ?
+                  {tr('ui.DemoVideosPage.besoinDAideMalgreTout')}
                 </button>
               </p>
             ) : (
               <>
                 <p className="text-sm font-medium text-content">
-                  Cette partie est-elle claire pour vous ?
+                  {tr('ui.DemoVideosPage.cettePartieEstElleClaire')}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => void sendFeedback('YES')}>
-                    Oui, c'est clair
+                    {tr('ui.DemoVideosPage.ouiCEstClair')}
                   </Button>
                   <Button variant="outline" onClick={() => void sendFeedback('UNSURE')}>
-                    Pas sûr
+                    {tr('ui.DemoVideosPage.pasSur')}
                   </Button>
                   <Button variant="outline" onClick={() => void sendFeedback('NO')}>
-                    Non, j'ai besoin d'aide
+                    {tr('ui.DemoVideosPage.nonJAiBesoinD')}
                   </Button>
                 </div>
               </>
@@ -231,8 +231,7 @@ export function DemoVideosPage() {
             {showHelp && (
               <div className="mt-4 rounded-xl bg-primary/5 p-4">
                 <p className="text-sm text-content">
-                  Un membre de l'équipe vous accompagne gratuitement, en direct, sur votre propre
-                  magasin.
+                  {tr('ui.DemoVideosPage.unMembreDeLEquipe')}
                 </p>
                 <a
                   href={helpLink}
@@ -240,7 +239,7 @@ export function DemoVideosPage() {
                   rel="noopener noreferrer"
                   className="btn-primary mt-3 inline-flex rounded-xl px-5 py-2.5 text-sm"
                 >
-                  <MessageCircle className="h-4 w-4" /> Demander une démonstration personnalisée
+                  <MessageCircle className="h-4 w-4" /> {tr('ui.DemoVideosPage.demanderUneDemonstrationPersonnalisee')}
                 </a>
               </div>
             )}
@@ -281,7 +280,7 @@ export function DemoVideosPage() {
                     <span className="mt-0.5 flex items-center gap-2 text-xs text-content-faint">
                       <Clock className="h-3 w-3" /> {v.durationLabel}
                       {inProgress && <Badge tone="warning">{p!.maxPercent} %</Badge>}
-                      {done && <Badge tone="success">Vue</Badge>}
+                      {done && <Badge tone="success">{tr('ui.DemoVideosPage.vue')}</Badge>}
                     </span>
                   </span>
                 </button>
@@ -292,16 +291,16 @@ export function DemoVideosPage() {
           {/* CTA abonnement toujours accessible : ne jamais bloquer un client prêt à payer. */}
           <div className="mt-4 rounded-2xl border bg-surface p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-content">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Déjà convaincu ?
+              <ShieldCheck className="h-4 w-4 text-primary" /> {tr('ui.DemoVideosPage.dejaConvaincu')}
             </p>
             <p className="mt-1 text-xs text-content-muted">
-              Pas besoin de finir les vidéos pour démarrer.
+              {tr('ui.DemoVideosPage.pasBesoinDeFinirLes')}
             </p>
             <Link
               to="/parametres/abonnement"
               className="btn-primary mt-3 flex w-full justify-center rounded-xl py-2.5 text-sm"
             >
-              Activer mon abonnement
+              {tr('ui.DemoVideosPage.activerMonAbonnement')}
             </Link>
             <a
               href={helpLink}
@@ -309,7 +308,7 @@ export function DemoVideosPage() {
               rel="noopener noreferrer"
               className="btn-outline mt-2 flex w-full justify-center gap-2 rounded-xl py-2.5 text-sm"
             >
-              <MessageCircle className="h-4 w-4" /> Démonstration personnalisée
+              <MessageCircle className="h-4 w-4" /> {tr('ui.DemoVideosPage.demonstrationPersonnalisee')}
             </a>
           </div>
         </div>
@@ -317,7 +316,7 @@ export function DemoVideosPage() {
 
       <p className="mt-8 flex items-center justify-center gap-2 text-xs text-content-faint">
         <PlayCircle className="h-3.5 w-3.5" />
-        Votre progression est enregistrée : revenez quand vous voulez.
+        {tr('ui.DemoVideosPage.votreProgressionEstEnregistreeRevenez')}
       </p>
     </div>
   );

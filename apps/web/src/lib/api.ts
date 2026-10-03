@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '../store/auth';
 import { clearOfflineSession, readOfflineSession } from './offline/session';
 import { reportNetworkFailure } from './offline/network';
+import { tr } from './tr';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -126,7 +127,7 @@ api.interceptors.response.use(
 );
 
 /** Extrait un message d'erreur lisible depuis une réponse API. */
-export function apiErrorMessage(err: unknown, fallback = 'Une erreur est survenue'): string {
+export function apiErrorMessage(err: unknown, fallback = tr('ui.api.uneErreurEstSurvenue')): string {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data as { error?: { message?: string } } | undefined;
     return data?.error?.message ?? err.message ?? fallback;

@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
 
 /** Locale d'affichage des nombres et dates : celle de la langue choisie. */
-function displayLocale(): string {
+export function displayLocale(): string {
   const lang = i18n.language || 'fr';
   return lang.startsWith('en') ? 'en-GB' : lang.startsWith('pt') ? 'pt-PT' : 'fr-FR';
 }

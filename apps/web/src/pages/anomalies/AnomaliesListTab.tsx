@@ -6,6 +6,7 @@ import { listAnomalies } from '../../features/anomalies/api';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageLoader, EmptyState } from '../../components/ui';
 import { AnomalyStatusBadge, AnomalyCategoryBadge, ANOMALY_CATEGORY_LABELS, ANOMALY_STATUS_LABELS } from './shared';
+import { tr } from '../../lib/tr';
 
 export function AnomaliesListTab({ onOpen }: { onOpen: (id: string) => void }) {
   const [category, setCategory] = useState('');
@@ -35,9 +36,9 @@ export function AnomaliesListTab({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input className="input h-9 w-56" placeholder="Numéro, élément, description…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="input h-9 w-56" placeholder={tr('ui.AnomaliesListTab.numeroElementDescription')} value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="input h-9 w-auto" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
-          <option value="">Toutes catégories</option>
+          <option value="">{tr('ui.AnomaliesListTab.toutesCategories')}</option>
           {ANOMALY_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {ANOMALY_CATEGORY_LABELS[c]}
@@ -45,7 +46,7 @@ export function AnomaliesListTab({ onOpen }: { onOpen: (id: string) => void }) {
           ))}
         </select>
         <select className="input h-9 w-auto" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">Tous les statuts</option>
+          <option value="">{tr('ui.AnomaliesListTab.tousLesStatuts')}</option>
           {ANOMALY_STATUSES.map((st) => (
             <option key={st} value={st}>
               {ANOMALY_STATUS_LABELS[st]}
@@ -54,31 +55,31 @@ export function AnomaliesListTab({ onOpen }: { onOpen: (id: string) => void }) {
         </select>
         <label className="flex items-center gap-1.5 text-xs text-content-muted">
           <input type="checkbox" checked={hasFinancialImpact} onChange={(e) => { setHasFinancialImpact(e.target.checked); setPage(1); }} />
-          Impact financier
+          {tr('ui.AnomaliesListTab.impactFinancier')}
         </label>
         <label className="flex items-center gap-1.5 text-xs text-content-muted">
           <input type="checkbox" checked={hasStockImpact} onChange={(e) => { setHasStockImpact(e.target.checked); setPage(1); }} />
-          Impact stock
+          {tr('ui.AnomaliesListTab.impactStock')}
         </label>
       </div>
 
       {isLoading ? (
         <PageLoader />
       ) : items.length === 0 ? (
-        <EmptyState icon={AlertTriangle} title="Aucune anomalie" hint="Déclarez une anomalie pour commencer le suivi." />
+        <EmptyState icon={AlertTriangle} title={tr('ui.AnomaliesListTab.aucuneAnomalie')} hint={tr('ui.AnomaliesListTab.declarezUneAnomaliePourCommencer')} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-surface-2/60 text-left text-xs uppercase tracking-wide text-content-muted">
-                <th className="table-cell font-semibold">Numéro</th>
-                <th className="table-cell font-semibold">Catégorie</th>
-                <th className="table-cell font-semibold">Élément</th>
-                <th className="table-cell font-semibold">Déclarant</th>
-                <th className="table-cell text-right font-semibold">Impact financier</th>
-                <th className="table-cell text-right font-semibold">Impact stock</th>
+                <th className="table-cell font-semibold">{tr('ui.AnomaliesListTab.numero')}</th>
+                <th className="table-cell font-semibold">{tr('ui.AnomaliesListTab.categorie')}</th>
+                <th className="table-cell font-semibold">{tr('ui.AnomaliesListTab.element')}</th>
+                <th className="table-cell font-semibold">{tr('ui.AnomaliesListTab.declarant')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.AnomaliesListTab.impactFinancier')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.AnomaliesListTab.impactStock')}</th>
                 <th className="table-cell font-semibold">Date</th>
-                <th className="table-cell font-semibold">Statut</th>
+                <th className="table-cell font-semibold">{tr('ui.AnomaliesListTab.statut')}</th>
               </tr>
             </thead>
             <tbody>
@@ -107,14 +108,14 @@ export function AnomaliesListTab({ onOpen }: { onOpen: (id: string) => void }) {
               </span>
               <div className="flex gap-1">
                 <button className="btn-outline h-7 rounded-md px-2" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  Précédent
+                  {tr('ui.AnomaliesListTab.precedent')}
                 </button>
                 <button
                   className="btn-outline h-7 rounded-md px-2"
                   disabled={page * data.pageSize >= data.total}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Suivant
+                  {tr('ui.AnomaliesListTab.suivant')}
                 </button>
               </div>
             </div>

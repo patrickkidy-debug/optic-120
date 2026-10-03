@@ -1,4 +1,5 @@
 import { Logo } from './Logo';
+import { tr } from '../lib/tr';
 
 export function BrandSplash() {
   return (
@@ -8,7 +9,7 @@ export function BrandSplash() {
         <div className="h-1 w-32 overflow-hidden rounded-full bg-surface-2">
           <div className="h-full w-1/2 animate-[slide-in_1s_ease-in-out_infinite] bg-brand" />
         </div>
-        <p className="text-sm text-content-muted">Chargement de votre espace…</p>
+        <p className="text-sm text-content-muted">{tr('ui.BrandSplash.chargementDeVotreEspace')}</p>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import { formatCurrency, formatDate } from '../../../lib/format';
 import { Button, Modal, PageLoader, EmptyState } from '../../../components/ui';
 import { RefundModal, useInsuranceRefresh } from './ClaimsTab';
 import { num } from './shared';
+import { tr } from '../../../lib/tr';
 
 export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUpdate: boolean }) {
   const refresh = useInsuranceRefresh();
@@ -34,12 +35,12 @@ export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUp
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
-          aria-label="Filtrer par assureur"
+          aria-label={tr('ui.RefundsTab.filtrerParAssureur')}
           className="input h-9 w-auto"
           value={insurerId}
           onChange={(e) => setInsurerId(e.target.value)}
         >
-          <option value="">Tous les assureurs</option>
+          <option value="">{tr('ui.RefundsTab.tousLesAssureurs')}</option>
           {insurers.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
@@ -48,12 +49,12 @@ export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUp
         </select>
         {canUpdate && (
           <Button onClick={() => setPicking(true)}>
-            <Plus className="h-4 w-4" /> Enregistrer un remboursement
+            <Plus className="h-4 w-4" /> {tr('ui.RefundsTab.enregistrerUnRemboursement')}
           </Button>
         )}
         {data && data.refunds.length > 0 && (
           <span className="text-sm text-content-muted">
-            Total reçu : <span className="font-semibold text-success">{formatCurrency(data.total)}</span>
+            {tr('ui.RefundsTab.totalRecu')} <span className="font-semibold text-success">{formatCurrency(data.total)}</span>
           </span>
         )}
       </div>
@@ -63,8 +64,8 @@ export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUp
       ) : !data || data.refunds.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="Aucun remboursement"
-          hint="Enregistrez un versement dès qu'un assureur vous paie."
+          title={tr('ui.RefundsTab.aucunRemboursement')}
+          hint={tr('ui.RefundsTab.enregistrezUnVersementDesQu')}
         />
       ) : (
         <div className="card overflow-x-auto">
@@ -72,11 +73,11 @@ export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUp
             <thead>
               <tr className="border-b bg-surface-2/60 text-left text-xs uppercase tracking-wide text-content-muted">
                 <th className="table-cell font-semibold">Date</th>
-                <th className="table-cell font-semibold">Dossier</th>
-                <th className="table-cell font-semibold">Assureur</th>
-                <th className="table-cell font-semibold">Référence</th>
-                <th className="table-cell text-right font-semibold">Attendu</th>
-                <th className="table-cell text-right font-semibold">Reçu</th>
+                <th className="table-cell font-semibold">{tr('ui.RefundsTab.dossier')}</th>
+                <th className="table-cell font-semibold">{tr('ui.RefundsTab.assureur')}</th>
+                <th className="table-cell font-semibold">{tr('ui.RefundsTab.reference')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.RefundsTab.attendu')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.RefundsTab.recu')}</th>
                 {canUpdate && <th className="table-cell" />}
               </tr>
             </thead>
@@ -97,9 +98,9 @@ export function RefundsTab({ insurers, canUpdate }: { insurers: Insurer[]; canUp
                     <td className="table-cell text-right">
                       <button
                         type="button"
-                        aria-label="Supprimer le remboursement"
+                        aria-label={tr('ui.RefundsTab.supprimerLeRemboursement')}
                         onClick={() => {
-                          if (confirm('Supprimer ce versement ? Le dossier redeviendra dû.')) {
+                          if (confirm(tr('ui.RefundsTab.supprimerCeVersementLeDossier'))) {
                             remove.mutate(r.id);
                           }
                         }}
@@ -162,11 +163,11 @@ function ClaimPicker({
     : open;
 
   return (
-    <Modal open onClose={onClose} title="Choisir le dossier remboursé">
+    <Modal open onClose={onClose} title={tr('ui.RefundsTab.choisirLeDossierRembourse')}>
       <input
         className="input mb-3"
         autoFocus
-        placeholder="Dossier, vente, client ou assureur…"
+        placeholder={tr('ui.RefundsTab.dossierVenteClientOuAssureur')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -174,7 +175,7 @@ function ClaimPicker({
         <PageLoader />
       ) : filtered.length === 0 ? (
         <p className="rounded-lg border border-dashed p-4 text-center text-sm text-content-faint">
-          Aucun dossier en attente de règlement.
+          {tr('ui.RefundsTab.aucunDossierEnAttenteDe')}
         </p>
       ) : (
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
@@ -190,7 +191,7 @@ function ClaimPicker({
                   {c.number} · {c.insurer?.name}
                 </p>
                 <p className="truncate text-xs text-content-faint">
-                  {c.customer ? `${c.customer.firstName} ${c.customer.lastName}` : 'Sans client'}
+                  {c.customer ? `${c.customer.firstName} ${c.customer.lastName}` : tr('ui.RefundsTab.sansClient')}
                   {c.sale ? ` · ${c.sale.number}` : ''}
                 </p>
               </div>

@@ -3,6 +3,7 @@ import { AlertTriangle, PackageCheck, Wrench, BellRing, ShieldCheck, type Lucide
 import { listLensOrders, listRenewals, listRepairs } from '../../features/optique/api';
 import { getInsuranceSummary } from '../../features/management/api';
 import { formatCurrency } from '../../lib/format';
+import { tr } from '../../lib/tr';
 
 type Tone = 'warning' | 'danger' | 'accent' | 'primary';
 const TONE_CLASSES: Record<Tone, string> = {
@@ -44,26 +45,26 @@ export function AlertsToday({
 
   const rows: { icon: LucideIcon; label: string; tone: Tone }[] = [];
   if (receivedCount > 0) {
-    rows.push({ icon: PackageCheck, label: `${receivedCount} commande(s) de verres reçue(s) à monter`, tone: 'accent' });
+    rows.push({ icon: PackageCheck, label: tr('ui.AlertsToday.receivedcountCommandeSDeVerres', { receivedCount: receivedCount }), tone: 'accent' });
   }
   if (readyRepairs > 0) {
-    rows.push({ icon: Wrench, label: `${readyRepairs} réparation(s) prête(s) à remettre`, tone: 'accent' });
+    rows.push({ icon: Wrench, label: tr('ui.AlertsToday.readyrepairsReparationSPreteS', { readyRepairs: readyRepairs }), tone: 'accent' });
   }
   if (lowStockCount > 0) {
-    rows.push({ icon: AlertTriangle, label: `${lowStockCount} produit(s) en stock faible`, tone: 'warning' });
+    rows.push({ icon: AlertTriangle, label: tr('ui.AlertsToday.lowstockcountProduitSEnStock', { lowStockCount: lowStockCount }), tone: 'warning' });
   }
   if (renewalsCount > 0) {
-    rows.push({ icon: BellRing, label: `${renewalsCount} client(s) à recontacter`, tone: 'primary' });
+    rows.push({ icon: BellRing, label: tr('ui.AlertsToday.renewalscountClientSARecontacter', { renewalsCount: renewalsCount }), tone: 'primary' });
   }
   if (insurance && insurance.pending > 0) {
-    rows.push({ icon: ShieldCheck, label: `Assurance en attente : ${formatCurrency(insurance.pending)}`, tone: 'primary' });
+    rows.push({ icon: ShieldCheck, label: tr('ui.AlertsToday.assuranceEnAttentePending', { pending: formatCurrency(insurance.pending) }), tone: 'primary' });
   }
 
   if (rows.length === 0) return null;
 
   return (
     <div className="card p-5">
-      <h3 className="mb-4 font-display font-bold text-content">À traiter aujourd'hui</h3>
+      <h3 className="mb-4 font-display font-bold text-content">{tr('ui.AlertsToday.aTraiterAujourdHui')}</h3>
       <div className="space-y-2">
         {rows.map((r, i) => {
           const Icon = r.icon;

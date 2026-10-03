@@ -35,6 +35,7 @@ import { Button, Field, Modal } from '../../components/ui';
 import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
 import { tr } from '../../lib/tr';
+import { trFr } from '../../lib/sharedLabels';
 
 /** État commun aux deux formulaires du catalogue. */
 interface BaseState {
@@ -258,7 +259,7 @@ export function FrameFormModal({
               <select className="input" value={a.frameType ?? ''} onChange={(e) => setAttr({ frameType: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>{trFr(t)}</option>
                 ))}
               </select>
             </Field>
@@ -266,7 +267,7 @@ export function FrameFormModal({
               <select className="input" value={a.gender ?? ''} onChange={(e) => setAttr({ gender: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_GENDERS.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                  <option key={g} value={g}>{trFr(g)}</option>
                 ))}
               </select>
             </Field>
@@ -274,7 +275,7 @@ export function FrameFormModal({
               <select className="input" value={a.shape ?? ''} onChange={(e) => setAttr({ shape: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_SHAPES.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f}>{trFr(f)}</option>
                 ))}
               </select>
             </Field>
@@ -282,7 +283,7 @@ export function FrameFormModal({
               <select className="input" value={a.material ?? ''} onChange={(e) => setAttr({ material: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_MATERIALS.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>{trFr(m)}</option>
                 ))}
               </select>
             </Field>
@@ -296,7 +297,7 @@ export function FrameFormModal({
                 <button
                   key={c.name}
                   type="button"
-                  title={c.name}
+                  title={trFr(c.name)}
                   onClick={() => setAttr({ color: a.color === c.name ? '' : c.name })}
                   style={{ background: c.hex }}
                   className={`h-7 w-7 rounded-full border transition ${
@@ -591,7 +592,7 @@ export function LensFormModal({
                 >
                   <option value="">—</option>
                   {LENS_MATERIALS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                    <option key={m} value={m}>{trFr(m)}</option>
                   ))}
                 </select>
               </Field>
@@ -616,7 +617,7 @@ export function LensFormModal({
                   <select className="input" value={a.design ?? ''} onChange={(e) => setAttr({ design: e.target.value })}>
                     <option value="">—</option>
                     {LENS_DESIGNS.map((d) => (
-                      <option key={d} value={d}>{d}</option>
+                      <option key={d} value={d}>{trFr(d)}</option>
                     ))}
                   </select>
                 </Field>
@@ -624,7 +625,7 @@ export function LensFormModal({
                   <select className="input" value={a.usage ?? ''} onChange={(e) => setAttr({ usage: e.target.value })}>
                     <option value="">—</option>
                     {LENS_USAGES.map((u) => (
-                      <option key={u} value={u}>{u}</option>
+                      <option key={u} value={u}>{trFr(u)}</option>
                     ))}
                   </select>
                 </Field>
@@ -658,7 +659,7 @@ export function LensFormModal({
                 <select className="input" value={a.tint ?? ''} onChange={(e) => setAttr({ tint: e.target.value })}>
                   <option value="">—</option>
                   {LENS_TINTS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>{trFr(t)}</option>
                   ))}
                 </select>
               </Field>

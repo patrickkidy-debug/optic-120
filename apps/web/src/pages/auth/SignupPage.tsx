@@ -15,6 +15,7 @@ import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
 import { OpticalShopIllustration } from '../../components/illustrations/OpticalShopIllustration';
+import { tr } from '../../lib/tr';
 
 const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
 
@@ -40,7 +41,7 @@ export function SignupPage() {
   const redirectTo = safeRedirect(nextParam);
   const google = useGoogleAuthFlow(redirectTo, plan);
   const [tenantName, setTenantName] = useState('');
-  const [branchName, setBranchName] = useState('Magasin principal');
+  const [branchName, setBranchName] = useState(tr('ui.SignupPage.magasinPrincipal'));
   const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const [serverError, setServerError] = useState('');
@@ -51,7 +52,7 @@ export function SignupPage() {
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { branchName: 'Magasin principal' },
+    defaultValues: { branchName: tr('ui.SignupPage.magasinPrincipal') },
   });
 
   async function onSubmit(values: SignupInput) {
@@ -69,14 +70,14 @@ export function SignupPage() {
       // La visite guidée narrée démarre automatiquement (ProductTourProvider).
       navigate(redirectTo);
     } catch (e) {
-      setServerError(apiErrorMessage(e, 'Création impossible'));
+      setServerError(apiErrorMessage(e, tr('ui.SignupPage.creationImpossible')));
     }
   }
 
   // Inscription Google : compte inexistant → on demande juste le nom de l'établissement.
   if (google.step.kind === 'needsSignup') {
     return (
-      <AuthLayout title={t('auth.finishSignup')} subtitle={`Bienvenue ${google.step.firstName} — encore une étape`}>
+      <AuthLayout title={t('auth.finishSignup')} subtitle={tr('ui.SignupPage.bienvenueFirstnameEncoreUneEtape', { firstName: google.step.firstName })}>
         <form
           onSubmit={(e) => { e.preventDefault(); void google.completeSignup(tenantName, branchName, googleWhatsapp); }}
           className="space-y-4"
@@ -84,10 +85,10 @@ export function SignupPage() {
           <Field label={t('auth.googleEmail')}>
             <input className="input" value={google.step.email} disabled />
           </Field>
-          <Field label="Nom de l'établissement">
+          <Field label={tr('ui.SignupPage.nomDeLEtablissement')}>
             <input className="input" autoFocus value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder={t('auth.placeholderOrg')} />
           </Field>
-          <Field label="Magasin principal">
+          <Field label={tr('ui.SignupPage.magasinPrincipal')}>
             <input className="input" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
           </Field>
           <Field label={t('auth.whatsapp')}>
@@ -96,10 +97,10 @@ export function SignupPage() {
           </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
           <Button type="submit" loading={google.loading} disabled={tenantName.trim().length < 2 || googleWhatsapp.trim().length < 8} className="w-full">
-            Créer mon compte
+            {tr('ui.SignupPage.creerMonCompte')}
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">
-            ← Retour
+            {tr('ui.SignupPage.retour')}
           </button>
         </form>
       </AuthLayout>
@@ -124,10 +125,10 @@ export function SignupPage() {
           </Field>
           {google.error && <p className="text-sm text-danger">{google.error}</p>}
           <Button type="submit" loading={google.loading} disabled={googleCode.length !== 6} className="w-full">
-            Vérifier
+            {tr('ui.SignupPage.verifier')}
           </Button>
           <button type="button" onClick={google.reset} className="w-full text-center text-sm text-content-muted hover:text-content">
-            ← Retour
+            {tr('ui.SignupPage.retour')}
           </button>
         </form>
       </AuthLayout>
@@ -143,7 +144,7 @@ export function SignupPage() {
       <GoogleSignInButton text="signup_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
       {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
       <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
-        <div className="h-px flex-1 bg-line" /> ou <div className="h-px flex-1 bg-line" />
+        <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.tenantName')}>
