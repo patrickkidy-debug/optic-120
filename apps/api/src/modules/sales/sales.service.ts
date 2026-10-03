@@ -4,8 +4,7 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
-  MADE_TO_ORDER_CATEGORIES,
-} from '@oculo/shared-types';
+  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo } from '@oculo/shared-types';
 import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
@@ -166,7 +165,7 @@ export async function createSale(
     // elle doit être figée sur la vente, pas supposée.
     const tenant = await tx.tenant.findUnique({
       where: { id: tenantId },
-      select: { vatRate: true, currency: true, opticalSettings: true },
+      select: { vatRate: true, currency: true, countryCode: true, whatsappPhone: true, opticalSettings: true },
     });
     // Un taux fourni par la caisse s'applique à cette vente uniquement
     // (exonération ou taux différent), sinon on prend celui de l'établissement.
@@ -225,7 +224,7 @@ export async function createSale(
         prescriptionId: input.prescriptionId ?? null,
         totalAmount: total,
         paidAmount: paidInit,
-        currency: tenant?.currency ?? 'XOF',
+        currency: tenant ? tenantCurrencyInfo(tenant).currency : 'XOF',
         loyaltyPointsUsed: pointsUsed,
         // Garantie : durée retenue (ou celle par défaut du cabinet) et échéance
         // figée à la vente, pour trancher un litige SAV plus tard.

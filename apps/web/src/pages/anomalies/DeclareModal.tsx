@@ -26,7 +26,7 @@ import {
   CORRECTION_TYPE_LABELS,
 } from './shared';
 import { TargetPicker, type PickedTarget } from './TargetPicker';
-import { displayLocale } from '../../lib/format';
+import { displayLocale, formatCurrency } from '../../lib/format';
 import { tr } from '../../lib/tr';
 
 interface SaleLine {
@@ -445,7 +445,7 @@ function ProductQuickList({ search, onPick }: { search: string; onPick: (p: { id
           onClick={() => onPick(p)}
           className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-surface-2"
         >
-          {p.name} — {Number(p.sellPrice).toLocaleString(displayLocale())} FCFA
+          {p.name} — {formatCurrency(Number(p.sellPrice))}
         </button>
       ))}
     </div>

@@ -35,7 +35,7 @@ import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
-import { formatCurrency, formatDate, formatDateTime, toLocalDatetimeString } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTime, toLocalDatetimeString, currencySymbol } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { StockHistoryModal } from './StockPage';
 import { FrameCatalog, FrameDetail } from './FrameCatalog';
@@ -1050,10 +1050,10 @@ function ProductModal({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.ProductsPage.prixDAchatFcfa')}>
+          <Field label={tr('ui.ProductsPage.prixDAchatFcfa', { currency: currencySymbol() })}>
             <input className="input" type="number" step="1" {...register('buyPrice', { valueAsNumber: true })} />
           </Field>
-          <Field label={tr('ui.ProductsPage.prixDeVenteFcfa')}>
+          <Field label={tr('ui.ProductsPage.prixDeVenteFcfa', { currency: currencySymbol() })}>
             <input className="input" type="number" step="1" {...register('sellPrice', { valueAsNumber: true })} />
             {errors.sellPrice && <p className="mt-1 text-xs text-danger">{trFr(errors.sellPrice.message)}</p>}
           </Field>

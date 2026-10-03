@@ -33,6 +33,7 @@ import { usePosStore } from '../../store/pos';
 import { formatDate, formatCurrency } from '../../lib/format';
 import { Modal, Button, Badge, PageLoader } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { saleStatusLabel } from '../../lib/labels';
 
 const SALE_TYPE_LABEL: Record<string, string> = { get SALE() { return tr('ui.ClientRecord.vente'); }, get QUOTE() { return tr('ui.ClientRecord.devis'); }, get RETURN() { return tr('ui.ClientRecord.retour'); } };
 
@@ -288,7 +289,7 @@ function SaleRow({ sale }: { sale: CustomerSale }) {
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <span className="font-semibold text-content">{formatCurrency(Number(sale.totalAmount))}</span>
-          <Badge tone="neutral">{sale.status}</Badge>
+          <Badge tone="neutral">{saleStatusLabel(sale.status)}</Badge>
           {open ? <ChevronUp className="h-3.5 w-3.5 text-content-faint" /> : <ChevronDown className="h-3.5 w-3.5 text-content-faint" />}
         </span>
       </button>

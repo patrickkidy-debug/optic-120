@@ -27,6 +27,7 @@ import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_OPT
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
+import { currencySymbol, getActiveCurrency } from '../../lib/format';
 import { tr } from '../../lib/tr';
 
 function ImagePicker({
@@ -584,7 +585,7 @@ function OpticalSettingsCard() {
         hint={tr('ui.ProfilePage.remiseObtenueParPointUtilise')}
         value={values.loyaltyPointValue}
         onChange={(n) => set({ loyaltyPointValue: n })}
-        suffix="FCFA"
+        suffix={currencySymbol()}
       />
 
       <div className="mt-4 flex items-center gap-3">
@@ -867,7 +868,7 @@ function InvoiceCustomizationCard() {
       insuranceAmount: '0',
       totalAmount: '90000',
       paidAmount: '0',
-      currency: 'XOF',
+      currency: getActiveCurrency(),
       createdAt: now,
       items: [
         { id: '1', productId: 'demo-1', quantity: 1, unitPrice: '75000', lineTotal: '75000', reference: null, product: { name: 'Monture Ray-Ban RB5154', sku: 'RB-5154' } },

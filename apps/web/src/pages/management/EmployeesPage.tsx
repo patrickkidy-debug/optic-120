@@ -7,7 +7,7 @@ import { employeeCreateSchema, type EmployeeCreateInput } from '@oculo/shared-ty
 import { listEmployees, createEmployee, updateEmployee, type Employee } from '../../features/management/api';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { formatCurrency, formatDate, initials } from '../../lib/format';
+import { formatCurrency, formatDate, initials, currencySymbol } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
@@ -126,7 +126,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Field label={tr('ui.EmployeesPage.salaireFcfa')}><input className="input" type="number" {...register('salary', { valueAsNumber: true })} /></Field>
+          <Field label={tr('ui.EmployeesPage.salaireFcfa', { currency: currencySymbol() })}><input className="input" type="number" {...register('salary', { valueAsNumber: true })} /></Field>
           <Field label={tr('ui.EmployeesPage.embauche')}><input className="input" type="date" {...register('hireDate')} /></Field>
           <Field label={tr('ui.EmployeesPage.statut')}>
             <select className="input" {...register('status')}>

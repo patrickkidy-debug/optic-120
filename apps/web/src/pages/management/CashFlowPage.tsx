@@ -23,7 +23,7 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
-import { formatCurrency, formatDate } from '../../lib/format';
+import { formatCurrency, formatDate, currencySymbol } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
@@ -305,7 +305,7 @@ function TransferModal({ onClose, defaultBranchId }: { onClose: () => void; defa
           {errors.label && <p className="mt-1 text-xs text-danger">{trFr(errors.label.message)}</p>}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.CashFlowPage.montantFcfa')}>
+          <Field label={tr('ui.CashFlowPage.montantFcfa', { currency: currencySymbol() })}>
             <input className="input" type="number" {...register('amount', { valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}
           </Field>
@@ -379,7 +379,7 @@ function ExpenseModal({ onClose, defaultBranchId }: { onClose: () => void; defau
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.CashFlowPage.montantFcfa')}>
+          <Field label={tr('ui.CashFlowPage.montantFcfa', { currency: currencySymbol() })}>
             <input className="input" type="number" {...register('amount', { valueAsNumber: true })} />
             {errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}
           </Field>

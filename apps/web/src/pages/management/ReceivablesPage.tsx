@@ -157,7 +157,7 @@ export function ReceivablesPage() {
                       ) : '—'}
                     </td>
                     <td className="table-cell text-right font-semibold text-danger">
-                      {r.balance > 0 ? formatCurrency(r.balance) : tr('ui.ReceivablesPage.n0Fcfa')}
+                      {r.balance > 0 ? formatCurrency(r.balance) : formatCurrency(0)}
                     </td>
                     <td className="table-cell text-right text-content-muted">{formatDateTime(r.createdAt)}</td>
                     <td className="table-cell">

@@ -6,6 +6,7 @@ import { lensBaseOptions, lensLabel, lensSku, DEFAULT_LENS_PRICING } from '@ocul
 import { listProducts, type Product } from '../../features/optique/api';
 import { useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, PageLoader, EmptyState } from '../../components/ui';
+import { formatCurrency } from '../../lib/format';
 import { tr } from '../../lib/tr';
 import i18n from 'i18next';
 
@@ -36,8 +37,8 @@ function Barcode({ value }: { value: string }) {
   }, [value]);
   return <svg ref={ref} className="w-full max-w-full" />;
 }
-
-const money = (n: number) => `${new Intl.NumberFormat('fr-FR').format(Math.round(n))} FCFA`;
+// Devise de l'établissement (FCFA, €, CHF, RWF…), comme partout ailleurs.
+const money = (n: number) => formatCurrency(n);
 
 function LabelCard({ name, code, price, onPrint }: LabelData & { onPrint?: () => void }) {
   return (

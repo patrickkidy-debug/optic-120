@@ -37,7 +37,7 @@ import { listSuppliers } from '../../features/management/api';
 import { CustomerSearch } from '../../features/optique/SaleTools';
 import { apiErrorMessage } from '../../lib/api';
 import { useAuthStore } from '../../store/auth';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, currencySymbol } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
@@ -684,7 +684,7 @@ export function LensOrderForm({
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </Field>
-                <Field label={tr('ui.LensOrderForm.coutFcfa')}>
+                <Field label={tr('ui.LensOrderForm.coutFcfa', { currency: currencySymbol() })}>
                   <input className="input" type="number" min={0} placeholder={tr('ui.LensOrderForm.prix')} value={cost} onChange={(e) => setCost(e.target.value)} />
                 </Field>
               </div>

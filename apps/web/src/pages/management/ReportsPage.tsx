@@ -11,7 +11,7 @@ import { listUsers } from '../../features/rbac/api';
 import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
-import { formatCurrency } from '../../lib/format';
+import { formatCurrency, displayLocale } from '../../lib/format';
 import { Button, Modal, PageLoader } from '../../components/ui';
 import { FilterBar } from './reports/FilterBar';
 import { KpiGrid, KpiGridSkeleton } from './reports/KpiGrid';
@@ -325,7 +325,7 @@ function SaleDetail({ saleId, onClose }: { saleId: string; onClose: () => void }
               {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
             </p>
             <p className="text-xs text-content-muted">
-              {new Date(sale.createdAt).toLocaleString('fr-FR')} · {statusLabel(sale.status)}
+              {new Date(sale.createdAt).toLocaleString(displayLocale())} · {statusLabel(sale.status)}
             </p>
           </div>
 

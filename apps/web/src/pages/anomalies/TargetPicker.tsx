@@ -9,7 +9,7 @@ import { CustomerSearch } from '../../features/optique/SaleTools';
 import { PageLoader } from '../../components/ui';
 import { useUIStore } from '../../store/ui';
 import { tr } from '../../lib/tr';
-import { displayLocale } from '../../lib/format';
+import { displayLocale, formatCurrency } from '../../lib/format';
 
 export interface PickedTarget {
   id: string;
@@ -159,7 +159,7 @@ function SalePicker({
       keyOf={(s) => s.id}
       renderRow={(s) => (
         <Row
-          title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: Number(s.totalAmount).toLocaleString(displayLocale()) })}
+          title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: formatCurrency(Number(s.totalAmount)) })}
           subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : tr('ui.TargetPicker.sansClient')}
           onClick={async () => {
             const full = await getSale(s.id);
@@ -209,7 +209,7 @@ function ProductPicker({ query, setQuery, onPick }: { query: string; setQuery: (
       renderRow={(p) => (
         <Row
           title={p.name}
-          subtitle={tr('ui.TargetPicker.skuValueFcfa', { sku: p.sku, value: Number(p.sellPrice).toLocaleString(displayLocale()) })}
+          subtitle={tr('ui.TargetPicker.skuValueFcfa', { sku: p.sku, value: formatCurrency(Number(p.sellPrice)) })}
           onClick={() =>
             onPick({
               id: p.id,
@@ -358,7 +358,7 @@ function CashRegisterPicker({ branchId, onPick }: { branchId: string | null; onP
   return (
     <Row
       title={tr('ui.TargetPicker.sessionOuverteLeValue', { value: new Date(data.openedAt).toLocaleString(displayLocale()) })}
-      subtitle={tr('ui.TargetPicker.fondDeCaisseValueFcfa', { value: Number(data.openingAmount).toLocaleString(displayLocale()) })}
+      subtitle={tr('ui.TargetPicker.fondDeCaisseValueFcfa', { value: formatCurrency(Number(data.openingAmount)) })}
       onClick={() =>
         onPick({
           id: data.id,
@@ -398,7 +398,7 @@ function PaymentPicker({ query, setQuery, onPick }: { query: string; setQuery: (
         keyOf={(s) => s.id}
         renderRow={(s) => (
           <Row
-            title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: Number(s.totalAmount).toLocaleString(displayLocale()) })}
+            title={tr('ui.TargetPicker.numberValueFcfa', { number: s.number, value: formatCurrency(Number(s.totalAmount)) })}
             subtitle={s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : tr('ui.TargetPicker.sansClient')}
             onClick={() => setSaleId(s.id)}
           />
@@ -424,7 +424,7 @@ function PaymentPicker({ query, setQuery, onPick }: { query: string; setQuery: (
           {payments.map((p) => (
             <Row
               key={p.id}
-              title={tr('ui.TargetPicker.valueFcfaMethod', { value: Number(p.amount).toLocaleString(displayLocale()), method: p.method })}
+              title={tr('ui.TargetPicker.valueFcfaMethod', { value: formatCurrency(Number(p.amount)), method: p.method })}
               subtitle={new Date(p.createdAt).toLocaleString(displayLocale())}
               onClick={() =>
                 onPick({
@@ -489,7 +489,7 @@ function InsurancePicker({ query, setQuery, onPick }: { query: string; setQuery:
           renderRow={(c) => (
             <Row
               title={c.number}
-              subtitle={tr('ui.TargetPicker.vDemandeValueFcfa', { v: c.insurer?.name ?? '—', value: Number(c.requestedAmount).toLocaleString(displayLocale()) })}
+              subtitle={tr('ui.TargetPicker.vDemandeValueFcfa', { v: c.insurer?.name ?? '—', value: formatCurrency(Number(c.requestedAmount)) })}
               onClick={() =>
                 onPick({
                   id: c.id,
@@ -511,7 +511,7 @@ function InsurancePicker({ query, setQuery, onPick }: { query: string; setQuery:
           keyOf={(r) => r.id}
           renderRow={(r) => (
             <Row
-              title={tr('ui.TargetPicker.vValueFcfa', { v: r.claim?.number ?? '—', value: Number(r.receivedAmount).toLocaleString(displayLocale()) })}
+              title={tr('ui.TargetPicker.vValueFcfa', { v: r.claim?.number ?? '—', value: formatCurrency(Number(r.receivedAmount)) })}
               subtitle={new Date(r.receivedAt).toLocaleDateString(displayLocale())}
               onClick={() =>
                 onPick({

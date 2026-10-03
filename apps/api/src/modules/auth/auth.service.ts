@@ -10,7 +10,7 @@ import type {
   LensPricing,
   WhatsappTemplates,
 } from '@oculo/shared-types';
-import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY } from '@oculo/shared-types';
+import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY, tenantCurrencyInfo } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
@@ -84,8 +84,8 @@ function buildAuthUser(user: NonNullable<UserWithCtx>): AuthUser {
     allBranches: user.role.allBranches,
     tenantName: user.tenant.name,
     tenantLogoUrl: user.tenant.logoUrl,
-    tenantCurrency: user.tenant.currency ?? 'XOF',
-    tenantCountryCode: user.tenant.countryCode ?? null,
+    tenantCurrency: tenantCurrencyInfo(user.tenant).currency,
+    tenantCountryCode: tenantCurrencyInfo(user.tenant).countryCode,
     tenantLocation: user.tenant.location,
     tenantContactPhone: user.tenant.contactPhone,
     tenantContactEmail: user.tenant.contactEmail,

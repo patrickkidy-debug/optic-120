@@ -16,7 +16,7 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
-import { formatCurrency, formatDate, displayLocale } from '../../lib/format';
+import { formatCurrency, formatDate, displayLocale, currencySymbol } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, StatCard, PageLoader, EmptyState } from '../../components/ui';
 import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
@@ -238,7 +238,7 @@ function ExpenseModal({ onClose }: { onClose: () => void }) {
           </select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={tr('ui.FinancePage.montantFcfa')}><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}</Field>
+          <Field label={tr('ui.FinancePage.montantFcfa', { currency: currencySymbol() })}><input className="input" type="number" {...register('amount', { valueAsNumber: true })} />{errors.amount && <p className="mt-1 text-xs text-danger">{trFr(errors.amount.message)}</p>}</Field>
           <Field label="Date"><input className="input" type="date" {...register('date')} /></Field>
         </div>
         {branches && branches.length > 1 && (

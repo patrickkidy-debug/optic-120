@@ -3670,3 +3670,20 @@ export interface SyncOpResult {
   result?: Record<string, unknown>;
   error?: string;
 }
+
+/**
+ * Devise et pays effectifs d'un établissement. Le pays est fixé à l'inscription
+ * d'après l'indicatif WhatsApp ; un établissement créé quand son pays n'était pas
+ * encore desservi (France, Rwanda…) est resté sans pays, donc en FCFA par défaut.
+ * On le déduit alors du numéro, comme le fait l'inscription aujourd'hui.
+ */
+export function tenantCurrencyInfo(tenant: {
+  countryCode?: string | null;
+  currency?: string | null;
+  whatsappPhone?: string | null;
+}): { countryCode: string | null; currency: string } {
+  if (tenant.countryCode) return { countryCode: tenant.countryCode, currency: tenant.currency || 'XOF' };
+  const c = tenant.whatsappPhone ? countryFromPhone(tenant.whatsappPhone) : undefined;
+  if (c) return { countryCode: c.code, currency: c.currency };
+  return { countryCode: null, currency: tenant.currency || 'XOF' };
+}

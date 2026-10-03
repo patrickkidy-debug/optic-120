@@ -9,6 +9,7 @@ import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { usePermission } from '../../store/auth';
 import { PageHeader, Button, Field, Modal, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { currencySymbol } from '../../lib/format';
 import { tr } from '../../lib/tr';
 
 const STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
@@ -172,7 +173,7 @@ function RepairModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         <Field label={tr('ui.RepairsPage.descriptionDuProbleme')}>
           <input className="input" placeholder={tr('ui.RepairsPage.exBrancheCasseeChangementDe')} {...register('description')} />
         </Field>
-        <Field label={tr('ui.RepairsPage.coutEstimeFcfa')}><input className="input" type="number" min={0} {...register('cost')} /></Field>
+        <Field label={tr('ui.RepairsPage.coutEstimeFcfa', { currency: currencySymbol() })}><input className="input" type="number" min={0} {...register('cost')} /></Field>
         <Field label="Notes"><input className="input" {...register('notes')} /></Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">

@@ -65,3 +65,9 @@ export function toLocalDatetimeString(dateInput: string | Date): string {
   const minutes = String(d.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+
+/** Symbole de la devise de l'établissement (FCFA, €, CHF, RWF, Esc…), pour les libellés de champs. */
+export function currencySymbol(currency?: string): string {
+  const code = (currency || activeCurrency) as SupportedCurrency;
+  return CURRENCY_FORMAT[code]?.symbol ?? code;
+}
