@@ -126,7 +126,7 @@ export function Sidebar() {
                           {it.badge === 'lensOverdue' && overdueCount ? (
                             <span
                               className="badge bg-[color:var(--danger)]/10 text-danger text-[10px] px-1.5"
-                              title="Commandes de verres en retard de livraison"
+                              title={t('shell.lateLensOrders')}
                             >
                               {overdueCount}
                             </span>

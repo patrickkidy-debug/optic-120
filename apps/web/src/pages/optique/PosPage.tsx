@@ -50,30 +50,8 @@ import { usePosStore, computeTotals } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { formatCurrency } from '../../lib/format';
+import { paymentMethodLabel } from '../../lib/labels';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
-
-/** Libellé commercial de chaque moyen d'encaissement. */
-const METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: 'Espèces',
-  CARD: 'Carte',
-  CHEQUE: 'Chèque',
-  WAVE: 'Wave',
-  ORANGE_MONEY: 'Orange Money',
-  MTN_MOMO: 'MTN MoMo',
-  MOOV_MONEY: 'Moov Money',
-  FREE_MONEY: 'Free Money',
-  MPESA: 'M-Pesa',
-  EMOLA: 'e-Mola',
-  MKESH: 'mKesh',
-  MULTICAIXA: 'Multicaixa Express',
-  UNITEL_MONEY: 'Unitel Money',
-  VINTI4: 'Vinti4',
-  // Facturation de l'editeur uniquement : absents de paymentMethodsForCountry(),
-  // donc jamais proposes en caisse. Presents ici parce que la carte est
-  // exhaustive par type.
-  BANK_TRANSFER: 'Virement bancaire',
-  OTHER: 'Autre',
-};
 
 /**
  * Moyens proposés en caisse : espèces et carte partout, puis les services
@@ -82,12 +60,12 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 function methodsFor(countryCode?: string | null) {
   const mobile = paymentMethodsForCountry(countryCode);
   return [
-    { value: 'CASH' as PaymentMethod, label: METHOD_LABELS.CASH, icon: Banknote, mobile: false },
-    { value: 'CARD' as PaymentMethod, label: METHOD_LABELS.CARD, icon: CreditCard, mobile: false },
+    { value: 'CASH' as PaymentMethod, label: paymentMethodLabel('CASH'), icon: Banknote, mobile: false },
+    { value: 'CARD' as PaymentMethod, label: paymentMethodLabel('CARD'), icon: CreditCard, mobile: false },
     // Chèque : moyen habituel des assurances (tiers payant), à saisir comme
     // n'importe quel encaissement constaté au comptoir.
-    { value: 'CHEQUE' as PaymentMethod, label: METHOD_LABELS.CHEQUE, icon: FileText, mobile: false },
-    ...mobile.map((m) => ({ value: m, label: METHOD_LABELS[m], icon: Smartphone, mobile: true })),
+    { value: 'CHEQUE' as PaymentMethod, label: paymentMethodLabel('CHEQUE'), icon: FileText, mobile: false },
+    ...mobile.map((m) => ({ value: m, label: paymentMethodLabel(m), icon: Smartphone, mobile: true })),
   ];
 }
 
@@ -209,7 +187,7 @@ export function PosPage() {
         pos.clear();
         setVatRate(null);
         setLoyaltyPoints(0);
-        alert(`Devis ${sale.number} créé.`);
+        alert(t('pos.quoteCreated', { number: sale.number }));
       } else {
         const due = Number(sale.totalAmount) - Number(sale.paidAmount);
         setPaySale({
@@ -264,14 +242,14 @@ export function PosPage() {
                   <div className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</div>
                   <div className="mt-1.5 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
                   <div className="text-xs text-content-faint">
-                    {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
+                    {p.unlimited ? t('pos.stockUnlimited') : t('pos.stockQty', { count: p.quantity })}
                   </div>
                 </button>
               ))}
             </div>
             {products.length > 10 && (
               <p className="mt-3 text-xs text-center text-content-muted font-medium">
-                Affichage des 10 premiers résultats. Utilisez la recherche pour trouver d'autres articles.
+                {t('pos.firstResults')}
               </p>
             )}
           </>
@@ -284,7 +262,7 @@ export function PosPage() {
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <ShoppingCart className="h-5 w-5 text-primary" />
             <h2 className="font-display font-bold text-content">{t('pos.cart')}</h2>
-            <span className="ml-auto text-sm text-content-muted">{pos.lines.length} article(s)</span>
+            <span className="ml-auto text-sm text-content-muted">{t('pos.itemsCount', { count: pos.lines.length })}</span>
           </div>
 
           <div className="min-h-[18rem] flex-1 overflow-y-auto px-4 py-2">
@@ -318,7 +296,7 @@ export function PosPage() {
                         value={l.reference ?? ''}
                         onChange={(e) => pos.setReference(l.productId, e.target.value)}
                         className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
-                        placeholder="Référence (optionnel)"
+                        placeholder={t('pos.referenceOptional')}
                         maxLength={80}
                       />
                     </div>
@@ -369,7 +347,7 @@ export function PosPage() {
                 l'assureur (montant restant modifiable au-dessus). */}
             {canSeeInsurers && insurers && insurers.length > 0 && (
               <label className="text-xs text-content-muted">
-                Assurance
+                {t('pos.insurer')}
                 <select
                   className="input mt-1"
                   value={insurerId}
@@ -380,7 +358,7 @@ export function PosPage() {
                     if (!e.target.value) pos.setInsurance(0);
                   }}
                 >
-                  <option value="">Aucune (client paie tout)</option>
+                  <option value="">{t('pos.noInsurer')}</option>
                   {insurers.map((ins) => (
                     <option key={ins.id} value={ins.id}>
                       {ins.name} — {ins.coveragePercent}%
@@ -419,12 +397,12 @@ export function PosPage() {
               <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />
               {loyaltyPoints > 0 && (
                 <Row
-                  label={`Fidélité (${loyaltyPoints} pt)`}
+                  label={t('pos.loyaltyLine', { points: loyaltyPoints })}
                   value={`- ${formatCurrency(Math.round(loyaltyPoints * optical.loyaltyPointValue))}`}
                 />
               )}
               <Row
-                label={effectiveVat === 0 ? `${t('pos.tax')} — exonéré` : `${t('pos.tax')} (${effectiveVat} %)`}
+                label={effectiveVat === 0 ? t('pos.vatExempt') : t('pos.vatRate', { rate: effectiveVat })}
                 value={formatCurrency(totals.taxAmount)}
               />
               <div className="my-1 border-t" />
@@ -450,7 +428,7 @@ export function PosPage() {
                 disabled={pos.lines.length === 0 || registerClosed}
                 loading={createMut.isPending && createMut.variables === 'SALE'}
                 onClick={() => createMut.mutate('SALE')}
-                title={registerClosed ? 'Ouvrez la caisse pour encaisser' : undefined}
+                title={registerClosed ? t('pos.openRegisterToCheckout') : undefined}
               >
                 {t('pos.checkout')}
               </Button>
@@ -461,7 +439,7 @@ export function PosPage() {
                 className="mt-2 flex items-center gap-2 rounded-xl border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-3 py-2 text-xs font-medium text-warning transition hover:bg-[color:var(--warning)]/15"
               >
                 <Lock className="h-3.5 w-3.5 shrink-0" />
-                Caisse fermée — ouvrez la session pour encaisser
+                {t('pos.registerClosedBanner')}
               </Link>
             )}
           </div>
@@ -513,10 +491,15 @@ export function PaymentModal({
   onPaid: () => void;
   onPaidLabel?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   // Moyens d'encaissement du pays de l'établissement (Wave, M-Pesa, Multicaixa…).
-  const METHODS = useMemo(() => methodsFor(user?.tenantCountryCode), [user?.tenantCountryCode]);
+  // La langue fait partie des dépendances : les libellés suivent le sélecteur.
+  const METHODS = useMemo(
+    () => methodsFor(user?.tenantCountryCode),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.tenantCountryCode, i18n.language],
+  );
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [amount, setAmount] = useState<number>(sale.due);
   const [settled, setSettled] = useState(0);
@@ -599,7 +582,7 @@ export function PaymentModal({
         setPhase('done');
         clearInterval(iv);
       } else if (s.status === 'FAILED') {
-        setError('Paiement échoué');
+        setError(t('pos.paymentFailed'));
         setPhase('choose');
         clearInterval(iv);
       }
@@ -617,7 +600,7 @@ export function PaymentModal({
       size="sm"
     >
       <div className="mb-4 rounded-xl bg-surface-2 p-3 text-center">
-        <p className="text-xs text-content-muted">{sale.coveredByInsurance ? 'Prise en charge assurance' : t('pos.due')}</p>
+        <p className="text-xs text-content-muted">{sale.coveredByInsurance ? t('pos.insuranceCover') : t('pos.due')}</p>
         <p className="font-display text-2xl font-bold text-content">{sale.coveredByInsurance ? '100 %' : formatCurrency(sale.due)}</p>
       </div>
 
@@ -625,7 +608,7 @@ export function PaymentModal({
         <>
           {sale.coveredByInsurance ? (
             <p className="mb-3 rounded-xl border border-primary/20 bg-primary-soft/30 p-3 text-sm text-content-muted">
-              La vente est entièrement couverte. Enregistrez le chèque remis par l'assurance pour tracer son mode d'encaissement.
+              {t('pos.fullyCovered')}
             </p>
           ) : <label className="mb-3 block text-sm">
             <span className="text-content-muted">{t('pos.amountNow')}</span>
@@ -639,13 +622,13 @@ export function PaymentModal({
             />
             {remainingAfter > 0 ? (
               <span className="mt-1 block text-xs text-warning">
-                Encaissement échelonné — reste {formatCurrency(remainingAfter)} après ce paiement.
+                {t('pos.partialPayment', { amount: formatCurrency(remainingAfter) })}
               </span>
             ) : (
               <span className="mt-1 block text-xs text-content-faint">{t('pos.fullPayment')}</span>
             )}
           </label>}
-          <p className="mb-2 text-sm text-content-muted">{sale.coveredByInsurance ? 'Mode de règlement de l’assurance' : t('pos.chooseMethod')}</p>
+          <p className="mb-2 text-sm text-content-muted">{sale.coveredByInsurance ? t('pos.insurerMethod') : t('pos.chooseMethod')}</p>
           <div className="grid grid-cols-2 gap-2">
             {METHODS.filter((m) => !sale.coveredByInsurance || m.value === 'CHEQUE').map((m) => (
               <button
@@ -700,7 +683,7 @@ export function PaymentModal({
             <>
               <p className="mt-3 font-display text-lg font-bold text-content">{t('pos.recorded')}</p>
               <p className="mt-1 text-sm text-content-muted">
-                Reçu {formatCurrency(settled)} · reste{' '}
+                {t('pos.receivedRemaining', { received: formatCurrency(settled) })}{' '}
                 <span className="font-semibold text-warning">{formatCurrency(sale.due - settled)}</span>
               </p>
             </>
@@ -722,7 +705,7 @@ export function PaymentModal({
           </div>
           {autoNext !== null && autoNext > 0 && (
             <p className="mt-3 text-xs text-content-faint">
-              {onPaidLabel ? 'Fermeture' : 'Nouvelle vente'} automatique dans {autoNext}s…
+              {t(onPaidLabel ? 'pos.autoClose' : 'pos.autoNewSale', { seconds: autoNext })}
             </p>
           )}
         </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Download, WifiOff, X, Share } from 'lucide-react';
@@ -35,6 +36,7 @@ type WinWithPrompt = Window & { __oculoInstallPrompt?: InstallPromptEvent | null
  * Rien à configurer : le service worker et le manifest sont déjà en place.
  */
 export function PwaControls() {
+  const { t } = useTranslation();
   // Le tunnel d'activation est une page de conversion : une invite qui recouvre
   // le bas de l'ecran mobile detourne du bouton principal. Le bandeau « Hors
   // ligne » reste affiche partout, lui : il previent d'une vraie panne.
@@ -97,9 +99,7 @@ export function PwaControls() {
           role="status"
         >
           <WifiOff className="h-4 w-4 shrink-0" />
-          {hasSession
-            ? 'Hors connexion — vos modifications sont enregistrées sur cet appareil et seront synchronisées automatiquement.'
-            : 'Hors connexion — reconnexion automatique au retour du réseau.'}
+          {hasSession ? t('sync.bannerSession') : t('sync.bannerNoSession')}
         </div>
       )}
 
@@ -109,14 +109,14 @@ export function PwaControls() {
             <Download className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1 text-sm">
-            <p className="font-semibold text-content">Installer OculoSaaS</p>
-            <p className="text-content-muted">Accès plein écran, ouverture rapide, hors connexion.</p>
+            <p className="font-semibold text-content">{t('pwa.installTitle')}</p>
+            <p className="text-content-muted">{t('pwa.installText')}</p>
           </div>
-          <Button onClick={install}>Installer</Button>
+          <Button onClick={install}>{t('pwa.install')}</Button>
           <button
             onClick={() => setDismissed(true)}
             className="text-content-faint transition hover:text-content"
-            aria-label="Fermer"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -130,16 +130,16 @@ export function PwaControls() {
             <Share className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1 text-sm">
-            <p className="font-semibold text-content">Installer sur iPhone / iPad</p>
+            <p className="font-semibold text-content">{t('pwa.iosTitle')}</p>
             <p className="text-content-muted">
-              Appuie sur <b>Partager</b> (l'icône <span aria-hidden>⬆️</span> en bas de Safari), puis{' '}
-              <b>« Sur l'écran d'accueil »</b>.
+              {t('pwa.iosTap')} <b>{t('pwa.iosShare')}</b> {t('pwa.iosIcon')} <span aria-hidden>⬆️</span>{' '}
+              {t('pwa.iosBottom')} <b>{t('pwa.iosHome')}</b>.
             </p>
           </div>
           <button
             onClick={dismissIos}
             className="text-content-faint transition hover:text-content"
-            aria-label="Fermer"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </button>

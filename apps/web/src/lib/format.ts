@@ -1,4 +1,11 @@
+import i18n from 'i18next';
 import { CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
+
+/** Locale d'affichage des nombres et dates : celle de la langue choisie. */
+function displayLocale(): string {
+  const lang = i18n.language || 'fr';
+  return lang.startsWith('en') ? 'en-GB' : lang.startsWith('pt') ? 'pt-PT' : 'fr-FR';
+}
 
 /**
  * Devise de l'établissement connecté. `formatCurrency` est appelé sans argument
@@ -19,7 +26,7 @@ export function getActiveCurrency(): string {
 export function formatCurrency(amount: number, currency?: string): string {
   const code = (currency || activeCurrency) as SupportedCurrency;
   const fmt = CURRENCY_FORMAT[code];
-  const n = new Intl.NumberFormat('fr-FR', {
+  const n = new Intl.NumberFormat(displayLocale(), {
     maximumFractionDigits: fmt?.decimals ?? 0,
     minimumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0);
@@ -28,14 +35,14 @@ export function formatCurrency(amount: number, currency?: string): string {
 
 export function formatDate(d: string | Date): string {
   const date = typeof d === 'string' ? new Date(d) : d;
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(displayLocale(), { day: '2-digit', month: 'short', year: 'numeric' }).format(
     date,
   );
 }
 
 export function formatDateTime(d: string | Date): string {
   const date = typeof d === 'string' ? new Date(d) : d;
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(displayLocale(), {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

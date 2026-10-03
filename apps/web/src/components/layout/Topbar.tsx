@@ -218,18 +218,19 @@ function UserMenu() {
 
 function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const shortcuts = [
-    { category: 'Raccourcis rapides', label: 'Nouvelle vente / Caisse', to: '/optique/caisse', icon: ShoppingCart },
-    { category: 'Raccourcis rapides', label: 'Enregistrer un nouveau client', to: '/optique/clients', icon: UserPlus },
-    { category: 'Raccourcis rapides', label: 'Voir l\'état des stocks', to: '/optique/stock', icon: Boxes },
-    { category: 'Navigation', label: 'Tableau de bord principal', to: '/dashboard', icon: LayoutDashboard },
-    { category: 'Navigation', label: 'Suivi financier et dépenses', to: '/gestion/finance', icon: Wallet },
-    { category: 'Navigation', label: 'Gestion du personnel', to: '/gestion/personnel', icon: UserCog },
-    { category: 'Configuration', label: 'Magasins et succursales', to: '/parametres/magasins', icon: Store },
-    { category: 'Configuration', label: 'Rôles & Permissions', to: '/parametres/roles', icon: ShieldHalf },
-    { category: 'Assistance', label: 'Aide et support technique', to: '/aide', icon: HelpCircle },
+    { category: t('shell.catShortcuts'), label: t('shell.scNewSale'), to: '/optique/caisse', icon: ShoppingCart },
+    { category: t('shell.catShortcuts'), label: t('shell.scNewClient'), to: '/optique/clients', icon: UserPlus },
+    { category: t('shell.catShortcuts'), label: t('shell.scStock'), to: '/optique/stock', icon: Boxes },
+    { category: t('shell.catNavigation'), label: t('shell.scDashboard'), to: '/dashboard', icon: LayoutDashboard },
+    { category: t('shell.catNavigation'), label: t('shell.scFinance'), to: '/gestion/finance', icon: Wallet },
+    { category: t('shell.catNavigation'), label: t('shell.scStaff'), to: '/gestion/personnel', icon: UserCog },
+    { category: t('shell.catSettings'), label: t('shell.scStores'), to: '/parametres/magasins', icon: Store },
+    { category: t('shell.catSettings'), label: t('shell.scRoles'), to: '/parametres/roles', icon: ShieldHalf },
+    { category: t('shell.catHelp'), label: t('shell.scHelp'), to: '/aide', icon: HelpCircle },
   ];
 
   const filtered = query
@@ -261,7 +262,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
             autoFocus
             type="text"
             className="flex-1 bg-transparent text-sm text-content outline-none placeholder:text-content-faint"
-            placeholder="Rechercher une page, un raccourci ou une action..."
+            placeholder={t('shell.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -277,7 +278,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
         <div className="max-h-[350px] overflow-y-auto p-2">
           {filtered.length === 0 ? (
             <div className="py-6 text-center text-sm text-content-muted">
-              Aucun résultat trouvé pour "{query}"
+              {t('shell.noResultFor', { query })}
             </div>
           ) : (
             <div className="space-y-4">
@@ -306,7 +307,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
                               </span>
                               <span>{item.label}</span>
                             </div>
-                            <span className="text-[10px] text-content-faint font-medium">Aller à</span>
+                            <span className="text-[10px] text-content-faint font-medium">{t('shell.goTo')}</span>
                           </button>
                         );
                       })}
@@ -322,6 +323,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 }
 
 export function Topbar() {
+  const { t } = useTranslation();
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const [searchOpen, setSearchOpen] = useState(false);
   const { pathname } = useLocation();
@@ -360,7 +362,7 @@ export function Topbar() {
           className="flex items-center gap-2.5 rounded-xl border bg-surface-2 px-3 py-1.5 text-xs text-content-muted transition hover:bg-surface-3 hover:text-content select-none"
         >
           <Search className="h-3.5 w-3.5" />
-          <span>Rechercher...</span>
+          <span>{t('shell.search')}</span>
           <span className="flex items-center gap-0.5 rounded bg-surface-3 px-1.5 py-0.5 text-[9px] font-bold border">
             <Command className="h-2 w-2" />K
           </span>

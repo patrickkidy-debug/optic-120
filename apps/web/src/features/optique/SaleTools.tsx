@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +35,7 @@ export function VatSelect({
   defaultRate: number;
   onChange: (rate: number | null) => void;
 }) {
+  const { t } = useTranslation();
   // « Autre » reste sélectionné tant qu'on saisit un taux hors liste.
   const isPreset = value === null || (VAT_RATE_PRESETS as readonly number[]).includes(value);
   const [custom, setCustom] = useState(!isPreset);
@@ -41,7 +43,7 @@ export function VatSelect({
   return (
     <div className="space-y-1.5">
       <label className="flex items-center gap-1.5 text-xs text-content-muted">
-        <Percent className="h-3.5 w-3.5 text-primary" /> TVA appliquée
+        <Percent className="h-3.5 w-3.5 text-primary" /> {t('saleTools.vatApplied')}
       </label>
       <select
         className="input"
@@ -60,14 +62,14 @@ export function VatSelect({
           }
         }}
       >
-        <option value="default">Taux de l'établissement ({defaultRate} %)</option>
-        <option value="0">Sans TVA — exonéré (0 %)</option>
+        <option value="default">{t('saleTools.vatDefault', { rate: defaultRate })}</option>
+        <option value="0">{t('saleTools.vatExemptOption')}</option>
         {VAT_RATE_PRESETS.filter((r) => r > 0).map((r) => (
           <option key={r} value={r}>
             {r} %
           </option>
         ))}
-        <option value="custom">Autre taux…</option>
+        <option value="custom">{t('saleTools.vatOther')}</option>
       </select>
       {custom && (
         <div className="flex items-center gap-1.5">
@@ -83,7 +85,7 @@ export function VatSelect({
               onChange(e.target.value === '' ? 0 : Math.min(100, Math.max(0, n)));
             }}
           />
-          <span className="text-xs text-content-faint">% appliqué à cette vente</span>
+          <span className="text-xs text-content-faint">{t('saleTools.vatAppliedToSale')}</span>
         </div>
       )}
     </div>
@@ -108,6 +110,7 @@ export function LoyaltyRedeem({
   value: number;
   onChange: (points: number) => void;
 }) {
+  const { t } = useTranslation();
   const branchId = useUIStore((st) => st.activeBranchId);
   const { data: customers } = useQuery({
     queryKey: ['customers', branchId],
@@ -134,11 +137,11 @@ export function LoyaltyRedeem({
       <div className="flex items-center justify-between gap-2">
         <label className="flex items-center gap-1.5 text-xs font-medium text-content">
           <Star className="h-3.5 w-3.5 text-accent" />
-          Fidélité — {available} point(s)
+          {t('saleTools.loyaltyPoints', { count: available })}
         </label>
         {value > 0 && (
           <button onClick={() => onChange(0)} className="text-xs text-content-faint hover:text-danger">
-            Retirer
+            {t('saleTools.remove')}
           </button>
         )}
       </div>
@@ -161,10 +164,10 @@ export function LoyaltyRedeem({
           disabled={max <= 0}
           className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50"
         >
-          Tout utiliser
+          {t('saleTools.useAll')}
         </button>
         <span className="text-xs text-content-muted">
-          = {formatCurrency(Math.round(value * pointValue))} de remise
+          {t('saleTools.discountValue', { amount: formatCurrency(Math.round(value * pointValue)) })}
         </span>
       </div>
     </div>
@@ -179,10 +182,11 @@ export function WarrantySelect({
   value: number;
   onChange: (months: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="block text-xs text-content-muted">
       <span className="flex items-center gap-1.5">
-        <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Garantie
+        <ShieldCheck className="h-3.5 w-3.5 text-primary" /> {t('saleTools.warranty')}
       </span>
       <select
         className="input mt-1"
@@ -191,7 +195,7 @@ export function WarrantySelect({
       >
         {WARRANTY_PRESETS.map((m) => (
           <option key={m} value={m}>
-            {m === 0 ? 'Aucune garantie' : `${m} mois`}
+            {m === 0 ? t('saleTools.noWarranty') : t('saleTools.months', { count: m })}
           </option>
         ))}
       </select>
@@ -210,6 +214,7 @@ export function CustomerSearch({
   value: string | null;
   onChange: (id: string | null, c?: Customer) => void;
 }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -254,7 +259,7 @@ export function CustomerSearch({
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
         <input
           className="input pl-9"
-          placeholder="Rechercher un client (nom, téléphone)…"
+          placeholder={t('saleTools.searchCustomer')}
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -266,7 +271,7 @@ export function CustomerSearch({
       {open && (
         <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border bg-surface shadow-card-lg">
           {filtered.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-content-faint">Aucun client trouvé</p>
+            <p className="px-3 py-2 text-xs text-content-faint">{t('saleTools.noCustomer')}</p>
           ) : (
             filtered.map((c) => (
               <button
@@ -294,7 +299,7 @@ export function CustomerSearch({
             }}
             className="flex w-full items-center gap-2 border-t px-3 py-2 text-left text-sm font-medium text-primary hover:bg-surface-2"
           >
-            <UserPlus className="h-4 w-4" /> Nouveau client
+            <UserPlus className="h-4 w-4" /> {t('saleTools.newCustomer')}
           </button>
         </div>
       )}
@@ -319,6 +324,7 @@ function NewCustomerModal({
   onClose: () => void;
   onCreated: (c: Customer) => void;
 }) {
+  const { t } = useTranslation();
   const [error, setError] = useState('');
   const branchId = useUIStore((st) => st.activeBranchId);
   const {
@@ -329,7 +335,7 @@ function NewCustomerModal({
 
   const mut = useMutation({
     mutationFn: (v: CustomerCreateInput) => {
-      if (!branchId) throw new Error('Sélectionnez un magasin avant de créer un client');
+      if (!branchId) throw new Error(t('saleTools.selectStoreFirst'));
       return createCustomer(v, branchId);
     },
     onSuccess: (c) => onCreated(c),
@@ -337,28 +343,28 @@ function NewCustomerModal({
   });
 
   return (
-    <Modal open onClose={onClose} title="Nouveau client" size="sm">
+    <Modal open onClose={onClose} title={t('saleTools.newCustomer')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prénom">
+          <Field label={t('common.firstName')}>
             <input className="input" {...register('firstName')} />
             {errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}
           </Field>
-          <Field label="Nom">
+          <Field label={t('common.lastName')}>
             <input className="input" {...register('lastName')} />
             {errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}
           </Field>
         </div>
-        <Field label="Téléphone (optionnel)">
+        <Field label={t('saleTools.phoneOptional')}>
           <input className="input" {...register('phone')} />
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {t('common.cancel')}
           </Button>
           <Button type="submit" loading={mut.isPending}>
-            Créer
+            {t('common.create')}
           </Button>
         </div>
       </form>
@@ -377,6 +383,7 @@ export function LensComposer({
   pricing: LensPricing;
   onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number }) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const [base, setBase] = useState<string>('');
   const [treatments, setTreatments] = useState<LensTreatmentKey[]>([]);
   const [error, setError] = useState('');
@@ -396,13 +403,13 @@ export function LensComposer({
   return (
     <div className="space-y-2 rounded-xl border border-primary/25 bg-primary-soft/20 p-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-content">
-        <Glasses className="h-4 w-4 text-primary" /> Verre sur mesure
+        <Glasses className="h-4 w-4 text-primary" /> {t('saleTools.customLens')}
       </div>
       <select className="input" value={base} onChange={(e) => setBase(e.target.value)}>
-        <option value="">— Type de verre —</option>
+        <option value="">{t('saleTools.lensType')}</option>
         {lensBaseOptions(pricing).map((b) => (
           <option key={b.key} value={b.key}>
-            {b.label} — {formatCurrency(b.price)}
+            {i18n.exists(`lensBases.${b.key}`) ? t(`lensBases.${b.key}`) : b.label} — {formatCurrency(b.price)}
           </option>
         ))}
       </select>
@@ -418,17 +425,17 @@ export function LensComposer({
               }
               className={`badge px-2.5 py-1 text-xs ${on ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
             >
-              {tr.label} +{formatCurrency(pricing[tr.key])}
+              {t(`lensTreatments.${tr.key}`)} +{formatCurrency(pricing[tr.key])}
             </button>
           );
         })}
       </div>
       <div className="flex items-center justify-between">
         <span className="text-sm text-content-muted">
-          Prix : <b className="text-content">{formatCurrency(price)}</b>
+          {t('saleTools.price')} <b className="text-content">{formatCurrency(price)}</b>
         </span>
         <Button type="button" onClick={() => mut.mutate()} disabled={!base} loading={mut.isPending}>
-          <Plus className="h-4 w-4" /> Ajouter
+          <Plus className="h-4 w-4" /> {t('common.add')}
         </Button>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}

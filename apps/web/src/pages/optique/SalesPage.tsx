@@ -49,6 +49,7 @@ import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../lib/labels';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 
 function statusTone(status: string) {
@@ -57,23 +58,9 @@ function statusTone(status: string) {
   if (status === 'CANCELLED') return 'danger' as const;
   return 'neutral' as const;
 }
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: 'Brouillon',
-  CONFIRMED: 'Confirmée',
-  PARTIALLY_PAID: 'Partiel',
-  PAID: 'Payée',
-  CANCELLED: 'Annulée',
-};
-const PAYMENT_LABEL: Record<string, string> = {
-  INSURANCE: 'Assurance',
-  CASH: 'Espèces', CARD: 'Carte', CHEQUE: 'Chèque', WAVE: 'Wave', ORANGE_MONEY: 'Orange Money',
-  MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', FREE_MONEY: 'Free Money',
-  MPESA: 'M-Pesa', EMOLA: 'e-Mola', MKESH: 'mKesh', MULTICAIXA: 'Multicaixa',
-  UNITEL_MONEY: 'Unitel Money', VINTI4: 'Vinti4',
-};
 
 export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const canCancel = usePermission('optique.sales.cancel');
   const canConvert = usePermission('optique.quotes.convert');
@@ -136,7 +123,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       if (due > 0 && canPay) {
         setPaySale({ id: sale.id, due, number: sale.number });
       } else {
-        alert(due <= 0 ? 'Devis converti en vente et déjà soldé.' : 'Devis converti en vente.');
+        alert(due <= 0 ? t('sales.convertedPaid') : t('sales.converted'));
       }
     },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -145,7 +132,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     mutationFn: createSaleReturn,
     onSuccess: () => {
       refreshSalesViews();
-      alert('Retour enregistré : stock réapprovisionné et avoir créé.');
+      alert(t('sales.returnRecorded'));
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -216,15 +203,24 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     try {
       const rows = await fetchAllSales();
       downloadCsv(
-        `${isQuote ? 'devis' : 'ventes'}_${new Date().toISOString().slice(0, 10)}.csv`,
-        ['N°', 'Date', 'Client', 'Statut', 'Moyen', 'Total', 'Payé', 'Reste'],
+        `${isQuote ? t('sales.csvQuotes') : t('sales.csvSales')}_${new Date().toISOString().slice(0, 10)}.csv`,
+        [
+          t('sales.number'),
+          t('sales.date'),
+          t('sales.customer'),
+          t('common.status'),
+          t('sales.method'),
+          t('common.total'),
+          t('sales.paid'),
+          t('sales.remaining'),
+        ],
         rows.map((s) => [
           s.number,
-          new Date(s.createdAt).toLocaleString('fr-FR'),
+          new Date(s.createdAt).toLocaleString(i18n.language),
           clientName(s),
-          STATUS_LABEL[s.status] ?? s.status,
+          saleStatusLabel(s.status),
           (s.paymentMethods ?? [])
-            .map((m) => (m === 'INSURANCE' && s.insurerName ? s.insurerName : PAYMENT_LABEL[m] ?? m))
+            .map((m) => (m === 'INSURANCE' && s.insurerName ? s.insurerName : paymentMethodLabel(m)))
             .join(' + '),
           Number(s.totalAmount),
           Number(s.paidAmount),
@@ -244,25 +240,24 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       const rows = await fetchAllSales();
       const esc = (v: unknown) =>
         String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const money = (n: number) =>
-        `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)} FCFA`;
+      const money = (n: number) => formatCurrency(n);
       const total = rows
         .filter((s) => s.status !== 'CANCELLED')
         .reduce((sum, s) => sum + Number(s.paidAmount), 0);
-      const title = isQuote ? 'Historique des devis' : 'Historique des ventes';
+      const title = isQuote ? t('sales.quotesHistory') : t('sales.title');
       const body = rows
         .map(
           (s) => `<tr>
             <td>${esc(s.number)}</td>
-            <td>${esc(new Date(s.createdAt).toLocaleDateString('fr-FR'))}</td>
+            <td>${esc(new Date(s.createdAt).toLocaleDateString(i18n.language))}</td>
             <td>${esc(clientName(s) || '—')}</td>
-            <td>${esc(STATUS_LABEL[s.status] ?? s.status)}</td>
+            <td>${esc(saleStatusLabel(s.status))}</td>
             <td style="text-align:right">${money(Number(s.totalAmount))}</td>
             <td style="text-align:right">${money(Number(s.paidAmount))}</td>
           </tr>`,
         )
         .join('');
-      const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8" />
+      const html = `<!doctype html><html lang="${i18n.language}"><head><meta charset="utf-8" />
         <title>${title}</title>
         <style>
           @page { size: A4; margin: 14mm; }
@@ -275,17 +270,17 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           tfoot td { font-weight:700; border-top:2px solid #0d9488; }
         </style></head><body>
         <h1>${esc(user?.tenantName ?? 'OculoSaaS')}</h1>
-        <div class="muted">${title} — édité le ${new Date().toLocaleDateString('fr-FR')} · ${rows.length} lignes</div>
+        <div class="muted">${title} — ${esc(t('sales.editedOn', { date: new Date().toLocaleDateString(i18n.language), count: rows.length }))}</div>
         <table>
-          <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Statut</th>
-            <th style="text-align:right">Total</th><th style="text-align:right">Payé</th></tr></thead>
+          <thead><tr><th>${esc(t('sales.number'))}</th><th>${esc(t('sales.date'))}</th><th>${esc(t('sales.customer'))}</th><th>${esc(t('common.status'))}</th>
+            <th style="text-align:right">${esc(t('common.total'))}</th><th style="text-align:right">${esc(t('sales.paid'))}</th></tr></thead>
           <tbody>${body}</tbody>
-          <tfoot><tr><td colspan="5" style="text-align:right">Total encaissé</td>
+          <tfoot><tr><td colspan="5" style="text-align:right">${esc(t('sales.totalCollected'))}</td>
             <td style="text-align:right">${money(total)}</td></tr></tfoot>
         </table></body></html>`;
       const win = window.open('', '_blank', 'width=900,height=1100');
       if (!win) {
-        alert('Veuillez autoriser les fenêtres pop-up pour générer le PDF.');
+        alert(t('sales.allowPopups'));
         return;
       }
       win.document.open();
@@ -313,8 +308,8 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   return (
     <div>
       <PageHeader
-        title={isQuote ? 'Devis' : 'Historique des ventes'}
-        subtitle={isQuote ? 'Devis en attente de conversion' : 'Toutes les ventes du magasin'}
+        title={isQuote ? t('sales.quotesTitle') : t('sales.title')}
+        subtitle={isQuote ? t('sales.quotesSubtitle') : t('sales.salesSubtitle')}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={exportCsv} loading={exporting}>
@@ -325,7 +320,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
             </Button>
             {isQuote && canQuote && (
               <Button onClick={() => setQuoteOpen(true)}>
-                <Plus className="h-4 w-4" /> Nouveau devis
+                <Plus className="h-4 w-4" /> {t('sales.newQuote')}
               </Button>
             )}
           </div>
@@ -337,7 +332,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input pl-9"
-            placeholder="Rechercher (n° de pièce, client, téléphone)…"
+            placeholder={t('sales.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -345,7 +340,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
         {data && (
           <span className="text-sm text-content-muted">
             <b className="text-content">{data.total}</b>{' '}
-            {debouncedSearch ? 'résultat(s)' : isQuote ? 'devis' : 'vente(s)'} au total
+            {debouncedSearch ? t('sales.resultsTotal') : isQuote ? t('sales.quotesTotal') : t('sales.salesTotal')}
           </span>
         )}
       </div>
@@ -355,10 +350,10 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={isQuote ? FileText : Receipt}
-          title={debouncedSearch ? 'Aucun résultat' : isQuote ? t('sales.noQuote') : t('sales.noSale')}
+          title={debouncedSearch ? t('sales.noResult') : isQuote ? t('sales.noQuote') : t('sales.noSale')}
           hint={
             debouncedSearch
-              ? `Aucune pièce ne correspond à « ${debouncedSearch} ».`
+              ? t('sales.noMatch', { search: debouncedSearch })
               : isQuote
                 ? t('sales.hintQuote')
                 : t('sales.hintSale')
@@ -366,7 +361,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           action={
             isQuote && canQuote ? (
               <Button onClick={() => setQuoteOpen(true)}>
-                <Plus className="h-4 w-4" /> Nouveau devis
+                <Plus className="h-4 w-4" /> {t('sales.newQuote')}
               </Button>
             ) : undefined
           }
@@ -379,10 +374,10 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                 <th className="table-cell font-semibold">{t('sales.number')}</th>
                 <th className="table-cell font-semibold">{t('sales.customer')}</th>
                 <th className="table-cell font-semibold">{t('common.status')}</th>
-                {!isQuote && <th className="table-cell font-semibold">Moyen</th>}
+                {!isQuote && <th className="table-cell font-semibold">{t('sales.method')}</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.amount')}</th>
                 {!isQuote && <th className="table-cell text-right font-semibold">{t('sales.paid')}</th>}
-                {!isQuote && <th className="table-cell text-right font-semibold">Reste</th>}
+                {!isQuote && <th className="table-cell text-right font-semibold">{t('sales.remaining')}</th>}
                 <th className="table-cell text-right font-semibold">{t('sales.date')}</th>
                 <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
@@ -395,7 +390,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                     {s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '—'}
                   </td>
                   <td className="table-cell">
-                    <Badge tone={statusTone(s.status)}>{STATUS_LABEL[s.status] ?? s.status}</Badge>
+                    <Badge tone={statusTone(s.status)}>{saleStatusLabel(s.status)}</Badge>
                   </td>
                   {!isQuote && (
                     <td className="table-cell text-content-muted">
@@ -409,16 +404,16 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                                   ? 'bg-accent/15 text-accent'
                                   : 'bg-surface-3 text-content-muted'
                               }`}
-                              title={m === 'INSURANCE' ? s.insurerName ?? 'Prise en charge assurance' : undefined}
+                              title={m === 'INSURANCE' ? s.insurerName ?? t('sales.insuranceCover') : undefined}
                             >
                               {m === 'INSURANCE' && s.insurerName
                                 ? s.insurerName
-                                : PAYMENT_LABEL[m] ?? m}
+                                : paymentMethodLabel(m)}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs">Non encaissée</span>
+                        <span className="text-xs">{t('sales.notCollected')}</span>
                       )}
                     </td>
                   )}
@@ -440,7 +435,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                           ) : due > 0 ? (
                             <span className="font-semibold text-warning">{formatCurrency(due)}</span>
                           ) : (
-                            <span className="text-success">Soldé</span>
+                            <span className="text-success">{t('sales.settled')}</span>
                           )}
                         </td>
                       );
@@ -466,7 +461,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                             )
                           }
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
-                          title="Envoyer un message WhatsApp au client"
+                          title={t('sales.whatsappTitle')}
                         >
                           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                         </button>
@@ -475,7 +470,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         onClick={() => handleDownload(s.id)}
                         disabled={downloadingId === s.id}
                         className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                        title={isQuote ? 'Télécharger le devis (PDF)' : 'Télécharger la facture (PDF)'}
+                        title={isQuote ? t('sales.downloadQuote') : t('sales.downloadInvoice')}
                       >
                         {downloadingId === s.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -488,28 +483,28 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         onClick={() => openDetail(s.id)}
                         disabled={loadingDetail === s.id}
                         className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
-                        title="Voir le détail et les encaissements"
+                        title={t('sales.detailTitle')}
                       >
                         {loadingDetail === s.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <Eye className="h-3.5 w-3.5" />
                         )}
-                        Détails
+                        {t('sales.details')}
                       </button>
                       {canUpdate && s.status !== 'CANCELLED' && (
                         <button
                           onClick={() => openEdit(s.id)}
                           disabled={loadingEdit === s.id}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                          title={isQuote ? 'Modifier ce devis' : 'Modifier cette vente'}
+                          title={isQuote ? t('sales.editQuote') : t('sales.editSale')}
                         >
                           {loadingEdit === s.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Pencil className="h-3.5 w-3.5" />
                           )}
-                          Modifier
+                          {t('sales.edit')}
                         </button>
                       )}
                       {!isQuote &&
@@ -527,7 +522,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                             className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
                             title={t('sales.collectBalance')}
                           >
-                            <Banknote className="h-3.5 w-3.5" /> Encaisser
+                            <Banknote className="h-3.5 w-3.5" /> {t('sales.collect')}
                           </button>
                         )}
                       {isQuote && canConvert && s.status !== 'CANCELLED' && (
@@ -542,25 +537,25 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                           ) : (
                             <ArrowRightLeft className="h-3.5 w-3.5" />
                           )}
-                          Convertir
+                          {t('sales.convertShort')}
                         </button>
                       )}
                       {!isQuote && canRefund && s.status !== 'CANCELLED' && (
                         <button
                           onClick={() => {
-                            if (confirm(`Enregistrer un retour / avoir pour la vente ${s.number} ? Le stock sera réapprovisionné.`))
+                            if (confirm(t('sales.confirmReturn', { number: s.number })))
                               returnMut.mutate(s.id);
                           }}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs text-accent"
                           title={t('sales.returnCredit')}
                         >
-                          <Undo2 className="h-3.5 w-3.5" /> Retour
+                          <Undo2 className="h-3.5 w-3.5" /> {t('sales.returnShort')}
                         </button>
                       )}
                       {!isQuote && canCancel && s.status !== 'CANCELLED' && (
                         <button
                           onClick={() => {
-                            if (confirm(`Annuler la vente ${s.number} ?`)) cancelMut.mutate(s.id);
+                            if (confirm(t('sales.confirmCancel', { number: s.number }))) cancelMut.mutate(s.id);
                           }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
                           title={t('sales.cancelSale')}
@@ -583,13 +578,13 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       {data && totalPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-3">
           <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Précédent
+            {t('sales.previous')}
           </Button>
           <span className="text-sm text-content-muted">
-            Page {page} / {totalPages}
+            {t('sales.pageOf', { page, total: totalPages })}
           </span>
           <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            Suivant
+            {t('sales.next')}
           </Button>
         </div>
       )}
@@ -600,7 +595,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           onCreated={(saleId) => {
             setQuoteOpen(false);
             refreshSalesViews();
-            if (confirm('Devis créé. Télécharger le PDF ?')) handleDownload(saleId);
+            if (confirm(t('sales.quoteCreatedDownload'))) handleDownload(saleId);
           }}
         />
       )}
@@ -664,13 +659,13 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   );
 }
 
-/** Libellé lisible d'un statut d'encaissement. */
-const PAYMENT_STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
-  SUCCESS: { label: 'Réussi', tone: 'success' },
-  PENDING: { label: 'En attente', tone: 'warning' },
-  FAILED: { label: 'Échoué', tone: 'danger' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
-  REFUNDED: { label: 'Remboursé', tone: 'warning' },
+/** Couleur d'un statut d'encaissement (libellé : paymentStatusLabel). */
+const PAYMENT_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
+  SUCCESS: 'success',
+  PENDING: 'warning',
+  FAILED: 'danger',
+  CANCELLED: 'danger',
+  REFUNDED: 'warning',
 };
 
 /**
@@ -687,6 +682,7 @@ function SaleDetailModal({
   onClose: () => void;
   onCollect?: () => void;
 }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const due = Number(sale.totalAmount) - Number(sale.paidAmount);
   const payments = sale.payments ?? [];
@@ -709,13 +705,13 @@ function SaleDetailModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={`Détail — ${sale.number}`} size="lg">
+    <Modal open onClose={onClose} title={t('sales.detailOf', { number: sale.number })} size="lg">
       <div className="space-y-4">
         {/* En-tête : client, statut, date */}
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-2 p-3 text-sm">
           <div>
             <p className="font-medium text-content">
-              {sale.customer ? `${sale.customer.firstName} ${sale.customer.lastName}` : 'Client de passage'}
+              {sale.customer ? `${sale.customer.firstName} ${sale.customer.lastName}` : t('sales.walkIn')}
               {sale.customer?.phone ? ` · ${sale.customer.phone}` : ''}
             </p>
             <p className="text-xs text-content-faint">
@@ -723,7 +719,7 @@ function SaleDetailModal({
               {sale.cashier ? ` · ${sale.cashier.firstName} ${sale.cashier.lastName}` : ''}
             </p>
           </div>
-          <Badge tone={statusTone(sale.status)}>{STATUS_LABEL[sale.status] ?? sale.status}</Badge>
+          <Badge tone={statusTone(sale.status)}>{saleStatusLabel(sale.status)}</Badge>
         </div>
 
         {/* Articles */}
@@ -731,10 +727,10 @@ function SaleDetailModal({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Article</th>
-                <th className="table-cell text-center font-semibold">Qté</th>
-                <th className="table-cell text-right font-semibold">P.U.</th>
-                <th className="table-cell text-right font-semibold">Total</th>
+                <th className="table-cell font-semibold">{t('sales.item')}</th>
+                <th className="table-cell text-center font-semibold">{t('sales.qty')}</th>
+                <th className="table-cell text-right font-semibold">{t('sales.unitPrice')}</th>
+                <th className="table-cell text-right font-semibold">{t('common.total')}</th>
               </tr>
             </thead>
             <tbody>
@@ -744,7 +740,7 @@ function SaleDetailModal({
                     <div className="text-content">{i.product.name}</div>
                     <div className="font-mono text-[11px] text-content-faint">{i.product.sku}</div>
                     {i.reference && (
-                      <div className="text-[11px] text-content-faint">Réf. {i.reference}</div>
+                      <div className="text-[11px] text-content-faint">{t('sales.ref', { ref: i.reference })}</div>
                     )}
                   </td>
                   <td className="table-cell text-center text-content-muted">{i.quantity}</td>
@@ -760,37 +756,37 @@ function SaleDetailModal({
 
         {/* Décomposition des montants */}
         <div className="space-y-1 rounded-xl border p-3 text-sm">
-          <AmountRow label="Sous-total" value={Number(sale.subtotal)} />
+          <AmountRow label={t('common.subtotal')} value={Number(sale.subtotal)} />
           {Number(sale.discountAmount) > 0 && (
-            <AmountRow label="Remise" value={-Number(sale.discountAmount)} />
+            <AmountRow label={t('sales.discount')} value={-Number(sale.discountAmount)} />
           )}
           <AmountRow
-            label={Number(sale.taxAmount) === 0 ? 'TVA — exonéré' : 'TVA'}
+            label={Number(sale.taxAmount) === 0 ? t('pos.vatExempt') : t('sales.vat')}
             value={Number(sale.taxAmount)}
           />
           {Number(sale.insuranceAmount) > 0 && (
-            <AmountRow label="Prise en charge assurance" value={Number(sale.insuranceAmount)} />
+            <AmountRow label={t('sales.insuranceCover')} value={Number(sale.insuranceAmount)} />
           )}
           <div className="my-1 border-t" />
           <div className="flex justify-between font-display text-lg font-bold text-content">
-            <span>Total</span>
+            <span>{t('common.total')}</span>
             <span>{formatCurrency(Number(sale.totalAmount))}</span>
           </div>
-          <AmountRow label="Déjà encaissé" value={Number(sale.paidAmount)} />
+          <AmountRow label={t('sales.alreadyCollected')} value={Number(sale.paidAmount)} />
           <div className="flex justify-between font-semibold">
-            <span className="text-content-muted">Reste à payer</span>
+            <span className="text-content-muted">{t('sales.remainingToPay')}</span>
             <span className={due > 0 ? 'text-warning' : 'text-success'}>
-              {due > 0 ? formatCurrency(due) : 'Soldé'}
+              {due > 0 ? formatCurrency(due) : t('sales.settled')}
             </span>
           </div>
         </div>
 
         {/* Encaissements par moyen de paiement */}
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-content">Encaissements</h4>
+          <h4 className="mb-2 text-sm font-semibold text-content">{t('sales.payments')}</h4>
           {payments.length === 0 && insured <= 0 ? (
             <p className="rounded-xl bg-surface-2 p-3 text-sm text-content-muted">
-              Aucun encaissement enregistré pour cette pièce.
+              {t('sales.noPayments')}
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -802,15 +798,15 @@ function SaleDetailModal({
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-accent" />
                     <span className="font-medium text-content">
-                      {sale.insurerName ?? 'Assurance'}
+                      {sale.insurerName ?? paymentMethodLabel('INSURANCE')}
                     </span>
-                    <Badge tone="info">Prise en charge</Badge>
+                    <Badge tone="info">{t('sales.covered')}</Badge>
                   </div>
                   <span className="font-display font-bold text-content">{formatCurrency(insured)}</span>
                 </div>
               )}
               {payments.map((p) => {
-                const st = PAYMENT_STATUS[p.status] ?? { label: p.status, tone: 'neutral' as const };
+                const st = { label: paymentStatusLabel(p.status), tone: PAYMENT_STATUS_TONE[p.status] ?? ('neutral' as const) };
                 return (
                   <div
                     key={p.id}
@@ -819,7 +815,7 @@ function SaleDetailModal({
                     <div className="flex items-center gap-2">
                       <Banknote className="h-4 w-4 text-primary" />
                       <span className="font-medium text-content">
-                        {PAYMENT_LABEL[p.method] ?? p.method}
+                        {paymentMethodLabel(p.method)}
                       </span>
                       <Badge tone={st.tone}>{st.label}</Badge>
                     </div>
@@ -838,27 +834,25 @@ function SaleDetailModal({
                           }}
                           className="btn-ghost h-8 rounded-lg px-2 text-xs text-danger"
                         >
-                          Annuler l'encaissement
+                          {t('sales.cancelPayment')}
                         </button>
                       )}
                     </div>
                     {cancelling === p.id && (
                       <div className="w-full border-t pt-2">
                         <p className="mb-2 text-xs text-danger">
-                          Annuler cet encaissement de {formatCurrency(Number(p.amount))} le retirera du
-                          total payé. La vente repassera à « Reste à payer » et l'opération sera
-                          conservée dans l'historique.
+                          {t('sales.cancelPaymentWarning', { amount: formatCurrency(Number(p.amount)) })}
                         </p>
                         <textarea
                           className="input min-h-[56px]"
-                          placeholder="Motif de l'annulation (obligatoire)"
+                          placeholder={t('sales.cancelReason')}
                           value={cancelReason}
                           onChange={(e) => setCancelReason(e.target.value)}
                         />
                         {cancelError && <p className="mt-1 text-xs text-danger">{cancelError}</p>}
                         <div className="mt-2 flex justify-end gap-2">
                           <Button variant="ghost" onClick={() => setCancelling(null)}>
-                            Retour
+                            {t('sales.back')}
                           </Button>
                           <Button
                             variant="danger"
@@ -868,7 +862,7 @@ function SaleDetailModal({
                               cancelPaymentMut.mutate({ paymentId: p.id, reason: cancelReason.trim() })
                             }
                           >
-                            Confirmer l'annulation
+                            {t('sales.confirmCancelPayment')}
                           </Button>
                         </div>
                       </div>
@@ -882,11 +876,11 @@ function SaleDetailModal({
 
         <div className="flex justify-end gap-2 border-t pt-3">
           <Button variant="outline" onClick={onClose}>
-            Fermer
+            {t('common.close')}
           </Button>
           {onCollect && (
             <Button variant="accent" onClick={onCollect}>
-              <Banknote className="h-4 w-4" /> Encaisser {formatCurrency(due)}
+              <Banknote className="h-4 w-4" /> {t('sales.collectAmount', { amount: formatCurrency(due) })}
             </Button>
           )}
         </div>
@@ -1108,7 +1102,7 @@ function QuoteModal({
     <Modal
       open
       onClose={onClose}
-      title={isEdit ? `Modifier ${editing!.number}` : t('sales.newQuote')}
+      title={isEdit ? t('sales.editTitle', { number: editing!.number }) : t('sales.newQuote')}
       size="lg"
     >
       {!branchId ? (
@@ -1147,7 +1141,7 @@ function QuoteModal({
                       <p className="truncate font-medium text-content">{p.name}</p>
                       <p className="font-mono text-[11px] text-content-faint">{p.sku}</p>
                       <p className="text-xs text-content-faint">
-                        {p.unlimited ? 'Stock : illimité' : `Stock : ${p.quantity}`}
+                        {p.unlimited ? t('pos.stockUnlimited') : t('pos.stockQty', { count: p.quantity })}
                       </p>
                     </div>
                     <span className="ml-2 shrink-0 font-semibold text-primary">{formatCurrency(p.sellPrice)}</span>
@@ -1195,7 +1189,7 @@ function QuoteModal({
                         value={l.reference ?? ''}
                         onChange={(e) => setReference(l.productId, e.target.value)}
                         className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
-                        placeholder="Référence (optionnel)"
+                        placeholder={t('pos.referenceOptional')}
                         maxLength={80}
                       />
                     </div>
@@ -1219,7 +1213,7 @@ function QuoteModal({
 
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-xs text-content-muted">
-                Remise
+                {t('sales.discount')}
                 <input
                   type="number"
                   className="input mt-1"
@@ -1228,7 +1222,7 @@ function QuoteModal({
                 />
               </label>
               <label className="text-xs text-content-muted">
-                Prise en charge
+                {t('sales.coverAmount')}
                 <input
                   type="number"
                   className="input mt-1"
@@ -1246,7 +1240,7 @@ function QuoteModal({
                 (montant restant modifiable). */}
             {canSeeInsurers && insurers && insurers.length > 0 && (
               <label className="mt-2 block text-xs text-content-muted">
-                Assurance
+                {t('pos.insurer')}
                 <select
                   className="input mt-1"
                   value={insurerId}
@@ -1260,7 +1254,7 @@ function QuoteModal({
                     }
                   }}
                 >
-                  <option value="">Aucune (client paie tout)</option>
+                  <option value="">{t('pos.noInsurer')}</option>
                   {insurers.map((ins) => (
                     <option key={ins.id} value={ins.id}>
                       {ins.name} — {ins.coveragePercent}%
@@ -1284,7 +1278,7 @@ function QuoteModal({
               <div className="mt-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 text-xs text-content-muted">
-                    <Glasses className="h-3.5 w-3.5 text-primary" /> Joindre une ordonnance
+                    <Glasses className="h-3.5 w-3.5 text-primary" /> {t('sales.attachPrescription')}
                   </span>
                   {canCreateRx && !addingRx && (
                     <button
@@ -1292,7 +1286,7 @@ function QuoteModal({
                       onClick={() => setAddingRx(true)}
                       className="btn-ghost h-7 rounded-lg px-2 text-xs text-primary"
                     >
-                      <Plus className="h-3.5 w-3.5" /> Nouvelle
+                      <Plus className="h-3.5 w-3.5" /> {t('sales.newPrescription')}
                     </button>
                   )}
                 </div>
@@ -1302,7 +1296,7 @@ function QuoteModal({
                   onChange={(e) => setPrescriptionId(e.target.value)}
                   disabled={!prescriptions || prescriptions.length === 0}
                 >
-                  <option value="">Aucune</option>
+                  <option value="">{t('sales.none')}</option>
                   {prescriptions?.map((rx) => (
                     <option key={rx.id} value={rx.id}>
                       {formatDate(rx.date)}
@@ -1312,8 +1306,8 @@ function QuoteModal({
                 </select>
                 {prescriptions && prescriptions.length === 0 && !addingRx && (
                   <span className="mt-1 block text-[11px] text-content-faint">
-                    Ce client n'a pas encore d'ordonnance —{' '}
-                    {canCreateRx ? 'cliquez sur « Nouvelle » pour la saisir.' : 'aucune à joindre.'}
+                    {t('sales.noPrescription')}{' '}
+                    {canCreateRx ? t('sales.clickNew') : t('sales.noneToAttach')}
                   </span>
                 )}
 
@@ -1321,7 +1315,7 @@ function QuoteModal({
                   <div className="mt-2">
                     <PrescriptionForm
                       customerId={customerId}
-                      title="Ordonnance du client"
+                      title={t('sales.customerPrescription')}
                       onClose={() => setAddingRx(false)}
                       onSaved={(rx) => {
                         // Disponible aussitôt dans la liste, et jointe au devis.
@@ -1342,11 +1336,11 @@ function QuoteModal({
                 <span className="text-content">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-content-muted">
-                <span>{effectiveVat === 0 ? 'TVA — exonéré' : `TVA (${effectiveVat} %)`}</span>
+                <span>{effectiveVat === 0 ? t('pos.vatExempt') : t('pos.vatRate', { rate: effectiveVat })}</span>
                 <span className="text-content">{formatCurrency(taxAmount)}</span>
               </div>
               <div className="flex justify-between font-display text-lg font-bold text-content">
-                <span>Total</span>
+                <span>{t('common.total')}</span>
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
@@ -1359,7 +1353,7 @@ function QuoteModal({
 
             <div className="mt-3 flex justify-end gap-2">
               <Button variant="outline" onClick={onClose}>
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button
                 disabled={lines.length === 0}
@@ -1369,7 +1363,7 @@ function QuoteModal({
                   createMut.mutate();
                 }}
               >
-                {isEdit ? 'Enregistrer les modifications' : 'Créer le devis'}
+                {isEdit ? t('sales.saveChanges') : t('sales.createQuote')}
               </Button>
             </div>
           </div>

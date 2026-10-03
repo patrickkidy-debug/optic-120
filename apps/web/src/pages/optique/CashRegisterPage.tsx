@@ -14,9 +14,12 @@ import {
   PlusCircle,
   Receipt,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
+  CURRENCY_FORMAT,
   expenseCreateSchema,
   type ExpenseCreateInput,
+  type SupportedCurrency,
 } from '@oculo/shared-types';
 import {
   getCurrentRegister,
@@ -30,43 +33,14 @@ import { useUIStore } from '../../store/ui';
 import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateFinancialViews } from '../../lib/queryInvalidation';
-import { formatCurrency, formatDateTime } from '../../lib/format';
+import { formatCurrency, formatDateTime, getActiveCurrency } from '../../lib/format';
+import { EXPENSE_CATEGORY_CODES, expenseCategoryLabel, paymentMethodLabel } from '../../lib/labels';
 import { PageHeader, PageLoader, Button, Field, Badge, Modal } from '../../components/ui';
 
-/** Libellés commerciaux des moyens d'encaissement. */
-const METHOD_LABELS: Record<string, string> = {
-  CASH: 'Espèces',
-  CARD: 'Carte',
-  CHEQUE: 'Chèque',
-  WAVE: 'Wave',
-  ORANGE_MONEY: 'Orange Money',
-  MTN_MOMO: 'MTN MoMo',
-  MOOV_MONEY: 'Moov Money',
-  FREE_MONEY: 'Free Money',
-  MPESA: 'M-Pesa',
-  EMOLA: 'e-Mola',
-  MKESH: 'mKesh',
-  MULTICAIXA: 'Multicaixa Express',
-  UNITEL_MONEY: 'Unitel Money',
-  VINTI4: 'Vinti4',
-};
 const methodIcon = (m: string) => (m === 'CASH' ? Banknote : m === 'CARD' ? CreditCard : Smartphone);
 
-const EXPENSE_CATEGORIES = [
-  { value: 'SUPPLIES', label: 'Fournitures' },
-  { value: 'TRANSPORT', label: 'Transport' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'MARKETING', label: 'Marketing' },
-  { value: 'ELECTRICITY', label: 'Électricité' },
-  { value: 'WATER', label: 'Eau' },
-  { value: 'INTERNET', label: 'Internet' },
-  { value: 'RENT', label: 'Loyer' },
-  { value: 'SALARIES', label: 'Salaires' },
-  { value: 'TAXES', label: 'Impôts & taxes' },
-  { value: 'OTHER', label: 'Divers' },
-];
-
 export function CashRegisterPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const branchId = useUIStore((s) => s.activeBranchId);
   const canOpen = usePermission('optique.cashregister.open');
@@ -143,12 +117,12 @@ export function CashRegisterPage() {
   return (
     <div>
       <PageHeader
-        title="Session de caisse"
-        subtitle="Ouverture, fermeture et contrôle d'écart (Z)"
+        title={t('cash.title')}
+        subtitle={t('cash.subtitle')}
         actions={
           register && canAddExpense ? (
             <Button variant="outline" onClick={() => setExpenseModalOpen(true)}>
-              <PlusCircle className="h-4 w-4" /> Dépense / Sortie
+              <PlusCircle className="h-4 w-4" /> {t('cash.addExpense')}
             </Button>
           ) : undefined
         }
@@ -163,32 +137,32 @@ export function CashRegisterPage() {
             <div className="card p-5">
               <div className="mb-3 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-success" />
-                <h3 className="font-display font-bold text-content">Caisse fermée avec succès</h3>
+                <h3 className="font-display font-bold text-content">{t('cash.closedSuccess')}</h3>
               </div>
               {closeResult.salesTotal !== undefined && closeResult.netTotal !== undefined && (
                 <>
-                  <SummaryRow label="Total encaissé de la journée" value={formatCurrency(closeResult.salesTotal)} />
+                  <SummaryRow label={t('cash.dayTotal')} value={formatCurrency(closeResult.salesTotal)} />
                   {closeResult.expenses > 0 && (
-                    <SummaryRow label="Dépenses" value={`- ${formatCurrency(closeResult.expenses)}`} />
+                    <SummaryRow label={t('cash.expenses')} value={`- ${formatCurrency(closeResult.expenses)}`} />
                   )}
-                  <SummaryRow label="Net après dépenses" value={formatCurrency(closeResult.netTotal)} />
+                  <SummaryRow label={t('cash.netAfterExpenses')} value={formatCurrency(closeResult.netTotal)} />
                   <div className="my-1 border-t" />
                 </>
               )}
-              <SummaryRow label="Fond de caisse" value={formatCurrency(closeResult.opening)} />
-              <SummaryRow label="Ventes espèces" value={`+ ${formatCurrency(closeResult.cashSales)}`} />
+              <SummaryRow label={t('cash.openingFloat')} value={formatCurrency(closeResult.opening)} />
+              <SummaryRow label={t('cash.cashSales')} value={`+ ${formatCurrency(closeResult.cashSales)}`} />
               {closeResult.transfersNet !== undefined && closeResult.transfersNet !== 0 && (
                 <SummaryRow
-                  label="Versements nets"
+                  label={t('cash.netTransfers')}
                   value={`${closeResult.transfersNet > 0 ? '+' : '-'} ${formatCurrency(Math.abs(closeResult.transfersNet))}`}
                 />
               )}
               {closeResult.expenses > 0 && (
-                <SummaryRow label="Dépenses déduites" value={`- ${formatCurrency(closeResult.expenses)}`} />
+                <SummaryRow label={t('cash.expensesDeducted')} value={`- ${formatCurrency(closeResult.expenses)}`} />
               )}
               <div className="my-1 border-t" />
-              <SummaryRow label="Attendu théorique en caisse" value={formatCurrency(closeResult.expected)} />
-              <SummaryRow label="Montant réel compté" value={formatCurrency(closeResult.counted)} />
+              <SummaryRow label={t('cash.expectedInRegister')} value={formatCurrency(closeResult.expected)} />
+              <SummaryRow label={t('cash.countedAmount')} value={formatCurrency(closeResult.counted)} />
               <div className="my-2 border-t" />
               {(() => {
                 const diff = closeResult.counted - closeResult.expected;
@@ -197,7 +171,7 @@ export function CashRegisterPage() {
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1 text-sm text-content-muted">
                       {diff !== 0 && <AlertTriangle className="h-4 w-4 text-danger" />}
-                      Écart
+                      {t('cash.variance')}
                     </span>
                     <span className={`font-display text-lg font-bold ${tone}`}>
                       {diff > 0 ? '+' : ''}
@@ -215,20 +189,20 @@ export function CashRegisterPage() {
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-5 w-5 text-primary" />
-                  <h3 className="font-display font-bold text-content">Caisse ouverte</h3>
+                  <h3 className="font-display font-bold text-content">{t('cash.registerOpen')}</h3>
                 </div>
-                <Badge tone="success">OUVERTE</Badge>
+                <Badge tone="success">{t('cash.openBadge')}</Badge>
               </div>
-              <SummaryRow label="Ouverte le" value={formatDateTime(register.openedAt)} />
-              <SummaryRow label="Fond de caisse" value={formatCurrency(Number(register.openingAmount))} />
+              <SummaryRow label={t('cash.openedAt')} value={formatDateTime(register.openedAt)} />
+              <SummaryRow label={t('cash.openingFloat')} value={formatCurrency(Number(register.openingAmount))} />
 
               {/* Détail des encaissements de la session, par moyen de paiement. */}
               <div className="mt-4 rounded-xl border border-line bg-surface-2/50 p-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-                  Encaissements du jour
+                  {t('cash.todayPayments')}
                 </p>
                 {!summary || summary.byMethod.length === 0 ? (
-                  <p className="text-sm text-content-muted">Aucun encaissement depuis l'ouverture.</p>
+                  <p className="text-sm text-content-muted">{t('cash.noPayments')}</p>
                 ) : (
                   <div className="space-y-1.5">
                     {summary.byMethod.map((m) => {
@@ -237,7 +211,7 @@ export function CashRegisterPage() {
                         <div key={m.method} className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2 text-content-muted">
                             <Icon className="h-4 w-4 text-primary" />
-                            {METHOD_LABELS[m.method] ?? m.method}
+                            {paymentMethodLabel(m.method)}
                             <span className="text-xs text-content-faint">· {m.count}</span>
                           </span>
                           <span className="font-medium text-content">{formatCurrency(m.amount)}</span>
@@ -245,16 +219,16 @@ export function CashRegisterPage() {
                       );
                     })}
                     <div className="mt-1 flex items-center justify-between border-t pt-1.5">
-                      <span className="text-sm font-semibold text-content">Total encaissé</span>
+                      <span className="text-sm font-semibold text-content">{t('cash.totalCollected')}</span>
                       <span className="font-display font-bold text-content">{formatCurrency(summary.total)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-content-muted">Dépenses ({summary.expensesCount})</span>
+                      <span className="text-content-muted">{t('cash.expensesCount', { count: summary.expensesCount })}</span>
                       <span className="font-medium text-danger">- {formatCurrency(summary.expensesTotal)}</span>
                     </div>
                     {summary.transfersNet !== undefined && summary.transfersNet !== 0 && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-content-muted">Versements nets</span>
+                        <span className="text-content-muted">{t('cash.netTransfers')}</span>
                         <span className={`font-medium ${summary.transfersNet >= 0 ? 'text-success' : 'text-danger'}`}>
                           {summary.transfersNet > 0 ? '+' : ''}
                           {formatCurrency(summary.transfersNet)}
@@ -262,7 +236,7 @@ export function CashRegisterPage() {
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t pt-1.5">
-                      <span className="text-sm font-semibold text-content">Net après dépenses</span>
+                      <span className="text-sm font-semibold text-content">{t('cash.netAfterExpenses')}</span>
                       <span className="font-display font-bold text-content">{formatCurrency(summary.netTotal)}</span>
                     </div>
                   </div>
@@ -275,7 +249,7 @@ export function CashRegisterPage() {
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wide text-danger flex items-center gap-1.5">
                       <Receipt className="h-3.5 w-3.5" />
-                      Dépenses de session ({summary.expenses.length})
+                      {t('cash.sessionExpenses', { count: summary.expenses.length })}
                     </p>
                     <span className="font-display text-xs font-bold text-danger">
                       - {formatCurrency(summary.expensesTotal)}
@@ -304,7 +278,7 @@ export function CashRegisterPage() {
                 <div className="mt-4 rounded-xl border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/5 p-3">
                   <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-danger">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    {summary.cancelledCount} vente(s) annulée(s) depuis l'ouverture
+                    {t('cash.cancelledSince', { count: summary.cancelledCount })}
                   </p>
                   <div className="space-y-1.5">
                     {summary.cancelled.map((s) => (
@@ -315,14 +289,14 @@ export function CashRegisterPage() {
                           <span className="block text-xs text-content-faint">
                             {formatDateTime(s.cancelledAt)}
                             {s.methods.length > 0 &&
-                              ` · ${s.methods.map((m) => METHOD_LABELS[m] ?? m).join(', ')}`}
+                              ` · ${s.methods.map((m) => paymentMethodLabel(m)).join(', ')}`}
                           </span>
                         </span>
                         <span className="shrink-0 text-right">
                           <span className="block font-medium text-content">{formatCurrency(s.total)}</span>
                           {s.cashedAmount > 0 && (
                             <span className="block text-xs font-semibold text-danger">
-                              encaissé : {formatCurrency(s.cashedAmount)}
+                              {t('cash.cashed', { amount: formatCurrency(s.cashedAmount) })}
                             </span>
                           )}
                         </span>
@@ -331,7 +305,7 @@ export function CashRegisterPage() {
                     {summary.cancelledCashedTotal > 0 && (
                       <div className="mt-1 flex items-center justify-between border-t border-[color:var(--danger)]/20 pt-1.5">
                         <span className="text-sm font-semibold text-content">
-                          Encaissé sur ventes annulées
+                          {t('cash.cashedOnCancelled')}
                         </span>
                         <span className="font-display font-bold text-danger">
                           {formatCurrency(summary.cancelledCashedTotal)}
@@ -341,8 +315,7 @@ export function CashRegisterPage() {
                   </div>
                   {summary.cancelledCashedTotal > 0 && (
                     <p className="mt-2 text-xs text-content-muted">
-                      Ce montant est inclus dans le total encaissé ci-dessus. S'il a été remboursé au
-                      client, retirez-le du montant compté.
+                      {t('cash.cancelledHint')}
                     </p>
                   )}
                 </div>
@@ -352,11 +325,11 @@ export function CashRegisterPage() {
                 <div className="mt-4 border-t pt-4">
                   {summary && (
                     <SummaryRow
-                      label="Espèces attendues (fond + ventes espèces - dépenses)"
+                      label={t('cash.expectedCash')}
                       value={formatCurrency(summary.expectedCash)}
                     />
                   )}
-                  <Field label="Montant compté en caisse (espèces)">
+                  <Field label={t('cash.countedCash')}>
                     <input
                       type="number"
                       min={0}
@@ -371,7 +344,7 @@ export function CashRegisterPage() {
                   </Field>
                   {summary && !closingTouched && (
                     <p className="mt-1 text-xs text-content-faint">
-                      Pré-rempli avec les espèces attendues (fond + ventes - dépenses) — ajustez-le au comptage réel.
+                      {t('cash.prefilledHint')}
                     </p>
                   )}
                   <Button
@@ -380,15 +353,15 @@ export function CashRegisterPage() {
                     disabled={closing === ''}
                     onClick={() => closeMut.mutate(register)}
                   >
-                    <Lock className="h-4 w-4" /> Fermer la caisse
+                    <Lock className="h-4 w-4" /> {t('cash.closeRegister')}
                   </Button>
                   <p className="mt-2 text-xs text-content-faint">
-                    L'écart tient compte du fond, des ventes espèces et des dépenses enregistrées depuis l'ouverture.
+                    {t('cash.varianceHint')}
                   </p>
                 </div>
               ) : (
                 <p className="mt-4 border-t pt-4 text-sm text-content-muted">
-                  Vous n'avez pas la permission de fermer la caisse.
+                  {t('cash.noPermissionClose')}
                 </p>
               )}
             </div>
@@ -397,11 +370,11 @@ export function CashRegisterPage() {
             <div className="card p-5">
               <div className="mb-4 flex items-center gap-2">
                 <Unlock className="h-5 w-5 text-primary" />
-                <h3 className="font-display font-bold text-content">Aucune caisse ouverte</h3>
+                <h3 className="font-display font-bold text-content">{t('cash.noRegisterOpen')}</h3>
               </div>
               {canOpen ? (
                 <>
-                  <Field label="Fond de caisse à l'ouverture">
+                  <Field label={t('cash.openingFloatField')}>
                     <input
                       type="number"
                       min={0}
@@ -417,12 +390,12 @@ export function CashRegisterPage() {
                     disabled={opening === ''}
                     onClick={() => openMut.mutate()}
                   >
-                    <Unlock className="h-4 w-4" /> Ouvrir la caisse
+                    <Unlock className="h-4 w-4" /> {t('cash.openRegister')}
                   </Button>
                 </>
               ) : (
                 <p className="text-sm text-content-muted">
-                  Vous n'avez pas la permission d'ouvrir la caisse.
+                  {t('cash.noPermissionOpen')}
                 </p>
               )}
             </div>
@@ -448,6 +421,7 @@ function RegisterExpenseModal({
   branchId: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState('');
   const {
@@ -469,26 +443,26 @@ function RegisterExpenseModal({
   });
 
   return (
-    <Modal open onClose={onClose} title="Sortie de caisse / Dépense" size="sm">
+    <Modal open onClose={onClose} title={t('cash.expenseModalTitle')} size="sm">
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
-        <Field label="Libellé (motif)">
+        <Field label={t('cash.expenseLabel')}>
           <input
             className="input"
-            placeholder="Ex: Transport coursier, fournitures, entretien..."
+            placeholder={t('cash.expenseLabelPlaceholder')}
             {...register('label')}
           />
           {errors.label && <p className="mt-1 text-xs text-danger">{errors.label.message}</p>}
         </Field>
-        <Field label="Catégorie">
+        <Field label={t('cash.category')}>
           <select className="input" {...register('category')}>
-            {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
+            {EXPENSE_CATEGORY_CODES.map((c) => (
+              <option key={c} value={c}>
+                {expenseCategoryLabel(c)}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="Montant retiré (FCFA)">
+        <Field label={`${t('cash.amountWithdrawn')} (${CURRENCY_FORMAT[getActiveCurrency() as SupportedCurrency]?.symbol ?? getActiveCurrency()})`}>
           <input
             className="input"
             type="number"
@@ -498,16 +472,16 @@ function RegisterExpenseModal({
           />
           {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
         </Field>
-        <Field label="Note / Justificatif (optionnel)">
-          <input className="input" placeholder="Détails supplémentaires..." {...register('notes')} />
+        <Field label={t('cash.noteOptional')}>
+          <input className="input" placeholder={t('cash.notePlaceholder')} {...register('notes')} />
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {t('common.cancel')}
           </Button>
           <Button type="submit" loading={mut.isPending}>
-            Enregistrer la sortie
+            {t('cash.saveExpense')}
           </Button>
         </div>
       </form>

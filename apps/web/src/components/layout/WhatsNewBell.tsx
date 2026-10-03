@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ANNOUNCEMENT_KIND_LABELS } from '@oculo/shared-types';
 import {
   announcementsUnreadCount,
@@ -20,6 +21,7 @@ import { Badge, Button } from '../ui';
  * l'ouverture du panneau, sinon tout passerait « lu » sans avoir été regardé.
  */
 export function WhatsNewBell() {
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function WhatsNewBell() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="btn-ghost relative h-9 w-9 rounded-xl p-0 text-content-muted hover:text-content"
-        aria-label={unread > 0 ? `Nouveautés, ${unread} non lues` : 'Nouveautés'}
+        aria-label={unread > 0 ? t('shell.whatsNewUnread', { count: unread }) : t('shell.whatsNew')}
         aria-expanded={open}
       >
         <Megaphone className="h-4 w-4" />
@@ -88,18 +90,18 @@ export function WhatsNewBell() {
       {open && (
         <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-[min(92vw,26rem)] overflow-auto rounded-2xl border bg-surface shadow-xl">
           <div className="flex items-center justify-between gap-2 border-b p-3">
-            <p className="font-display font-bold text-content">Nouveautés</p>
+            <p className="font-display font-bold text-content">{t('shell.whatsNew')}</p>
             <div className="flex items-center gap-1">
               {unread > 0 && (
                 <Button variant="ghost" onClick={() => readAllMut.mutate()} loading={readAllMut.isPending}>
-                  Tout marquer comme lu
+                  {t('shell.markAllRead')}
                 </Button>
               )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="btn-ghost h-7 w-7 rounded-lg p-0"
-                aria-label="Fermer"
+                aria-label={t('common.close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -107,10 +109,10 @@ export function WhatsNewBell() {
           </div>
 
           {isLoading ? (
-            <p className="p-6 text-center text-sm text-content-muted">Chargement…</p>
+            <p className="p-6 text-center text-sm text-content-muted">{t('common.loading')}</p>
           ) : !announcements || announcements.length === 0 ? (
             <p className="p-6 text-center text-sm text-content-muted">
-              Aucune nouveauté pour le moment.
+              {t('shell.noNews')}
             </p>
           ) : (
             <ul className="divide-y">
@@ -132,7 +134,7 @@ export function WhatsNewBell() {
                     <span className="min-w-0 flex-1">
                       <span className="mb-1 flex flex-wrap items-center gap-1.5">
                         <Badge tone={a.kind === 'FIX' ? 'success' : a.kind === 'IMPROVEMENT' ? 'accent' : 'info'}>
-                          {ANNOUNCEMENT_KIND_LABELS[a.kind]}
+                          {i18n.exists(`announcementKinds.${a.kind}`) ? t(`announcementKinds.${a.kind}`) : ANNOUNCEMENT_KIND_LABELS[a.kind]}
                         </Badge>
                         {!a.read && <span className="h-2 w-2 rounded-full bg-danger" aria-label="Non lue" />}
                       </span>
