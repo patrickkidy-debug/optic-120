@@ -30,6 +30,7 @@ import { createPatientFromCustomer } from '../../features/clinic/api';
 import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, PageLoader, EmptyState } from '../../components/ui';
 import { ClientRecord } from './ClientRecord';
+import { tr } from '../../lib/tr';
 
 export function ClientsPage() {
   const { t } = useTranslation();
@@ -136,7 +137,7 @@ export function ClientsPage() {
         </table></body></html>`;
       const win = window.open('', '_blank', 'width=900,height=1100');
       if (!win) {
-        alert('Veuillez autoriser les fenêtres pop-up pour générer le PDF.');
+        alert(tr('ui.ClientsPage.veuillezAutoriserLesFenetresPop'));
         return;
       }
       win.document.open();
@@ -231,24 +232,24 @@ export function ClientsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
-                          title={`Relancer ${c.firstName} sur WhatsApp`}
+                          title={tr('ui.ClientsPage.relancerFirstnameSurWhatsapp', { firstName: c.firstName })}
                         >
                           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                         </a>
                       )}
                       {canQuote && (
                         <button onClick={() => startQuote(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                          <FileText className="h-3.5 w-3.5" /> Devis
+                          <FileText className="h-3.5 w-3.5" /> {tr('ui.ClientsPage.devis')}
                         </button>
                       )}
                       {canCreatePatient && (
-                        <button onClick={() => openClinicalRecord(c.id)} disabled={clinicLoading === c.id} className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50" title="Ouvrir le dossier clinique">
-                          <Stethoscope className="h-3.5 w-3.5" /> {clinicLoading === c.id ? '…' : 'Clinique'}
+                        <button onClick={() => openClinicalRecord(c.id)} disabled={clinicLoading === c.id} className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50" title={tr('ui.ClientsPage.ouvrirLeDossierClinique')}>
+                          <Stethoscope className="h-3.5 w-3.5" /> {clinicLoading === c.id ? '…' : tr('ui.ClientsPage.clinique')}
                         </button>
                       )}
                       {canSeeRx && (
                         <button onClick={() => setRecordId(c.id)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                          <Glasses className="h-3.5 w-3.5" /> Ordonnances
+                          <Glasses className="h-3.5 w-3.5" /> {tr('ui.ClientsPage.ordonnances')}
                         </button>
                       )}
                       {canSeeRx && (
@@ -256,9 +257,9 @@ export function ClientsPage() {
                           onClick={() => downloadDossier(c.id)}
                           disabled={dossierLoading === c.id}
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs disabled:opacity-50"
-                          title="Télécharger le dossier client (PDF)"
+                          title={tr('ui.ClientsPage.telechargerLeDossierClientPdf')}
                         >
-                          <Download className="h-3.5 w-3.5" /> {dossierLoading === c.id ? '…' : 'Dossier'}
+                          <Download className="h-3.5 w-3.5" /> {dossierLoading === c.id ? '…' : tr('ui.ClientsPage.dossier')}
                         </button>
                       )}
                       {canUpdate && (
@@ -307,7 +308,7 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
   const mut = useMutation({
     mutationFn: (v: CustomerCreateInput) => {
       if (customer) return updateCustomer(customer.id, v);
-      if (!branchId) throw new Error('Sélectionnez un magasin avant de créer un client');
+      if (!branchId) throw new Error(tr('ui.ClientsPage.selectionnezUnMagasinAvantDe'));
       return createCustomer(v, branchId);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['customers'] }); onClose(); },
@@ -318,45 +319,45 @@ function CustomerModal({ customer, onClose }: { customer: Customer | null; onClo
     <Modal open onClose={onClose} title={customer ? t('clients.editClient') : t('clients.newClient')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prénom"><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
-          <Field label="Nom"><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
+          <Field label={tr('ui.ClientsPage.prenom')}><input className="input" {...register('firstName')} />{errors.firstName && <p className="mt-1 text-xs text-danger">{errors.firstName.message}</p>}</Field>
+          <Field label={tr('ui.ClientsPage.nom')}><input className="input" {...register('lastName')} />{errors.lastName && <p className="mt-1 text-xs text-danger">{errors.lastName.message}</p>}</Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Téléphone"><input className="input" {...register('phone')} /></Field>
+          <Field label={tr('ui.ClientsPage.telephone')}><input className="input" {...register('phone')} /></Field>
           <Field label="Email"><input className="input" type="email" {...register('email')} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date de naissance">
+          <Field label={tr('ui.ClientsPage.dateDeNaissance')}>
             <input className="input" type="date" {...register('dateOfBirth')} />
           </Field>
-          <Field label="Genre">
+          <Field label={tr('ui.ClientsPage.genre')}>
             <select className="input" {...register('gender')}>
-              <option value="">— Non précisé —</option>
-              <option value="MALE">Masculin</option>
-              <option value="FEMALE">Féminin</option>
-              <option value="OTHER">Autre</option>
+              <option value="">{tr('ui.ClientsPage.nonPrecise')}</option>
+              <option value="MALE">{tr('ui.ClientsPage.masculin')}</option>
+              <option value="FEMALE">{tr('ui.ClientsPage.feminin')}</option>
+              <option value="OTHER">{tr('ui.ClientsPage.autre')}</option>
             </select>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Profession">
-            <input className="input" {...register('profession')} placeholder="Enseignant, chauffeur…" />
+          <Field label={tr('ui.ClientsPage.profession')}>
+            <input className="input" {...register('profession')} placeholder={tr('ui.ClientsPage.enseignantChauffeur')} />
           </Field>
-          <Field label="Adresse">
-            <input className="input" {...register('address')} placeholder="Quartier, ville" />
+          <Field label={tr('ui.ClientsPage.adresse')}>
+            <input className="input" {...register('address')} placeholder={tr('ui.ClientsPage.quartierVille')} />
           </Field>
         </div>
         <Field label="Notes">
           <textarea
             className="input min-h-[60px]"
             {...register('notes')}
-            placeholder="Antécédents, préférences de monture, remarques…"
+            placeholder={tr('ui.ClientsPage.antecedentsPreferencesDeMontureRemarques')}
           />
         </Field>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button type="submit" loading={mut.isPending}>Enregistrer</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.ClientsPage.annuler')}</Button>
+          <Button type="submit" loading={mut.isPending}>{tr('ui.ClientsPage.enregistrer')}</Button>
         </div>
       </form>
     </Modal>

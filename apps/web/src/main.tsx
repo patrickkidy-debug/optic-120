@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import i18n from 'i18next';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
@@ -26,6 +27,16 @@ router.subscribe((state) => {
 });
 
 function Root() {
+  // Changement de langue : on remonte toute l'application. Les textes sont lus
+  // au rendu via i18n.t, y compris dans des écrans qui ne s'abonnent pas à la
+  // langue ; un remontage garantit qu'aucun ne reste dans l'ancienne langue.
+  const [lang, setLang] = useState(i18n.language);
+  useEffect(() => {
+    const onChange = (l: string) => setLang(l);
+    i18n.on('languageChanged', onChange);
+    return () => i18n.off('languageChanged', onChange);
+  }, []);
+
   useEffect(() => {
     const unwatch = watchSystemTheme(() => useUIStore.getState().theme);
     startOffline();
@@ -49,7 +60,7 @@ function Root() {
     // Les bandeaux PWA sont rendus par l'enveloppe racine du routeur (voir
     // router.tsx) : ils ont ainsi acces a l'URL courante, ce qui permet de
     // retirer l'invite d'installation du tunnel d'activation.
-    <RouterProvider router={router} />
+    <RouterProvider key={lang} router={router} />
   );
 }
 

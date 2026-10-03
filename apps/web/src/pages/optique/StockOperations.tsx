@@ -17,6 +17,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, Field, PageLoader } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 interface Line {
   productId: string;
@@ -51,7 +52,7 @@ function ProductPicker({
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
         <input
           className="input pl-9"
-          placeholder="Rechercher un article (nom ou référence)…"
+          placeholder={tr('ui.StockOperations.rechercherUnArticleNomOu')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -75,7 +76,7 @@ function ProductPicker({
                   <span className="font-mono text-[11px] text-content-faint">{r.sku}</span>
                 </span>
                 <span className="ml-2 shrink-0 text-xs text-content-muted">
-                  {r.unlimited ? 'illimité' : `stock ${r.quantity}`}
+                  {r.unlimited ? tr('ui.StockOperations.illimite') : `stock ${r.quantity}`}
                 </span>
               </button>
             ))
@@ -97,7 +98,7 @@ function LineEditor({
   onChange: (lines: Line[]) => void;
 }) {
   if (lines.length === 0) {
-    return <p className="py-6 text-center text-sm text-content-muted">Aucun article ajouté.</p>;
+    return <p className="py-6 text-center text-sm text-content-muted">{tr('ui.StockOperations.aucunArticleAjoute')}</p>;
   }
   const set = (id: string, patch: Partial<Line>) =>
     onChange(lines.map((l) => (l.productId === id ? { ...l, ...patch } : l)));
@@ -116,21 +117,21 @@ function LineEditor({
             value={l.quantity}
             onChange={(e) => set(l.productId, { quantity: Math.max(1, Number(e.target.value) || 1) })}
             className="input h-8 w-16 px-2 text-center"
-            title="Quantité"
+            title={tr('ui.StockOperations.quantite')}
           />
           {withCost && (
             <input
               type="number"
               min={0}
               value={l.unitCost ?? ''}
-              placeholder="Coût"
+              placeholder={tr('ui.StockOperations.cout')}
               onChange={(e) =>
                 set(l.productId, {
                   unitCost: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)),
                 })
               }
               className="input h-8 w-24 px-2 text-right"
-              title="Prix d'achat unitaire"
+              title={tr('ui.StockOperations.prixDAchatUnitaire')}
             />
           )}
           <button
@@ -186,19 +187,19 @@ export function ReceiveStockModal({ branchId, onClose }: { branchId: string; onC
       }),
     onSuccess: (r) => {
       invalidateProductViews(qc);
-      alert(`Réception enregistrée : ${r.received} article(s) entrés en stock.`);
+      alert(tr('ui.StockOperations.receptionEnregistreeReceivedArticleS', { received: r.received }));
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
   return (
-    <Modal open onClose={onClose} title="Réception fournisseur" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.StockOperations.receptionFournisseur')} size="lg">
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Fournisseur">
+          <Field label={tr('ui.StockOperations.fournisseur')}>
             <select className="input" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-              <option value="">— Non précisé —</option>
+              <option value="">{tr('ui.StockOperations.nonPrecise')}</option>
               {suppliers?.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -206,7 +207,7 @@ export function ReceiveStockModal({ branchId, onClose }: { branchId: string; onC
               ))}
             </select>
           </Field>
-          <Field label="Référence (bon de livraison)">
+          <Field label={tr('ui.StockOperations.referenceBonDeLivraison')}>
             <input
               className="input"
               value={reference}
@@ -219,27 +220,27 @@ export function ReceiveStockModal({ branchId, onClose }: { branchId: string; onC
         <ProductPicker
           rows={rows ?? []}
           onPick={(r) => setLines((prev) => addLine(prev, r))}
-          emptyHint="Aucun article trouvé."
+          emptyHint={tr('ui.StockOperations.aucunArticleTrouve')}
         />
         <LineEditor lines={lines} withCost onChange={setLines} />
 
         {total > 0 && (
           <div className="flex justify-between border-t pt-2 text-sm">
-            <span className="text-content-muted">Total d'achat</span>
+            <span className="text-content-muted">{tr('ui.StockOperations.totalDAchat')}</span>
             <span className="font-display font-bold text-content">{formatCurrency(total)}</span>
           </div>
         )}
         <p className="text-xs text-content-faint">
-          Le prix d'achat renseigné met à jour la fiche produit (suivi des marges).
+          {tr('ui.StockOperations.lePrixDAchatRenseigne')}
         </p>
 
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.StockOperations.annuler')}
           </Button>
           <Button disabled={lines.length === 0} loading={mut.isPending} onClick={() => mut.mutate()}>
-            <PackagePlus className="h-4 w-4" /> Enregistrer la réception
+            <PackagePlus className="h-4 w-4" /> {tr('ui.StockOperations.enregistrerLaReception')}
           </Button>
         </div>
       </div>
@@ -275,29 +276,29 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
     onSuccess: () => {
       invalidateProductViews(qc);
       qc.invalidateQueries({ queryKey: ['stockTransfers'] });
-      alert("Demande de transfert transmise ! Le stock sera crédité au magasin destinataire dès sa confirmation de réception.");
+      alert(tr('ui.StockOperations.demandeDeTransfertTransmiseLe'));
       onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
   return (
-    <Modal open onClose={onClose} title="Transfert entre magasins" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.StockOperations.transfertEntreMagasins')} size="lg">
       <div className="space-y-3">
         {targets.length === 0 ? (
           <p className="rounded-xl bg-surface-2 p-3 text-sm text-content-muted">
-            Il faut au moins deux magasins pour effectuer un transfert.
+            {tr('ui.StockOperations.ilFautAuMoinsDeux')}
           </p>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Magasin destinataire">
+              <Field label={tr('ui.StockOperations.magasinDestinataire')}>
                 <select
                   className="input"
                   value={toBranchId}
                   onChange={(e) => setToBranchId(e.target.value)}
                 >
-                  <option value="">— Choisir —</option>
+                  <option value="">{tr('ui.StockOperations.choisir')}</option>
                   {targets.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -305,12 +306,12 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
                   ))}
                 </select>
               </Field>
-              <Field label="Motif (optionnel)">
+              <Field label={tr('ui.StockOperations.motifOptionnel')}>
                 <input
                   className="input"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Réassort, demande client…"
+                  placeholder={tr('ui.StockOperations.reassortDemandeClient')}
                 />
               </Field>
             </div>
@@ -318,21 +319,21 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
             <ProductPicker
               rows={(rows ?? []).filter((r) => !r.unlimited)}
               onPick={(r) => setLines((prev) => addLine(prev, r))}
-              emptyHint="Aucun article en stock dans ce magasin."
+              emptyHint={tr('ui.StockOperations.aucunArticleEnStockDans')}
             />
             <LineEditor lines={lines} onChange={setLines} />
 
             {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={onClose}>
-                Annuler
+                {tr('ui.StockOperations.annuler')}
               </Button>
               <Button
                 disabled={lines.length === 0 || !toBranchId}
                 loading={mut.isPending}
                 onClick={() => mut.mutate()}
               >
-                <ArrowLeftRight className="h-4 w-4" /> Transférer
+                <ArrowLeftRight className="h-4 w-4" /> {tr('ui.StockOperations.transferer')}
               </Button>
             </div>
           </>
@@ -377,13 +378,13 @@ export function PendingTransfersModal({
   });
 
   return (
-    <Modal open onClose={onClose} title="Réceptions de stock en attente" size="lg">
+    <Modal open onClose={onClose} title={tr('ui.StockOperations.receptionsDeStockEnAttente')} size="lg">
       <div className="space-y-4">
         {isLoading ? (
           <PageLoader />
         ) : !transfers || transfers.length === 0 ? (
           <p className="rounded-xl bg-surface-2 p-4 text-center text-sm text-content-muted">
-            Aucun transfert en attente de réception pour ce magasin.
+            {tr('ui.StockOperations.aucunTransfertEnAttenteDe')}
           </p>
         ) : (
           <div className="space-y-3">
@@ -393,12 +394,12 @@ export function PendingTransfersModal({
                   <div>
                     <span className="font-mono text-sm font-bold text-primary">{t.number}</span>
                     <span className="ml-2 text-xs text-content-muted">
-                      Provenance : <strong>{t.fromBranch.name}</strong>
+                      {tr('ui.StockOperations.provenance')} <strong>{t.fromBranch.name}</strong>
                     </span>
                   </div>
                   <span className="text-xs text-content-faint">{formatDateTime(t.createdAt)}</span>
                 </div>
-                {t.reason && <p className="mt-2 text-xs italic text-content-muted">Motif : {t.reason}</p>}
+                {t.reason && <p className="mt-2 text-xs italic text-content-muted">{tr('ui.StockOperations.motif')} {t.reason}</p>}
                 <div className="mt-3 space-y-1">
                   {t.items.map((item) => (
                     <div key={item.id} className="flex justify-between text-xs text-content">
@@ -414,14 +415,14 @@ export function PendingTransfersModal({
                     loading={cancelMut.isPending}
                     onClick={() => cancelMut.mutate(t.id)}
                   >
-                    Refuser
+                    {tr('ui.StockOperations.refuser')}
                   </Button>
                   <Button
                     className="h-8 px-3 text-xs"
                     loading={confirmMut.isPending}
                     onClick={() => confirmMut.mutate(t.id)}
                   >
-                    <Check className="h-3.5 w-3.5 text-white" /> Confirmer la réception
+                    <Check className="h-3.5 w-3.5 text-white" /> {tr('ui.StockOperations.confirmerLaReception')}
                   </Button>
                 </div>
               </div>
@@ -431,7 +432,7 @@ export function PendingTransfersModal({
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end pt-2">
           <Button variant="ghost" onClick={onClose}>
-            Fermer
+            {tr('ui.StockOperations.fermer')}
           </Button>
         </div>
       </div>

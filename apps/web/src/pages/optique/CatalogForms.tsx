@@ -34,6 +34,7 @@ import { formatCurrency, toLocalDatetimeString } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
 import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
+import { tr } from '../../lib/tr';
 
 /** État commun aux deux formulaires du catalogue. */
 interface BaseState {
@@ -194,7 +195,7 @@ export function FrameFormModal({
     <Modal
       open
       onClose={onClose}
-      title={product ? 'Modifier la monture' : 'Nouvelle monture'}
+      title={product ? tr('ui.CatalogForms.modifierLaMonture') : tr('ui.CatalogForms.nouvelleMonture')}
       size="lg"
     >
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
@@ -207,7 +208,7 @@ export function FrameFormModal({
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Marque">
+            <Field label={tr('ui.CatalogForms.marque')}>
               <input
                 className="input"
                 value={base.brand}
@@ -215,7 +216,7 @@ export function FrameFormModal({
                 placeholder="Ray-Ban"
               />
             </Field>
-            <Field label="Modèle">
+            <Field label={tr('ui.CatalogForms.modele')}>
               <input
                 className="input"
                 value={a.model ?? ''}
@@ -225,25 +226,25 @@ export function FrameFormModal({
             </Field>
           </div>
 
-          <Field label="Désignation (laissez vide pour « Marque Modèle »)">
+          <Field label={tr('ui.CatalogForms.designationLaissezVidePourMarque')}>
             <input
               className="input"
               value={base.name}
               onChange={(e) => set({ name: e.target.value })}
-              placeholder={effectiveName || 'Monture'}
+              placeholder={effectiveName || tr('ui.CatalogForms.monture')}
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Référence (SKU)">
+            <Field label={tr('ui.CatalogForms.referenceSku')}>
               <input
                 className="input"
                 value={base.sku}
                 onChange={(e) => set({ sku: e.target.value })}
-                placeholder="Générée si vide"
+                placeholder={tr('ui.CatalogForms.genereeSiVide')}
               />
             </Field>
-            <Field label="EAN / code-barres">
+            <Field label={tr('ui.CatalogForms.eanCodeBarres')}>
               <input
                 className="input"
                 value={a.ean ?? ''}
@@ -253,7 +254,7 @@ export function FrameFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Field label="Type de monture">
+            <Field label={tr('ui.CatalogForms.typeDeMonture')}>
               <select className="input" value={a.frameType ?? ''} onChange={(e) => setAttr({ frameType: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_TYPES.map((t) => (
@@ -261,7 +262,7 @@ export function FrameFormModal({
                 ))}
               </select>
             </Field>
-            <Field label="Genre">
+            <Field label={tr('ui.CatalogForms.genre')}>
               <select className="input" value={a.gender ?? ''} onChange={(e) => setAttr({ gender: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_GENDERS.map((g) => (
@@ -269,7 +270,7 @@ export function FrameFormModal({
                 ))}
               </select>
             </Field>
-            <Field label="Forme">
+            <Field label={tr('ui.CatalogForms.forme')}>
               <select className="input" value={a.shape ?? ''} onChange={(e) => setAttr({ shape: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_SHAPES.map((f) => (
@@ -277,7 +278,7 @@ export function FrameFormModal({
                 ))}
               </select>
             </Field>
-            <Field label="Matière">
+            <Field label={tr('ui.CatalogForms.matiere')}>
               <select className="input" value={a.material ?? ''} onChange={(e) => setAttr({ material: e.target.value })}>
                 <option value="">—</option>
                 {FRAME_MATERIALS.map((m) => (
@@ -289,7 +290,7 @@ export function FrameFormModal({
 
           {/* Couleur : choix visuel par pastille, plus rapide qu'une liste */}
           <div>
-            <span className="label">Couleur</span>
+            <span className="label">{tr('ui.CatalogForms.couleur')}</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {FRAME_COLORS.map((c) => (
                 <button
@@ -310,7 +311,7 @@ export function FrameFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Taille (calibre-pont-branches)">
+            <Field label={tr('ui.CatalogForms.tailleCalibrePontBranches')}>
               <input
                 className="input"
                 value={a.size ?? ''}
@@ -318,23 +319,23 @@ export function FrameFormModal({
                 placeholder="52-18-140"
               />
             </Field>
-            <Field label="Emplacement en boutique">
+            <Field label={tr('ui.CatalogForms.emplacementEnBoutique')}>
               <input
                 className="input"
                 value={a.location ?? ''}
                 onChange={(e) => setAttr({ location: e.target.value })}
-                placeholder="Vitrine A, étagère 2"
+                placeholder={tr('ui.CatalogForms.vitrineAEtagere2')}
               />
             </Field>
           </div>
 
-          <Field label="Fournisseur">
+          <Field label={tr('ui.CatalogForms.fournisseur')}>
             <input
               className="input"
               list="frame-suppliers"
               value={a.supplier ?? ''}
               onChange={(e) => setAttr({ supplier: e.target.value })}
-              placeholder="Nom du fournisseur"
+              placeholder={tr('ui.CatalogForms.nomDuFournisseur')}
             />
             <datalist id="frame-suppliers">
               {suppliers?.map((s) => (
@@ -344,7 +345,7 @@ export function FrameFormModal({
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Prix d'achat">
+            <Field label={tr('ui.CatalogForms.prixDAchat')}>
               <input
                 type="number"
                 min={0}
@@ -353,7 +354,7 @@ export function FrameFormModal({
                 onChange={(e) => set({ buyPrice: e.target.value })}
               />
             </Field>
-            <Field label="Prix de vente">
+            <Field label={tr('ui.CatalogForms.prixDeVente')}>
               <input
                 type="number"
                 min={0}
@@ -365,7 +366,7 @@ export function FrameFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
-            <Field label="Quantité en stock">
+            <Field label={tr('ui.CatalogForms.quantiteEnStock')}>
               <input
                 type="number"
                 min={0}
@@ -374,7 +375,7 @@ export function FrameFormModal({
                 onChange={(e) => set({ qty: Math.max(0, Number(e.target.value) || 0) })}
               />
             </Field>
-            <Field label="Seuil d'alerte">
+            <Field label={tr('ui.CatalogForms.seuilDAlerte')}>
               <input
                 type="number"
                 min={0}
@@ -389,7 +390,7 @@ export function FrameFormModal({
         {/* Aperçu : la carte telle qu'elle sortira au catalogue */}
         <div className="lg:sticky lg:top-0 lg:self-start">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-            Aperçu au catalogue
+            {tr('ui.CatalogForms.apercuAuCatalogue')}
           </p>
           <FramePreview
             photoUrl={base.photoUrl}
@@ -408,7 +409,7 @@ export function FrameFormModal({
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       <div className="mt-4 flex justify-end gap-2 border-t pt-4">
         <Button variant="ghost" onClick={onClose}>
-          Annuler
+          {tr('ui.CatalogForms.annuler')}
         </Button>
         <Button
           disabled={!canSave}
@@ -420,7 +421,7 @@ export function FrameFormModal({
             })
           }
         >
-          <Glasses className="h-4 w-4" /> {product ? 'Enregistrer' : 'Ajouter la monture'}
+          <Glasses className="h-4 w-4" /> {product ? tr('ui.CatalogForms.enregistrer') : tr('ui.CatalogForms.ajouterLaMonture')}
         </Button>
       </div>
     </Modal>
@@ -429,14 +430,15 @@ export function FrameFormModal({
 
 /* ============================ FORMULAIRE VERRE ============================ */
 
+/** Étapes du formulaire verre (clés de traduction, libellés via tr()). */
 const LENS_STEPS = [
-  'Identification',
-  'Type de verre',
-  'Paramètres techniques',
-  'Traitements',
-  'Tarification',
-  'Illustration',
-  'Résumé',
+  'ui.CatalogForms.identification',
+  'ui.CatalogForms.typeDeVerre',
+  'ui.CatalogForms.parametresTechniques',
+  'ui.CatalogForms.traitements',
+  'ui.CatalogForms.tarification',
+  'ui.CatalogForms.illustration',
+  'ui.CatalogForms.resume',
 ] as const;
 
 /**
@@ -493,21 +495,21 @@ export function LensFormModal({
   const summary = useMemo(
     () =>
       [
-        ['Marque', base.brand],
-        ['Gamme', a.range],
-        ['Type', familyLabel],
-        ['Indice', a.index],
-        ['Matériau', a.material],
-        ['Traitements', (a.treatments ?? []).join(', ')],
-        ['Teinte', a.tint],
-        ['Design', a.design],
-        ['Usage', a.usage],
+        [tr('ui.CatalogForms.marque'), base.brand],
+        [tr('ui.CatalogForms.gamme'), a.range],
+        [tr('ui.CatalogForms.type'), familyLabel],
+        [tr('ui.CatalogForms.indice'), a.index],
+        [tr('ui.CatalogForms.materiau'), a.material],
+        [tr('ui.CatalogForms.traitements'), (a.treatments ?? []).join(', ')],
+        [tr('ui.CatalogForms.teinte'), a.tint],
+        [tr('ui.CatalogForms.design'), a.design],
+        [tr('ui.CatalogForms.usage'), a.usage],
       ].filter(([, v]) => Boolean(v)) as [string, string][],
     [base.brand, a, familyLabel],
   );
 
   return (
-    <Modal open onClose={onClose} title={product ? 'Modifier le verre' : 'Nouveau verre'} size="lg">
+    <Modal open onClose={onClose} title={product ? tr('ui.CatalogForms.modifierLeVerre') : tr('ui.CatalogForms.nouveauVerre')} size="lg">
       {/* Progression */}
       <div className="mb-4 flex flex-wrap gap-1">
         {LENS_STEPS.map((s, i) => (
@@ -523,7 +525,7 @@ export function LensFormModal({
                   : 'bg-surface-2 text-content-faint'
             }`}
           >
-            {i < step && <Check className="h-3 w-3" />} {i + 1}. {s}
+            {i < step && <Check className="h-3 w-3" />} {i + 1}. {tr(s)}
           </button>
         ))}
       </div>
@@ -533,18 +535,18 @@ export function LensFormModal({
           {step === 0 && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Marque">
-                  <input className="input" value={base.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="Essilor" />
+                <Field label={tr('ui.CatalogForms.marque')}>
+                  <input className="input" value={base.brand} onChange={(e) => set({ brand: e.target.value })} placeholder={tr('ui.CatalogForms.essilor')} />
                 </Field>
-                <Field label="Gamme">
-                  <input className="input" value={a.range ?? ''} onChange={(e) => setAttr({ range: e.target.value })} placeholder="Varilux Comfort" />
+                <Field label={tr('ui.CatalogForms.gamme')}>
+                  <input className="input" value={a.range ?? ''} onChange={(e) => setAttr({ range: e.target.value })} placeholder={tr('ui.CatalogForms.variluxComfort')} />
                 </Field>
               </div>
-              <Field label="Désignation (laissez vide pour la déduire)">
-                <input className="input" value={base.name} onChange={(e) => set({ name: e.target.value })} placeholder={effectiveName || 'Verre'} />
+              <Field label={tr('ui.CatalogForms.designationLaissezVidePourLa')}>
+                <input className="input" value={base.name} onChange={(e) => set({ name: e.target.value })} placeholder={effectiveName || tr('ui.CatalogForms.verre')} />
               </Field>
-              <Field label="Référence (SKU)">
-                <input className="input" value={base.sku} onChange={(e) => set({ sku: e.target.value })} placeholder="Générée si vide" />
+              <Field label={tr('ui.CatalogForms.referenceSku')}>
+                <input className="input" value={base.sku} onChange={(e) => set({ sku: e.target.value })} placeholder={tr('ui.CatalogForms.genereeSiVide')} />
               </Field>
             </>
           )}
@@ -568,7 +570,7 @@ export function LensFormModal({
 
           {step === 2 && (
             <>
-              <Field label="Matériau">
+              <Field label={tr('ui.CatalogForms.materiau')}>
                 <select
                   className="input"
                   value={a.material ?? ''}
@@ -593,7 +595,7 @@ export function LensFormModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Indice de réfraction">
+              <Field label={tr('ui.CatalogForms.indiceDeRefraction')}>
                 <select
                   className="input"
                   value={a.index ?? ''}
@@ -606,11 +608,11 @@ export function LensFormModal({
                   ))}
                 </select>
                 {!a.material && (
-                  <p className="mt-1 text-xs text-content-faint">Choisissez d'abord le matériau pour affiner les indices proposés.</p>
+                  <p className="mt-1 text-xs text-content-faint">{tr('ui.CatalogForms.choisissezDAbordLeMateriau')}</p>
                 )}
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Design">
+                <Field label={tr('ui.CatalogForms.design')}>
                   <select className="input" value={a.design ?? ''} onChange={(e) => setAttr({ design: e.target.value })}>
                     <option value="">—</option>
                     {LENS_DESIGNS.map((d) => (
@@ -618,7 +620,7 @@ export function LensFormModal({
                     ))}
                   </select>
                 </Field>
-                <Field label="Usage">
+                <Field label={tr('ui.CatalogForms.usage')}>
                   <select className="input" value={a.usage ?? ''} onChange={(e) => setAttr({ usage: e.target.value })}>
                     <option value="">—</option>
                     {LENS_USAGES.map((u) => (
@@ -633,7 +635,7 @@ export function LensFormModal({
           {step === 3 && (
             <>
               <div>
-                <span className="label">Traitements</span>
+                <span className="label">{tr('ui.CatalogForms.traitements')}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {LENS_TREATMENTS.map((t) => {
                     const on = (a.treatments ?? []).includes(t.label);
@@ -652,7 +654,7 @@ export function LensFormModal({
                   })}
                 </div>
               </div>
-              <Field label="Teinte">
+              <Field label={tr('ui.CatalogForms.teinte')}>
                 <select className="input" value={a.tint ?? ''} onChange={(e) => setAttr({ tint: e.target.value })}>
                   <option value="">—</option>
                   {LENS_TINTS.map((t) => (
@@ -666,14 +668,14 @@ export function LensFormModal({
                   checked={Boolean(a.premium)}
                   onChange={(e) => setAttr({ premium: e.target.checked })}
                 />
-                <Sparkles className="h-4 w-4 text-warning" /> Gamme premium (mise en avant au catalogue)
+                <Sparkles className="h-4 w-4 text-warning" /> {tr('ui.CatalogForms.gammePremiumMiseEnAvant')}
               </label>
             </>
           )}
 
           {step === 4 && (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Prix d'achat">
+              <Field label={tr('ui.CatalogForms.prixDAchat')}>
                 <input
                   type="number"
                   min={0}
@@ -682,7 +684,7 @@ export function LensFormModal({
                   onChange={(e) => set({ buyPrice: e.target.value })}
                 />
               </Field>
-              <Field label="Prix de vente">
+              <Field label={tr('ui.CatalogForms.prixDeVente')}>
                 <input
                   type="number"
                   min={0}
@@ -697,8 +699,7 @@ export function LensFormModal({
           {step === 5 && (
             <>
               <p className="text-sm text-content-muted">
-                Facultatif : sans photo, le catalogue utilise l'illustration correspondant au type
-                de verre choisi.
+                {tr('ui.CatalogForms.facultatifSansPhotoLeCatalogue')}
               </p>
               <PhotoUploader
                 photoUrl={base.photoUrl}
@@ -710,7 +711,7 @@ export function LensFormModal({
 
           {step === 6 && (
             <div className="rounded-xl border p-4">
-              <p className="font-display text-lg font-bold text-content">{effectiveName || 'Verre'}</p>
+              <p className="font-display text-lg font-bold text-content">{effectiveName || tr('ui.CatalogForms.verre')}</p>
               <dl className="mt-3 space-y-1.5 text-sm">
                 {summary.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 border-b pb-1 last:border-0">
@@ -725,7 +726,7 @@ export function LensFormModal({
 
         <div className="lg:sticky lg:top-0 lg:self-start">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-            Aperçu au catalogue
+            {tr('ui.CatalogForms.apercuAuCatalogue')}
           </p>
           <LensPreview
             brand={base.brand}
@@ -742,15 +743,15 @@ export function LensFormModal({
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       <div className="mt-4 flex items-center justify-between border-t pt-4">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
-          <ChevronLeft className="h-4 w-4" /> Précédent
+          <ChevronLeft className="h-4 w-4" /> {tr('ui.CatalogForms.precedent')}
         </Button>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.CatalogForms.annuler')}
           </Button>
           {step < LENS_STEPS.length - 1 ? (
             <Button onClick={() => setStep((s) => Math.min(LENS_STEPS.length - 1, s + 1))}>
-              Suivant <ChevronRight className="h-4 w-4" />
+              {tr('ui.CatalogForms.suivant')} <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button
@@ -767,7 +768,7 @@ export function LensFormModal({
                 })
               }
             >
-              <Check className="h-4 w-4" /> {product ? 'Enregistrer' : 'Ajouter le verre'}
+              <Check className="h-4 w-4" /> {product ? tr('ui.CatalogForms.enregistrer') : tr('ui.CatalogForms.ajouterLeVerre')}
             </Button>
           )}
         </div>
@@ -780,11 +781,11 @@ export function LensFormModal({
 
 /** Libellés d'affichage des 5 familles couvertes par le formulaire générique. */
 const GENERIC_CATEGORY_LABELS: Record<string, string> = {
-  LENTILLE: 'Lentilles',
-  ACCESSOIRE: 'Accessoires',
-  ENTRETIEN: "Produits d'entretien",
+  get LENTILLE() { return tr('ui.CatalogForms.lentilles'); },
+  get ACCESSOIRE() { return tr('ui.CatalogForms.accessoires'); },
+  get ENTRETIEN() { return tr('ui.CatalogForms.produitsDEntretien'); },
   SERVICE: 'Services',
-  AUTRE: 'Autres',
+  get AUTRE() { return tr('ui.CatalogForms.autres'); },
 };
 
 function genericCategoryLabel(category: string): string {
@@ -816,7 +817,7 @@ function GenericProductPreview({
     <div className="card w-full max-w-[16rem] overflow-hidden">
       <div className="aspect-[4/3] w-full bg-surface-2">
         {photoUrl ? (
-          <img src={photoUrl} alt="Aperçu" className="h-full w-full object-contain" />
+          <img src={photoUrl} alt={tr('ui.CatalogForms.apercu')} className="h-full w-full object-contain" />
         ) : (
           <div className="grid h-full place-items-center">
             <Package className="h-8 w-8 text-content-faint" />
@@ -827,9 +828,9 @@ function GenericProductPreview({
         <span className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
           {genericCategoryLabel(category)}
         </span>
-        <p className="mt-1 truncate text-sm font-semibold text-content">{name || 'Nouveau produit'}</p>
+        <p className="mt-1 truncate text-sm font-semibold text-content">{name || tr('ui.CatalogForms.nouveauProduit')}</p>
         {brand && <p className="truncate text-xs text-content-faint">{brand}</p>}
-        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || 'Référence auto'}</p>
+        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || tr('ui.CatalogForms.referenceAuto')}</p>
         <p className="mt-3 font-display text-lg font-bold text-content">{formatCurrency(price || 0)}</p>
       </div>
     </div>
@@ -895,7 +896,7 @@ export function GenericProductFormModal({
     <Modal
       open
       onClose={onClose}
-      title={product ? `Modifier — ${label}` : `Nouveau — ${label}`}
+      title={product ? tr('ui.CatalogForms.modifierLabel', { label: label }) : tr('ui.CatalogForms.nouveauLabel', { label: label })}
       size="lg"
     >
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
@@ -908,7 +909,7 @@ export function GenericProductFormModal({
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Nom du produit">
+            <Field label={tr('ui.CatalogForms.nomDuProduit')}>
               <input
                 className="input"
                 value={base.name}
@@ -916,29 +917,29 @@ export function GenericProductFormModal({
                 placeholder={label}
               />
             </Field>
-            <Field label="Famille">
+            <Field label={tr('ui.CatalogForms.famille')}>
               <select className="input" value={cat} onChange={(e) => setCat(e.target.value)}>
                 {Object.entries(GENERIC_CATEGORY_LABELS).map(([value, text]) => (
                   <option key={value} value={value}>
                     {text}
                   </option>
                 ))}
-                <option value={ProductCategory.MONTURE}>Montures</option>
-                <option value={ProductCategory.VERRE}>Verres</option>
+                <option value={ProductCategory.MONTURE}>{tr('ui.CatalogForms.montures')}</option>
+                <option value={ProductCategory.VERRE}>{tr('ui.CatalogForms.verres')}</option>
               </select>
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Référence (SKU)">
+            <Field label={tr('ui.CatalogForms.referenceSku')}>
               <input
                 className="input"
                 value={base.sku}
                 onChange={(e) => set({ sku: e.target.value })}
-                placeholder="Générée si vide"
+                placeholder={tr('ui.CatalogForms.genereeSiVide')}
               />
             </Field>
-            <Field label="EAN / code-barres">
+            <Field label={tr('ui.CatalogForms.eanCodeBarres')}>
               <input
                 className="input"
                 value={a.ean ?? ''}
@@ -948,31 +949,31 @@ export function GenericProductFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Marque">
+            <Field label={tr('ui.CatalogForms.marque')}>
               <input
                 className="input"
                 value={base.brand}
                 onChange={(e) => set({ brand: e.target.value })}
               />
             </Field>
-            <Field label="Emplacement en boutique">
+            <Field label={tr('ui.CatalogForms.emplacementEnBoutique')}>
               <input
                 className="input"
                 value={a.location ?? ''}
                 onChange={(e) => setAttr({ location: e.target.value })}
-                placeholder="Vitrine A, étagère 2"
+                placeholder={tr('ui.CatalogForms.vitrineAEtagere2')}
               />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Fournisseur">
+            <Field label={tr('ui.CatalogForms.fournisseur')}>
               <input
                 className="input"
                 list="generic-suppliers"
                 value={a.supplier ?? ''}
                 onChange={(e) => setAttr({ supplier: e.target.value })}
-                placeholder="Nom du fournisseur"
+                placeholder={tr('ui.CatalogForms.nomDuFournisseur')}
               />
               <datalist id="generic-suppliers">
                 {suppliers?.map((s) => (
@@ -980,7 +981,7 @@ export function GenericProductFormModal({
                 ))}
               </datalist>
             </Field>
-            <Field label="Date d'ajout">
+            <Field label={tr('ui.CatalogForms.dateDAjout')}>
               <input
                 type="datetime-local"
                 className="input"
@@ -991,7 +992,7 @@ export function GenericProductFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Prix d'achat">
+            <Field label={tr('ui.CatalogForms.prixDAchat')}>
               <input
                 type="number"
                 min={0}
@@ -1000,7 +1001,7 @@ export function GenericProductFormModal({
                 onChange={(e) => set({ buyPrice: e.target.value })}
               />
             </Field>
-            <Field label="Prix de vente">
+            <Field label={tr('ui.CatalogForms.prixDeVente')}>
               <input
                 type="number"
                 min={0}
@@ -1013,7 +1014,7 @@ export function GenericProductFormModal({
 
           {managesStock ? (
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
-              <Field label="Quantité en stock">
+              <Field label={tr('ui.CatalogForms.quantiteEnStock')}>
                 <input
                   type="number"
                   min={0}
@@ -1022,7 +1023,7 @@ export function GenericProductFormModal({
                   onChange={(e) => set({ qty: Math.max(0, Number(e.target.value) || 0) })}
                 />
               </Field>
-              <Field label="Seuil d'alerte">
+              <Field label={tr('ui.CatalogForms.seuilDAlerte')}>
                 <input
                   type="number"
                   min={0}
@@ -1034,7 +1035,7 @@ export function GenericProductFormModal({
             </div>
           ) : (
             <p className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-content-muted">
-              Prestation réalisée à la demande : aucun stock à gérer.
+              {tr('ui.CatalogForms.prestationRealiseeALaDemande')}
             </p>
           )}
         </div>
@@ -1042,7 +1043,7 @@ export function GenericProductFormModal({
         {/* Aperçu : la carte telle qu'elle sortira au catalogue */}
         <div className="lg:sticky lg:top-0 lg:self-start">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-            Aperçu au catalogue
+            {tr('ui.CatalogForms.apercuAuCatalogue')}
           </p>
           <GenericProductPreview
             photoUrl={base.photoUrl}
@@ -1058,7 +1059,7 @@ export function GenericProductFormModal({
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       <div className="mt-4 flex justify-end gap-2 border-t pt-4">
         <Button variant="ghost" onClick={onClose}>
-          Annuler
+          {tr('ui.CatalogForms.annuler')}
         </Button>
         <Button
           disabled={!canSave}
@@ -1070,7 +1071,7 @@ export function GenericProductFormModal({
             })
           }
         >
-          <Package className="h-4 w-4" /> {product ? 'Enregistrer' : 'Ajouter au catalogue'}
+          <Package className="h-4 w-4" /> {product ? tr('ui.CatalogForms.enregistrer') : tr('ui.CatalogForms.ajouterAuCatalogue')}
         </Button>
       </div>
     </Modal>

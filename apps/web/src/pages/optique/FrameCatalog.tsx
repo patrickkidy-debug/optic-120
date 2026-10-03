@@ -20,6 +20,7 @@ import {
 import type { Product, StockRow } from '../../features/optique/api';
 import { formatCurrency } from '../../lib/format';
 import { Badge, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /** Attributs monture d'un produit, typés et sûrs même si le JSON est vide. */
 export function frameAttrs(p: Product): FrameAttributes {
@@ -29,10 +30,10 @@ export function frameAttrs(p: Product): FrameAttributes {
 /** État de stock affiché sur la carte. */
 function stockState(row: StockRow | undefined) {
   const qty = row?.quantity ?? 0;
-  if (row?.unlimited) return { label: 'Disponible', tone: 'success' as const, qty: null };
-  if (qty <= 0) return { label: 'Rupture', tone: 'danger' as const, qty };
-  if (qty <= (row?.minAlert ?? 0)) return { label: 'Stock faible', tone: 'warning' as const, qty };
-  return { label: 'Disponible', tone: 'success' as const, qty };
+  if (row?.unlimited) return { label: tr('ui.FrameCatalog.disponible'), tone: 'success' as const, qty: null };
+  if (qty <= 0) return { label: tr('ui.FrameCatalog.rupture'), tone: 'danger' as const, qty };
+  if (qty <= (row?.minAlert ?? 0)) return { label: tr('ui.FrameCatalog.stockFaible'), tone: 'warning' as const, qty };
+  return { label: tr('ui.FrameCatalog.disponible'), tone: 'success' as const, qty };
 }
 
 export interface FrameActions {
@@ -82,7 +83,7 @@ function FrameCard({
         type="button"
         onClick={() => actions.onView(p)}
         className="relative aspect-[4/3] w-full overflow-hidden bg-surface-2"
-        title="Voir la fiche"
+        title={tr('ui.FrameCatalog.voirLaFiche')}
       >
         <FrameThumb p={p} className="h-full w-full transition duration-300 group-hover:scale-105" />
         <span className="absolute left-2 top-2">
@@ -126,26 +127,26 @@ function FrameCard({
           </span>
           {/* Actions : discrètes au repos, révélées au survol */}
           <div className="flex gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-            <button onClick={() => actions.onView(p)} title="Voir" className="btn-ghost h-7 w-7 rounded-lg p-0">
+            <button onClick={() => actions.onView(p)} title={tr('ui.FrameCatalog.voir')} className="btn-ghost h-7 w-7 rounded-lg p-0">
               <Eye className="h-3.5 w-3.5" />
             </button>
             {canUpdate && (
-              <button onClick={() => actions.onEdit(p)} title="Modifier" className="btn-ghost h-7 w-7 rounded-lg p-0">
+              <button onClick={() => actions.onEdit(p)} title={tr('ui.FrameCatalog.modifier')} className="btn-ghost h-7 w-7 rounded-lg p-0">
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             )}
             {canUpdate && (
-              <button onClick={() => actions.onDuplicate(p)} title="Dupliquer" className="btn-ghost h-7 w-7 rounded-lg p-0">
+              <button onClick={() => actions.onDuplicate(p)} title={tr('ui.FrameCatalog.dupliquer')} className="btn-ghost h-7 w-7 rounded-lg p-0">
                 <Copy className="h-3.5 w-3.5" />
               </button>
             )}
             {canSell && (
-              <button onClick={() => actions.onSell(p)} title="Vendre" className="btn-ghost h-7 w-7 rounded-lg p-0 text-primary">
+              <button onClick={() => actions.onSell(p)} title={tr('ui.FrameCatalog.vendre')} className="btn-ghost h-7 w-7 rounded-lg p-0 text-primary">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </button>
             )}
             {canDelete && actions.onDelete && (
-              <button onClick={() => actions.onDelete!(p)} title="Supprimer" className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
+              <button onClick={() => actions.onDelete!(p)} title={tr('ui.FrameCatalog.supprimer')} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
@@ -229,7 +230,7 @@ export function FrameCatalog({
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
             <input
               className="input pl-9"
-              placeholder="Rechercher une monture (marque, modèle, référence, couleur)…"
+              placeholder={tr('ui.FrameCatalog.rechercherUneMontureMarqueModele')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -237,7 +238,7 @@ export function FrameCatalog({
           <div className="flex rounded-xl border p-0.5">
             <button
               onClick={() => setView('grid')}
-              title="Vue grille"
+              title={tr('ui.FrameCatalog.vueGrille')}
               className={`rounded-lg px-2.5 py-1.5 transition ${
                 view === 'grid' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
               }`}
@@ -246,7 +247,7 @@ export function FrameCatalog({
             </button>
             <button
               onClick={() => setView('list')}
-              title="Vue liste"
+              title={tr('ui.FrameCatalog.vueListe')}
               className={`rounded-lg px-2.5 py-1.5 transition ${
                 view === 'list' ? 'bg-primary text-white' : 'text-content-muted hover:text-content'
               }`}
@@ -258,26 +259,26 @@ export function FrameCatalog({
 
         <div className="flex flex-wrap items-center gap-2">
           <select className="input h-9 w-auto py-1" value={brand} onChange={(e) => setBrand(e.target.value)}>
-            <option value="">Toutes marques</option>
+            <option value="">{tr('ui.FrameCatalog.toutesMarques')}</option>
             {brands.map((b) => (
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
           <select className="input h-9 w-auto py-1" value={gender} onChange={(e) => setGender(e.target.value)}>
-            <option value="">Tous genres</option>
+            <option value="">{tr('ui.FrameCatalog.tousGenres')}</option>
             {FRAME_GENDERS.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
           <select className="input h-9 w-auto py-1" value={shape} onChange={(e) => setShape(e.target.value)}>
-            <option value="">Toutes formes</option>
+            <option value="">{tr('ui.FrameCatalog.toutesFormes')}</option>
             {FRAME_SHAPES.map((f) => (
               <option key={f} value={f}>{f}</option>
             ))}
           </select>
           {sizes.length > 0 && (
             <select className="input h-9 w-auto py-1" value={size} onChange={(e) => setSize(e.target.value)}>
-              <option value="">Toutes tailles</option>
+              <option value="">{tr('ui.FrameCatalog.toutesTailles')}</option>
               {sizes.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -287,7 +288,7 @@ export function FrameCatalog({
             type="number"
             min={0}
             className="input h-9 w-32 py-1"
-            placeholder="Prix max"
+            placeholder={tr('ui.FrameCatalog.prixMax')}
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
           />
@@ -297,7 +298,7 @@ export function FrameCatalog({
               stockOnly ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
             }`}
           >
-            En stock
+            {tr('ui.FrameCatalog.enStock')}
           </button>
 
           {/* Pastilles de couleur : filtre visuel, plus rapide qu'une liste */}
@@ -328,7 +329,7 @@ export function FrameCatalog({
               }}
               className="btn-ghost h-8 rounded-lg px-2 text-xs"
             >
-              <X className="h-3.5 w-3.5" /> Effacer
+              <X className="h-3.5 w-3.5" /> {tr('ui.FrameCatalog.effacer')}
             </button>
           )}
 
@@ -341,11 +342,11 @@ export function FrameCatalog({
       {filtered.length === 0 ? (
         <EmptyState
           icon={Glasses}
-          title="Aucune monture"
+          title={tr('ui.FrameCatalog.aucuneMonture')}
           hint={
             products.length === 0
-              ? 'Ajoutez votre première monture au catalogue.'
-              : 'Aucune monture ne correspond à ces filtres.'
+              ? tr('ui.FrameCatalog.ajoutezVotrePremiereMontureAu')
+              : tr('ui.FrameCatalog.aucuneMontureNeCorrespondA')
           }
         />
       ) : view === 'grid' ? (
@@ -367,12 +368,12 @@ export function FrameCatalog({
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                <th className="table-cell font-semibold">Monture</th>
-                <th className="table-cell font-semibold">Genre</th>
-                <th className="table-cell font-semibold">Forme</th>
-                <th className="table-cell font-semibold">Couleur</th>
-                <th className="table-cell font-semibold">Taille</th>
-                <th className="table-cell text-right font-semibold">Prix</th>
+                <th className="table-cell font-semibold">{tr('ui.FrameCatalog.monture')}</th>
+                <th className="table-cell font-semibold">{tr('ui.FrameCatalog.genre')}</th>
+                <th className="table-cell font-semibold">{tr('ui.FrameCatalog.forme')}</th>
+                <th className="table-cell font-semibold">{tr('ui.FrameCatalog.couleur')}</th>
+                <th className="table-cell font-semibold">{tr('ui.FrameCatalog.taille')}</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.FrameCatalog.prix')}</th>
                 <th className="table-cell text-center font-semibold">Stock</th>
                 <th className="table-cell text-right font-semibold">Actions</th>
               </tr>
@@ -410,26 +411,26 @@ export function FrameCatalog({
                     </td>
                     <td className="table-cell">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => actions.onView(p)} title="Voir" className="btn-ghost h-8 w-8 rounded-lg p-0">
+                        <button onClick={() => actions.onView(p)} title={tr('ui.FrameCatalog.voir')} className="btn-ghost h-8 w-8 rounded-lg p-0">
                           <Eye className="h-4 w-4" />
                         </button>
                         {canUpdate && (
-                          <button onClick={() => actions.onEdit(p)} title="Modifier" className="btn-ghost h-8 w-8 rounded-lg p-0">
+                          <button onClick={() => actions.onEdit(p)} title={tr('ui.FrameCatalog.modifier')} className="btn-ghost h-8 w-8 rounded-lg p-0">
                             <Pencil className="h-4 w-4" />
                           </button>
                         )}
                         {canUpdate && (
-                          <button onClick={() => actions.onDuplicate(p)} title="Dupliquer" className="btn-ghost h-8 w-8 rounded-lg p-0">
+                          <button onClick={() => actions.onDuplicate(p)} title={tr('ui.FrameCatalog.dupliquer')} className="btn-ghost h-8 w-8 rounded-lg p-0">
                             <Copy className="h-4 w-4" />
                           </button>
                         )}
                         {canSell && (
-                          <button onClick={() => actions.onSell(p)} title="Vendre" className="btn-ghost h-8 w-8 rounded-lg p-0 text-primary">
+                          <button onClick={() => actions.onSell(p)} title={tr('ui.FrameCatalog.vendre')} className="btn-ghost h-8 w-8 rounded-lg p-0 text-primary">
                             <ShoppingCart className="h-4 w-4" />
                           </button>
                         )}
                         {canDelete && actions.onDelete && (
-                          <button onClick={() => actions.onDelete!(p)} title="Supprimer" className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger">
+                          <button onClick={() => actions.onDelete!(p)} title={tr('ui.FrameCatalog.supprimer')} className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -475,7 +476,7 @@ export function FrameDetail({ p, stock }: { p: Product; stock?: StockRow }) {
                   i === active ? 'border-primary ring-2 ring-primary/30' : 'hover:border-primary'
                 }`}
               >
-                <img src={src} alt={`Vue ${i + 1}`} className="h-full w-full object-cover" />
+                <img src={src} alt={tr('ui.FrameCatalog.vueV', { v: i + 1 })} className="h-full w-full object-cover" />
               </button>
             ))}
           </div>
@@ -492,20 +493,20 @@ export function FrameDetail({ p, stock }: { p: Product; stock?: StockRow }) {
         <div className="mt-2">
           <Badge tone={st.tone}>
             {st.label}
-            {st.qty !== null && st.qty > 0 ? ` · ${st.qty} en stock` : ''}
+            {st.qty !== null && st.qty > 0 ? tr('ui.FrameCatalog.qtyEnStock', { qty: st.qty }) : ''}
           </Badge>
         </div>
 
         <dl className="mt-4 space-y-1.5 text-sm">
           {[
-            ['Genre', a.gender],
-            ['Forme', a.shape],
-            ['Couleur', a.color],
-            ['Matière', a.material],
-            ['Taille', a.size],
+            [tr('ui.FrameCatalog.genre'), a.gender],
+            [tr('ui.FrameCatalog.forme'), a.shape],
+            [tr('ui.FrameCatalog.couleur'), a.color],
+            [tr('ui.FrameCatalog.matiere'), a.material],
+            [tr('ui.FrameCatalog.taille'), a.size],
             ['EAN', a.ean],
-            ['Emplacement', a.location],
-            ['Fournisseur', a.supplier],
+            [tr('ui.FrameCatalog.emplacement'), a.location],
+            [tr('ui.FrameCatalog.fournisseur'), a.supplier],
           ]
             .filter(([, v]) => Boolean(v))
             .map(([k, v]) => (
@@ -547,7 +548,7 @@ export function FramePreview({
     <div className="card w-full max-w-[16rem] overflow-hidden">
       <div className="aspect-[4/3] w-full bg-surface-2">
         {photoUrl ? (
-          <img src={photoUrl} alt="Aperçu" className="h-full w-full object-contain" />
+          <img src={photoUrl} alt={tr('ui.FrameCatalog.apercu')} className="h-full w-full object-contain" />
         ) : (
           <div className="grid h-full place-items-center">
             <Glasses className="h-8 w-8 text-content-faint" />
@@ -558,13 +559,13 @@ export function FramePreview({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
-              {brand || 'Marque'}
+              {brand || tr('ui.FrameCatalog.marque')}
             </p>
-            <p className="truncate text-sm font-semibold text-content">{model || 'Modèle'}</p>
+            <p className="truncate text-sm font-semibold text-content">{model || tr('ui.FrameCatalog.modele')}</p>
           </div>
           {swatch && <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full border" style={{ background: swatch.hex }} />}
         </div>
-        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || 'Référence auto'}</p>
+        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || tr('ui.FrameCatalog.referenceAuto')}</p>
         <div className="mt-2 flex flex-wrap gap-1">
           {[gender, shape, size].filter(Boolean).map((t) => (
             <span key={t} className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">

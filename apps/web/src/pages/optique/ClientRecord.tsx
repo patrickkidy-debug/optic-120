@@ -32,15 +32,16 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore } from '../../store/pos';
 import { formatDate, formatCurrency } from '../../lib/format';
 import { Modal, Button, Badge, PageLoader } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
-const SALE_TYPE_LABEL: Record<string, string> = { SALE: 'Vente', QUOTE: 'Devis', RETURN: 'Retour' };
+const SALE_TYPE_LABEL: Record<string, string> = { get SALE() { return tr('ui.ClientRecord.vente'); }, get QUOTE() { return tr('ui.ClientRecord.devis'); }, get RETURN() { return tr('ui.ClientRecord.retour'); } };
 
 const REPAIR_STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
-  RECEIVED: { label: 'Reçu', tone: 'info' },
-  IN_PROGRESS: { label: 'En cours', tone: 'warning' },
-  READY: { label: 'Prêt', tone: 'success' },
-  DELIVERED: { label: 'Livré', tone: 'success' },
-  CANCELLED: { label: 'Annulé', tone: 'danger' },
+  RECEIVED: { get label() { return tr('ui.ClientRecord.recu'); }, tone: 'info' },
+  IN_PROGRESS: { get label() { return tr('ui.ClientRecord.enCours'); }, tone: 'warning' },
+  READY: { get label() { return tr('ui.ClientRecord.pret'); }, tone: 'success' },
+  DELIVERED: { get label() { return tr('ui.ClientRecord.livre'); }, tone: 'success' },
+  CANCELLED: { get label() { return tr('ui.ClientRecord.annule'); }, tone: 'danger' },
 };
 
 /** Ton de badge pour une commande de verres, cohérent avec le Kanban. */
@@ -89,7 +90,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
   const olderRx = customer?.prescriptions.slice(2) ?? [];
 
   return (
-    <Modal open onClose={onClose} title="Fiche client" size="xl">
+    <Modal open onClose={onClose} title={tr('ui.ClientRecord.ficheClient')} size="xl">
       {isLoading || !customer ? (
         <PageLoader />
       ) : (
@@ -114,21 +115,21 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
                 ) : null;
               })()}
               <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-0.5 text-xs font-bold text-white">
-                <Star className="h-3.5 w-3.5" /> {customer.loyaltyPoints ?? 0} points de fidélité
+                <Star className="h-3.5 w-3.5" /> {customer.loyaltyPoints ?? 0} {tr('ui.ClientRecord.pointsDeFidelite')}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => printClientDossier(customer, company)}>
-                <Download className="h-4 w-4" /> Dossier PDF
+                <Download className="h-4 w-4" /> {tr('ui.ClientRecord.dossierPdf')}
               </Button>
               {canQuote && (
                 <Button variant="outline" onClick={startQuote}>
-                  <FileText className="h-4 w-4" /> Créer un devis
+                  <FileText className="h-4 w-4" /> {tr('ui.ClientRecord.creerUnDevis')}
                 </Button>
               )}
               {canCreate && !adding && (
                 <Button onClick={() => setAdding(true)}>
-                  <Plus className="h-4 w-4" /> Ordonnance
+                  <Plus className="h-4 w-4" /> {tr('ui.ClientRecord.ordonnance')}
                 </Button>
               )}
             </div>
@@ -136,7 +137,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
 
           {customer.notes && (
             <div className="rounded-xl border border-line bg-surface-2/60 p-3 text-sm text-content-muted">
-              <span className="font-semibold text-content">Notes — </span>
+              <span className="font-semibold text-content">{tr('ui.ClientRecord.notes')} </span>
               {customer.notes}
             </div>
           )}
@@ -168,10 +169,10 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
           <div>
             <div className="mb-2 flex items-center gap-2">
               <Glasses className="h-4 w-4 text-primary" />
-              <h4 className="font-semibold text-content">Ordonnances ({customer.prescriptions.length})</h4>
+              <h4 className="font-semibold text-content">{tr('ui.ClientRecord.ordonnances')}{customer.prescriptions.length})</h4>
             </div>
             {customer.prescriptions.length === 0 ? (
-              <p className="text-sm text-content-muted">Aucune ordonnance enregistrée.</p>
+              <p className="text-sm text-content-muted">{tr('ui.ClientRecord.aucuneOrdonnanceEnregistree')}</p>
             ) : (
               <div className="space-y-3">
                 {recentRx.map((p) => (
@@ -192,7 +193,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                     >
                       {showAllRx ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                      {showAllRx ? 'Masquer' : `Voir les ${olderRx.length} ordonnance(s) précédente(s)`}
+                      {showAllRx ? tr('ui.ClientRecord.masquer') : tr('ui.ClientRecord.voirLesLengthOrdonnanceS', { length: olderRx.length })}
                     </button>
                     {showAllRx && (
                       <div className="space-y-3">
@@ -215,7 +216,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
           </div>
 
           {customer.sales.length > 0 && (
-            <RecordSection icon={ReceiptText} title={`Achats & devis (${customer.sales.length})`}>
+            <RecordSection icon={ReceiptText} title={tr('ui.ClientRecord.achatsDevisLength', { length: customer.sales.length })}>
               <div className="space-y-2">
                 {customer.sales.map((s) => (
                   <SaleRow key={s.id} sale={s} />
@@ -225,7 +226,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
           )}
 
           {customer.lensOrders.length > 0 && (
-            <RecordSection icon={Glasses} title={`Commandes de verres (${customer.lensOrders.length})`}>
+            <RecordSection icon={Glasses} title={tr('ui.ClientRecord.commandesDeVerresLength', { length: customer.lensOrders.length })}>
               <div className="space-y-2">
                 {customer.lensOrders.map((o) => (
                   <LensOrderRow key={o.id} order={o} />
@@ -235,7 +236,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
           )}
 
           {customer.repairs.length > 0 && (
-            <RecordSection icon={Wrench} title={`SAV & réparations (${customer.repairs.length})`}>
+            <RecordSection icon={Wrench} title={tr('ui.ClientRecord.savReparationsLength', { length: customer.repairs.length })}>
               <div className="space-y-2">
                 {customer.repairs.map((r) => (
                   <RepairRow key={r.id} repair={r} />
@@ -246,7 +247,7 @@ export function ClientRecord({ customerId, onClose }: { customerId: string; onCl
 
           {customer.sales.length === 0 && customer.lensOrders.length === 0 && customer.repairs.length === 0 && (
             <div className="flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm text-content-muted">
-              <History className="h-4 w-4 shrink-0" /> Aucun achat, commande de verres ou réparation enregistré pour ce client.
+              <History className="h-4 w-4 shrink-0" /> {tr('ui.ClientRecord.aucunAchatCommandeDeVerres')}
             </div>
           )}
         </div>
@@ -319,8 +320,8 @@ function LensOrderRow({ order }: { order: CustomerLensOrder }) {
         {order.odLens || order.ogLens ? [order.odLens && `OD ${order.odLens}`, order.ogLens && `OG ${order.ogLens}`].filter(Boolean).join(' · ') : order.description}
       </p>
       <p className="mt-0.5 text-xs text-content-faint">
-        Commandé le {formatDate(order.createdAt)}
-        {order.deliveredAt ? ` · livré le ${formatDate(order.deliveredAt)}` : order.expectedAt ? ` · prévu le ${formatDate(order.expectedAt)}` : ''}
+        {tr('ui.ClientRecord.commandeLe')} {formatDate(order.createdAt)}
+        {order.deliveredAt ? tr('ui.ClientRecord.livreLeDeliveredat', { deliveredAt: formatDate(order.deliveredAt) }) : order.expectedAt ? tr('ui.ClientRecord.prevuLeExpectedat', { expectedAt: formatDate(order.expectedAt) }) : ''}
       </p>
     </div>
   );
@@ -338,7 +339,7 @@ function RepairRow({ repair }: { repair: CustomerRepair }) {
         {repair.cost != null && <span className="shrink-0 font-semibold text-content">{formatCurrency(Number(repair.cost))}</span>}
       </div>
       <p className="mt-1 truncate text-xs text-content-muted">{repair.description}</p>
-      <p className="mt-0.5 text-xs text-content-faint">Reçu le {formatDate(repair.createdAt)}</p>
+      <p className="mt-0.5 text-xs text-content-faint">{tr('ui.ClientRecord.recuLe')} {formatDate(repair.createdAt)}</p>
     </div>
   );
 }
@@ -367,10 +368,10 @@ function PrescriptionCard({
               commander des verres — on l'annonce clairement. */}
           {rx.expiresAt &&
             (new Date(rx.expiresAt) < new Date() ? (
-              <Badge tone="danger">Expirée le {formatDate(rx.expiresAt)}</Badge>
+              <Badge tone="danger">{tr('ui.ClientRecord.expireeLe')} {formatDate(rx.expiresAt)}</Badge>
             ) : (
               <span className="text-xs text-content-faint">
-                Valide jusqu'au {formatDate(rx.expiresAt)}
+                {tr('ui.ClientRecord.valideJusquAu')} {formatDate(rx.expiresAt)}
               </span>
             ))}
         </div>
@@ -380,7 +381,7 @@ function PrescriptionCard({
             <button
               onClick={onEdit}
               className="btn-ghost h-7 w-7 rounded-lg p-0"
-              title="Modifier l'ordonnance"
+              title={tr('ui.ClientRecord.modifierLOrdonnance')}
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
@@ -388,7 +389,7 @@ function PrescriptionCard({
           <button
             onClick={() => printPrescription(rx, patient, company)}
             className="btn-ghost h-7 w-7 rounded-lg p-0"
-            title="Imprimer l'ordonnance"
+            title={tr('ui.ClientRecord.imprimerLOrdonnance')}
           >
             <Printer className="h-3.5 w-3.5" />
           </button>
@@ -400,21 +401,21 @@ function PrescriptionCard({
           <div
             className="relative h-14 w-20 cursor-pointer overflow-hidden rounded-md border bg-surface-2 transition hover:opacity-90"
             onClick={() => setZoom(true)}
-            title="Cliquez pour agrandir le scan"
+            title={tr('ui.ClientRecord.cliquezPourAgrandirLeScan')}
           >
-            <img src={rx.photoUrl} alt="Scan ordonnance papier" className="h-full w-full object-cover" />
+            <img src={rx.photoUrl} alt={tr('ui.ClientRecord.scanOrdonnancePapier')} className="h-full w-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition hover:opacity-100">
               <Eye className="h-4 w-4 text-white" />
             </div>
           </div>
           <div className="min-w-0 flex-1 text-xs">
-            <p className="font-semibold text-content">Scan de l'ordonnance papier</p>
+            <p className="font-semibold text-content">{tr('ui.ClientRecord.scanDeLOrdonnancePapier')}</p>
             <button
               type="button"
               onClick={() => setZoom(true)}
               className="mt-0.5 inline-flex items-center gap-1 font-medium text-primary underline hover:text-primary-hover"
             >
-              <Eye className="h-3 w-3" /> Voir le document original
+              <Eye className="h-3 w-3" /> {tr('ui.ClientRecord.voirLeDocumentOriginal')}
             </button>
           </div>
         </div>
@@ -424,10 +425,10 @@ function PrescriptionCard({
         <thead>
           <tr className="text-xs uppercase text-content-faint">
             <th className="py-1 text-left font-semibold">Œil</th>
-            <th className="font-semibold">Sphère</th>
-            <th className="font-semibold">Cylindre</th>
-            <th className="font-semibold">Axe</th>
-            <th className="font-semibold">Add.</th>
+            <th className="font-semibold">{tr('ui.ClientRecord.sphere')}</th>
+            <th className="font-semibold">{tr('ui.ClientRecord.cylindre')}</th>
+            <th className="font-semibold">{tr('ui.ClientRecord.axe')}</th>
+            <th className="font-semibold">{tr('ui.ClientRecord.add')}</th>
           </tr>
         </thead>
         <tbody>
@@ -448,14 +449,14 @@ function PrescriptionCard({
         </tbody>
       </table>
       <div className="mt-2 flex flex-wrap gap-x-4 text-xs text-content-faint">
-        {rx.pupillaryDistance && <span>Écart pupillaire : {rx.pupillaryDistance} mm</span>}
-        {rx.prescriberName && <span>Prescripteur : {rx.prescriberName}</span>}
+        {rx.pupillaryDistance && <span>{tr('ui.ClientRecord.ecartPupillaire')} {rx.pupillaryDistance} mm</span>}
+        {rx.prescriberName && <span>{tr('ui.ClientRecord.prescripteur')} {rx.prescriberName}</span>}
       </div>
       {rx.notes && <p className="mt-1 text-xs text-content-muted">{rx.notes}</p>}
 
       {zoom && rx.photoUrl && (
-        <Modal open onClose={() => setZoom(false)} title="Scan de l'ordonnance papier" size="lg">
-          <img src={rx.photoUrl} alt="Ordonnance papier agrandie" className="max-h-[75vh] w-full object-contain" />
+        <Modal open onClose={() => setZoom(false)} title={tr('ui.ClientRecord.scanDeLOrdonnancePapier')} size="lg">
+          <img src={rx.photoUrl} alt={tr('ui.ClientRecord.ordonnancePapierAgrandie')} className="max-h-[75vh] w-full object-contain" />
         </Modal>
       )}
     </div>

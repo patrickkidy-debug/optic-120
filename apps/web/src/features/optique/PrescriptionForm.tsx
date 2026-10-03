@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { fileToResizedDataUrl, uploadImageToSupabase } from '../../lib/image';
 import { Button, Field, Modal } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /**
  * Saisie d'une ordonnance optique, rattachée à un client. Partagée par la
@@ -82,7 +83,7 @@ export function PrescriptionForm({
       const url = await uploadImageToSupabase(file, 'ordonnances', 1024, 600 * 1024);
       setPhotoUrl(url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur lors du traitement de la photo');
+      setError(e instanceof Error ? e.message : tr('ui.PrescriptionForm.erreurLorsDuTraitementDe'));
     } finally {
       setUploadBusy(false);
     }
@@ -97,13 +98,13 @@ export function PrescriptionForm({
     >
       <h4 className="flex items-center gap-2 font-semibold text-content">
         <Glasses className="h-4 w-4 text-primary" />{' '}
-        {title ?? (isEdit ? "Modifier l'ordonnance optique" : 'Nouvelle ordonnance optique')}
+        {title ?? (isEdit ? tr('ui.PrescriptionForm.modifierLOrdonnanceOptique') : tr('ui.PrescriptionForm.nouvelleOrdonnanceOptique'))}
       </h4>
 
       {/* Upload Scan / Photo de l'ordonnance papier */}
       <div className="rounded-xl border border-dashed border-primary/40 bg-surface/80 p-3">
         <p className="mb-2 text-xs font-semibold text-content">
-          Scan / Photo de l'ordonnance papier (facultatif)
+          {tr('ui.PrescriptionForm.scanPhotoDeLOrdonnance')}
         </p>
 
         <input
@@ -121,13 +122,13 @@ export function PrescriptionForm({
         {photoUrl ? (
           <div className="flex items-center gap-3">
             <div className="group relative h-20 w-28 overflow-hidden rounded-lg border bg-surface-2">
-              <img src={photoUrl} alt="Ordonnance papier" className="h-full w-full object-cover" />
+              <img src={photoUrl} alt={tr('ui.PrescriptionForm.ordonnancePapier')} className="h-full w-full object-cover" />
               <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition group-hover:opacity-100">
                 <button
                   type="button"
                   onClick={() => setZoomPhoto(true)}
                   className="rounded bg-white/90 p-1 text-slate-900"
-                  title="Agrandir"
+                  title={tr('ui.PrescriptionForm.agrandir')}
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </button>
@@ -135,7 +136,7 @@ export function PrescriptionForm({
                   type="button"
                   onClick={() => setPhotoUrl('')}
                   className="rounded bg-white/90 p-1 text-danger"
-                  title="Supprimer"
+                  title={tr('ui.PrescriptionForm.supprimer')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -143,17 +144,17 @@ export function PrescriptionForm({
             </div>
             <div className="space-y-1">
               <span className="badge bg-success/10 text-xs font-medium text-success">
-                Photo d'ordonnance jointe
+                {tr('ui.PrescriptionForm.photoDOrdonnanceJointe')}
               </span>
               <p className="text-xs text-content-faint">
-                L'image est enregistrée avec les données de réfraction.
+                {tr('ui.PrescriptionForm.lImageEstEnregistreeAvec')}
               </p>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="text-xs text-primary underline hover:text-primary-hover"
               >
-                Remplacer l'image
+                {tr('ui.PrescriptionForm.remplacerLImage')}
               </button>
             </div>
           </div>
@@ -171,8 +172,8 @@ export function PrescriptionForm({
             )}
             <span>
               {uploadBusy
-                ? 'Traitement de la photo...'
-                : 'Ajouter une photo ou scan de l\'ordonnance papier'}
+                ? tr('ui.PrescriptionForm.traitementDeLaPhoto')
+                : tr('ui.PrescriptionForm.ajouterUnePhotoOuScan')}
             </span>
           </button>
         )}
@@ -183,10 +184,10 @@ export function PrescriptionForm({
           <thead>
             <tr className="text-xs uppercase text-content-faint">
               <th className="px-1 pb-1 text-left font-semibold">Œil</th>
-              <th className="px-1 pb-1 font-semibold">Sphère</th>
-              <th className="px-1 pb-1 font-semibold">Cylindre</th>
-              <th className="px-1 pb-1 font-semibold">Axe</th>
-              <th className="px-1 pb-1 font-semibold">Addition</th>
+              <th className="px-1 pb-1 font-semibold">{tr('ui.PrescriptionForm.sphere')}</th>
+              <th className="px-1 pb-1 font-semibold">{tr('ui.PrescriptionForm.cylindre')}</th>
+              <th className="px-1 pb-1 font-semibold">{tr('ui.PrescriptionForm.axe')}</th>
+              <th className="px-1 pb-1 font-semibold">{tr('ui.PrescriptionForm.addition')}</th>
             </tr>
           </thead>
           <tbody>
@@ -209,10 +210,10 @@ export function PrescriptionForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Field label="Écart pupillaire (mm)"><input className="input" placeholder="62" {...register('pupillaryDistance')} /></Field>
-        <Field label="Type de verres">
+        <Field label={tr('ui.PrescriptionForm.ecartPupillaireMm')}><input className="input" placeholder="62" {...register('pupillaryDistance')} /></Field>
+        <Field label={tr('ui.PrescriptionForm.typeDeVerres')}>
           {lensOther ? (
-            <input className="input" placeholder="Préciser le type" autoFocus {...register('lensType')} />
+            <input className="input" placeholder={tr('ui.PrescriptionForm.preciserLeType')} autoFocus {...register('lensType')} />
           ) : (
             <select
               className="input"
@@ -224,29 +225,29 @@ export function PrescriptionForm({
                 } else setValue('lensType', e.target.value);
               }}
             >
-              <option value="">— Choisir —</option>
+              <option value="">{tr('ui.PrescriptionForm.choisir')}</option>
               {lensBaseOptions(pricing).map((o) => (
                 <option key={o.key} value={o.label}>{o.label}</option>
               ))}
-              <option value="__other__">Autre…</option>
+              <option value="__other__">{tr('ui.PrescriptionForm.autre')}</option>
             </select>
           )}
         </Field>
-        <Field label="Prescripteur"><input className="input" {...register('prescriberName')} /></Field>
+        <Field label={tr('ui.PrescriptionForm.prescripteur')}><input className="input" {...register('prescriberName')} /></Field>
       </div>
 
       {/* Mesures avancées de montage */}
       <details className="rounded-xl border border-line bg-surface-2/40 px-3 py-2">
         <summary className="cursor-pointer select-none text-sm font-semibold text-content-muted">
-          Mesures avancées de montage (optionnel)
+          {tr('ui.PrescriptionForm.mesuresAvanceesDeMontageOptionnel')}
         </summary>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Field label="Hauteur OD (mm)"><input className="input" placeholder="18" {...register('odHeight')} /></Field>
-          <Field label="Hauteur OG (mm)"><input className="input" placeholder="18" {...register('ogHeight')} /></Field>
-          <Field label="EP près OD (mm)"><input className="input" placeholder="29" {...register('odNearPd')} /></Field>
-          <Field label="EP près OG (mm)"><input className="input" placeholder="29" {...register('ogNearPd')} /></Field>
-          <Field label="Vertex (mm)"><input className="input" placeholder="12" {...register('vertex')} /></Field>
-          <Field label="Angle pantoscopique (°)"><input className="input" placeholder="8" {...register('pantoTilt')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.hauteurOdMm')}><input className="input" placeholder="18" {...register('odHeight')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.hauteurOgMm')}><input className="input" placeholder="18" {...register('ogHeight')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.epPresOdMm')}><input className="input" placeholder="29" {...register('odNearPd')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.epPresOgMm')}><input className="input" placeholder="29" {...register('ogNearPd')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.vertexMm')}><input className="input" placeholder="12" {...register('vertex')} /></Field>
+          <Field label={tr('ui.PrescriptionForm.anglePantoscopique')}><input className="input" placeholder="8" {...register('pantoTilt')} /></Field>
         </div>
       </details>
 
@@ -254,15 +255,15 @@ export function PrescriptionForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
+        <Button type="button" variant="ghost" onClick={onClose}>{tr('ui.PrescriptionForm.annuler')}</Button>
         <Button type="submit" loading={mut.isPending}>
-          {isEdit ? 'Enregistrer les modifications' : "Enregistrer l'ordonnance"}
+          {isEdit ? tr('ui.PrescriptionForm.enregistrerLesModifications') : tr('ui.PrescriptionForm.enregistrerLOrdonnance')}
         </Button>
       </div>
 
       {zoomPhoto && photoUrl && (
-        <Modal open onClose={() => setZoomPhoto(false)} title="Ordonnance papier" size="lg">
-          <img src={photoUrl} alt="Ordonnance papier agrandie" className="max-h-[75vh] w-full object-contain" />
+        <Modal open onClose={() => setZoomPhoto(false)} title={tr('ui.PrescriptionForm.ordonnancePapier')} size="lg">
+          <img src={photoUrl} alt={tr('ui.PrescriptionForm.ordonnancePapierAgrandie')} className="max-h-[75vh] w-full object-contain" />
         </Modal>
       )}
     </form>

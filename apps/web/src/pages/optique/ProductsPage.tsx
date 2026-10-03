@@ -43,15 +43,16 @@ import { LensCatalog } from './LensCatalog';
 import { FrameFormModal, LensFormModal, GenericProductFormModal } from './CatalogForms';
 import { usePosStore } from '../../store/pos';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { tr } from '../../lib/tr';
 
 const CATEGORIES = [
-  { value: 'MONTURE', label: 'Montures' },
-  { value: 'VERRE', label: 'Verres' },
-  { value: 'LENTILLE', label: 'Lentilles' },
-  { value: 'ACCESSOIRE', label: 'Accessoires' },
-  { value: 'ENTRETIEN', label: "Produits d'entretien" },
+  { value: 'MONTURE', get label() { return tr('ui.ProductsPage.montures'); } },
+  { value: 'VERRE', get label() { return tr('ui.ProductsPage.verres'); } },
+  { value: 'LENTILLE', get label() { return tr('ui.ProductsPage.lentilles'); } },
+  { value: 'ACCESSOIRE', get label() { return tr('ui.ProductsPage.accessoires'); } },
+  { value: 'ENTRETIEN', get label() { return tr('ui.ProductsPage.produitsDEntretien'); } },
   { value: 'SERVICE', label: 'Services' },
-  { value: 'AUTRE', label: 'Autres' },
+  { value: 'AUTRE', get label() { return tr('ui.ProductsPage.autres'); } },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -93,7 +94,7 @@ export function ProductsPage() {
     mutationFn: (to: string) => recategorizeProducts(category, to),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['products'] });
-      alert(`${res.count} produit(s) déplacé(s) vers « ${catLabel(moveTo)} ».`);
+      alert(tr('ui.ProductsPage.countProduitSDeplaceS', { count: res.count, moveTo: catLabel(moveTo) }));
       setCategory(moveTo);
     },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -232,7 +233,7 @@ export function ProductsPage() {
     onSell: sellProduct,
     onDelete: canDelete
       ? (p: Product) => {
-          if (confirm(`Supprimer « ${p.name} » ?`)) removeMut.mutate(p.id);
+          if (confirm(tr('ui.ProductsPage.supprimerName', { name: p.name }))) removeMut.mutate(p.id);
         }
       : undefined,
   };
@@ -246,7 +247,7 @@ export function ProductsPage() {
       // Un produit déjà vendu ne peut pas être effacé : on explique pourquoi.
       if (!res.deleted) {
         alert(
-          `Ce produit figure sur ${res.soldLines} ligne(s) de vente : il ne peut pas être effacé sans casser vos factures. Il a été retiré du catalogue et du stock.`,
+          tr('ui.ProductsPage.ceProduitFigureSurSoldlines', { soldLines: res.soldLines }),
         );
       }
     },
@@ -256,19 +257,19 @@ export function ProductsPage() {
   return (
     <div>
       <PageHeader
-        title="Catalogue produits"
-        subtitle="Montures, verres, lentilles et accessoires"
+        title={tr('ui.ProductsPage.catalogueProduits')}
+        subtitle={tr('ui.ProductsPage.monturesVerresLentillesEtAccessoires')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {(canCreate || canUpdate) && (
               <Button variant="outline" onClick={() => setShowImport(true)}>
-                <FileUp className="h-4 w-4" /> Importer
+                <FileUp className="h-4 w-4" /> {tr('ui.ProductsPage.importer')}
               </Button>
             )}
             <Button variant="outline" onClick={() => exportProductsExcel(buildExportRows(), 'catalogue-produits.xlsx')}>
               <FileSpreadsheet className="h-4 w-4" /> Excel
             </Button>
-            <Button variant="outline" onClick={() => exportProductsPdf(buildExportRows(), 'Catalogue produits')}>
+            <Button variant="outline" onClick={() => exportProductsPdf(buildExportRows(), tr('ui.ProductsPage.catalogueProduits'))}>
               <FileText className="h-4 w-4" /> PDF
             </Button>
             {canCreate && (
@@ -283,12 +284,12 @@ export function ProductsPage() {
               >
                 <Plus className="h-4 w-4" />
                 {category === 'MONTURE'
-                  ? 'Ajouter une monture'
+                  ? tr('ui.ProductsPage.ajouterUneMonture')
                   : category === 'VERRE'
-                    ? 'Ajouter un verre'
+                    ? tr('ui.ProductsPage.ajouterUnVerre')
                     : category
-                      ? `Ajouter — ${catLabel(category)}`
-                      : 'Nouveau produit'}
+                      ? tr('ui.ProductsPage.ajouterCategory', { category: catLabel(category) })
+                      : tr('ui.ProductsPage.nouveauProduit')}
               </Button>
             )}
           </div>
@@ -315,19 +316,19 @@ export function ProductsPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-primary">{c.label}</p>
               <div className="mt-2 flex items-baseline justify-between">
                 <span className="font-display text-2xl font-bold text-content">
-                  {stats.count} <span className="text-xs font-normal text-content-muted">réf(s)</span>
+                  {stats.count} <span className="text-xs font-normal text-content-muted">{tr('ui.ProductsPage.refS')}</span>
                 </span>
                 {c.value !== 'VERRE' && c.value !== 'SERVICE' && (
                   <span className="text-xs font-semibold text-content-muted">
-                    {stats.totalStock} en stock
+                    {stats.totalStock} {tr('ui.ProductsPage.enStock')}
                   </span>
                 )}
               </div>
               <p className="mt-2 text-[10px] text-content-faint">
                 {stats.lastCreated ? (
-                  <>Dernier enreg. : <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
+                  <>{tr('ui.ProductsPage.dernierEnreg')} <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
                 ) : (
-                  'Aucun produit enregistré'
+                  tr('ui.ProductsPage.aucunProduitEnregistre')
                 )}
               </p>
             </div>
@@ -340,7 +341,7 @@ export function ProductsPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input pl-9"
-            placeholder="Rechercher…"
+            placeholder={tr('ui.ProductsPage.rechercher')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -358,7 +359,7 @@ export function ProductsPage() {
             onClick={() => setCategory('')}
             className={`badge px-3 py-1.5 ${category === '' ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
           >
-            Tous
+            {tr('ui.ProductsPage.tous')}
           </button>
           {CATEGORIES.map((c) => (
             <button
@@ -377,10 +378,10 @@ export function ProductsPage() {
       {canUpdate && category && filteredProducts.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
           <span className="text-content">
-            <b>{filteredProducts.length}</b> produit(s) dans <b>{catLabel(category)}</b>
+            <b>{filteredProducts.length}</b> {tr('ui.ProductsPage.produitSDans')} <b>{catLabel(category)}</b>
           </span>
           <span className="text-content-faint">·</span>
-          <span className="text-content-muted">Déplacer tout vers</span>
+          <span className="text-content-muted">{tr('ui.ProductsPage.deplacerToutVers')}</span>
           <select
             className="input h-8 w-auto py-0 text-xs"
             value={moveTo}
@@ -397,12 +398,12 @@ export function ProductsPage() {
             variant="outline"
             loading={recategorizeMut.isPending}
             onClick={() => {
-              if (confirm(`Déplacer les ${filteredProducts.length} produit(s) de « ${catLabel(category)} » vers « ${catLabel(moveTo)} » ?`)) {
+              if (confirm(tr('ui.ProductsPage.deplacerLesLengthProduitS', { length: filteredProducts.length, category: catLabel(category), moveTo: catLabel(moveTo) }))) {
                 recategorizeMut.mutate(moveTo);
               }
             }}
           >
-            Appliquer
+            {tr('ui.ProductsPage.appliquer')}
           </Button>
         </div>
       )}
@@ -413,8 +414,7 @@ export function ProductsPage() {
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 px-3 py-2 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
           <span className="text-content">
-            {data.items.length} produits affichés sur <b>{data.total}</b> — catalogue très volumineux,
-            filtrez par famille ou utilisez la recherche pour affiner.
+            {data.items.length} {tr('ui.ProductsPage.produitsAffichesSur')} <b>{data.total}</b> {tr('ui.ProductsPage.catalogueTresVolumineuxFiltrezPar')}
           </span>
         </div>
       )}
@@ -423,11 +423,11 @@ export function ProductsPage() {
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
           <Search className="h-4 w-4 text-primary" />
           <span className="text-content">
-            <b>{searchSummary.refs}</b> référence(s) trouvée(s)
+            <b>{searchSummary.refs}</b> {tr('ui.ProductsPage.referenceSTrouveeS')}
           </span>
           <span className="text-content-faint">·</span>
           <span className="text-content">
-            <b>{searchSummary.qty}</b> unité(s) en stock pour cette recherche
+            <b>{searchSummary.qty}</b> {tr('ui.ProductsPage.uniteSEnStockPour')}
           </span>
         </div>
       )}
@@ -454,26 +454,26 @@ export function ProductsPage() {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="Aucun produit"
-          hint="Ajoutez votre premier produit au catalogue."
-          action={canCreate && <Button onClick={openCreate}><Plus className="h-4 w-4" /> Nouveau produit</Button>}
+          title={tr('ui.ProductsPage.aucunProduit')}
+          hint={tr('ui.ProductsPage.ajoutezVotrePremierProduitAu')}
+          action={canCreate && <Button onClick={openCreate}><Plus className="h-4 w-4" /> {tr('ui.ProductsPage.nouveauProduit')}</Button>}
         />
       ) : (
         <div className="card overflow-x-auto">
           {filteredProducts.length === 0 ? (
             <div className="p-8 text-center text-sm text-content-muted">
-              Aucun produit trouvé dans cette catégorie.
+              {tr('ui.ProductsPage.aucunProduitTrouveDansCette')}
             </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Produit</th>
-                  <th className="table-cell font-semibold">Référence</th>
-                  <th className="table-cell font-semibold">Catégorie</th>
-                  <th className="table-cell text-right font-semibold">Prix de vente</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductsPage.produit')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductsPage.reference')}</th>
+                  <th className="table-cell font-semibold">{tr('ui.ProductsPage.categorie')}</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ProductsPage.prixDeVente')}</th>
                   <th className="table-cell text-center font-semibold">Stock</th>
-                  <th className="table-cell text-right font-semibold">Enregistré le</th>
+                  <th className="table-cell text-right font-semibold">{tr('ui.ProductsPage.enregistreLe')}</th>
                   <th className="table-cell text-right font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -493,20 +493,20 @@ export function ProductsPage() {
                     </td>
                     <td className="table-cell text-center">
                       {isMadeToOrderCategory(p.category) ? (
-                        <span className="text-xs font-semibold text-content-muted">Illimité</span>
+                        <span className="text-xs font-semibold text-content-muted">{tr('ui.ProductsPage.illimite')}</span>
                       ) : (() => {
                         const r = rowFor(p);
                         const content = (
                           <span className="inline-flex items-center gap-1.5">
                             <span className="font-display text-base font-bold text-content">{r.quantity}</span>
-                            {r.low && <Badge tone="danger">Bas</Badge>}
+                            {r.low && <Badge tone="danger">{tr('ui.ProductsPage.bas')}</Badge>}
                           </span>
                         );
                         return canAdjust && branchId ? (
                           <button
                             onClick={() => setAdjusting(r)}
                             className="btn-ghost inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
-                            title="Ajuster la quantité"
+                            title={tr('ui.ProductsPage.ajusterLaQuantite')}
                           >
                             {content}
                             <SlidersHorizontal className="h-3.5 w-3.5 text-content-faint" />
@@ -525,7 +525,7 @@ export function ProductsPage() {
                         type="button"
                         onClick={() => setViewingHistory({ productId: p.id, name: p.name })}
                         className="btn-ghost h-8 w-8 rounded-lg p-0 text-primary"
-                        title="Historique des mouvements"
+                        title={tr('ui.ProductsPage.historiqueDesMouvements')}
                       >
                         <History className="h-4 w-4" />
                       </button>
@@ -537,7 +537,7 @@ export function ProductsPage() {
                       {canDelete && (
                         <button
                           onClick={() => {
-                            if (confirm(`Désactiver « ${p.name} » ?`)) removeMut.mutate(p.id);
+                            if (confirm(tr('ui.ProductsPage.desactiverName', { name: p.name }))) removeMut.mutate(p.id);
                           }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
                         >
@@ -636,18 +636,18 @@ function StockAdjustModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={`Stock — ${row.name}`} size="sm">
+    <Modal open onClose={onClose} title={tr('ui.ProductsPage.stockName', { name: row.name })} size="sm">
       <div className="space-y-4">
         <div className="rounded-xl bg-surface-2 p-3 text-center">
-          <p className="text-xs text-content-muted">Quantité en stock</p>
+          <p className="text-xs text-content-muted">{tr('ui.ProductsPage.quantiteEnStock')}</p>
           <p className="font-display text-2xl font-bold text-content">{row.quantity}</p>
           {delta !== 0 && (
             <p className="mt-1 text-xs text-content-faint">
-              Mouvement : <span className="font-semibold text-content">{delta > 0 ? `+${delta}` : delta}</span>
+              {tr('ui.ProductsPage.mouvement')} <span className="font-semibold text-content">{delta > 0 ? `+${delta}` : delta}</span>
             </p>
           )}
         </div>
-        <Field label="Nouvelle quantité">
+        <Field label={tr('ui.ProductsPage.nouvelleQuantite')}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -672,7 +672,7 @@ function StockAdjustModal({
             </button>
           </div>
         </Field>
-        <Field label="Seuil d'alerte (stock bas)">
+        <Field label={tr('ui.ProductsPage.seuilDAlerteStockBas')}>
           <input
             type="number"
             min={0}
@@ -684,14 +684,14 @@ function StockAdjustModal({
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ProductsPage.annuler')}
           </Button>
           <Button
             onClick={() => mut.mutate()}
             loading={mut.isPending}
             disabled={delta === 0 && minAlert === row.minAlert}
           >
-            Enregistrer
+            {tr('ui.ProductsPage.enregistrer')}
           </Button>
         </div>
       </div>
@@ -868,7 +868,7 @@ function ProductModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={product ? 'Modifier le produit' : 'Nouveau produit'}>
+    <Modal open onClose={onClose} title={product ? tr('ui.ProductsPage.modifierLeProduit') : tr('ui.ProductsPage.nouveauProduit')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
         {/* Gallery photo du produit */}
         <PhotoUploader
@@ -880,13 +880,13 @@ function ProductModal({
           }}
         />
 
-        <Field label="Nom du produit">
+        <Field label={tr('ui.ProductsPage.nomDuProduit')}>
           <input className="input" {...register('name')} />
           {errors.name && <p className="mt-1 text-xs text-danger">{errors.name.message}</p>}
         </Field>
         <div className={hideSku ? '' : 'grid grid-cols-2 gap-3'}>
           {!hideSku && (
-            <Field label="Référence (SKU)">
+            <Field label={tr('ui.ProductsPage.referenceSku')}>
               <input
                 className={`input ${dupProduct ? 'border-danger focus:border-danger' : ''}`}
                 {...register('sku')}
@@ -895,12 +895,12 @@ function ProductModal({
               {dupProduct && (
                 <p className="mt-1 flex items-start gap-1 text-xs text-danger">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>Référence déjà enregistrée pour « {dupProduct.name} ».</span>
+                  <span>{tr('ui.ProductsPage.referenceDejaEnregistreePour')} {dupProduct.name} ».</span>
                 </p>
               )}
             </Field>
           )}
-          <Field label="Catégorie">
+          <Field label={tr('ui.ProductsPage.categorie')}>
             <select className="input" {...register('category')}>
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -911,10 +911,10 @@ function ProductModal({
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Marque (optionnel)">
+          <Field label={tr('ui.ProductsPage.marqueOptionnel')}>
             <input className="input" {...register('brand')} />
           </Field>
-          <Field label="Date d'enregistrement">
+          <Field label={tr('ui.ProductsPage.dateDEnregistrement')}>
             <input type="datetime-local" className="input" {...register('createdAt')} />
           </Field>
         </div>
@@ -923,7 +923,7 @@ function ProductModal({
         {isLens && (
           <div className="space-y-3 rounded-xl border border-primary/25 bg-primary-soft/25 p-3">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Type de verre">
+              <Field label={tr('ui.ProductsPage.typeDeVerre')}>
                 <select
                   className="input"
                   value={typeOther ? '__other__' : lensBase}
@@ -939,32 +939,32 @@ function ProductModal({
                     }
                   }}
                 >
-                  <option value="">— Choisir —</option>
+                  <option value="">{tr('ui.ProductsPage.choisir')}</option>
                   {lensBaseOptions(pricing).map((b) => (
                     <option key={b.key} value={b.key}>
                       {b.label} — {formatCurrency(b.price)}
                     </option>
                   ))}
-                  <option value="__other__">Autre (préciser)…</option>
+                  <option value="__other__">{tr('ui.ProductsPage.autrePreciser')}</option>
                 </select>
                 {typeOther && (
                   <input
                     className="input mt-2"
-                    placeholder="Ex : Bifocal, Mi-distance…"
+                    placeholder={tr('ui.ProductsPage.exBifocalMiDistance')}
                     value={lensTypeName}
                     onChange={(e) => {
                       setLensTypeName(e.target.value);
                       if (!getValues('name')?.trim() && e.target.value.trim())
-                        setValue('name', `Verre ${e.target.value.trim()}`);
+                        setValue('name', tr('ui.ProductsPage.verreValue', { value: e.target.value.trim() }));
                     }}
                   />
                 )}
               </Field>
-              <Field label="Indice (amincissement)">
+              <Field label={tr('ui.ProductsPage.indiceAmincissement')}>
                 {indexOther ? (
                   <input
                     className="input"
-                    placeholder="Ex : 1.59"
+                    placeholder={tr('ui.ProductsPage.ex159')}
                     value={lensIndex}
                     onChange={(e) => setLensIndex(e.target.value)}
                   />
@@ -980,19 +980,19 @@ function ProductModal({
                       } else applyLens(lensBase, treatments, v);
                     }}
                   >
-                    <option value="">— Indice —</option>
+                    <option value="">{tr('ui.ProductsPage.indice')}</option>
                     {LENS_INDICES.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.label}
                       </option>
                     ))}
-                    <option value="__other__">Autre…</option>
+                    <option value="__other__">{tr('ui.ProductsPage.autre')}</option>
                   </select>
                 )}
               </Field>
             </div>
             <div>
-              <p className="mb-1.5 text-xs font-medium text-content-muted">Traitements</p>
+              <p className="mb-1.5 text-xs font-medium text-content-muted">{tr('ui.ProductsPage.traitements')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {LENS_TREATMENTS.map((tr) => {
                   const on = treatments.includes(tr.key);
@@ -1011,18 +1011,18 @@ function ProductModal({
             </div>
             {lensBase && (
               <p className="text-xs text-content-muted">
-                Prix suggéré :{' '}
+                {tr('ui.ProductsPage.prixSuggere')}{' '}
                 <span className="font-semibold text-content">
                   {formatCurrency(suggestPrice(lensBase, treatments, lensIndex))}
                 </span>{' '}
-                — modifiable ci-dessous.
+                {tr('ui.ProductsPage.modifiableCiDessous')}
               </p>
             )}
-            <Field label="Fournisseur">
+            <Field label={tr('ui.ProductsPage.fournisseur')}>
               {supplierOther || (suppliers && suppliers.length === 0) ? (
                 <input
                   className="input"
-                  placeholder="Ex : Essilor, Zeiss…"
+                  placeholder={tr('ui.ProductsPage.exEssilorZeiss')}
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
                 />
@@ -1037,11 +1037,11 @@ function ProductModal({
                     } else setSupplier(e.target.value);
                   }}
                 >
-                  <option value="">— Choisir —</option>
+                  <option value="">{tr('ui.ProductsPage.choisir')}</option>
                   {suppliers?.map((s) => (
                     <option key={s.id} value={s.name}>{s.name}</option>
                   ))}
-                  <option value="__other__">Autre…</option>
+                  <option value="__other__">{tr('ui.ProductsPage.autre')}</option>
                 </select>
               )}
             </Field>
@@ -1049,10 +1049,10 @@ function ProductModal({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Prix d'achat (FCFA)">
+          <Field label={tr('ui.ProductsPage.prixDAchatFcfa')}>
             <input className="input" type="number" step="1" {...register('buyPrice', { valueAsNumber: true })} />
           </Field>
-          <Field label="Prix de vente (FCFA)">
+          <Field label={tr('ui.ProductsPage.prixDeVenteFcfa')}>
             <input className="input" type="number" step="1" {...register('sellPrice', { valueAsNumber: true })} />
             {errors.sellPrice && <p className="mt-1 text-xs text-danger">{errors.sellPrice.message}</p>}
           </Field>
@@ -1063,10 +1063,10 @@ function ProductModal({
         {branchId && !isLens && (
           <div className="rounded-xl border border-line bg-surface-2/40 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-              Stock — magasin actif
+              {tr('ui.ProductsPage.stockMagasinActif')}
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <Field label={product ? 'Quantité en stock' : 'Quantité initiale'}>
+              <Field label={product ? tr('ui.ProductsPage.quantiteEnStock') : tr('ui.ProductsPage.quantiteInitiale')}>
                 <input
                   type="number"
                   min={0}
@@ -1075,7 +1075,7 @@ function ProductModal({
                   onChange={(e) => setQty(Math.max(0, parseInt(e.target.value || '0', 10)))}
                 />
               </Field>
-              <Field label="Seuil d'alerte (stock bas)">
+              <Field label={tr('ui.ProductsPage.seuilDAlerteStockBas')}>
                 <input
                   type="number"
                   min={0}
@@ -1091,10 +1091,10 @@ function ProductModal({
         {serverError && <p className="text-sm text-danger">{serverError}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.ProductsPage.annuler')}
           </Button>
           <Button type="submit" loading={mut.isPending} disabled={!!dupProduct}>
-            Enregistrer
+            {tr('ui.ProductsPage.enregistrer')}
           </Button>
         </div>
       </form>

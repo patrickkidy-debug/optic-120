@@ -10,6 +10,7 @@ import type { Product, StockRow } from '../../features/optique/api';
 import { LensVisual } from '../../features/optique/LensVisual';
 import { formatCurrency } from '../../lib/format';
 import { Badge, Button, EmptyState, Modal } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /** Attributs verre d'un produit, sûrs même si le JSON est vide. */
 export function lensAttrs(p: Product): LensAttributes {
@@ -63,16 +64,16 @@ function LensCard({
         {a.premium && (
           <span className="absolute right-2 top-2">
             <Badge tone="warning">
-              <Sparkles className="h-3 w-3" /> Premium
+              <Sparkles className="h-3 w-3" /> {tr('ui.LensCatalog.premium')}
             </Badge>
           </span>
         )}
         <label
           className="absolute left-2 top-2 flex cursor-pointer items-center gap-1 rounded-lg bg-surface/80 px-1.5 py-1 text-[10px] text-content-muted backdrop-blur"
-          title="Ajouter au comparateur"
+          title={tr('ui.LensCatalog.ajouterAuComparateur')}
         >
           <input type="checkbox" checked={selected} onChange={onToggleCompare} className="h-3 w-3" />
-          Comparer
+          {tr('ui.LensCatalog.comparer')}
         </label>
       </div>
 
@@ -98,22 +99,22 @@ function LensCard({
           </span>
           <div className="flex gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
             {canUpdate && (
-              <button onClick={() => actions.onEdit(p)} title="Modifier" className="btn-ghost h-7 w-7 rounded-lg p-0">
+              <button onClick={() => actions.onEdit(p)} title={tr('ui.LensCatalog.modifier')} className="btn-ghost h-7 w-7 rounded-lg p-0">
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             )}
             {canUpdate && (
-              <button onClick={() => actions.onDuplicate(p)} title="Dupliquer" className="btn-ghost h-7 w-7 rounded-lg p-0">
+              <button onClick={() => actions.onDuplicate(p)} title={tr('ui.LensCatalog.dupliquer')} className="btn-ghost h-7 w-7 rounded-lg p-0">
                 <Copy className="h-3.5 w-3.5" />
               </button>
             )}
             {canSell && (
-              <button onClick={() => actions.onSell(p)} title="Vendre" className="btn-ghost h-7 w-7 rounded-lg p-0 text-primary">
+              <button onClick={() => actions.onSell(p)} title={tr('ui.LensCatalog.vendre')} className="btn-ghost h-7 w-7 rounded-lg p-0 text-primary">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </button>
             )}
             {canDelete && actions.onDelete && (
-              <button onClick={() => actions.onDelete!(p)} title="Supprimer" className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
+              <button onClick={() => actions.onDelete!(p)} title={tr('ui.LensCatalog.supprimer')} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
@@ -183,7 +184,7 @@ export function LensCatalog({
             family === '' ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
           }`}
         >
-          Toutes familles
+          {tr('ui.LensCatalog.toutesFamilles')}
         </button>
         {LENS_FAMILIES.map((f) => (
           <button
@@ -203,22 +204,22 @@ export function LensCatalog({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
             className="input pl-9"
-            placeholder="Rechercher un verre (marque, gamme, référence)…"
+            placeholder={tr('ui.LensCatalog.rechercherUnVerreMarqueGamme')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select className="input h-9 w-auto py-1" value={index} onChange={(e) => setIndex(e.target.value)}>
-          <option value="">Tous indices</option>
+          <option value="">{tr('ui.LensCatalog.tousIndices')}</option>
           {LENS_INDICES.map((i) => (
             <option key={i.id} value={i.id}>
-              Indice {i.label}
+              {tr('ui.LensCatalog.indice')} {i.label}
             </option>
           ))}
         </select>
         {treatments.length > 0 && (
           <select className="input h-9 w-auto py-1" value={treatment} onChange={(e) => setTreatment(e.target.value)}>
-            <option value="">Tous traitements</option>
+            <option value="">{tr('ui.LensCatalog.tousTraitements')}</option>
             {treatments.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
@@ -233,12 +234,12 @@ export function LensCatalog({
             }}
             className="btn-ghost h-8 rounded-lg px-2 text-xs"
           >
-            <X className="h-3.5 w-3.5" /> Effacer
+            <X className="h-3.5 w-3.5" /> {tr('ui.LensCatalog.effacer')}
           </button>
         )}
         {compare.length > 0 && (
           <Button className="h-9 px-3 text-xs" onClick={() => setShowCompare(true)}>
-            <Scale className="h-4 w-4" /> Comparer ({compare.length})
+            <Scale className="h-4 w-4" /> {tr('ui.LensCatalog.comparer2')}{compare.length})
           </Button>
         )}
         <span className="ml-auto text-xs text-content-faint">{filtered.length} verre(s)</span>
@@ -247,11 +248,11 @@ export function LensCatalog({
       {filtered.length === 0 ? (
         <EmptyState
           icon={Scale}
-          title="Aucun verre"
+          title={tr('ui.LensCatalog.aucunVerre')}
           hint={
             products.length === 0
-              ? 'Ajoutez votre premier verre au catalogue.'
-              : 'Aucun verre ne correspond à ces filtres.'
+              ? tr('ui.LensCatalog.ajoutezVotrePremierVerreAu')
+              : tr('ui.LensCatalog.aucunVerreNeCorrespondA')
           }
         />
       ) : (
@@ -276,12 +277,12 @@ export function LensCatalog({
       )}
 
       {showCompare && compared.length > 0 && (
-        <Modal open onClose={() => setShowCompare(false)} title="Comparer les verres" size="lg">
+        <Modal open onClose={() => setShowCompare(false)} title={tr('ui.LensCatalog.comparerLesVerres')} size="lg">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
-                  <th className="table-cell font-semibold">Critère</th>
+                  <th className="table-cell font-semibold">{tr('ui.LensCatalog.critere')}</th>
                   {compared.map((p) => (
                     <th key={p.id} className="table-cell text-center font-semibold">
                       <LensVisual family={lensAttrs(p).family} className="mx-auto h-12 w-full" />
@@ -293,19 +294,19 @@ export function LensCatalog({
               <tbody>
                 {(
                   [
-                    ['Marque', (p: Product) => p.brand || '—'],
-                    ['Gamme', (p: Product) => lensAttrs(p).range || '—'],
+                    [tr('ui.LensCatalog.marque'), (p: Product) => p.brand || '—'],
+                    [tr('ui.LensCatalog.gamme'), (p: Product) => lensAttrs(p).range || '—'],
                     [
-                      'Type',
+                      tr('ui.LensCatalog.type'),
                       (p: Product) =>
                         LENS_FAMILIES.find((f) => f.key === lensAttrs(p).family)?.label || '—',
                     ],
-                    ['Indice', (p: Product) => lensAttrs(p).index || '—'],
-                    ['Matériau', (p: Product) => lensAttrs(p).material || '—'],
-                    ['Traitements', (p: Product) => (lensAttrs(p).treatments ?? []).join(', ') || '—'],
-                    ['Teinte', (p: Product) => lensAttrs(p).tint || '—'],
-                    ['Design', (p: Product) => lensAttrs(p).design || '—'],
-                    ['Usage', (p: Product) => lensAttrs(p).usage || '—'],
+                    [tr('ui.LensCatalog.indice'), (p: Product) => lensAttrs(p).index || '—'],
+                    [tr('ui.LensCatalog.materiau'), (p: Product) => lensAttrs(p).material || '—'],
+                    [tr('ui.LensCatalog.traitements'), (p: Product) => (lensAttrs(p).treatments ?? []).join(', ') || '—'],
+                    [tr('ui.LensCatalog.teinte'), (p: Product) => lensAttrs(p).tint || '—'],
+                    [tr('ui.LensCatalog.design'), (p: Product) => lensAttrs(p).design || '—'],
+                    [tr('ui.LensCatalog.usage'), (p: Product) => lensAttrs(p).usage || '—'],
                   ] as [string, (p: Product) => string][]
                 ).map(([label, get]) => (
                   <tr key={label} className="border-b last:border-0">
@@ -318,7 +319,7 @@ export function LensCatalog({
                   </tr>
                 ))}
                 <tr className="border-t-2">
-                  <td className="table-cell font-semibold text-content">Prix de vente</td>
+                  <td className="table-cell font-semibold text-content">{tr('ui.LensCatalog.prixDeVente')}</td>
                   {compared.map((p) => (
                     <td key={p.id} className="table-cell text-center font-display font-bold text-content">
                       {formatCurrency(Number(p.sellPrice))}
@@ -330,9 +331,9 @@ export function LensCatalog({
           </div>
           <div className="mt-4 flex justify-between">
             <Button variant="ghost" onClick={() => setCompare([])}>
-              Vider le comparateur
+              {tr('ui.LensCatalog.viderLeComparateur')}
             </Button>
-            <Button onClick={() => setShowCompare(false)}>Fermer</Button>
+            <Button onClick={() => setShowCompare(false)}>{tr('ui.LensCatalog.fermer')}</Button>
           </div>
         </Modal>
       )}
@@ -363,18 +364,18 @@ export function LensPreview({
     <div className="card w-full max-w-[16rem] overflow-hidden">
       <div className="bg-surface-2 p-3">
         {photoUrl ? (
-          <img src={photoUrl} alt="Aperçu" className="mx-auto h-24 object-contain" />
+          <img src={photoUrl} alt={tr('ui.LensCatalog.apercu')} className="mx-auto h-24 object-contain" />
         ) : (
           <LensVisual family={attrs.family} className="mx-auto h-24 w-full" />
         )}
       </div>
       <div className="p-3">
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
-          {brand || 'Marque'}
+          {brand || tr('ui.LensCatalog.marque')}
           {range ? ` · ${range}` : ''}
         </p>
-        <p className="truncate text-sm font-semibold text-content">{name || 'Désignation du verre'}</p>
-        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || 'Référence auto'}</p>
+        <p className="truncate text-sm font-semibold text-content">{name || tr('ui.LensCatalog.designationDuVerre')}</p>
+        <p className="mt-0.5 font-mono text-[11px] text-content-faint">{sku || tr('ui.LensCatalog.referenceAuto')}</p>
         <div className="mt-2 flex flex-wrap gap-1">
           {tags.slice(0, 5).map((t) => (
             <span key={t} className="badge bg-primary-soft px-2 py-0.5 text-[10px] text-primary">

@@ -31,18 +31,19 @@ import { InventoryHistoryModal } from '../../features/optique/inventory/Inventor
 import { exportProductsExcel, exportProductsPdf } from '../../features/optique/import/exportProducts';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 // Toutes les familles du catalogue (ProductCategory) : une famille absente
 // d'ici n'aurait ni carte de synthèse ni filtre, et son stock passerait
 // inaperçu — c'était le cas des produits d'entretien et des autres.
 const CATEGORIES = [
-  { value: 'MONTURE', label: 'Montures' },
-  { value: 'VERRE', label: 'Verres' },
-  { value: 'LENTILLE', label: 'Lentilles' },
-  { value: 'ACCESSOIRE', label: 'Accessoires' },
-  { value: 'ENTRETIEN', label: "Produits d'entretien" },
+  { value: 'MONTURE', get label() { return tr('ui.StockPage.montures'); } },
+  { value: 'VERRE', get label() { return tr('ui.StockPage.verres'); } },
+  { value: 'LENTILLE', get label() { return tr('ui.StockPage.lentilles'); } },
+  { value: 'ACCESSOIRE', get label() { return tr('ui.StockPage.accessoires'); } },
+  { value: 'ENTRETIEN', get label() { return tr('ui.StockPage.produitsDEntretien'); } },
   { value: 'SERVICE', label: 'Services' },
-  { value: 'AUTRE', label: 'Autres' },
+  { value: 'AUTRE', get label() { return tr('ui.StockPage.autres'); } },
 ];
 const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
@@ -134,7 +135,7 @@ export function StockPage() {
       // Un produit déjà vendu ne peut pas être effacé : on explique pourquoi.
       if (!res.deleted) {
         alert(
-          `Ce produit figure sur ${res.soldLines} ligne(s) de vente : il ne peut pas être effacé sans casser vos factures. Il a été retiré du catalogue et du stock.`,
+          tr('ui.StockPage.ceProduitFigureSurSoldlines', { soldLines: res.soldLines }),
         );
       }
     },
@@ -168,22 +169,22 @@ export function StockPage() {
             </Button>
             {canAdjust && (
               <Button variant="outline" onClick={() => setOperation('receive')}>
-                <PackagePlus className="h-4 w-4" /> Réception
+                <PackagePlus className="h-4 w-4" /> {tr('ui.StockPage.reception')}
               </Button>
             )}
             {canTransfer && (
               <Button variant="outline" onClick={() => setOperation('transfer')}>
-                <ArrowLeftRight className="h-4 w-4" /> Transfert
+                <ArrowLeftRight className="h-4 w-4" /> {tr('ui.StockPage.transfert')}
               </Button>
             )}
             {canViewInventoryHistory && (
               <Button variant="outline" onClick={() => setShowInventoryHistory(true)}>
-                <History className="h-4 w-4" /> Historique
+                <History className="h-4 w-4" /> {tr('ui.StockPage.historique')}
               </Button>
             )}
             {canOpenInventory && (
               <Button onClick={() => setShowInventory(true)}>
-                <ClipboardCheck className="h-4 w-4" /> Inventaire
+                <ClipboardCheck className="h-4 w-4" /> {tr('ui.StockPage.inventaire')}
               </Button>
             )}
           </div>
@@ -199,15 +200,15 @@ export function StockPage() {
             </span>
             <div>
               <p className="font-semibold text-content">
-                {pendingTransfers.length} transfert(s) de stock en attente de réception
+                {pendingTransfers.length} {tr('ui.StockPage.transfertSDeStockEn')}
               </p>
               <p className="text-xs text-content-muted">
-                Un autre magasin vous a envoyé du stock. Confirmez la réception pour ajouter les articles à votre inventaire.
+                {tr('ui.StockPage.unAutreMagasinVousA')}
               </p>
             </div>
           </div>
           <Button variant="accent" className="h-8 px-3 text-xs" onClick={() => setShowPendingTransfers(true)}>
-            Voir et confirmer
+            {tr('ui.StockPage.voirEtConfirmer')}
           </Button>
         </div>
       )}
@@ -228,19 +229,19 @@ export function StockPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-primary">{c.label}</p>
               <div className="mt-2 flex items-baseline justify-between">
                 <span className="font-display text-2xl font-bold text-content">
-                  {stats.count} <span className="text-xs font-normal text-content-muted">réf(s)</span>
+                  {stats.count} <span className="text-xs font-normal text-content-muted">{tr('ui.StockPage.refS')}</span>
                 </span>
                 {c.value !== 'VERRE' && c.value !== 'SERVICE' && (
                   <span className="text-xs font-semibold text-content-muted">
-                    {stats.totalStock} en stock
+                    {stats.totalStock} {tr('ui.StockPage.enStock')}
                   </span>
                 )}
               </div>
               <p className="mt-2 text-[10px] text-content-faint">
                 {stats.lastCreated ? (
-                  <>Dernier enreg. : <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
+                  <>{tr('ui.StockPage.dernierEnreg')} <span className="font-medium text-content-muted">{formatDate(stats.lastCreated)}</span></>
                 ) : (
-                  'Aucun produit enregistré'
+                  tr('ui.StockPage.aucunProduitEnregistre')
                 )}
               </p>
             </div>
@@ -262,14 +263,14 @@ export function StockPage() {
           onClick={() => setLowOnly((v) => !v)}
           className={`btn-outline ${lowOnly ? 'border-danger text-danger' : ''}`}
         >
-          <AlertTriangle className="h-4 w-4" /> Stock faible
+          <AlertTriangle className="h-4 w-4" /> {tr('ui.StockPage.stockFaible')}
         </button>
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setCategory('')}
             className={`badge px-3 py-1.5 ${category === '' ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}
           >
-            Tous
+            {tr('ui.StockPage.tous')}
           </button>
           {CATEGORIES.map((c) => (
             <button
@@ -288,11 +289,11 @@ export function StockPage() {
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
           <Search className="h-4 w-4 text-primary" />
           <span className="text-content">
-            <b>{searchSummary.refs}</b> référence(s) trouvée(s)
+            <b>{searchSummary.refs}</b> {tr('ui.StockPage.referenceSTrouveeS')}
           </span>
           <span className="text-content-faint">·</span>
           <span className="text-content">
-            <b>{searchSummary.qty}</b> unité(s) en stock pour cette recherche
+            <b>{searchSummary.qty}</b> {tr('ui.StockPage.uniteSEnStockPour')}
           </span>
         </div>
       )}
@@ -311,7 +312,7 @@ export function StockPage() {
                 <th className="table-cell text-right font-semibold">{t('common.price')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.quantity')}</th>
                 <th className="table-cell text-center font-semibold">{t('common.threshold')}</th>
-                <th className="table-cell text-right font-semibold">Enregistré le</th>
+                <th className="table-cell text-right font-semibold">{tr('ui.StockPage.enregistreLe')}</th>
                 <th className="table-cell text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -330,7 +331,7 @@ export function StockPage() {
                   </td>
                   <td className="table-cell text-center">
                     {r.unlimited ? (
-                      <span className="text-sm font-semibold text-content-muted">Illimité</span>
+                      <span className="text-sm font-semibold text-content-muted">{tr('ui.StockPage.illimite')}</span>
                     ) : (
                       <span className="font-display text-lg font-bold text-content">{r.quantity}</span>
                     )}
@@ -346,23 +347,23 @@ export function StockPage() {
                         type="button"
                         onClick={() => setViewingHistory(r)}
                         className="btn-ghost h-8 rounded-lg px-2 text-xs flex items-center gap-1 text-primary hover:bg-primary-soft/20"
-                        title="Historique des mouvements"
+                        title={tr('ui.StockPage.historiqueDesMouvements')}
                       >
-                        <History className="h-3.5 w-3.5" /> Historique
+                        <History className="h-3.5 w-3.5" /> {tr('ui.StockPage.historique')}
                       </button>
                       {canAdjust && !r.unlimited && (
                         <button onClick={() => setEditing(r)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                          <SlidersHorizontal className="h-3.5 w-3.5" /> Ajuster
+                          <SlidersHorizontal className="h-3.5 w-3.5" /> {tr('ui.StockPage.ajuster')}
                         </button>
                       )}
                       {canDelete && (
                         <button
                           onClick={() => {
-                            if (confirm(`Retirer « ${r.name} » du stock et du catalogue ?`))
+                            if (confirm(tr('ui.StockPage.retirerNameDuStockEt', { name: r.name })))
                               removeMut.mutate(r.productId);
                           }}
                           className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
-                          title="Retirer du stock et du catalogue"
+                          title={tr('ui.StockPage.retirerDuStockEtDu')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -439,13 +440,13 @@ function AdjustModal({
   });
 
   return (
-    <Modal open onClose={onClose} title={`Ajuster — ${row.name}`} size="sm">
+    <Modal open onClose={onClose} title={tr('ui.StockPage.ajusterName', { name: row.name })} size="sm">
       <div className="space-y-4">
         <div className="rounded-xl bg-surface-2 p-3 text-center">
           <p className="text-xs text-content-muted">{t('stock.currentQty')}</p>
           <p className="font-display text-2xl font-bold text-content">{row.quantity}</p>
           <p className="mt-1 text-xs text-content-faint">
-            Nouvelle quantité : <span className="font-semibold text-content">{row.quantity + delta}</span>
+            {tr('ui.StockPage.nouvelleQuantite')} <span className="font-semibold text-content">{row.quantity + delta}</span>
           </p>
         </div>
         <Field label={t('stock.movement')}>
@@ -475,10 +476,10 @@ function AdjustModal({
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Annuler
+            {tr('ui.StockPage.annuler')}
           </Button>
           <Button onClick={() => mut.mutate()} loading={mut.isPending} disabled={delta === 0 && minAlert === row.minAlert}>
-            Enregistrer
+            {tr('ui.StockPage.enregistrer')}
           </Button>
         </div>
       </div>
@@ -505,37 +506,37 @@ export function StockHistoryModal({
   const getMovementTypeLabel = (type: string, qty: number) => {
     switch (type) {
       case 'PURCHASE_IN':
-        return 'Achat (Entrée)';
+        return tr('ui.StockPage.achatEntree');
       case 'SALE_OUT':
-        return 'Vente (Sortie)';
+        return tr('ui.StockPage.venteSortie');
       case 'RETURN_IN':
-        return 'Retour client (Entrée)';
+        return tr('ui.StockPage.retourClientEntree');
       case 'TRANSFER':
-        return qty > 0 ? 'Transfert (Entrée)' : 'Transfert (Sortie)';
+        return qty > 0 ? tr('ui.StockPage.transfertEntree') : tr('ui.StockPage.transfertSortie');
       case 'ADJUSTMENT':
-        return qty > 0 ? 'Ajustement (Entrée)' : 'Ajustement (Sortie)';
+        return qty > 0 ? tr('ui.StockPage.ajustementEntree') : tr('ui.StockPage.ajustementSortie');
       default:
         return type;
     }
   };
 
   return (
-    <Modal open onClose={onClose} title={`Historique des mouvements — ${row.name}`} size="md">
+    <Modal open onClose={onClose} title={tr('ui.StockPage.historiqueDesMouvementsName', { name: row.name })} size="md">
       {isLoading ? (
         <PageLoader />
       ) : !movements || movements.length === 0 ? (
         <div className="py-8 text-center text-sm text-content-muted">
-          Aucun mouvement de stock enregistré pour cet article.
+          {tr('ui.StockPage.aucunMouvementDeStockEnregistre')}
         </div>
       ) : (
         <div className="max-h-[60vh] overflow-y-auto pr-1">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b text-xs uppercase tracking-wider text-content-faint">
-                <th className="py-2 font-semibold">Date & Heure</th>
-                <th className="py-2 font-semibold">Type</th>
-                <th className="py-2 text-right font-semibold">Quantité</th>
-                <th className="py-2 pl-4 font-semibold">Motif / Réf</th>
+                <th className="py-2 font-semibold">{tr('ui.StockPage.dateHeure')}</th>
+                <th className="py-2 font-semibold">{tr('ui.StockPage.type')}</th>
+                <th className="py-2 text-right font-semibold">{tr('ui.StockPage.quantite')}</th>
+                <th className="py-2 pl-4 font-semibold">{tr('ui.StockPage.motifRef')}</th>
               </tr>
             </thead>
             <tbody>

@@ -3,6 +3,7 @@ import { ImagePlus, Trash2, Star, ZoomIn, X, Loader2 } from 'lucide-react';
 import { MAX_PRODUCT_PHOTOS } from '@oculo/shared-types';
 import { fileToResizedDataUrl, uploadImageToSupabase } from '../../lib/image';
 import { Modal } from '../../components/ui';
+import { tr } from '../../lib/tr';
 
 /**
  * Résolution de stockage des photos produit. Les images vivent en data URL
@@ -53,7 +54,7 @@ export function PhotoUploader({
 
       for (const file of list) {
         if (main && extra.length >= MAX_PRODUCT_PHOTOS) {
-          problems.push(`« ${file.name} » ignorée : maximum ${MAX_PRODUCT_PHOTOS} photos secondaires.`);
+          problems.push(tr('ui.PhotoUploader.nameIgnoreeMaximumMaxProduct', { name: file.name, MAX_PRODUCT_PHOTOS: MAX_PRODUCT_PHOTOS }));
           continue;
         }
         // Une image en échec ne doit pas faire perdre les autres : on la
@@ -116,21 +117,21 @@ export function PhotoUploader({
       >
         {photoUrl ? (
           <>
-            <img src={photoUrl} alt="Photo principale" className="h-full w-full object-contain" />
+            <img src={photoUrl} alt={tr('ui.PhotoUploader.photoPrincipale')} className="h-full w-full object-contain" />
             <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1.5 bg-gradient-to-t from-black/60 to-transparent p-2">
               <button
                 type="button"
                 onClick={() => setZoom(photoUrl)}
                 className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-900 hover:bg-white"
               >
-                <ZoomIn className="inline h-3.5 w-3.5" /> Zoom
+                <ZoomIn className="inline h-3.5 w-3.5" /> {tr('ui.PhotoUploader.zoom')}
               </button>
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-900 hover:bg-white"
               >
-                Remplacer
+                {tr('ui.PhotoUploader.remplacer')}
               </button>
               <button
                 type="button"
@@ -152,9 +153,9 @@ export function PhotoUploader({
             ) : (
               <ImagePlus className="h-8 w-8 text-primary" />
             )}
-            <span className="text-sm font-medium text-content">Photo du produit</span>
+            <span className="text-sm font-medium text-content">{tr('ui.PhotoUploader.photoDuProduit')}</span>
             <span className="text-xs text-content-faint">
-              Glissez une image ici ou cliquez pour choisir
+              {tr('ui.PhotoUploader.glissezUneImageIciOu')}
             </span>
           </button>
         )}
@@ -168,7 +169,7 @@ export function PhotoUploader({
             <div className="absolute inset-0 hidden items-center justify-center gap-1 bg-black/50 group-hover:flex">
               <button
                 type="button"
-                title="Définir comme photo principale"
+                title={tr('ui.PhotoUploader.definirCommePhotoPrincipale')}
                 onClick={() => promote(i)}
                 className="rounded bg-white/90 p-1 text-slate-900"
               >
@@ -176,7 +177,7 @@ export function PhotoUploader({
               </button>
               <button
                 type="button"
-                title="Agrandir"
+                title={tr('ui.PhotoUploader.agrandir')}
                 onClick={() => setZoom(p)}
                 className="rounded bg-white/90 p-1 text-slate-900"
               >
@@ -184,7 +185,7 @@ export function PhotoUploader({
               </button>
               <button
                 type="button"
-                title="Retirer"
+                title={tr('ui.PhotoUploader.retirer')}
                 onClick={() => onChange({ photoUrl, photos: photos.filter((_, j) => j !== i) })}
                 className="rounded bg-white/90 p-1 text-danger"
               >
@@ -198,7 +199,7 @@ export function PhotoUploader({
             type="button"
             onClick={() => inputRef.current?.click()}
             className="grid h-16 w-16 place-items-center rounded-lg border-2 border-dashed border-line text-content-faint transition hover:border-primary hover:text-primary"
-            title={`Ajouter une photo (${remaining} restante(s))`}
+            title={tr('ui.PhotoUploader.ajouterUnePhotoRemainingRestante', { remaining: remaining })}
           >
             <ImagePlus className="h-4 w-4" />
           </button>
@@ -210,8 +211,8 @@ export function PhotoUploader({
       )}
 
       {zoom && (
-        <Modal open onClose={() => setZoom(null)} title="Aperçu" size="lg">
-          <img src={zoom} alt="Aperçu agrandi" className="max-h-[70vh] w-full object-contain" />
+        <Modal open onClose={() => setZoom(null)} title={tr('ui.PhotoUploader.apercu')} size="lg">
+          <img src={zoom} alt={tr('ui.PhotoUploader.apercuAgrandi')} className="max-h-[70vh] w-full object-contain" />
         </Modal>
       )}
     </div>
