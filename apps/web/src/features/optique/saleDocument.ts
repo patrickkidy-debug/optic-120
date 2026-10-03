@@ -1,5 +1,8 @@
 import { CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
 import type { SaleDetail } from './api';
+import { tr } from '../../lib/tr';
+import { displayLocale } from '../../lib/format';
+import { saleStatusLabel } from '../../lib/labels';
 
 export interface CompanyInfo {
   name: string;
@@ -19,26 +22,18 @@ export interface CompanyInfo {
   contactEmail?: string | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: 'Brouillon',
-  CONFIRMED: 'Confirmée',
-  PARTIALLY_PAID: 'Partiellement payée',
-  PAID: 'Payée',
-  CANCELLED: 'Annulée',
-};
-
 // La devise vient de la vente elle-meme (figee a l'encaissement) : une
 // facture reimprimee garde sa devise d'origine.
 function money(amount: number | string, currency = 'XOF'): string {
   const fmt = CURRENCY_FORMAT[currency as SupportedCurrency];
-  const n = new Intl.NumberFormat('fr-FR', {
+  const n = new Intl.NumberFormat(displayLocale(), {
     maximumFractionDigits: fmt?.decimals ?? 0,
   }).format(Number.isFinite(Number(amount)) ? Number(amount) : 0);
   return `${n} ${fmt?.symbol ?? currency}`;
 }
 
 function frDate(d: string | Date): string {
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(displayLocale(), { day: '2-digit', month: 'long', year: 'numeric' }).format(
     typeof d === 'string' ? new Date(d) : d,
   );
 }
@@ -59,14 +54,14 @@ function esc(value: unknown): string {
  */
 export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): string {
   const isQuote = sale.type === 'QUOTE';
-  const docTitle = isQuote ? 'DEVIS' : 'FACTURE';
+  const docTitle = isQuote ? tr('doc.quote') : tr('doc.invoice');
   const validColor = /^#[0-9a-fA-F]{6}$/.test(company.accentColor ?? '');
   const accent = validColor ? (company.accentColor as string) : isQuote ? '#7c3aed' : '#0d9488';
   const currency = sale.currency || 'XOF';
 
   const customerName = sale.customer
     ? `${sale.customer.firstName} ${sale.customer.lastName}`
-    : 'Client comptant';
+    : tr('doc.walkIn');
 
   const balance = Number(sale.totalAmount) - Number(sale.paidAmount);
 
@@ -103,8 +98,8 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     .join(' · ');
 
   const contactLine = [
-    company.contactPhone ? `Tél : ${esc(company.contactPhone)}` : '',
-    company.contactEmail ? `Email : ${esc(company.contactEmail)}` : '',
+    company.contactPhone ? tr('doc.phone', { value: esc(company.contactPhone) }) : '',
+    company.contactEmail ? tr('doc.email', { value: esc(company.contactEmail) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -131,9 +126,9 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     </tr>`;
   const rxExtras = rx
     ? [
-        rx.pupillaryDistance ? `Écart pupillaire : ${esc(rx.pupillaryDistance)} mm` : '',
-        rx.lensType ? `Type de verres : ${esc(rx.lensType)}` : '',
-        rx.prescriberName ? `Prescripteur : ${esc(rx.prescriberName)}` : '',
+        rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+        rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
+        rx.prescriberName ? tr('doc.prescriber', { value: esc(rx.prescriberName) }) : '',
       ]
         .filter(Boolean)
         .join(' · ')
@@ -141,21 +136,21 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
   const prescriptionBlock = rx
     ? `<div style="margin-top:26px;page-break-inside:avoid;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">
-          Ordonnance jointe — ${frDate(rx.date)}
+          ${tr('doc.attachedRx', { date: frDate(rx.date) })}
         </div>
         <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">
           <thead>
             <tr style="background:#f1f5f9;color:#334155;">
-              <th style="padding:8px 12px;text-align:left;">Œil</th>
-              <th style="padding:8px 12px;text-align:center;">Sphère</th>
-              <th style="padding:8px 12px;text-align:center;">Cylindre</th>
-              <th style="padding:8px 12px;text-align:center;">Axe</th>
-              <th style="padding:8px 12px;text-align:center;">Addition</th>
+              <th style="padding:8px 12px;text-align:left;">${tr('doc.eye')}</th>
+              <th style="padding:8px 12px;text-align:center;">${tr('doc.sphere')}</th>
+              <th style="padding:8px 12px;text-align:center;">${tr('doc.cylinder')}</th>
+              <th style="padding:8px 12px;text-align:center;">${tr('doc.axis')}</th>
+              <th style="padding:8px 12px;text-align:center;">${tr('doc.addition')}</th>
             </tr>
           </thead>
           <tbody>
-            ${rxRow('OD (droit)', rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
-            ${rxRow('OG (gauche)', rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
+            ${rxRow(tr('doc.odRight'), rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
+            ${rxRow(tr('doc.ogLeft'), rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
           </tbody>
         </table>
         ${rxExtras ? `<div style="margin-top:6px;font-size:12px;color:#475569;">${rxExtras}</div>` : ''}
@@ -163,14 +158,14 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     : '';
 
   const paymentBlock = isQuote
-    ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">Ce devis est valable ${validityDays} jours à compter de sa date d'émission. Sous réserve de disponibilité des articles en stock.</p>`
+    ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">${tr('doc.quoteValidity', { days: validityDays })}</p>`
     : `<table style="width:100%;border-collapse:collapse;">
-        ${totalRow('Payé', money(sale.paidAmount, currency), { color: '#0d9488' })}
-        ${balance > 0 ? totalRow('Reste à payer', money(balance, currency), { strong: true, color: '#dc2626' }) : ''}
+        ${totalRow(tr('doc.paid'), money(sale.paidAmount, currency), { color: '#0d9488' })}
+        ${balance > 0 ? totalRow(tr('doc.balanceDue'), money(balance, currency), { strong: true, color: '#dc2626' }) : ''}
       </table>`;
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${displayLocale().slice(0, 2)}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -199,14 +194,14 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
       </div>
       <div style="text-align:right;">
         <div style="font-size:28px;font-weight:800;letter-spacing:1px;color:${accent};">${docTitle}</div>
-        <div style="margin-top:4px;font-size:13px;color:#0f172a;font-weight:600;">N° ${esc(sale.number)}</div>
-        <div style="font-size:12px;color:#64748b;">Date : ${frDate(sale.createdAt)}</div>
-        <div style="font-size:12px;color:#64748b;">Statut : ${esc(STATUS_LABEL[sale.status] ?? sale.status)}</div>
+        <div style="margin-top:4px;font-size:13px;color:#0f172a;font-weight:600;">${tr('doc.number', { value: esc(sale.number) })}</div>
+        <div style="font-size:12px;color:#64748b;">${tr('doc.date', { value: frDate(sale.createdAt) })}</div>
+        <div style="font-size:12px;color:#64748b;">${tr('doc.status', { value: esc(saleStatusLabel(sale.status)) })}</div>
       </div>
     </div>
 
     <div style="margin-top:28px;padding:14px 16px;background:#f8fafc;border-radius:10px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">${isQuote ? 'Devis pour' : 'Facturé à'}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">${isQuote ? tr('doc.quoteFor') : tr('doc.billedTo')}</div>
       <div style="margin-top:2px;font-size:15px;font-weight:700;color:#0f172a;">${esc(customerName)}</div>
       ${sale.customer?.phone ? `<div style="font-size:12px;color:#64748b;">${esc(sale.customer.phone)}</div>` : ''}
       ${sale.customer?.email ? `<div style="font-size:12px;color:#64748b;">${esc(sale.customer.email)}</div>` : ''}
@@ -215,10 +210,10 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     <table style="width:100%;border-collapse:collapse;margin-top:24px;font-size:13px;">
       <thead>
         <tr style="background:${accent};color:#fff;">
-          <th style="padding:10px 12px;text-align:left;border-radius:8px 0 0 0;">Désignation</th>
-          <th style="padding:10px 12px;text-align:center;">Qté</th>
-          <th style="padding:10px 12px;text-align:right;">P.U.</th>
-          <th style="padding:10px 12px;text-align:right;border-radius:0 8px 0 0;">Total</th>
+          <th style="padding:10px 12px;text-align:left;border-radius:8px 0 0 0;">${tr('doc.description')}</th>
+          <th style="padding:10px 12px;text-align:center;">${tr('doc.qty')}</th>
+          <th style="padding:10px 12px;text-align:right;">${tr('doc.unitPrice')}</th>
+          <th style="padding:10px 12px;text-align:right;border-radius:0 8px 0 0;">${tr('doc.total')}</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -226,12 +221,12 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
 
     <div style="display:flex;justify-content:flex-end;margin-top:18px;">
       <table style="width:320px;border-collapse:collapse;font-size:13px;">
-        ${totalRow('Sous-total', money(sale.subtotal, currency))}
-        ${Number(sale.discountAmount) > 0 ? totalRow('Remise', `- ${money(sale.discountAmount, currency)}`) : ''}
-        ${totalRow('TVA', money(sale.taxAmount, currency))}
-        ${Number(sale.insuranceAmount) > 0 ? totalRow('Prise en charge', `- ${money(sale.insuranceAmount, currency)}`) : ''}
+        ${totalRow(tr('doc.subtotal'), money(sale.subtotal, currency))}
+        ${Number(sale.discountAmount) > 0 ? totalRow(tr('doc.discount'), `- ${money(sale.discountAmount, currency)}`) : ''}
+        ${totalRow(tr('doc.vat'), money(sale.taxAmount, currency))}
+        ${Number(sale.insuranceAmount) > 0 ? totalRow(tr('doc.insurance'), `- ${money(sale.insuranceAmount, currency)}`) : ''}
         <tr><td colspan="2" style="padding:4px 0;"><div style="border-top:2px solid ${accent};"></div></td></tr>
-        ${totalRow('TOTAL', money(sale.totalAmount, currency), { strong: true })}
+        ${totalRow(tr('doc.grandTotal'), money(sale.totalAmount, currency), { strong: true })}
       </table>
     </div>
 
@@ -247,7 +242,7 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
 
     <div style="margin-top:40px;display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;">
       <span>${esc(company.name)}</span>
-      <span>${sale.cashier ? `Établi par ${esc(sale.cashier.firstName)} ${esc(sale.cashier.lastName)}` : ''}</span>
+      <span>${sale.cashier ? tr('doc.issuedBy', { name: `${esc(sale.cashier.firstName)} ${esc(sale.cashier.lastName)}` }) : ''}</span>
     </div>
   </div>
 </body>
@@ -262,7 +257,7 @@ export function printSaleDocument(sale: SaleDetail, company: CompanyInfo): void 
   const html = buildSaleDocumentHtml(sale, company);
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) {
-    alert("Veuillez autoriser les fenêtres pop-up pour télécharger le document.");
+    alert(tr('doc.allowPopups'));
     return;
   }
   win.document.open();

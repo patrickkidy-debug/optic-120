@@ -1,6 +1,9 @@
 import type { Customer, Prescription, CustomerSale, CustomerLensOrder, CustomerRepair } from './api';
 import type { CompanyInfo } from './saleDocument';
 import { LENS_ORDER_STATUS_LABELS, ageFromBirthDate, type LensOrderStatus } from '@oculo/shared-types';
+import { tr } from '../../lib/tr';
+import { displayLocale, formatCurrency } from '../../lib/format';
+import { saleStatusLabel } from '../../lib/labels';
 
 export type DossierCustomer = Customer & {
   prescriptions: Prescription[];
@@ -9,7 +12,7 @@ export type DossierCustomer = Customer & {
   repairs: CustomerRepair[];
 };
 
-const SALE_TYPE_LABEL: Record<string, string> = { SALE: 'Vente', QUOTE: 'Devis', RETURN: 'Retour' };
+const SALE_TYPE_KEY: Record<string, string> = { SALE: 'doc.sale', QUOTE: 'doc.quoteType', RETURN: 'doc.return' };
 
 function esc(value: unknown): string {
   return String(value ?? '')
@@ -20,13 +23,14 @@ function esc(value: unknown): string {
 }
 
 function frDate(d: string | Date): string {
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(displayLocale(), { day: '2-digit', month: 'long', year: 'numeric' }).format(
     typeof d === 'string' ? new Date(d) : d,
   );
 }
 
 function money(v: string | number): string {
-  return new Intl.NumberFormat('fr-FR').format(Number(v)) + ' FCFA';
+  // Devise de l'établissement (et non plus « FCFA » en dur).
+  return formatCurrency(Number(v));
 }
 
 function rxTable(rx: Prescription, accent: string): string {
@@ -39,34 +43,34 @@ function rxTable(rx: Prescription, accent: string): string {
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:center;">${esc(add ?? '—')}</td>
     </tr>`;
   const extras = [
-    rx.lensType ? `Type de verres : ${esc(rx.lensType)}` : '',
-    rx.pupillaryDistance ? `Écart pupillaire : ${esc(rx.pupillaryDistance)} mm` : '',
-    rx.prescriberName ? `Prescripteur : ${esc(rx.prescriberName)}` : '',
-    rx.expiresAt ? `Valide jusqu'au ${frDate(rx.expiresAt)}` : '',
+    rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
+    rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+    rx.prescriberName ? tr('doc.prescriber', { value: esc(rx.prescriberName) }) : '',
+    rx.expiresAt ? tr('doc.validUntil', { date: frDate(rx.expiresAt) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
 
   return `
     <div style="margin-top:10px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;">
-      <div style="font-size:12px;font-weight:700;color:#0f172a;">Ordonnance du ${frDate(rx.date)}</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a;">${tr('doc.rxOf', { date: frDate(rx.date) })}</div>
       <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">
         <thead>
           <tr style="background:${accent};color:#fff;">
-            <th style="padding:6px 10px;text-align:left;">Œil</th>
-            <th style="padding:6px 10px;text-align:center;">Sphère</th>
-            <th style="padding:6px 10px;text-align:center;">Cylindre</th>
-            <th style="padding:6px 10px;text-align:center;">Axe</th>
-            <th style="padding:6px 10px;text-align:center;">Add.</th>
+            <th style="padding:6px 10px;text-align:left;">${tr('doc.eye')}</th>
+            <th style="padding:6px 10px;text-align:center;">${tr('doc.sphere')}</th>
+            <th style="padding:6px 10px;text-align:center;">${tr('doc.cylinder')}</th>
+            <th style="padding:6px 10px;text-align:center;">${tr('doc.axis')}</th>
+            <th style="padding:6px 10px;text-align:center;">${tr('doc.addShort')}</th>
           </tr>
         </thead>
         <tbody>
-          ${eyeRow('OD (droit)', rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
-          ${eyeRow('OG (gauche)', rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
+          ${eyeRow(tr('doc.odRight'), rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
+          ${eyeRow(tr('doc.ogLeft'), rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
         </tbody>
       </table>
       ${extras ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">${extras}</div>` : ''}
-      ${rx.notes ? `<div style="margin-top:4px;font-size:11px;color:#334155;"><b>Notes :</b> ${esc(rx.notes)}</div>` : ''}
+      ${rx.notes ? `<div style="margin-top:4px;font-size:11px;color:#334155;"><b>${tr('doc.notes')}</b> ${esc(rx.notes)}</div>` : ''}
     </div>`;
 }
 
@@ -76,10 +80,10 @@ function saleRow(s: CustomerSale): string {
     <tr>
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(s.number)}</td>
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${frDate(s.createdAt)}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(SALE_TYPE_LABEL[s.type] ?? s.type)}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(SALE_TYPE_KEY[s.type] ? tr(SALE_TYPE_KEY[s.type]!) : s.type)}</td>
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b;">${items || '—'}</td>
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">${money(s.totalAmount)}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(s.status)}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(saleStatusLabel(s.status))}</td>
     </tr>`;
 }
 
@@ -128,15 +132,15 @@ export function buildClientDossierHtml(customer: DossierCustomer, company: Compa
     ? `<img src="${esc(company.logoUrl)}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;" />`
     : `<div style="font-size:22px;font-weight:800;color:${accent};">${esc(company.name)}</div>`;
   const contactLine = [
-    company.contactPhone ? `Tél : ${esc(company.contactPhone)}` : '',
-    company.contactEmail ? `Email : ${esc(company.contactEmail)}` : '',
+    company.contactPhone ? tr('doc.phone', { value: esc(company.contactPhone) }) : '',
+    company.contactEmail ? tr('doc.email', { value: esc(company.contactEmail) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
 
   const age = ageFromBirthDate(customer.dateOfBirth);
   const identityBits = [
-    age !== null ? `${age} ans` : null,
+    age !== null ? tr('doc.years', { count: age }) : null,
     customer.gender || null,
     customer.profession || null,
     customer.address || null,
@@ -148,11 +152,11 @@ export function buildClientDossierHtml(customer: DossierCustomer, company: Compa
   const olderRxCount = customer.prescriptions.length - recentRx.length;
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${displayLocale().slice(0, 2)}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dossier client ${esc(customer.lastName)}</title>
+<title>${tr('doc.dossierTitle', { name: esc(customer.lastName) })}</title>
 <style>
   @page { size: A4; margin: 16mm; }
   * { box-sizing: border-box; }
@@ -169,37 +173,37 @@ export function buildClientDossierHtml(customer: DossierCustomer, company: Compa
         ${contactLine ? `<div style="font-size:12px;color:#64748b;">${contactLine}</div>` : ''}
       </div>
       <div style="text-align:right;">
-        <div style="font-size:26px;font-weight:800;letter-spacing:1px;color:${accent};">DOSSIER CLIENT</div>
-        <div style="font-size:12px;color:#64748b;">Généré le ${frDate(new Date())}</div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:1px;color:${accent};">${tr('doc.dossier')}</div>
+        <div style="font-size:12px;color:#64748b;">${tr('doc.generatedOn', { date: frDate(new Date()) })}</div>
       </div>
     </div>
 
     <div style="margin-top:26px;padding:14px 16px;background:#f8fafc;border-radius:10px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">Client</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">${tr('doc.customer')}</div>
       <div style="margin-top:2px;font-size:18px;font-weight:700;color:#0f172a;">${esc(customer.firstName)} ${esc(customer.lastName)}</div>
       <div style="margin-top:2px;font-size:12px;color:#64748b;">
         ${customer.phone ? esc(customer.phone) : ''}${customer.phone && customer.email ? ' · ' : ''}${customer.email ? esc(customer.email) : ''}
       </div>
       ${identityBits ? `<div style="font-size:12px;color:#64748b;">${esc(identityBits)}</div>` : ''}
-      <div style="margin-top:4px;font-size:12px;color:${accent};font-weight:700;">${customer.loyaltyPoints ?? 0} points de fidélité</div>
-      ${customer.notes ? `<div style="margin-top:6px;font-size:12px;color:#334155;"><b>Notes :</b> ${esc(customer.notes)}</div>` : ''}
+      <div style="margin-top:4px;font-size:12px;color:${accent};font-weight:700;">${tr('doc.loyalty', { count: customer.loyaltyPoints ?? 0 })}</div>
+      ${customer.notes ? `<div style="margin-top:6px;font-size:12px;color:#334155;"><b>${tr('doc.notes')}</b> ${esc(customer.notes)}</div>` : ''}
     </div>
 
     <div style="margin-top:22px;font-size:14px;font-weight:800;color:#0f172a;">
-      Ordonnances les plus récentes ${customer.prescriptions.length > 0 ? `(${customer.prescriptions.length} au total)` : ''}
+      ${tr('doc.recentRx')} ${customer.prescriptions.length > 0 ? tr('doc.rxTotal', { count: customer.prescriptions.length }) : ''}
     </div>
     ${
       recentRx.length > 0
         ? recentRx.map((rx) => rxTable(rx, accent)).join('')
-        : '<div style="margin-top:8px;font-size:12px;color:#64748b;">Aucune ordonnance enregistrée.</div>'
+        : `<div style="margin-top:8px;font-size:12px;color:#64748b;">${tr('doc.noRx')}</div>`
     }
-    ${olderRxCount > 0 ? `<div style="margin-top:6px;font-size:11px;color:#94a3b8;">+ ${olderRxCount} ordonnance(s) plus ancienne(s) — voir la fiche client dans l'application.</div>` : ''}
+    ${olderRxCount > 0 ? `<div style="margin-top:6px;font-size:11px;color:#94a3b8;">${tr('doc.olderRx', { count: olderRxCount })}</div>` : ''}
 
     ${
       customer.sales.length > 0
         ? section(
-            `Achats & devis (${customer.sales.length})`,
-            '<th style="padding:6px 10px;text-align:left;">N°</th><th style="padding:6px 10px;text-align:left;">Date</th><th style="padding:6px 10px;text-align:left;">Type</th><th style="padding:6px 10px;text-align:left;">Articles</th><th style="padding:6px 10px;text-align:right;">Montant</th><th style="padding:6px 10px;text-align:left;">Statut</th>',
+            tr('doc.purchases', { count: customer.sales.length }),
+            `<th style="padding:6px 10px;text-align:left;">${tr('doc.colNo')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colDate')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colType')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colItems')}</th><th style="padding:6px 10px;text-align:right;">${tr('doc.colAmount')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colStatus')}</th>`,
             customer.sales.map(saleRow).join(''),
           )
         : ''
@@ -208,8 +212,8 @@ export function buildClientDossierHtml(customer: DossierCustomer, company: Compa
     ${
       customer.lensOrders.length > 0
         ? section(
-            `Commandes de verres (${customer.lensOrders.length})`,
-            '<th style="padding:6px 10px;text-align:left;">N°</th><th style="padding:6px 10px;text-align:left;">Date</th><th style="padding:6px 10px;text-align:left;">Verres</th><th style="padding:6px 10px;text-align:left;">Statut</th><th style="padding:6px 10px;text-align:right;">Coût</th>',
+            tr('doc.lensOrders', { count: customer.lensOrders.length }),
+            `<th style="padding:6px 10px;text-align:left;">${tr('doc.colNo')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colDate')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colLenses')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colStatus')}</th><th style="padding:6px 10px;text-align:right;">${tr('doc.colCost')}</th>`,
             customer.lensOrders.map(lensOrderRow).join(''),
           )
         : ''
@@ -218,15 +222,15 @@ export function buildClientDossierHtml(customer: DossierCustomer, company: Compa
     ${
       customer.repairs.length > 0
         ? section(
-            `SAV & réparations (${customer.repairs.length})`,
-            '<th style="padding:6px 10px;text-align:left;">N°</th><th style="padding:6px 10px;text-align:left;">Date</th><th style="padding:6px 10px;text-align:left;">Description</th><th style="padding:6px 10px;text-align:left;">Statut</th><th style="padding:6px 10px;text-align:right;">Coût</th>',
+            tr('doc.repairs', { count: customer.repairs.length }),
+            `<th style="padding:6px 10px;text-align:left;">${tr('doc.colNo')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colDate')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colDescription')}</th><th style="padding:6px 10px;text-align:left;">${tr('doc.colStatus')}</th><th style="padding:6px 10px;text-align:right;">${tr('doc.colCost')}</th>`,
             customer.repairs.map(repairRow).join(''),
           )
         : ''
     }
 
     <div style="margin-top:40px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;">
-      ${esc(company.name)} — Dossier généré depuis OculoSaaS
+      ${esc(company.name)} — ${tr('doc.footerGenerated')}
     </div>
   </div>
 </body>
@@ -238,7 +242,7 @@ export function printClientDossier(customer: DossierCustomer, company: CompanyIn
   const html = buildClientDossierHtml(customer, company);
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) {
-    alert("Veuillez autoriser les fenêtres pop-up pour générer le dossier client.");
+    alert(tr('doc.allowPopupsDossier'));
     return;
   }
   win.document.open();

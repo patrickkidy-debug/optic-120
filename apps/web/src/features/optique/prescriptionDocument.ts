@@ -1,5 +1,7 @@
 import type { Prescription } from './api';
 import type { CompanyInfo } from './saleDocument';
+import { tr } from '../../lib/tr';
+import { displayLocale } from '../../lib/format';
 
 export interface PrescriptionPatient {
   firstName: string;
@@ -16,7 +18,7 @@ function esc(value: unknown): string {
 }
 
 function frDate(d: string | Date): string {
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(displayLocale(), { day: '2-digit', month: 'long', year: 'numeric' }).format(
     typeof d === 'string' ? new Date(d) : d,
   );
 }
@@ -38,8 +40,8 @@ export function buildPrescriptionHtml(
     : `<div style="font-size:22px;font-weight:800;color:${accent};">${esc(company.name)}</div>`;
 
   const contactLine = [
-    company.contactPhone ? `Tél : ${esc(company.contactPhone)}` : '',
-    company.contactEmail ? `Email : ${esc(company.contactEmail)}` : '',
+    company.contactPhone ? tr('doc.phone', { value: esc(company.contactPhone) }) : '',
+    company.contactEmail ? tr('doc.email', { value: esc(company.contactEmail) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -60,18 +62,18 @@ export function buildPrescriptionHtml(
     </tr>`;
 
   const extras = [
-    rx.pupillaryDistance ? `Écart pupillaire : ${esc(rx.pupillaryDistance)} mm` : '',
-    rx.lensType ? `Type de verres : ${esc(rx.lensType)}` : '',
+    rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+    rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${displayLocale().slice(0, 2)}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ordonnance ${esc(patient.lastName)}</title>
+<title>${tr('doc.prescriptionTitle', { name: esc(patient.lastName) })}</title>
 <style>
   @page { size: A4; margin: 16mm; }
   * { box-sizing: border-box; }
@@ -88,13 +90,13 @@ export function buildPrescriptionHtml(
         ${contactLine ? `<div style="font-size:12px;color:#64748b;">${contactLine}</div>` : ''}
       </div>
       <div style="text-align:right;">
-        <div style="font-size:26px;font-weight:800;letter-spacing:1px;color:${accent};">ORDONNANCE</div>
-        <div style="font-size:12px;color:#64748b;">Date : ${frDate(rx.date)}</div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:1px;color:${accent};">${tr('doc.prescription')}</div>
+        <div style="font-size:12px;color:#64748b;">${tr('doc.date', { value: frDate(rx.date) })}</div>
       </div>
     </div>
 
     <div style="margin-top:26px;padding:14px 16px;background:#f8fafc;border-radius:10px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">Patient</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">${tr('doc.patient')}</div>
       <div style="margin-top:2px;font-size:16px;font-weight:700;color:#0f172a;">${esc(patient.firstName)} ${esc(patient.lastName)}</div>
       ${patient.phone ? `<div style="font-size:12px;color:#64748b;">${esc(patient.phone)}</div>` : ''}
     </div>
@@ -102,27 +104,27 @@ export function buildPrescriptionHtml(
     <table style="width:100%;border-collapse:collapse;margin-top:24px;font-size:14px;">
       <thead>
         <tr style="background:${accent};color:#fff;">
-          <th style="padding:10px 12px;text-align:left;border-radius:8px 0 0 0;">Œil</th>
-          <th style="padding:10px 12px;text-align:center;">Sphère</th>
-          <th style="padding:10px 12px;text-align:center;">Cylindre</th>
-          <th style="padding:10px 12px;text-align:center;">Axe</th>
-          <th style="padding:10px 12px;text-align:center;border-radius:0 8px 0 0;">Addition</th>
+          <th style="padding:10px 12px;text-align:left;border-radius:8px 0 0 0;">${tr('doc.eye')}</th>
+          <th style="padding:10px 12px;text-align:center;">${tr('doc.sphere')}</th>
+          <th style="padding:10px 12px;text-align:center;">${tr('doc.cylinder')}</th>
+          <th style="padding:10px 12px;text-align:center;">${tr('doc.axis')}</th>
+          <th style="padding:10px 12px;text-align:center;border-radius:0 8px 0 0;">${tr('doc.addition')}</th>
         </tr>
       </thead>
       <tbody>
-        ${eyeRow('OD (droit)', rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
-        ${eyeRow('OG (gauche)', rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
+        ${eyeRow(tr('doc.odRight'), rx.odSphere, rx.odCylinder, rx.odAxis, rx.odAddition)}
+        ${eyeRow(tr('doc.ogLeft'), rx.ogSphere, rx.ogCylinder, rx.ogAxis, rx.ogAddition)}
       </tbody>
     </table>
 
     ${extras ? `<div style="margin-top:14px;font-size:13px;color:#334155;">${extras}</div>` : ''}
-    ${rx.notes ? `<div style="margin-top:10px;font-size:13px;color:#334155;"><b>Notes :</b> ${esc(rx.notes)}</div>` : ''}
+    ${rx.notes ? `<div style="margin-top:10px;font-size:13px;color:#334155;"><b>${tr('doc.notes')}</b> ${esc(rx.notes)}</div>` : ''}
 
     <div style="margin-top:48px;display:flex;justify-content:space-between;align-items:flex-end;">
       <div style="font-size:12px;color:#94a3b8;">${esc(company.name)}</div>
       <div style="text-align:center;">
         <div style="width:200px;border-top:1px solid #94a3b8;padding-top:6px;font-size:12px;color:#64748b;">
-          ${rx.prescriberName ? esc(rx.prescriberName) : 'Cachet & signature'}
+          ${rx.prescriberName ? esc(rx.prescriberName) : tr('doc.stampSignature')}
         </div>
       </div>
     </div>
@@ -140,7 +142,7 @@ export function printPrescription(
   const html = buildPrescriptionHtml(rx, patient, company);
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) {
-    alert('Veuillez autoriser les fenêtres pop-up pour imprimer l\'ordonnance.');
+    alert(tr('doc.allowPopupsRx'));
     return;
   }
   win.document.open();

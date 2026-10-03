@@ -76,7 +76,7 @@ export function exportProductsPdf(rows: ExportRow[], title: string): void {
     </style>
   </head><body>
     <h1>${title}</h1>
-    <p>${rows.length} article(s) — généré le ${new Date().toLocaleDateString(displayLocale())}</p>
+    <p>${tr('doc.itemsGenerated', { count: rows.length, date: new Date().toLocaleDateString(displayLocale()) })}</p>
     <table><thead><tr>${headers().map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
   </body></html>`;
 
