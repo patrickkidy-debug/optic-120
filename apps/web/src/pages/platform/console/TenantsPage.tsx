@@ -26,6 +26,7 @@ import {
   listConsoleTenants,
   type RealSubState,
 } from '../../../features/billing/console';
+import { ContactWhatsappModal, type WhatsappContact } from './ContactWhatsappModal';
 
 const STATES: { id: RealSubState | 'all'; label: string }[] = [
   { id: 'all', label: 'Tous' },
@@ -61,6 +62,7 @@ export function ConsoleTenantsPage({
   const [debounced, setDebounced] = useState('');
   const [state, setState] = useState<RealSubState | 'all'>('all');
   const [page, setPage] = useState(1);
+  const [contacting, setContacting] = useState<WhatsappContact | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(search.trim()), 350);
@@ -144,11 +146,15 @@ export function ConsoleTenantsPage({
                       label: 'Envoyer un WhatsApp',
                       icon: MessageCircle,
                       onClick: () =>
-                        window.open(
-                          `https://wa.me/${t.whatsapp!.replace(/[^0-9]/g, '')}`,
-                          '_blank',
-                          'noopener,noreferrer',
-                        ),
+                        setContacting({
+                          tenantName: t.name,
+                          phone: t.whatsapp,
+                          email: t.email,
+                          planName: t.planName,
+                          endsAt: t.currentPeriodEnd,
+                          state: t.state,
+                          countryCode: t.country && t.country.length === 2 ? t.country : null,
+                        }),
                     });
                   }
                   return (
@@ -234,6 +240,7 @@ export function ConsoleTenantsPage({
           onOpenBilling={onOpenBilling}
         />
       )}
+      {contacting && <ContactWhatsappModal contact={contacting} onClose={() => setContacting(null)} />}
     </div>
   );
 }

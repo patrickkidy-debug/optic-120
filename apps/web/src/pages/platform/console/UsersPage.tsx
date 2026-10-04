@@ -47,6 +47,7 @@ import {
   ExtendTrialModal,
   PlatformResetPasswordModal,
 } from './modals';
+import { ContactWhatsappModal, type WhatsappContact } from './ContactWhatsappModal';
 
 const FILTERS = [
   { id: 'all', label: 'Tous' },
@@ -92,6 +93,7 @@ export function ConsoleUsersPage({
   const [extending, setExtending] = useState<{ tenantId: string; tenantName: string } | null>(null);
   const [resetResult, setResetResult] = useState<{ user: PlatformUser; tempPassword: string } | null>(null);
   const [editingEmail, setEditingEmail] = useState<ConsoleUser | null>(null);
+  const [contacting, setContacting] = useState<WhatsappContact | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(search.trim()), 350);
@@ -158,11 +160,17 @@ export function ConsoleUsersPage({
       items.push({
         label: 'Envoyer un WhatsApp',
         icon: MessageCircle,
-        onClick: () => {
-          const digits = u.phone!.replace(/[^0-9]/g, '');
-          const text = `Bonjour ${u.name}, ici l'équipe OculoSaaS.`;
-          window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
-        },
+        onClick: () =>
+          setContacting({
+            name: u.name,
+            tenantName: u.tenantName,
+            phone: u.phone,
+            email: u.email,
+            planName: u.planName,
+            endsAt: u.subscriptionEndsAt,
+            state: u.state,
+            lastLoginAt: u.lastLoginAt,
+          }),
       });
     }
     items.push({
@@ -402,6 +410,7 @@ export function ConsoleUsersPage({
           }}
         />
       )}
+      {contacting && <ContactWhatsappModal contact={contacting} onClose={() => setContacting(null)} />}
       {editingEmail && (
         <ChangeEmailModal
           user={editingEmail}
