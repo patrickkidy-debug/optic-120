@@ -5,6 +5,16 @@ import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-gu
 import { notFound, badRequest, forbidden } from '../../lib/http-error.js';
 import type { FastifyRequest } from 'fastify';
 import { getOpticalSettings, addMonths } from '../../lib/optical-settings.js';
+import {
+  DIRECTORY_SEGMENTS,
+  DIRECTORY_VISITS,
+  customerCode,
+  getCustomerSummary,
+  getDirectory,
+  type DirectorySegment,
+  type DirectorySort,
+  type DirectoryVisit,
+} from './customers.directory.js';
 
 function toDate(v?: string | null): Date | null {
   return v ? new Date(v) : null;
@@ -70,6 +80,36 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
       take: 100,
     });
     return reply.send({ customers });
+  });
+
+  // Annuaire de la page Clients : paginé, filtrable, enrichi (dernière visite,
+  // dernier achat, ordonnance, total dépensé) + compteurs du haut de page.
+  // GET / reste inchangé : la caisse et d'autres écrans s'en servent.
+  app.get('/directory', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const q = req.query as {
+      search?: string;
+      branchId?: string;
+      page?: string;
+      pageSize?: string;
+      segments?: string;
+      visit?: string;
+      sort?: string;
+    };
+    const segments = (q.segments ?? '')
+      .split(',')
+      .filter((x): x is DirectorySegment => (DIRECTORY_SEGMENTS as readonly string[]).includes(x));
+    const visit = (DIRECTORY_VISITS as readonly string[]).includes(q.visit ?? '') ? (q.visit as DirectoryVisit) : undefined;
+    const sort = (['recent', 'visit', 'name', 'spent'] as const).includes(q.sort as DirectorySort) ? (q.sort as DirectorySort) : 'recent';
+    const result = await getDirectory(req.db!, req.auth!.tenantId, {
+      scope: customerScope(req, q.branchId),
+      search: q.search?.slice(0, 80),
+      segments,
+      visit,
+      sort,
+      page: Math.max(1, Number.parseInt(q.page ?? '1', 10) || 1),
+      pageSize: Math.min(100, Math.max(10, Number.parseInt(q.pageSize ?? '25', 10) || 25)),
+    });
+    return reply.send(result);
   });
 
   app.post('/', { preHandler: requirePermission('optique.customers.create') }, async (req, reply) => {
@@ -160,7 +200,37 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     });
     if (!customer) throw notFound('Client introuvable');
     assertCustomerVisible(req, customer.branchId);
-    return reply.send({ customer });
+    // Dossier patient : synthèse sur tout l'historique, et volet clinique
+    // (consultations, rendez-vous) seulement pour qui a le droit de le voir.
+    const perms = req.auth!.permissions;
+    const canConsult = perms.has('clinic.consultations.view');
+    const canAppoint = perms.has('clinic.appointments.view');
+    const [summary, patient] = await Promise.all([
+      getCustomerSummary(req.db!, id),
+      canConsult || canAppoint
+        ? req.db!.patient.findFirst({
+            where: { customerId: id },
+            select: {
+              id: true,
+              consultations: canConsult
+                ? {
+                    orderBy: { date: 'desc' },
+                    take: 20,
+                    select: { id: true, date: true, practitionerName: true, diagnosis: true, visualAcuityRight: true, visualAcuityLeft: true, lensType: true },
+                  }
+                : false,
+              appointments: canAppoint
+                ? {
+                    orderBy: { scheduledAt: 'desc' },
+                    take: 20,
+                    select: { id: true, scheduledAt: true, status: true, reason: true },
+                  }
+                : false,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+    return reply.send({ customer: { ...customer, code: customerCode(customer.id), summary, clinic: patient } });
   });
 
   // Ordonnances optiques d'un client.

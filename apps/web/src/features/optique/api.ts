@@ -311,12 +311,85 @@ export interface CustomerRepair {
 
 export async function getCustomer(id: string) {
   const { data } = await api.get(`/customers/${id}`);
-  return data.customer as Customer & {
-    prescriptions: Prescription[];
-    sales: CustomerSale[];
-    lensOrders: CustomerLensOrder[];
-    repairs: CustomerRepair[];
-  };
+  return data.customer as CustomerDetail;
+}
+
+/** Synthèse du dossier patient, calculée sur tout l'historique. */
+export interface CustomerSummary {
+  totalSpent: number;
+  totalPaid: number;
+  balance: number;
+  salesCount: number;
+  quotesCount: number;
+  prescriptionsCount: number;
+  lensOrdersCount: number;
+  repairsCount: number;
+  visits: number;
+}
+
+export type CustomerDetail = Customer & {
+  code?: string;
+  prescriptions: Prescription[];
+  sales: CustomerSale[];
+  lensOrders: CustomerLensOrder[];
+  repairs: CustomerRepair[];
+  summary?: CustomerSummary;
+  /** Volet clinique (si la fiche est liée à un patient et selon les droits). */
+  clinic?: {
+    id: string;
+    consultations?: { id: string; date: string; practitionerName: string | null; diagnosis: string | null; visualAcuityRight: string | null; visualAcuityLeft: string | null; lensType: string | null }[];
+    appointments?: { id: string; scheduledAt: string; status: string; reason: string | null }[];
+  } | null;
+};
+
+/* --- Annuaire clients (page Clients) --- */
+
+export type DirectorySegment = 'new' | 'active' | 'inactive' | 'withRx' | 'withoutRx' | 'withPurchase' | 'withoutPurchase' | 'followUp';
+export type DirectoryVisit = 'today' | '7d' | '30d' | '3m' | 'over6m';
+export type DirectorySort = 'recent' | 'visit' | 'name' | 'spent';
+
+export interface DirectoryCustomer extends Customer {
+  code: string;
+  lastVisitAt: string | null;
+  lastPrescriptionAt: string | null;
+  rxStatus: 'none' | 'valid' | 'expired';
+  totalSpent: number;
+  salesCount: number;
+  active: boolean;
+  followUp: boolean;
+  isNew: boolean;
+  lastPurchase: { id: string; number: string; total: number; at: string; label: string | null } | null;
+}
+
+export interface CustomerDirectory {
+  customers: DirectoryCustomer[];
+  total: number;
+  page: number;
+  pageSize: number;
+  stats: { total: number; newThisMonth: number; active: number; followUp: number };
+}
+
+export async function getCustomerDirectory(params: {
+  search?: string;
+  branchId?: string;
+  segments?: DirectorySegment[];
+  visit?: DirectoryVisit;
+  sort?: DirectorySort;
+  page?: number;
+  pageSize?: number;
+}): Promise<CustomerDirectory> {
+  const { data } = await api.get<CustomerDirectory>('/customers/directory', {
+    params: {
+      search: params.search || undefined,
+      branchId: params.branchId || undefined,
+      segments: params.segments?.length ? params.segments.join(',') : undefined,
+      visit: params.visit || undefined,
+      sort: params.sort,
+      page: params.page,
+      pageSize: params.pageSize,
+    },
+  });
+  return data;
 }
 
 export async function listPrescriptions(customerId: string): Promise<Prescription[]> {

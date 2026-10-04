@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Receipt,
   FileText,
@@ -185,6 +186,17 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
       setLoadingDetail(null);
     }
   }
+
+  // Lien direct depuis le dossier patient : ouvre la vente demandée une fois.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const saleId = (location.state as { openSaleId?: string } | null)?.openSaleId;
+    if (!saleId) return;
+    navigate(location.pathname, { replace: true, state: null });
+    void openDetail(saleId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   /** Récupère TOUT l'historique (toutes les pages) pour l'export. */
   async function fetchAllSales(): Promise<SaleListItem[]> {

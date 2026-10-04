@@ -72,10 +72,16 @@ export default {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        // Panneau latéral (dossier patient) qui arrive par la droite.
+        'slide-in-right': {
+          '0%': { transform: 'translateX(24px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.25s ease-out',
         'slide-in': 'slide-in 0.2s ease-out',
+        'slide-in-right': 'slide-in-right 0.22s ease-out',
       },
     },
   },

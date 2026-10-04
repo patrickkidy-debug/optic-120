@@ -37,7 +37,7 @@ import { saleStatusLabel } from '../../lib/labels';
 
 const SALE_TYPE_LABEL: Record<string, string> = { get SALE() { return tr('ui.ClientRecord.vente'); }, get QUOTE() { return tr('ui.ClientRecord.devis'); }, get RETURN() { return tr('ui.ClientRecord.retour'); } };
 
-const REPAIR_STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
+export const REPAIR_STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' }> = {
   RECEIVED: { get label() { return tr('ui.ClientRecord.recu'); }, tone: 'info' },
   IN_PROGRESS: { get label() { return tr('ui.ClientRecord.enCours'); }, tone: 'warning' },
   READY: { get label() { return tr('ui.ClientRecord.pret'); }, tone: 'success' },
@@ -46,7 +46,7 @@ const REPAIR_STATUS: Record<RepairStatus, { label: string; tone: 'neutral' | 'in
 };
 
 /** Ton de badge pour une commande de verres, cohérent avec le Kanban. */
-function lensOrderTone(status: LensOrderStatus): 'neutral' | 'info' | 'warning' | 'success' | 'danger' {
+export function lensOrderTone(status: LensOrderStatus): 'neutral' | 'info' | 'warning' | 'success' | 'danger' {
   if (status === 'CANCELLED') return 'danger';
   if (status === 'READY' || status === 'DELIVERED') return 'success';
   const idx = (LENS_ORDER_BOARD_STATUSES as readonly string[]).indexOf(status);
@@ -277,7 +277,7 @@ function RecordSection({
   );
 }
 
-function SaleRow({ sale }: { sale: CustomerSale }) {
+export function SaleRow({ sale }: { sale: CustomerSale }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-lg border p-2.5 text-sm">
@@ -307,7 +307,7 @@ function SaleRow({ sale }: { sale: CustomerSale }) {
   );
 }
 
-function LensOrderRow({ order }: { order: CustomerLensOrder }) {
+export function LensOrderRow({ order }: { order: CustomerLensOrder }) {
   return (
     <div className="rounded-lg border p-2.5 text-sm">
       <div className="flex items-center justify-between gap-2">
@@ -328,7 +328,7 @@ function LensOrderRow({ order }: { order: CustomerLensOrder }) {
   );
 }
 
-function RepairRow({ repair }: { repair: CustomerRepair }) {
+export function RepairRow({ repair }: { repair: CustomerRepair }) {
   const st = REPAIR_STATUS[repair.status];
   return (
     <div className="rounded-lg border p-2.5 text-sm">
@@ -345,7 +345,7 @@ function RepairRow({ repair }: { repair: CustomerRepair }) {
   );
 }
 
-function PrescriptionCard({
+export function PrescriptionCard({
   rx,
   patient,
   company,

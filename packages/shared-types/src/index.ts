@@ -2657,6 +2657,7 @@ export const SALE_WA_STAGES = [
   { key: 'lens_ready', label: 'Verres prêts' },
   { key: 'lens_delivered', label: 'Verres livrés / retirés' },
   { key: 'renewal', label: 'Renouvellement' },
+  { key: 'followup', label: 'Suivi client' },
 ] as const;
 export type SaleWaStage = (typeof SALE_WA_STAGES)[number]['key'];
 
@@ -2674,6 +2675,7 @@ export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = {
     'Bonjour {client}, merci d’avoir retiré vos verres chez {etablissement}. Prenez soin de votre vue !',
   renewal:
     'Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.',
+  followup: 'Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}.',
 };
 
 /**
@@ -2695,6 +2697,7 @@ export const DEFAULT_WA_TEMPLATES_EN: Record<SaleWaStage, string> = {
     'Hello {client}, thank you for collecting your glasses at {etablissement}. Take care of your eyesight!',
   renewal:
     'Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.',
+  followup: 'Hello {client}, we are contacting you about your follow-up at {etablissement}.',
 };
 
 /** Langues des messages WhatsApp clients, par pays (première = par défaut). */
@@ -2711,6 +2714,7 @@ export const whatsappTemplatesSchema = z
     lens_ready: z.string().max(1000),
     lens_delivered: z.string().max(1000),
     renewal: z.string().max(1000),
+    followup: z.string().max(1000),
     /** Version anglaise des modèles (établissements bilingues, ex. Rwanda). */
     en: z
       .object({
@@ -2720,6 +2724,7 @@ export const whatsappTemplatesSchema = z
         lens_ready: z.string().max(1000),
         lens_delivered: z.string().max(1000),
         renewal: z.string().max(1000),
+        followup: z.string().max(1000),
       })
       .partial(),
   })
