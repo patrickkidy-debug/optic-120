@@ -1,7 +1,11 @@
 import {
   DEFAULT_WA_TEMPLATES,
+  DEFAULT_WA_TEMPLATES_EN,
+  DEFAULT_WA_TEMPLATES_FR,
+  WA_MESSAGE_LANGS_BY_COUNTRY,
   fillWaTemplate,
   type SaleWaStage,
+  type WaMessageLang,
   type WhatsappTemplates,
 } from '@oculo/shared-types';
 import { useAuthStore } from '../store/auth';
@@ -50,6 +54,7 @@ export function sendWhatsappForStage(
   stage: SaleWaStage,
   phone: string | null | undefined,
   vars: Record<string, string | number>,
+  lang?: WaMessageLang,
 ): boolean {
   const link = waLink(phone);
   if (!link) {
@@ -58,8 +63,23 @@ export function sendWhatsappForStage(
   }
   const templates: WhatsappTemplates =
     useAuthStore.getState().user?.tenantWhatsappTemplates ?? {};
-  const tpl = templates[stage] ?? DEFAULT_WA_TEMPLATES[stage];
+  // Établissement bilingue (Rwanda) : la langue choisie au clic décide du modèle,
+  // indépendamment de la langue de l'interface.
+  const tpl =
+    lang === 'en'
+      ? templates.en?.[stage] ?? DEFAULT_WA_TEMPLATES_EN[stage]
+      : lang === 'fr'
+        ? templates[stage] ?? DEFAULT_WA_TEMPLATES_FR[stage]
+        : templates[stage] ?? DEFAULT_WA_TEMPLATES[stage];
   const text = fillWaTemplate(tpl, vars);
   window.open(`${link}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   return true;
+}
+
+/**
+ * Langues proposées pour les messages clients de l'établissement connecté :
+ * deux au Rwanda (anglais, français), sinon une seule (comportement habituel).
+ */
+export function waMessageLangs(countryCode?: string | null): readonly WaMessageLang[] {
+  return (countryCode && WA_MESSAGE_LANGS_BY_COUNTRY[countryCode]) || [];
 }

@@ -49,6 +49,7 @@ import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { WhatsappSendButton } from '../../components/WhatsappSendButton';
 import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../lib/labels';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 
@@ -446,8 +447,8 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                   <td className="table-cell">
                     <div className="flex justify-end gap-1">
                       {s.customer?.phone && s.status !== 'CANCELLED' && (
-                        <button
-                          onClick={() =>
+                        <WhatsappSendButton
+                          onSend={(lang) =>
                             sendWhatsappForStage(
                               isQuote ? 'quote' : 'sale_paid',
                               s.customer?.phone,
@@ -458,13 +459,14 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                                 montant: formatCurrency(Number(s.totalAmount)),
                                 reste: formatCurrency(Number(s.totalAmount) - Number(s.paidAmount)),
                               },
+                              lang,
                             )
                           }
                           className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
                           title={t('sales.whatsappTitle')}
                         >
                           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                        </button>
+                        </WhatsappSendButton>
                       )}
                       <button
                         onClick={() => handleDownload(s.id)}

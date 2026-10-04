@@ -23,11 +23,12 @@ import { WatchDemoCard } from '../../features/demo/WatchDemoCard';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings, LensPricing, OpticalSettings } from '@oculo/shared-types';
-import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_OPTICAL_SETTINGS } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_WA_TEMPLATES_EN, DEFAULT_WA_TEMPLATES_FR, DEFAULT_OPTICAL_SETTINGS } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
 import { currencySymbol, getActiveCurrency } from '../../lib/format';
+import { waMessageLangs } from '../../lib/whatsapp';
 import { tr } from '../../lib/tr';
 
 function ImagePicker({
@@ -603,6 +604,9 @@ function WhatsappTemplatesCard() {
   const qc = useQueryClient();
   const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
   const [tpl, setTpl] = useState<Record<string, string>>({});
+  const [tplEn, setTplEn] = useState<Record<string, string>>({});
+  // Établissement bilingue (Rwanda) : modèles français ET anglais.
+  const bilingual = waMessageLangs(useAuthStore((st) => st.user?.tenantCountryCode)).length > 1;
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -610,18 +614,22 @@ function WhatsappTemplatesCard() {
   useEffect(() => {
     if (branding && !hydrated) {
       const merged: Record<string, string> = {};
+      const mergedEn: Record<string, string> = {};
       for (const s of SALE_WA_STAGES) {
-        merged[s.key] = branding.whatsappTemplates?.[s.key] ?? DEFAULT_WA_TEMPLATES[s.key];
+        merged[s.key] = branding.whatsappTemplates?.[s.key] ?? (bilingual ? DEFAULT_WA_TEMPLATES_FR : DEFAULT_WA_TEMPLATES)[s.key];
+        mergedEn[s.key] = branding.whatsappTemplates?.en?.[s.key] ?? DEFAULT_WA_TEMPLATES_EN[s.key];
       }
       setTpl(merged);
+      setTplEn(mergedEn);
       setHydrated(true);
     }
-  }, [branding, hydrated]);
+  }, [branding, hydrated, bilingual]);
 
   async function save() {
     setBusy(true);
     try {
-      await updateBranding({ whatsappTemplates: tpl as Parameters<typeof updateBranding>[0]['whatsappTemplates'] });
+      const payload = bilingual ? { ...tpl, en: tplEn } : tpl;
+      await updateBranding({ whatsappTemplates: payload as Parameters<typeof updateBranding>[0]['whatsappTemplates'] });
       qc.invalidateQueries({ queryKey: ['branding'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -648,6 +656,7 @@ function WhatsappTemplatesCard() {
       </p>
 
       <div className="space-y-3">
+        {bilingual && <p className="text-sm font-semibold text-content">Français</p>}
         {SALE_WA_STAGES.map((s) => (
           <Field key={s.key} label={s.label}>
             <textarea
@@ -659,6 +668,22 @@ function WhatsappTemplatesCard() {
           </Field>
         ))}
       </div>
+
+      {bilingual && (
+        <div className="mt-5 space-y-3 border-t pt-4">
+          <p className="text-sm font-semibold text-content">English</p>
+          {SALE_WA_STAGES.map((s) => (
+            <Field key={s.key} label={s.label}>
+              <textarea
+                rows={2}
+                className="input resize-y"
+                value={tplEn[s.key] ?? ''}
+                onChange={(e) => setTplEn((prev) => ({ ...prev, [s.key]: e.target.value }))}
+              />
+            </Field>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={save} loading={busy}>

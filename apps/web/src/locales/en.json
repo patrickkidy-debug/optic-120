@@ -3837,7 +3837,9 @@
     "laRemiseDepasseLeSousTotal_6g1t8z": "The discount exceeds the subtotal",
     "leMontantDuReglementDoitEtre_1129tlg": "The payment amount must be greater than zero",
     "montantRequis_1p9s0v6": "Amount required",
-    "motifRequis_bkx3n6": "Reason required"
+    "motifRequis_bkx3n6": "Reason required",
+    "renouvellement_oilj1v": "Renewal",
+    "bonjourClientVotreOrdonnanceChezEtabliss_1i3rs48": "Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you."
   },
   "reports": {
     "pageRange": "Showing {{first}}–{{last}} of {{total}} sale(s)",

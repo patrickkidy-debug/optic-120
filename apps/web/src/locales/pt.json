@@ -3837,7 +3837,9 @@
     "laRemiseDepasseLeSousTotal_6g1t8z": "O desconto excede o subtotal",
     "leMontantDuReglementDoitEtre_1129tlg": "O valor do pagamento deve ser superior a zero",
     "montantRequis_1p9s0v6": "Valor obrigatório",
-    "motifRequis_bkx3n6": "Motivo obrigatório"
+    "motifRequis_bkx3n6": "Motivo obrigatório",
+    "renouvellement_oilj1v": "Renovação",
+    "bonjourClientVotreOrdonnanceChezEtabliss_1i3rs48": "Olá {client}, a sua receita na {etablissement} está a chegar ao fim da validade. Marque um novo exame visual: teremos todo o gosto em recebê-lo."
   },
   "reports": {
     "pageRange": "A mostrar {{first}} a {{last}} de {{total}} venda(s)",

@@ -14,7 +14,8 @@ import {
   type LensOrder,
 } from '../../features/optique/api';
 import { Avatar } from '../../components/Avatar';
-import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { sendWhatsappForStage, waMessageLangs } from '../../lib/whatsapp';
+import type { WaMessageLang } from '@oculo/shared-types';
 import { useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
@@ -69,12 +70,13 @@ export function LensOrderDetail({
     onError: (e) => alert(apiErrorMessage(e)),
   });
 
-  function notifyClient() {
+  const waLangs = waMessageLangs(useAuthStore.getState().user?.tenantCountryCode);
+  function notifyClient(lang?: WaMessageLang) {
     const ok = sendWhatsappForStage(stageForStatus(order.status), order.customer?.phone, {
       client: order.customer?.firstName ?? '',
       etablissement: tenantName,
       numero: order.number,
-    });
+    }, lang);
     if (ok) notifyMut.mutate();
   }
 
@@ -246,15 +248,22 @@ export function LensOrderDetail({
           )}
 
           {canManage && order.customer?.phone && (
-            <Button
-              className="w-full"
-              variant={notified ? 'outline' : 'accent'}
-              loading={notifyMut.isPending}
-              onClick={notifyClient}
-            >
-              <MessageCircle className="h-4 w-4" />
-              {notified ? tr('ui.LensOrderDetail.prevenirANouveau') : tr('ui.LensOrderDetail.notifierLeClient')}
-            </Button>
+            // Établissement bilingue (Rwanda) : un bouton par langue du message.
+            <div className="flex gap-2">
+              {(waLangs.length > 1 ? waLangs : [undefined]).map((lang) => (
+                <Button
+                  key={lang ?? 'default'}
+                  className="w-full"
+                  variant={notified ? 'outline' : 'accent'}
+                  loading={notifyMut.isPending}
+                  onClick={() => notifyClient(lang)}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {notified ? tr('ui.LensOrderDetail.prevenirANouveau') : tr('ui.LensOrderDetail.notifierLeClient')}
+                  {lang && ` (${lang.toUpperCase()})`}
+                </Button>
+              ))}
+            </div>
           )}
 
           {canManage && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (

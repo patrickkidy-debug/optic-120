@@ -2656,6 +2656,7 @@ export const SALE_WA_STAGES = [
   { key: 'lens_ordered', label: 'Verres commandés' },
   { key: 'lens_ready', label: 'Verres prêts' },
   { key: 'lens_delivered', label: 'Verres livrés / retirés' },
+  { key: 'renewal', label: 'Renouvellement' },
 ] as const;
 export type SaleWaStage = (typeof SALE_WA_STAGES)[number]['key'];
 
@@ -2671,7 +2672,36 @@ export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = {
     'Bonjour {client}, bonne nouvelle : vos verres sont prêts ! Vous pouvez passer les retirer chez {etablissement}.',
   lens_delivered:
     'Bonjour {client}, merci d’avoir retiré vos verres chez {etablissement}. Prenez soin de votre vue !',
+  renewal:
+    'Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.',
 };
+
+/**
+ * Modèles par défaut figés en français et en anglais, pour les établissements qui
+ * écrivent à leurs clients dans les deux langues (Rwanda). Contrairement à
+ * DEFAULT_WA_TEMPLATES, ils ne suivent pas la langue de l'interface.
+ */
+export const DEFAULT_WA_TEMPLATES_FR: Record<SaleWaStage, string> = { ...DEFAULT_WA_TEMPLATES };
+export const DEFAULT_WA_TEMPLATES_EN: Record<SaleWaStage, string> = {
+  quote:
+    'Hello {client}, here is your quote {numero} from {etablissement}: {montant}. It remains valid for a few days. Kind regards.',
+  sale_paid:
+    'Hello {client}, we confirm your payment of {montant} at {etablissement}. Thank you for your trust!',
+  lens_ordered:
+    'Hello {client}, your lenses have been ordered at {etablissement}. We will let you know as soon as they arrive.',
+  lens_ready:
+    'Hello {client}, good news: your glasses are ready! You can collect them at {etablissement}.',
+  lens_delivered:
+    'Hello {client}, thank you for collecting your glasses at {etablissement}. Take care of your eyesight!',
+  renewal:
+    'Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.',
+};
+
+/** Langues des messages WhatsApp clients, par pays (première = par défaut). */
+export const WA_MESSAGE_LANGS_BY_COUNTRY: Partial<Record<string, readonly ('fr' | 'en')[]>> = {
+  RW: ['en', 'fr'],
+};
+export type WaMessageLang = 'fr' | 'en';
 
 export const whatsappTemplatesSchema = z
   .object({
@@ -2680,6 +2710,18 @@ export const whatsappTemplatesSchema = z
     lens_ordered: z.string().max(1000),
     lens_ready: z.string().max(1000),
     lens_delivered: z.string().max(1000),
+    renewal: z.string().max(1000),
+    /** Version anglaise des modèles (établissements bilingues, ex. Rwanda). */
+    en: z
+      .object({
+        quote: z.string().max(1000),
+        sale_paid: z.string().max(1000),
+        lens_ordered: z.string().max(1000),
+        lens_ready: z.string().max(1000),
+        lens_delivered: z.string().max(1000),
+        renewal: z.string().max(1000),
+      })
+      .partial(),
   })
   .partial();
 export type WhatsappTemplates = z.infer<typeof whatsappTemplatesSchema>;

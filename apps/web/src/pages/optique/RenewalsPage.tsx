@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { BellRing, Phone, MessageCircle } from 'lucide-react';
 import { listRenewals } from '../../features/optique/api';
 import { PageHeader, Badge, PageLoader, EmptyState } from '../../components/ui';
+import { WhatsappSendButton } from '../../components/WhatsappSendButton';
+import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { useAuthStore } from '../../store/auth';
 import { tr } from '../../lib/tr';
 
 function waLink(phone?: string | null) {
@@ -25,6 +28,7 @@ function ageLabel(v?: string | null): string {
 
 export function RenewalsPage() {
   const { data, isLoading } = useQuery({ queryKey: ['renewals'], queryFn: listRenewals });
+  const tenantName = useAuthStore((s) => s.user?.tenantName) ?? 'OculoSaaS';
 
   return (
     <div>
@@ -78,14 +82,14 @@ export function RenewalsPage() {
                           </a>
                         )}
                         {wa && (
-                          <a
-                            href={wa}
-                            target="_blank"
-                            rel="noopener noreferrer"
+<WhatsappSendButton
+                            onSend={(lang) =>
+                              sendWhatsappForStage('renewal', c.phone, { client: c.firstName ?? '', etablissement: tenantName }, lang)
+                            }
                             className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
                           >
                             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                          </a>
+                          </WhatsappSendButton>
                         )}
                       </div>
                     </td>

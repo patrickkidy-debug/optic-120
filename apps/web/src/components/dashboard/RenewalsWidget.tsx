@@ -4,6 +4,9 @@ import { BellRing, MessageCircle } from 'lucide-react';
 import { listRenewals } from '../../features/optique/api';
 import { Avatar } from '../Avatar';
 import { formatDate } from '../../lib/format';
+import { WhatsappSendButton } from '../WhatsappSendButton';
+import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { useAuthStore } from '../../store/auth';
 import { tr } from '../../lib/tr';
 
 function waLink(phone?: string | null): string | null {
@@ -16,6 +19,7 @@ function waLink(phone?: string | null): string | null {
 export function RenewalsWidget({ enabled }: { enabled: boolean }) {
   const { data, isLoading } = useQuery({ queryKey: ['renewals'], queryFn: listRenewals, enabled });
   const renewals = data ?? [];
+  const tenantName = useAuthStore((s) => s.user?.tenantName) ?? 'OculoSaaS';
 
   if (!enabled) return null;
 
@@ -59,14 +63,14 @@ export function RenewalsWidget({ enabled }: { enabled: boolean }) {
                   </p>
                 </div>
                 {wa && (
-                  <a
-                    href={wa}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <WhatsappSendButton
+                    onSend={(lang) =>
+                      sendWhatsappForStage('renewal', c.phone, { client: c.firstName ?? '', etablissement: tenantName }, lang)
+                    }
                     className="btn-outline h-8 shrink-0 rounded-lg px-2.5 text-xs text-success"
                   >
                     <MessageCircle className="h-3.5 w-3.5" /> {tr('ui.RenewalsWidget.contacter')}
-                  </a>
+                  </WhatsappSendButton>
                 )}
               </div>
             );
