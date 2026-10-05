@@ -85,6 +85,7 @@ export function CustomerFormModal({
     onSuccess: (c) => {
       void qc.invalidateQueries({ queryKey: ['customers'] });
       void qc.invalidateQueries({ queryKey: ['customer-directory'] });
+      void qc.invalidateQueries({ queryKey: ['customer-birthdays'] });
       if (customer) {
         void qc.invalidateQueries({ queryKey: ['customer', customer.id] });
         toast.success(tr('crm.toastUpdated'));

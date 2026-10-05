@@ -48,6 +48,7 @@ import { Badge, Button, DropdownMenu, EmptyState, type DropdownItem } from '../.
 import { CustomerFormModal } from './clients/CustomerFormModal';
 import { ImportCustomersModal } from './clients/ImportCustomersModal';
 import { PatientProfile, type ProfileTab } from './clients/PatientProfile';
+import { BirthdaysPanel } from './clients/BirthdaysPanel';
 import { tr } from '../../lib/tr';
 
 const PAGE_SIZE = 25;
@@ -258,6 +259,8 @@ export function ClientsPage() {
         <KpiCard icon={UserCheck} label={tr('crm.kpiActive')} value={stats?.active} hint={tr('crm.kpiActiveHint')} onClick={() => setSegments(['active'])} active={segments.length === 1 && segments[0] === 'active'} />
         <KpiCard icon={BellRing} label={tr('crm.kpiFollowUp')} value={stats?.followUp} hint={tr('crm.kpiFollowUpHint')} tone="warning" onClick={() => setSegments(['followUp'])} active={segments.length === 1 && segments[0] === 'followUp'} />
       </div>
+
+      <BirthdaysPanel branchId={branchId} onOpen={(id) => setProfile({ id })} />
 
       {/* Recherche + filtres */}
       <div className="mb-3 flex flex-wrap items-center gap-2">

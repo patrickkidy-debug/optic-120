@@ -3841,7 +3841,9 @@
     "renouvellement_oilj1v": "Renovação",
     "bonjourClientVotreOrdonnanceChezEtabliss_1i3rs48": "Olá {client}, a sua receita na {etablissement} está a chegar ao fim da validade. Marque um novo exame visual: teremos todo o gosto em recebê-lo.",
     "suiviClient_1xx3rm9": "Acompanhamento do cliente",
-    "bonjourClientNousVousContactonsConcernan_l87d0d": "Olá {client}, contactamo-lo a propósito do seu acompanhamento na {etablissement}."
+    "bonjourClientNousVousContactonsConcernan_l87d0d": "Olá {client}, contactamo-lo a propósito do seu acompanhamento na {etablissement}.",
+    "anniversaire_hny79v": "Aniversário",
+    "joyeuxAnniversaireClientTouteLEquipe_1nxth9a": "Feliz aniversário {client}! 🎉 Toda a equipa da {etablissement} deseja-lhe um excelente dia. Até breve!"
   },
   "reports": {
     "pageRange": "A mostrar {{first}} a {{last}} de {{total}} venda(s)",
@@ -3948,7 +3950,12 @@
     "colDescription": "Descrição",
     "footerGenerated": "Processo gerado a partir do OculoSaaS",
     "allowPopupsDossier": "Permita janelas pop-up para gerar o processo do cliente.",
-    "itemsGenerated": "{{count}} artigo(s) — gerado em {{date}}"
+    "itemsGenerated": "{{count}} artigo(s) — gerado em {{date}}",
+    "paperFormat": "Formato:",
+    "printBtn": "Imprimir",
+    "paperFormatSetting": "Formato de impressão (faturas, orçamentos, recibos)",
+    "paperA4Hint": "Folha padrão 21 × 29,7 cm",
+    "paperA5Hint": "Meia folha 14,8 × 21 cm"
   },
   "crm": {
     "title": "Clientes",
@@ -4171,5 +4178,22 @@
     "noTransfer": "Nenhum movimento nesta sessão.",
     "cancelledList": "Vendas anuladas ({{n}})",
     "signature": "Assinatura do operador: ______________________        Assinatura do responsável: ______________________"
+  },
+  "bday": {
+    "title": "Aniversários",
+    "todayCount": "{{n}} aniversário(s) hoje 🎉",
+    "upcomingCount": "{{n}} nos próximos 30 dias",
+    "tabToday": "Hoje",
+    "tabWeek": "7 dias",
+    "tabMonth": "30 dias",
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "inDays": "Daqui a {{n}} dias",
+    "turning": "faz {{n}} anos",
+    "none30": "Nenhum aniversário nos próximos 30 dias.",
+    "noneRange": "Nenhum aniversário neste período.",
+    "hintDob": "Indique a data de nascimento na ficha dos clientes para não esquecer nenhum.",
+    "wish": "Dar os parabéns no WhatsApp",
+    "wishShort": "Felicitar"
   }
 }

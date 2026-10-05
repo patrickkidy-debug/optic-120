@@ -3841,7 +3841,9 @@
     "renouvellement_oilj1v": "Renewal",
     "bonjourClientVotreOrdonnanceChezEtabliss_1i3rs48": "Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.",
     "suiviClient_1xx3rm9": "Customer follow-up",
-    "bonjourClientNousVousContactonsConcernan_l87d0d": "Hello {client}, we are contacting you about your follow-up at {etablissement}."
+    "bonjourClientNousVousContactonsConcernan_l87d0d": "Hello {client}, we are contacting you about your follow-up at {etablissement}.",
+    "anniversaire_hny79v": "Birthday",
+    "joyeuxAnniversaireClientTouteLEquipe_1nxth9a": "Happy birthday {client}! 🎉 The whole team at {etablissement} wishes you a wonderful day. We look forward to seeing you soon."
   },
   "reports": {
     "pageRange": "Showing {{first}}–{{last}} of {{total}} sale(s)",
@@ -3948,7 +3950,12 @@
     "colDescription": "Description",
     "footerGenerated": "File generated from OculoSaaS",
     "allowPopupsDossier": "Please allow pop-ups to generate the customer file.",
-    "itemsGenerated": "{{count}} item(s) — generated on {{date}}"
+    "itemsGenerated": "{{count}} item(s) — generated on {{date}}",
+    "paperFormat": "Paper:",
+    "printBtn": "Print",
+    "paperFormatSetting": "Print format (invoices, quotes, receipts)",
+    "paperA4Hint": "Standard sheet 21 × 29.7 cm",
+    "paperA5Hint": "Half sheet 14.8 × 21 cm"
   },
   "crm": {
     "title": "Customers",
@@ -4171,5 +4178,22 @@
     "noTransfer": "No transfer in this session.",
     "cancelledList": "Cancelled sales ({{n}})",
     "signature": "Cashier signature: ______________________        Manager signature: ______________________"
+  },
+  "bday": {
+    "title": "Birthdays",
+    "todayCount": "{{n}} birthday(s) today 🎉",
+    "upcomingCount": "{{n}} in the next 30 days",
+    "tabToday": "Today",
+    "tabWeek": "7 days",
+    "tabMonth": "30 days",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "In {{n}} days",
+    "turning": "turns {{n}}",
+    "none30": "No birthdays in the next 30 days.",
+    "noneRange": "No birthdays in this period.",
+    "hintDob": "Add your customers' date of birth to their record so you never miss one.",
+    "wish": "Send birthday wishes on WhatsApp",
+    "wishShort": "Wish"
   }
 }

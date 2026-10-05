@@ -112,6 +112,43 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(result);
   });
 
+  // Anniversaires à venir (aujourd'hui → `days` jours), pour souhaiter
+  // l'anniversaire des clients. Calculé en UTC sur le jour et le mois.
+  app.get('/birthdays', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string; days?: string };
+    const days = Math.min(60, Math.max(0, Number.parseInt(q.days ?? '30', 10) || 30));
+    const rows = await req.db!.customer.findMany({
+      where: { AND: [customerScope(req, q.branchId), { dateOfBirth: { not: null } }] },
+      select: { id: true, firstName: true, lastName: true, phone: true, email: true, dateOfBirth: true },
+    });
+    const now = new Date();
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const DAY = 86_400_000;
+    const birthdays = rows
+      .map((c) => {
+        const dob = c.dateOfBirth!;
+        const m = dob.getUTCMonth();
+        const d = dob.getUTCDate();
+        // Prochain anniversaire ; un 29 février se fête le 28 les années non bissextiles.
+        const at = (y: number) => {
+          const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+          return Date.UTC(y, m, m === 1 && d === 29 && !leap ? 28 : d);
+        };
+        let year = now.getUTCFullYear();
+        let next = at(year);
+        if (next < today) next = at(++year);
+        return {
+          ...c,
+          nextBirthday: new Date(next).toISOString(),
+          daysUntil: Math.round((next - today) / DAY),
+          turning: year - dob.getUTCFullYear(),
+        };
+      })
+      .filter((c) => c.daysUntil <= days && c.turning > 0)
+      .sort((a, b) => a.daysUntil - b.daysUntil || a.lastName.localeCompare(b.lastName));
+    return reply.send({ birthdays, withBirthDate: rows.length });
+  });
+
   app.post('/', { preHandler: requirePermission('optique.customers.create') }, async (req, reply) => {
     const input = customerCreateSchema.parse(req.body);
     // Le magasin propriétaire est obligatoire à la création : une fiche créée

@@ -20,6 +20,76 @@ export interface CompanyInfo {
   /** Contact de l'entreprise, affiché sous l'en-tête. */
   contactPhone?: string | null;
   contactEmail?: string | null;
+  /** Format de papier par défaut (A4 si absent). */
+  paperSize?: 'A4' | 'A5' | null;
+}
+
+/**
+ * Mise en page d'impression commune aux factures, devis et reçus.
+ *
+ * Le document est dessiné pour ~780 px de large, puis mis à l'échelle (zoom)
+ * pour occuper EXACTEMENT la largeur imprimable du format choisi : il remplit
+ * la feuille, centré, quel que soit le papier (A4 ou A5). Sa hauteur minimale
+ * couvre la page, ce qui envoie le pied de document en bas de feuille.
+ * La fenêtre affiche un aperçu de la feuille et une barre A4 / A5 / Imprimer.
+ */
+const PAPER = {
+  A4: { w: 210, h: 297, margin: 12, zoom: 0.92 },
+  A5: { w: 148, h: 210, margin: 9, zoom: 0.62 },
+} as const;
+
+export function paperStyles(): string {
+  const page = (k: keyof typeof PAPER) => {
+    const p = PAPER[k];
+    const innerW = p.w - 2 * p.margin;
+    // Légère marge de sécurité en hauteur : évite une page blanche due aux arrondis.
+    const innerH = p.h - 2 * p.margin - 3;
+    return `
+  body.paper-${k} .sheet { width:${p.w}mm; min-height:${p.h}mm; padding:${p.margin}mm; }
+  body.paper-${k} .doc { zoom:${p.zoom}; width:calc(${innerW}mm / ${p.zoom}); min-height:calc(${innerH}mm / ${p.zoom}); }`;
+  };
+  return `
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1e293b; background:#e5e7eb; }
+  .toolbar { position:sticky; top:0; z-index:10; display:flex; gap:8px; justify-content:center; align-items:center; padding:10px; background:#0f172a; color:#fff; font-size:13px; }
+  .toolbar button { border:0; border-radius:8px; padding:7px 14px; font-weight:600; cursor:pointer; background:#334155; color:#fff; }
+  .toolbar button.on { background:#7c3aed; }
+  .toolbar .print { background:#16a34a; }
+  .sheet { margin:20px auto; background:#fff; box-shadow:0 10px 30px rgba(15,23,42,.18); }
+  .doc { display:flex; flex-direction:column; }
+  ${page('A4')}
+  ${page('A5')}
+  @media print {
+    body { background:#fff; }
+    .toolbar, .no-print { display:none !important; }
+    .sheet { margin:0 !important; padding:0 !important; box-shadow:none !important; width:auto !important; min-height:0 !important; }
+    tr, .avoid-break { page-break-inside:avoid; }
+  }`;
+}
+
+/** Barre de format + script de bascule A4 / A5 (règle @page dynamique). */
+export function paperToolbar(initial: 'A4' | 'A5'): string {
+  const margins = { A4: PAPER.A4.margin, A5: PAPER.A5.margin };
+  return `<div class="toolbar no-print">
+    <span>${tr('doc.paperFormat')}</span>
+    <button type="button" data-size="A4">A4</button>
+    <button type="button" data-size="A5">A5</button>
+    <button type="button" class="print" onclick="window.print()">${tr('doc.printBtn')}</button>
+  </div>
+  <style id="page-rule"></style>
+  <script>
+    (function () {
+      var margins = ${JSON.stringify(margins)};
+      function setSize(s) {
+        document.body.className = 'paper-' + s;
+        document.getElementById('page-rule').textContent = '@page { size: ' + s + ' portrait; margin: ' + margins[s] + 'mm; }';
+        document.querySelectorAll('.toolbar [data-size]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-size') === s); });
+      }
+      document.querySelectorAll('.toolbar [data-size]').forEach(function (b) { b.onclick = function () { setSize(b.getAttribute('data-size')); }; });
+      setSize(${JSON.stringify(initial)});
+    })();
+  </script>`;
 }
 
 // La devise vient de la vente elle-meme (figee a l'encaissement) : une
@@ -134,7 +204,7 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
         .join(' · ')
     : '';
   const prescriptionBlock = rx
-    ? `<div style="margin-top:26px;page-break-inside:avoid;">
+    ? `<div class="avoid-break" style="margin-top:26px;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">
           ${tr('doc.attachedRx', { date: frDate(rx.date) })}
         </div>
@@ -159,10 +229,10 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
 
   const paymentBlock = isQuote
     ? `<p style="margin:16px 0 0;font-size:12px;color:#64748b;">${tr('doc.quoteValidity', { days: validityDays })}</p>`
-    : `<table style="width:100%;border-collapse:collapse;">
+    : `<div style="display:flex;justify-content:flex-end;"><table style="width:320px;border-collapse:collapse;font-size:13px;">
         ${totalRow(tr('doc.paid'), money(sale.paidAmount, currency), { color: '#0d9488' })}
         ${balance > 0 ? totalRow(tr('doc.balanceDue'), money(balance, currency), { strong: true, color: '#dc2626' }) : ''}
-      </table>`;
+      </table></div>`;
 
   return `<!doctype html>
 <html lang="${displayLocale().slice(0, 2)}">
@@ -170,15 +240,11 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${docTitle} ${esc(sale.number)}</title>
-<style>
-  @page { size: A4; margin: 16mm; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1e293b; margin:0; padding:24px; }
-  @media print { body { padding:0; } .no-print { display:none !important; } }
-</style>
+<style>${paperStyles()}</style>
 </head>
-<body>
-  <div style="max-width:780px;margin:0 auto;">
+<body class="paper-${company.paperSize === 'A5' ? 'A5' : 'A4'}">
+  ${paperToolbar(company.paperSize === 'A5' ? 'A5' : 'A4')}
+  <div class="sheet"><div class="doc">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
       <div>
         ${logo}
@@ -240,11 +306,12 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
         : ''
     }
 
-    <div style="margin-top:40px;display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;">
+    <div style="flex:1 0 40px;"></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;">
       <span>${esc(company.name)}</span>
       <span>${sale.cashier ? tr('doc.issuedBy', { name: `${esc(sale.cashier.firstName)} ${esc(sale.cashier.lastName)}` }) : ''}</span>
     </div>
-  </div>
+  </div></div>
 </body>
 </html>`;
 }

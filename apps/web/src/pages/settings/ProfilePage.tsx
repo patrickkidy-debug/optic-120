@@ -840,6 +840,7 @@ function InvoiceCustomizationCard() {
   const [legalInfo, setLegalInfo] = useState('');
   const [footerNote, setFooterNote] = useState('');
   const [validity, setValidity] = useState('30');
+  const [paper, setPaper] = useState<'A4' | 'A5'>('A4');
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -854,6 +855,7 @@ function InvoiceCustomizationCard() {
     setLegalInfo(iv?.legalInfo ?? '');
     setFooterNote(iv?.footerNote ?? '');
     setValidity(String(iv?.quoteValidityDays ?? 30));
+    setPaper(iv?.paperSize === 'A5' ? 'A5' : 'A4');
     setHydrated(true);
   }, [branding, hydrated]);
 
@@ -864,6 +866,7 @@ function InvoiceCustomizationCard() {
     if (footerNote.trim()) out.footerNote = footerNote.trim();
     const v = parseInt(validity, 10);
     if (Number.isFinite(v) && v > 0 && v !== 30) out.quoteValidityDays = v;
+    if (paper === 'A5') out.paperSize = 'A5';
     return out;
   }
 
@@ -961,6 +964,23 @@ function InvoiceCustomizationCard() {
             value={validity}
             onChange={(e) => setValidity(e.target.value)}
           />
+        </Field>
+
+        <Field label={tr('doc.paperFormatSetting')}>
+          <div className="flex gap-2" role="group">
+            {(['A4', 'A5'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setPaper(f)}
+                aria-pressed={paper === f}
+                className={`flex-1 rounded-xl border px-3 py-2 text-left text-sm transition ${paper === f ? 'border-primary bg-primary-soft text-primary' : 'text-content-muted hover:bg-surface-2'}`}
+              >
+                <span className="block font-semibold">{f}</span>
+                <span className="text-xs">{f === 'A4' ? tr('doc.paperA4Hint') : tr('doc.paperA5Hint')}</span>
+              </button>
+            ))}
+          </div>
         </Field>
 
         <Field label={tr('ui.ProfilePage.mentionsLegalesRccmNineaIfu')}>

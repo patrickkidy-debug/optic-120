@@ -2454,6 +2454,8 @@ export const invoiceSettingsSchema = z
     footerNote: z.string().max(300).optional(),
     /** Durée de validité d'un devis, en jours. */
     quoteValidityDays: z.number().int().min(1).max(365).optional(),
+    /** Format de papier des factures, devis et reçus (A4 par défaut). */
+    paperSize: z.enum(['A4', 'A5']).optional(),
   })
   .strict();
 export type InvoiceSettings = z.infer<typeof invoiceSettingsSchema>;
@@ -2658,6 +2660,7 @@ export const SALE_WA_STAGES = [
   { key: 'lens_delivered', label: 'Verres livrés / retirés' },
   { key: 'renewal', label: 'Renouvellement' },
   { key: 'followup', label: 'Suivi client' },
+  { key: 'birthday', label: 'Anniversaire' },
 ] as const;
 export type SaleWaStage = (typeof SALE_WA_STAGES)[number]['key'];
 
@@ -2676,6 +2679,7 @@ export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = {
   renewal:
     'Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.',
   followup: 'Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}.',
+  birthday: 'Joyeux anniversaire {client} ! 🎉 Toute l’équipe de {etablissement} vous souhaite une excellente journée. Au plaisir de vous revoir bientôt.',
 };
 
 /**
@@ -2698,6 +2702,7 @@ export const DEFAULT_WA_TEMPLATES_EN: Record<SaleWaStage, string> = {
   renewal:
     'Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.',
   followup: 'Hello {client}, we are contacting you about your follow-up at {etablissement}.',
+  birthday: 'Happy birthday {client}! 🎉 The whole team at {etablissement} wishes you a wonderful day. We look forward to seeing you soon.',
 };
 
 /** Langues des messages WhatsApp clients, par pays (première = par défaut). */
@@ -2715,6 +2720,7 @@ export const whatsappTemplatesSchema = z
     lens_delivered: z.string().max(1000),
     renewal: z.string().max(1000),
     followup: z.string().max(1000),
+    birthday: z.string().max(1000),
     /** Version anglaise des modèles (établissements bilingues, ex. Rwanda). */
     en: z
       .object({
@@ -2725,6 +2731,7 @@ export const whatsappTemplatesSchema = z
         lens_delivered: z.string().max(1000),
         renewal: z.string().max(1000),
         followup: z.string().max(1000),
+        birthday: z.string().max(1000),
       })
       .partial(),
   })

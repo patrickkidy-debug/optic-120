@@ -3841,7 +3841,9 @@
     "renouvellement_oilj1v": "Renouvellement",
     "bonjourClientVotreOrdonnanceChezEtabliss_1i3rs48": "Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.",
     "suiviClient_1xx3rm9": "Suivi client",
-    "bonjourClientNousVousContactonsConcernan_l87d0d": "Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}."
+    "bonjourClientNousVousContactonsConcernan_l87d0d": "Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}.",
+    "anniversaire_hny79v": "Anniversaire",
+    "joyeuxAnniversaireClientTouteLEquipe_1nxth9a": "Joyeux anniversaire {client} ! 🎉 Toute l’équipe de {etablissement} vous souhaite une excellente journée. Au plaisir de vous revoir bientôt."
   },
   "reports": {
     "pageRange": "Affichage de {{first}} à {{last}} sur {{total}} vente(s)",
@@ -3948,7 +3950,12 @@
     "colDescription": "Description",
     "footerGenerated": "Dossier généré depuis OculoSaaS",
     "allowPopupsDossier": "Veuillez autoriser les fenêtres pop-up pour générer le dossier client.",
-    "itemsGenerated": "{{count}} article(s) — généré le {{date}}"
+    "itemsGenerated": "{{count}} article(s) — généré le {{date}}",
+    "paperFormat": "Format :",
+    "printBtn": "Imprimer",
+    "paperFormatSetting": "Format d'impression (factures, devis, reçus)",
+    "paperA4Hint": "Feuille standard 21 × 29,7 cm",
+    "paperA5Hint": "Demi-feuille 14,8 × 21 cm"
   },
   "crm": {
     "title": "Clients",
@@ -4171,5 +4178,22 @@
     "noTransfer": "Aucun versement sur cette session.",
     "cancelledList": "Ventes annulées ({{n}})",
     "signature": "Signature du caissier : ______________________        Signature du responsable : ______________________"
+  },
+  "bday": {
+    "title": "Anniversaires",
+    "todayCount": "{{n}} anniversaire(s) aujourd'hui 🎉",
+    "upcomingCount": "{{n}} dans les 30 prochains jours",
+    "tabToday": "Aujourd'hui",
+    "tabWeek": "7 jours",
+    "tabMonth": "30 jours",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "inDays": "Dans {{n}} jours",
+    "turning": "{{n}} ans",
+    "none30": "Aucun anniversaire dans les 30 prochains jours.",
+    "noneRange": "Aucun anniversaire sur cette période.",
+    "hintDob": "Renseignez la date de naissance dans la fiche de vos clients pour ne plus en oublier aucun.",
+    "wish": "Souhaiter l'anniversaire sur WhatsApp",
+    "wishShort": "Souhaiter"
   }
 }

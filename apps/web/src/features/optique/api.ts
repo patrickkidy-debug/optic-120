@@ -940,3 +940,24 @@ export async function getForecast(branchId?: string): Promise<ForecastData> {
   });
   return data.forecast;
 }
+
+/* --- Anniversaires clients --- */
+
+export interface CustomerBirthday {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  dateOfBirth: string;
+  nextBirthday: string;
+  daysUntil: number;
+  turning: number;
+}
+
+export async function getBirthdays(branchId?: string, days = 30): Promise<{ birthdays: CustomerBirthday[]; withBirthDate: number }> {
+  const { data } = await api.get<{ birthdays: CustomerBirthday[]; withBirthDate: number }>('/customers/birthdays', {
+    params: { branchId: branchId || undefined, days },
+  });
+  return data;
+}
