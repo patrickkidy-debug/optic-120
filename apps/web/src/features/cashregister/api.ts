@@ -97,3 +97,56 @@ export async function closeRegister(
   }>(`/cashregister/${id}/close`, { closingAmount });
   return data;
 }
+
+/* --- Historique des sessions de caisse --- */
+
+export interface CashSessionRow {
+  id: string;
+  status: 'OPEN' | 'CLOSED';
+  openedAt: string;
+  closedAt: string | null;
+  durationMinutes: number;
+  openedBy: string | null;
+  closedBy: string | null;
+  salesTotal: number;
+  cashSales: number;
+  paymentsCount: number;
+  expensesTotal: number;
+  expensesCount: number;
+  transfersIn: number;
+  transfersOut: number;
+  netTotal: number;
+  openingAmount: number;
+  expectedAmount: number;
+  countedAmount: number | null;
+  variance: number | null;
+  methods: string[];
+}
+
+export interface CashHistory {
+  sessions: CashSessionRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  stats: { sessions: number; closed: number; salesTotal: number; varianceTotal: number; withVariance: number };
+}
+
+export async function getCashHistory(params: { branchId: string; from?: string; to?: string; page?: number; pageSize?: number }): Promise<CashHistory> {
+  const { data } = await api.get<CashHistory>('/cashregister/history', { params });
+  return data;
+}
+
+export interface CashSessionReport extends Omit<CashSessionRow, 'methods'> {
+  branchName: string | null;
+  byMethod: { method: string; amount: number; count: number }[];
+  salesCount: number;
+  payments: { id: string; method: string; amount: number; at: string; saleId: string; saleNumber: string; saleType: string; cancelled: boolean; customerName: string | null }[];
+  expenses: { id: string; label: string; category: string; amount: number; createdAt: string; date: string }[];
+  transfers: { id: string; direction: 'IN' | 'OUT'; label: string; amount: number; createdAt: string; date: string }[];
+  cancelled: { id: string; number: string; total: number; at: string; customerName: string | null }[];
+}
+
+export async function getCashSessionReport(id: string): Promise<CashSessionReport> {
+  const { data } = await api.get<{ report: CashSessionReport }>(`/cashregister/${id}/report`);
+  return data.report;
+}

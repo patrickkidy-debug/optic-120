@@ -3,6 +3,7 @@ import { cashOpenSchema, cashCloseSchema, CashRegisterStatus } from '@oculo/shar
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { badRequest, conflict, notFound } from '../../lib/http-error.js';
+import { listSessions, sessionReport } from './cashregister.history.js';
 
 type Db = NonNullable<FastifyRequest['db']>;
 
@@ -50,6 +51,38 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       orderBy: { openedAt: 'desc' },
     });
     return reply.send({ register });
+  });
+
+  // Historique des sessions d'un magasin (plus récentes d'abord), avec les
+  // chiffres de chaque session et les totaux de la période demandée.
+  app.get('/history', { preHandler: requirePermission('optique.cashregister.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string; from?: string; to?: string; page?: string; pageSize?: string };
+    if (!q.branchId) throw badRequest('branchId requis');
+    assertBranchAccess(req, q.branchId);
+    const day = (v?: string, end = false) => {
+      if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
+      return new Date(`${v}T${end ? '23:59:59.999' : '00:00:00.000'}Z`);
+    };
+    return reply.send(
+      await listSessions(req.db!, {
+        branchId: q.branchId,
+        from: day(q.from),
+        to: day(q.to, true),
+        page: Math.max(1, Number.parseInt(q.page ?? '1', 10) || 1),
+        pageSize: Math.min(50, Math.max(5, Number.parseInt(q.pageSize ?? '15', 10) || 15)),
+      }),
+    );
+  });
+
+  // Rapport détaillé d'une session (rapport Z) : encaissements un par un,
+  // dépenses, versements, ventes annulées et rapprochement des espèces.
+  app.get('/:id/report', { preHandler: requirePermission('optique.cashregister.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const report = await sessionReport(req.db!, id);
+    if (!report) throw notFound('Caisse introuvable');
+    const reg = await req.db!.cashRegister.findFirst({ where: { id }, select: { branchId: true } });
+    assertBranchAccess(req, reg!.branchId);
+    return reply.send({ report });
   });
 
   // Résumé en direct de la session : encaissements par moyen de paiement depuis

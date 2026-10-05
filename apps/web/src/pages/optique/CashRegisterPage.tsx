@@ -37,6 +37,7 @@ import { formatCurrency, formatDateTime, getActiveCurrency } from '../../lib/for
 import { EXPENSE_CATEGORY_CODES, expenseCategoryLabel, paymentMethodLabel } from '../../lib/labels';
 import { PageHeader, PageLoader, Button, Field, Badge, Modal } from '../../components/ui';
 import { trFr } from '../../lib/sharedLabels';
+import { CashHistory } from './cash/CashHistory';
 
 const methodIcon = (m: string) => (m === 'CASH' ? Banknote : m === 'CARD' ? CreditCard : Smartphone);
 
@@ -87,6 +88,7 @@ export function CashRegisterPage() {
     onSuccess: () => {
       setOpening('');
       qc.invalidateQueries({ queryKey: ['cash-current'] });
+      qc.invalidateQueries({ queryKey: ['cash-history'] });
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -109,6 +111,7 @@ export function CashRegisterPage() {
       setClosingTouched(false);
       qc.invalidateQueries({ queryKey: ['cash-current'] });
       qc.invalidateQueries({ queryKey: ['cash-summary'] });
+      qc.invalidateQueries({ queryKey: ['cash-history'] });
     },
     onError: (e) => alert(apiErrorMessage(e)),
   });
@@ -132,7 +135,10 @@ export function CashRegisterPage() {
       {isLoading ? (
         <PageLoader />
       ) : (
-        <div className="mx-auto max-w-lg space-y-4">
+        // Caisse du jour à gauche, historique des sessions à droite (empilés
+        // sur mobile) : on ferme sa caisse en gardant les jours précédents en vue.
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+        <div className="space-y-4">
           {/* Résultat de la dernière fermeture */}
           {closeResult && (
             <div className="card p-5">
@@ -401,6 +407,8 @@ export function CashRegisterPage() {
               )}
             </div>
           )}
+        </div>
+        <CashHistory branchId={branchId} />
         </div>
       )}
 
