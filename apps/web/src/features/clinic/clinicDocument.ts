@@ -20,7 +20,7 @@ function frDate(d: string | Date): string {
 /**
  * Ordonnance MÉDICALE (clinique d'ophtalmologie), autonome et noir sur blanc
  * (indépendant du thème sombre de l'app). Reprend les mesures de la consultation
- * et la prescription du médecin.
+ * et la prescription de l'opticien optométriste.
  */
 export function buildMedicalPrescriptionHtml(
   c: Consultation,
@@ -112,7 +112,8 @@ export function buildMedicalPrescriptionHtml(
 
     <div style="margin-top:48px;display:flex;justify-content:flex-end;">
       <div style="text-align:center;">
-        <div style="width:220px;border-top:1px solid #94a3b8;padding-top:6px;font-size:12px;color:#64748b;">
+        ${c.practitionerName ? `<div style="margin-bottom:34px;font-size:13px;font-weight:600;color:#0f172a;">${esc(c.practitionerName)}<div style="font-size:11px;font-weight:400;color:#64748b;">${tr('doc.optometrist')}</div></div>` : ''}
+        <div style="width:240px;border-top:1px solid #94a3b8;padding-top:6px;font-size:12px;color:#64748b;">
           ${tr('doc.doctorStamp')}
         </div>
       </div>

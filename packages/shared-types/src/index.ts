@@ -1688,6 +1688,8 @@ export type PatientCreateInput = z.infer<typeof patientCreateSchema>;
 
 export const consultationCreateSchema = z.object({
   patientId: z.string().uuid(),
+  /** Opticien optométriste ayant réalisé l'examen (affiché sur l'ordonnance). */
+  practitionerName: z.string().max(120).optional().or(z.literal('')),
   date: z.string().optional().or(z.literal('')),
   visualAcuityRight: z.string().max(40).optional().or(z.literal('')),
   visualAcuityLeft: z.string().max(40).optional().or(z.literal('')),
@@ -2639,10 +2641,10 @@ export const lensProductSchema = z.object({
 export type LensProductInput = z.infer<typeof lensProductSchema>;
 
 /**
- * Catégories fabriquées sur commande : pas de gestion de stock (les verres sont
- * commandés au labo à chaque vente). La caisse ne bloque donc pas sur le stock.
+ * Catégories sans gestion de stock : verres (commandés au labo à chaque vente)
+ * et services (consultations, prestations). La caisse ne bloque pas sur le stock.
  */
-export const MADE_TO_ORDER_CATEGORIES = ['VERRE'] as const;
+export const MADE_TO_ORDER_CATEGORIES = ['VERRE', 'SERVICE'] as const;
 
 /** Vrai pour les catégories fabriquées sur commande (stock illimité, non bloquant). */
 export function isMadeToOrderCategory(category: string): boolean {

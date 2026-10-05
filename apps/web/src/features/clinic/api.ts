@@ -42,7 +42,17 @@ export interface Consultation {
   prescription: string | null;
   lensType: string | null;
   notes: string | null;
-  patient?: { firstName: string; lastName: string };
+  practitionerName?: string | null;
+  patient?: { firstName: string; lastName: string; customerId?: string | null; phone?: string | null; dateOfBirth?: string | null };
+}
+
+/** Prépare la facturation d'une consultation (fiche client + prestation au catalogue). */
+export async function prepareConsultationBilling(id: string, input: { branchId: string; amount: number; label?: string }) {
+  const { data } = await api.post<{ customerId: string; product: { id: string; name: string; sku: string }; amount: number; label: string }>(
+    `/consultations/${id}/billing`,
+    input,
+  );
+  return data;
 }
 
 export interface Appointment {

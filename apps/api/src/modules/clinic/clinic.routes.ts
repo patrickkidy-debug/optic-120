@@ -8,8 +8,8 @@ import {
   surgeryUpdateSchema,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
-import { notFound } from '../../lib/http-error.js';
+import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import { badRequest, notFound } from '../../lib/http-error.js';
 import { assertWithinLimit } from '../billing/billing.service.js';
 
 /** Convertit une chaîne ISO (éventuellement vide) en Date ou null. */
@@ -146,9 +146,68 @@ async function consultationsRoutes(app: FastifyInstance) {
       where,
       orderBy: { date: 'desc' },
       take: 200,
-      include: { patient: { select: { firstName: true, lastName: true } } },
+      include: {
+        patient: { select: { firstName: true, lastName: true, customerId: true, phone: true, dateOfBirth: true } },
+      },
     });
     return reply.send({ consultations });
+  });
+
+  /**
+   * Prépare la facturation d'une consultation (client qui ne prend pas de
+   * lunettes) : la vente elle-même passe ensuite par la caisse, comme toute
+   * vente (encaissement, reçu, session de caisse). Ici on garantit seulement
+   * ses deux prérequis :
+   *  - une fiche client liée au patient (créée depuis la fiche patient si besoin) ;
+   *  - une prestation « Consultation » au catalogue (catégorie Services, sans stock).
+   */
+  app.post('/:id/billing', { preHandler: requirePermission('optique.sales.create') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = (req.body ?? {}) as { branchId?: string; amount?: number; label?: string };
+    if (!body.branchId) throw badRequest('Magasin requis');
+    assertBranchAccess(req, body.branchId);
+    const amount = Number(body.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw badRequest('Montant de la consultation requis');
+    const label = (body.label ?? '').trim().slice(0, 120) || 'Consultation optométrique';
+    const tenantId = req.auth!.tenantId;
+    const branchId = body.branchId;
+
+    const consultation = await req.db!.consultation.findFirst({ where: { id }, include: { patient: true } });
+    if (!consultation) throw notFound('Consultation introuvable');
+    const patient = consultation.patient;
+
+    const result = await req.db!.$transaction(async (tx) => {
+      let customerId = patient.customerId;
+      if (!customerId) {
+        const customer = await tx.customer.create({
+          data: {
+            tenantId,
+            branchId,
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            phone: patient.phone,
+            email: patient.email,
+            dateOfBirth: patient.dateOfBirth,
+            gender: patient.gender,
+            address: patient.address,
+          },
+        });
+        customerId = customer.id;
+        await tx.patient.updateMany({ where: { id: patient.id }, data: { customerId } });
+      }
+      const SKU = 'CONSULT-OPTO';
+      let product = await tx.product.findFirst({ where: { tenantId, sku: SKU } });
+      if (!product) {
+        product = await tx.product.create({
+          data: { tenantId, sku: SKU, category: 'SERVICE', name: label, buyPrice: 0, sellPrice: amount },
+        });
+      }
+      // Visible dans le catalogue du magasin (les services n'ont pas de stock).
+      const line = await tx.stockItem.findFirst({ where: { productId: product.id, branchId } });
+      if (!line) await tx.stockItem.create({ data: { tenantId, productId: product.id, branchId, quantity: 0 } });
+      return { customerId, product: { id: product.id, name: product.name, sku: product.sku } };
+    });
+    return reply.send({ ...result, amount, label });
   });
 
   app.post('/', { preHandler: requirePermission('clinic.consultations.create') }, async (req, reply) => {
