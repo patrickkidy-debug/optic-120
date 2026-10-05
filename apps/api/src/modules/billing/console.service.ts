@@ -498,11 +498,14 @@ export type UserFilter =
   | 'expired'
   | 'suspended'
   | 'inactive'
-  | 'active';
+  | 'active'
+  | 'online';
 
 export interface ListUsersParams {
   search?: string;
   filter?: UserFilter;
+  /** « activity » : dernière connexion d'abord (défaut : inscription récente). */
+  sort?: 'activity' | 'recent';
   page?: number;
   pageSize?: number;
 }
@@ -565,6 +568,10 @@ export async function listPlatformUsers(params: ListUsersParams = {}) {
     case 'active':
       where.isActive = true;
       break;
+    case 'online':
+      // Session renouvelée récemment = application ouverte en ce moment.
+      where.refreshTokens = { some: { createdAt: { gte: new Date(now.getTime() - ONLINE_WINDOW_MS) }, revokedAt: null } };
+      break;
     default:
       break;
   }
@@ -574,7 +581,10 @@ export async function listPlatformUsers(params: ListUsersParams = {}) {
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy:
+        params.sort === 'activity'
+          ? [{ lastLoginAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }]
+          : { createdAt: 'desc' },
       include: {
         tenant: {
           select: {
@@ -594,6 +604,7 @@ export async function listPlatformUsers(params: ListUsersParams = {}) {
     }),
     prisma.user.count({ where }),
   ]);
+  const activity = await lastActivity(rows.map((r) => r.id));
 
   return {
     users: rows.map((u) => {
@@ -610,6 +621,8 @@ export async function listPlatformUsers(params: ListUsersParams = {}) {
         roleLabel: u.role.name,
         isActive: u.isActive,
         lastLoginAt: u.lastLoginAt,
+        lastActiveAt: activity.get(u.id)?.at ?? u.lastLoginAt,
+        online: activity.get(u.id)?.online ?? false,
         createdAt: u.createdAt,
         subscriptionStatus: s?.status ?? null,
         subscriptionEndsAt: s?.currentPeriodEnd ?? null,
@@ -622,6 +635,121 @@ export async function listPlatformUsers(params: ListUsersParams = {}) {
     total,
     page,
     pageSize,
+  };
+}
+
+/* ------------------------- Activité en temps réel ------------------------- */
+
+/**
+ * Un utilisateur est « en ligne » si sa session a été renouvelée récemment :
+ * l'application renouvelle le jeton d'accès (15 min) tant qu'elle est ouverte.
+ * Aucune colonne supplémentaire : on lit les jetons de session existants.
+ */
+const ONLINE_WINDOW_MS = 20 * 60 * 1000;
+
+async function lastActivity(userIds: string[]) {
+  const out = new Map<string, { at: Date; online: boolean }>();
+  if (!userIds.length) return out;
+  const since = new Date(Date.now() - ONLINE_WINDOW_MS);
+  const [last, live] = await Promise.all([
+    prisma.refreshToken.groupBy({ by: ['userId'], where: { userId: { in: userIds } }, _max: { createdAt: true } }),
+    prisma.refreshToken.groupBy({ by: ['userId'], where: { userId: { in: userIds }, createdAt: { gte: since }, revokedAt: null } }),
+  ]);
+  const liveSet = new Set(live.map((l) => l.userId));
+  for (const l of last) if (l._max.createdAt) out.set(l.userId, { at: l._max.createdAt, online: liveSet.has(l.userId) });
+  return out;
+}
+
+/** Appareil lisible à partir du user-agent (« Chrome · Windows », « Safari · iPhone »). */
+function deviceLabel(ua?: string | null): string | null {
+  if (!ua) return null;
+  const os = /iPhone/.test(ua)
+    ? 'iPhone'
+    : /iPad/.test(ua)
+      ? 'iPad'
+      : /Android/.test(ua)
+        ? 'Android'
+        : /Windows/.test(ua)
+          ? 'Windows'
+          : /Mac OS X|Macintosh/.test(ua)
+            ? 'Mac'
+            : /Linux/.test(ua)
+              ? 'Linux'
+              : null;
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\//.test(ua)
+      ? 'Opera'
+      : /Chrome\//.test(ua)
+        ? 'Chrome'
+        : /Firefox\//.test(ua)
+          ? 'Firefox'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : null;
+  return [browser, os].filter(Boolean).join(' · ') || null;
+}
+
+/**
+ * Activité des utilisateurs pour la console : qui est en ligne maintenant,
+ * fil des dernières connexions (journal LOGIN_SUCCESS), compteurs du jour.
+ */
+export async function getUsersActivity() {
+  const now = Date.now();
+  const since = new Date(now - ONLINE_WINDOW_MS);
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const LOGIN = ['LOGIN_SUCCESS', 'LOGIN_GOOGLE_SUCCESS'];
+  const [onlineRows, logins, loginsToday, active24h, neverLogged] = await Promise.all([
+    prisma.refreshToken.groupBy({
+      by: ['userId'],
+      where: { createdAt: { gte: since }, revokedAt: null, user: { tenant: notDemo } },
+      _max: { createdAt: true },
+    }),
+    prisma.auditLog.findMany({
+      where: { action: { in: LOGIN }, tenant: notDemo },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      select: {
+        id: true,
+        createdAt: true,
+        userAgent: true,
+        action: true,
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        tenant: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.auditLog.count({ where: { action: { in: LOGIN }, createdAt: { gte: dayStart }, tenant: notDemo } }),
+    prisma.user.count({ where: { lastLoginAt: { gte: new Date(now - 24 * 3600 * 1000) }, tenant: notDemo } }),
+    prisma.user.count({ where: { lastLoginAt: null, isActive: true, tenant: notDemo } }),
+  ]);
+  const onlineUsers = onlineRows.length
+    ? await prisma.user.findMany({
+        where: { id: { in: onlineRows.map((r) => r.userId) } },
+        select: { id: true, firstName: true, lastName: true, tenant: { select: { name: true } } },
+      })
+    : [];
+  const seen = new Map(onlineRows.map((r) => [r.userId, r._max.createdAt]));
+  return {
+    onlineCount: onlineUsers.length,
+    online: onlineUsers
+      .map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`, tenantName: u.tenant.name, lastSeenAt: seen.get(u.id) ?? null }))
+      .sort((a, b) => (b.lastSeenAt?.getTime() ?? 0) - (a.lastSeenAt?.getTime() ?? 0)),
+    recentLogins: logins
+      .filter((l) => l.user)
+      .map((l) => ({
+        id: l.id,
+        at: l.createdAt,
+        userId: l.user!.id,
+        name: `${l.user!.firstName} ${l.user!.lastName}`,
+        email: l.user!.email,
+        tenantName: l.tenant?.name ?? null,
+        device: deviceLabel(l.userAgent),
+        method: l.action === 'LOGIN_GOOGLE_SUCCESS' ? 'google' : 'password',
+      })),
+    loginsToday,
+    active24h,
+    neverLogged,
   };
 }
 

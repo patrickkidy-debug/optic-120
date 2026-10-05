@@ -139,15 +139,21 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
    * continue de fonctionner.
    */
   app.get('/users/paged', async (req, reply) => {
-    const q = req.query as { search?: string; filter?: string; page?: string; pageSize?: string };
+    const q = req.query as { search?: string; filter?: string; page?: string; pageSize?: string; sort?: string };
     return reply.send(
       await console_.listPlatformUsers({
         search: q.search,
         filter: q.filter as never,
+        sort: q.sort === 'activity' ? 'activity' : 'recent',
         page: q.page ? Number(q.page) : undefined,
         pageSize: q.pageSize ? Number(q.pageSize) : undefined,
       }),
     );
+  });
+
+  // Activité en temps réel (en ligne maintenant, fil des connexions).
+  app.get('/users/activity', async (_req, reply) => {
+    return reply.send(await console_.getUsersActivity());
   });
 
   app.get('/users', async (_req, reply) => {

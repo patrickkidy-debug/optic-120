@@ -48,9 +48,12 @@ import {
   PlatformResetPasswordModal,
 } from './modals';
 import { ContactWhatsappModal, type WhatsappContact } from './ContactWhatsappModal';
+import { LiveActivity, ago } from './LiveActivity';
+import { Avatar } from '../../../components/Avatar';
 
 const FILTERS = [
   { id: 'all', label: 'Tous' },
+  { id: 'online', label: '🟢 En ligne' },
   { id: 'paying', label: 'Payants' },
   { id: 'trialing', label: 'En essai' },
   { id: 'expired', label: 'Expirés' },
@@ -88,6 +91,7 @@ export function ConsoleUsersPage({
   const [debounced, setDebounced] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<'activity' | 'recent'>('activity');
 
   const [activating, setActivating] = useState<{ tenantId: string; tenantName: string; planCode: string | null } | null>(null);
   const [extending, setExtending] = useState<{ tenantId: string; tenantName: string } | null>(null);
@@ -99,11 +103,13 @@ export function ConsoleUsersPage({
     const id = setTimeout(() => setDebounced(search.trim()), 350);
     return () => clearTimeout(id);
   }, [search]);
-  useEffect(() => setPage(1), [debounced, filter]);
+  useEffect(() => setPage(1), [debounced, filter, sort]);
 
+  // Rafraîchie toutes les 30 s : les pastilles « en ligne » restent à jour.
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['console-users', debounced, filter, page],
-    queryFn: () => listConsoleUsers({ search: debounced || undefined, filter, page, pageSize: PAGE_SIZE }),
+    queryKey: ['console-users', debounced, filter, page, sort],
+    queryFn: () => listConsoleUsers({ search: debounced || undefined, filter, page, pageSize: PAGE_SIZE, sort }),
+    refetchInterval: 30_000,
   });
 
   const invalidate = () => {
@@ -255,7 +261,9 @@ export function ConsoleUsersPage({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <LiveActivity onFilterOnline={() => setFilter('online')} />
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[260px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
           <input
@@ -265,6 +273,10 @@ export function ConsoleUsersPage({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <select className="input w-auto" value={sort} onChange={(e) => setSort(e.target.value as 'activity' | 'recent')} aria-label="Trier">
+          <option value="activity">Dernière connexion d'abord</option>
+          <option value="recent">Inscription la plus récente</option>
+        </select>
         <span className="text-sm text-content-muted">
           {total} compte{total > 1 ? 's' : ''}
         </span>
@@ -278,9 +290,7 @@ export function ConsoleUsersPage({
             onClick={() => setFilter(f.id)}
             aria-pressed={filter === f.id}
             className={`rounded-lg px-2.5 py-1.5 text-sm transition ${
-              filter === f.id
-                ? 'bg-primary text-white'
-                : 'bg-surface-2 text-content-muted hover:bg-surface-3 hover:text-content'
+              filter === f.id ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted hover:bg-surface-3 hover:text-content'
             }`}
           >
             {f.label}
@@ -291,69 +301,97 @@ export function ConsoleUsersPage({
       {isLoading ? (
         <PageLoader />
       ) : rows.length === 0 ? (
-        <EmptyState
-          icon={UsersIcon}
-          title="Aucun compte"
-          hint="Aucun compte ne correspond à cette recherche ou à ce filtre."
-        />
+        <EmptyState icon={UsersIcon} title="Aucun compte" hint="Aucun compte ne correspond à cette recherche ou à ce filtre." />
       ) : (
-        <div className="card overflow-hidden">
-          <div className={`overflow-x-auto transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-            <table className="w-full min-w-[920px]">
+        <div className="card">
+          <div className={`transition-opacity ${isFetching ? 'opacity-80' : ''}`}>
+            <table className="w-full">
               <thead>
-                <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
+                <tr className="border-b text-left text-[11px] uppercase tracking-wider text-content-faint">
                   <th className="table-cell font-semibold">Utilisateur</th>
-                  <th className="table-cell font-semibold">Établissement</th>
-                  <th className="table-cell font-semibold">Téléphone</th>
-                  <th className="table-cell font-semibold">Offre</th>
+                  <th className="table-cell hidden font-semibold md:table-cell">Établissement</th>
                   <th className="table-cell font-semibold">Abonnement</th>
-                  <th className="table-cell font-semibold">Échéance</th>
-                  <th className="table-cell font-semibold">Dernière connexion</th>
-                  {/* Largeur fixe et minimale : le menu tient dans un bouton,
-                      la colonne ne peut plus être poussée hors de l'écran. */}
-                  <th className="table-cell w-12 text-right font-semibold">Actions</th>
+                  <th className="table-cell hidden font-semibold lg:table-cell">Échéance</th>
+                  <th className="table-cell font-semibold">Activité</th>
+                  <th className="table-cell w-12 text-right font-semibold">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((u) => (
-                  <tr key={u.id} className="border-b last:border-0 hover:bg-surface-2/50">
-                    <td className="table-cell">
-                      <div className="font-medium text-content">{u.name}</div>
-                      <div className="text-xs text-content-faint">{u.email}</div>
-                      {!u.isActive && (
-                        <Badge tone="neutral">Compte désactivé</Badge>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      <button
-                        type="button"
-                        onClick={() => onOpenTenant(u.tenantId)}
-                        className="text-left text-content-muted hover:text-primary hover:underline"
-                      >
-                        {u.tenantName}
-                      </button>
-                      <div className="text-xs text-content-faint">{u.roleLabel}</div>
-                    </td>
-                    <td className="table-cell text-content-muted">{u.phone ?? '—'}</td>
-                    <td className="table-cell text-content-muted">{u.planName ?? '—'}</td>
-                    <td className="table-cell">
-                      {u.state ? (
-                        <Badge tone={SUB_STATE_META[u.state].tone}>{SUB_STATE_META[u.state].label}</Badge>
-                      ) : (
-                        <Badge tone="neutral">Aucun</Badge>
-                      )}
-                    </td>
-                    <td className="table-cell text-content-muted">
-                      {u.subscriptionEndsAt ? formatDateTime(u.subscriptionEndsAt) : '—'}
-                    </td>
-                    <td className="table-cell text-content-muted">
-                      {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Jamais'}
-                    </td>
-                    <td className="table-cell text-right">
-                      <DropdownMenu items={actionsFor(u)} />
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((u) => {
+                  const [first, ...rest] = u.name.split(' ');
+                  const ends = u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).getTime() : null;
+                  const days = ends !== null ? Math.ceil((ends - Date.now()) / 86_400_000) : null;
+                  const endTone = days === null ? 'text-content-faint' : days < 0 ? 'text-danger' : days <= 7 ? 'text-warning' : 'text-content-muted';
+                  const endText = days === null ? '—' : days < 0 ? `expiré depuis ${-days} j` : days === 0 ? "expire aujourd'hui" : `dans ${days} j`;
+                  const last = u.lastActiveAt ?? u.lastLoginAt;
+                  return (
+                    <tr key={u.id} className="group border-b transition-colors last:border-0 hover:bg-primary-soft/30">
+                      <td className="table-cell">
+                        <div className="flex items-center gap-3">
+                          <span className="relative shrink-0">
+                            <Avatar firstName={first} lastName={rest.join(' ')} className="h-10 w-10 rounded-full text-xs" />
+                            {u.online && (
+                              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-50" />
+                                <span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-surface bg-success" />
+                              </span>
+                            )}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-content">
+                              {u.name}
+                              {!u.isActive && <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-content-muted">désactivé</span>}
+                            </p>
+                            <p className="truncate text-xs text-content-faint">{u.email}</p>
+                            <p className="truncate text-xs text-content-faint md:hidden">{u.tenantName}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="table-cell hidden md:table-cell">
+                        <button type="button" onClick={() => onOpenTenant(u.tenantId)} className="block max-w-[220px] truncate text-left font-medium text-content hover:text-primary hover:underline">
+                          {u.tenantName}
+                        </button>
+                        <p className="text-xs text-content-faint">
+                          {u.roleLabel}
+                          {u.phone ? ` · ${u.phone}` : ''}
+                        </p>
+                      </td>
+                      <td className="table-cell">
+                        <div className="flex flex-col items-start gap-1">
+                          {u.state ? (
+                            <Badge tone={SUB_STATE_META[u.state].tone}>{SUB_STATE_META[u.state].label}</Badge>
+                          ) : (
+                            <Badge tone="neutral">Aucun</Badge>
+                          )}
+                          {u.planName && <span className="text-xs font-medium text-content-muted">{u.planName}</span>}
+                        </div>
+                      </td>
+                      <td className="table-cell hidden lg:table-cell">
+                        <p className={`text-sm font-medium ${endTone}`}>{endText}</p>
+                        {u.subscriptionEndsAt && <p className="text-xs text-content-faint">{formatDateTime(u.subscriptionEndsAt)}</p>}
+                      </td>
+                      <td className="table-cell">
+                        {u.online ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--success)]/12 px-2.5 py-1 text-xs font-semibold text-success">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> En ligne
+                          </span>
+                        ) : last ? (
+                          <div title={formatDateTime(last)}>
+                            <p className="text-sm font-medium text-content">{ago(last)}</p>
+                            <p className="text-xs text-content-faint">{formatDateTime(last)}</p>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-[color:var(--warning)]/15 px-2.5 py-1 text-xs font-semibold text-warning">Jamais connecté</span>
+                        )}
+                      </td>
+                      <td className="table-cell text-right">
+                        <DropdownMenu items={actionsFor(u)} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -364,22 +402,10 @@ export function ConsoleUsersPage({
                 Page {page} sur {pageCount}
               </span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  aria-label="Page précédente"
-                >
+                <Button variant="outline" className="h-8 w-8 p-0" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} aria-label="Page précédente">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  disabled={page >= pageCount}
-                  onClick={() => setPage((p) => p + 1)}
-                  aria-label="Page suivante"
-                >
+                <Button variant="outline" className="h-8 w-8 p-0" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)} aria-label="Page suivante">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

@@ -100,6 +100,9 @@ export interface ConsoleUser {
   roleLabel: string;
   isActive: boolean;
   lastLoginAt: string | null;
+  /** Dernière activité (session renouvelée) ; « online » si dans les 20 dernières minutes. */
+  lastActiveAt?: string | null;
+  online?: boolean;
   createdAt: string;
   subscriptionStatus: string | null;
   subscriptionEndsAt: string | null;
@@ -180,6 +183,7 @@ export async function searchPlatform(q: string) {
 export async function listConsoleUsers(params: {
   search?: string;
   filter?: string;
+  sort?: 'activity' | 'recent';
   page?: number;
   pageSize?: number;
 }) {
@@ -223,3 +227,18 @@ export const SUB_STATE_META: Record<
   suspended: { label: 'Suspendu', tone: 'warning' },
   cancelled: { label: 'Annulé', tone: 'neutral' },
 };
+
+/** Activité en temps réel des utilisateurs (console). */
+export interface UsersActivity {
+  onlineCount: number;
+  online: { id: string; name: string; tenantName: string; lastSeenAt: string | null }[];
+  recentLogins: { id: string; at: string; userId: string; name: string; email: string; tenantName: string | null; device: string | null; method: 'google' | 'password' }[];
+  loginsToday: number;
+  active24h: number;
+  neverLogged: number;
+}
+
+export async function getUsersActivity(): Promise<UsersActivity> {
+  const { data } = await api.get<UsersActivity>('/platform/users/activity');
+  return data;
+}
