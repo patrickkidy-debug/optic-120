@@ -4242,5 +4242,22 @@
     "billGo": "Passer en caisse",
     "defaultLabel": "Consultation optométrique",
     "toPos": "Consultation ajoutée au panier"
+  },
+  "lensForm": {
+    "step1": "1 · Client & ordonnance",
+    "step2": "2 · Verres",
+    "step3": "3 · Laboratoire, délai & monture",
+    "step3Hint": "Tout est facultatif : vous pourrez compléter plus tard.",
+    "supplierOptional": "Laboratoire / fournisseur (facultatif)",
+    "later": "à préciser",
+    "invalidRx": "Valeur à corriger : nombre attendu (ex. +1,25 ou -0.75), axe entre 0 et 180.",
+    "fixRx": "Corriger l'ordonnance",
+    "clientRxAvailable": "Ordonnance du client du {{date}} disponible",
+    "useClientRx": "Reprendre cette ordonnance",
+    "clientRxApplied": "Ordonnance du client reprise — vous pouvez l’ajuster.",
+    "saveRx": "Enregistrer aussi cette ordonnance dans le dossier du client",
+    "rxSaved": "Ordonnance enregistrée dans le dossier du client",
+    "rxNotSaved": "La commande est créée, mais l'ordonnance n'a pas pu être ajoutée au dossier :",
+    "rxNote": "Saisie lors de la commande de verres {{number}}"
   }
 }

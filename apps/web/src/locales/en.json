@@ -4242,5 +4242,22 @@
     "billGo": "Go to checkout",
     "defaultLabel": "Optometric consultation",
     "toPos": "Consultation added to the cart"
+  },
+  "lensForm": {
+    "step1": "1 · Customer & prescription",
+    "step2": "2 · Lenses",
+    "step3": "3 · Lab, due date & frame",
+    "step3Hint": "All optional: you can complete this later.",
+    "supplierOptional": "Lab / supplier (optional)",
+    "later": "to be set",
+    "invalidRx": "Value to fix: a number is expected (e.g. +1.25 or -0.75), axis between 0 and 180.",
+    "fixRx": "Fix the prescription",
+    "clientRxAvailable": "Customer's prescription of {{date}} available",
+    "useClientRx": "Use this prescription",
+    "clientRxApplied": "Customer prescription applied — you can adjust it.",
+    "saveRx": "Also save this prescription to the customer file",
+    "rxSaved": "Prescription saved to the customer file",
+    "rxNotSaved": "The order is created, but the prescription could not be added to the file:",
+    "rxNote": "Entered with lens order {{number}}"
   }
 }

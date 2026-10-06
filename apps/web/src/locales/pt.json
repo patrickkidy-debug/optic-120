@@ -4242,5 +4242,22 @@
     "billGo": "Ir para a caixa",
     "defaultLabel": "Consulta optométrica",
     "toPos": "Consulta adicionada ao carrinho"
+  },
+  "lensForm": {
+    "step1": "1 · Cliente e receita",
+    "step2": "2 · Lentes",
+    "step3": "3 · Laboratório, prazo e armação",
+    "step3Hint": "Tudo opcional: pode completar mais tarde.",
+    "supplierOptional": "Laboratório / fornecedor (opcional)",
+    "later": "a definir",
+    "invalidRx": "Valor a corrigir: número esperado (ex. +1,25 ou -0.75), eixo entre 0 e 180.",
+    "fixRx": "Corrigir a receita",
+    "clientRxAvailable": "Receita do cliente de {{date}} disponível",
+    "useClientRx": "Usar esta receita",
+    "clientRxApplied": "Receita do cliente aplicada — pode ajustá-la.",
+    "saveRx": "Guardar também esta receita no processo do cliente",
+    "rxSaved": "Receita guardada no processo do cliente",
+    "rxNotSaved": "A encomenda foi criada, mas a receita não pôde ser adicionada ao processo:",
+    "rxNote": "Introduzida na encomenda de lentes {{number}}"
   }
 }

@@ -32,12 +32,20 @@ import {
   lensBaseLabel,
   computeLensOrderPrice,
 } from '@oculo/shared-types';
-import { createLensOrder, listProducts, type Product, type LensOrder } from '../../features/optique/api';
+import {
+  createLensOrder,
+  createPrescription,
+  listPrescriptions,
+  listProducts,
+  type Product,
+  type LensOrder,
+  type Prescription,
+} from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
 import { CustomerSearch } from '../../features/optique/SaleTools';
 import { apiErrorMessage } from '../../lib/api';
-import { useAuthStore } from '../../store/auth';
-import { formatCurrency, currencySymbol } from '../../lib/format';
+import { useAuthStore, usePermission } from '../../store/auth';
+import { formatCurrency, formatDate, currencySymbol } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
@@ -59,10 +67,36 @@ interface EyeRx {
   prismBase?: string;
 }
 
-function toNumber(v?: string): number | undefined {
-  if (v === undefined || v.trim() === '') return undefined;
-  const n = Number(v);
+/**
+ * Lit une valeur d'ordonnance saisie librement, comme l'écrivent les opticiens :
+ * « +1,25 », « −0.75 », « 2 D », « 90° ». Les anciens champs numériques du
+ * navigateur rejetaient en silence le « + » et la virgule : la valeur semblait
+ * saisie mais l'ordonnance partait vide.
+ */
+function parseRx(v?: string): number | undefined {
+  if (v === undefined) return undefined;
+  const t = v.trim().replace(/[\u2212\u2013]/g, '-').replace(',', '.').replace(/\s+/g, '').replace(/[dD°]$/, '');
+  if (t === '') return undefined;
+  const n = Number(t);
   return Number.isFinite(n) ? n : undefined;
+}
+const toNumber = parseRx;
+
+/** Valeur saisie mais illisible ou hors limites (axe 0–180°, dioptries ±30). */
+function rxInvalid(field: keyof EyeRx, v?: string): boolean {
+  if (!v || !v.trim() || field === 'prismBase') return false;
+  const n = parseRx(v);
+  if (n === undefined) return true;
+  if (field === 'axis') return !Number.isInteger(n) || n < 0 || n > 180;
+  return Math.abs(n) > 30;
+}
+
+/** Valeur normalisée pour la fiche client (« +1.25 », « -0.50 », « 90 »). */
+function rxText(field: keyof EyeRx, v?: string): string {
+  const n = parseRx(v);
+  if (n === undefined) return '';
+  if (field === 'axis') return String(n);
+  return (n > 0 ? '+' : '') + n.toFixed(2);
 }
 
 function signed(n: number): string {
@@ -71,9 +105,10 @@ function signed(n: number): string {
 
 /** Résumé texte lisible d'un œil, pour la compatibilité (carte Kanban, historique). */
 function formatRx(rx: EyeRx): string {
-  let base = rx.sphere ? signed(Number(rx.sphere)) : '';
-  if (rx.cylinder) base += ` (${signed(Number(rx.cylinder))}${rx.axis ? ` × ${rx.axis}°` : ''})`;
-  if (rx.addition) base += `${base ? ' ' : ''}add ${signed(Number(rx.addition))}`;
+  const n = (v?: string) => parseRx(v);
+  let base = n(rx.sphere) !== undefined ? signed(n(rx.sphere)!) : '';
+  if (n(rx.cylinder) !== undefined) base += ` (${signed(n(rx.cylinder)!)}${n(rx.axis) !== undefined ? ` × ${n(rx.axis)}°` : ''})`;
+  if (n(rx.addition) !== undefined) base += `${base ? ' ' : ''}add ${signed(n(rx.addition)!)}`;
   if (rx.prism) base += `${base ? ' ' : ''}prisme ${rx.prism}${rx.prismBase ? ` ${rx.prismBase}` : ''}`;
   return base;
 }
@@ -255,70 +290,45 @@ function EyeRxFields({
   showAdvanced: boolean;
 }) {
   const set = (patch: Partial<EyeRx>) => onChange({ ...rx, ...patch });
+  const cell = (field: keyof EyeRx, title: string, placeholder: string) => {
+    const bad = rxInvalid(field, rx[field]);
+    return (
+      <label className="block">
+        <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-content-faint">{title}</span>
+        <input
+          className={`input h-10 text-center text-sm ${bad ? 'border-danger ring-1 ring-[color:var(--danger)]/40' : ''}`}
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder={placeholder}
+          disabled={disabled}
+          value={rx[field] ?? ''}
+          onChange={(e) => set({ [field]: e.target.value })}
+        />
+      </label>
+    );
+  };
+  const invalid = (['sphere', 'cylinder', 'axis', 'addition', 'prism'] as const).some((f) => rxInvalid(f, rx[f]));
   return (
-    <div className={`rounded-xl border p-3 ${disabled ? 'bg-surface-2/50' : 'bg-surface-2/20'}`}>
+    <div className={`rounded-xl border p-3 ${disabled ? 'bg-surface-2/50' : 'bg-surface'}`}>
       <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-muted">
         <Eye className="h-3.5 w-3.5" /> {label}
       </p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <input
-          className="input text-sm"
-          placeholder={tr('ui.LensOrderForm.sphere')}
-          type="number"
-          step="0.25"
-          disabled={disabled}
-          value={rx.sphere ?? ''}
-          onChange={(e) => set({ sphere: e.target.value })}
-        />
-        <input
-          className="input text-sm"
-          placeholder={tr('ui.LensOrderForm.cylindre')}
-          type="number"
-          step="0.25"
-          disabled={disabled}
-          value={rx.cylinder ?? ''}
-          onChange={(e) => set({ cylinder: e.target.value })}
-        />
-        <input
-          className="input text-sm"
-          placeholder={tr('ui.LensOrderForm.axe')}
-          type="number"
-          min={0}
-          max={180}
-          disabled={disabled}
-          value={rx.axis ?? ''}
-          onChange={(e) => set({ axis: e.target.value })}
-        />
-        <input
-          className="input text-sm"
-          placeholder={tr('ui.LensOrderForm.addition')}
-          type="number"
-          step="0.25"
-          disabled={disabled}
-          value={rx.addition ?? ''}
-          onChange={(e) => set({ addition: e.target.value })}
-        />
+      <div className="grid grid-cols-4 gap-1.5">
+        {cell('sphere', 'Sph', '±0.00')}
+        {cell('cylinder', 'Cyl', '±0.00')}
+        {cell('axis', 'Axe', '0–180')}
+        {cell('addition', 'Add', '+0.00')}
       </div>
       {showAdvanced && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <input
-            className="input text-sm"
-            placeholder={tr('ui.LensOrderForm.prisme')}
-            type="number"
-            step="0.25"
-            disabled={disabled}
-            value={rx.prism ?? ''}
-            onChange={(e) => set({ prism: e.target.value })}
-          />
-          <input
-            className="input text-sm"
-            placeholder={tr('ui.LensOrderForm.baseExInOut')}
-            disabled={disabled}
-            value={rx.prismBase ?? ''}
-            onChange={(e) => set({ prismBase: e.target.value })}
-          />
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {cell('prism', tr('ui.LensOrderForm.prisme'), '0.00')}
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-content-faint">Base</span>
+            <input className="input h-10 text-sm" placeholder={tr('ui.LensOrderForm.baseExInOut')} disabled={disabled} value={rx.prismBase ?? ''} onChange={(e) => set({ prismBase: e.target.value })} />
+          </label>
         </div>
       )}
+      {invalid && !disabled && <p className="mt-1.5 text-[11px] text-danger">{tr('lensForm.invalidRx')}</p>}
     </div>
   );
 }
@@ -355,6 +365,12 @@ export function LensOrderForm({
   const [ogRx, setOgRx] = useState<EyeRx>({});
   const [sameForBoth, setSameForBoth] = useState(false);
   const [showAdvancedRx, setShowAdvancedRx] = useState(false);
+  // Ordonnance reprise du dossier client (id) ; sinon saisie à la main.
+  const [rxFromClient, setRxFromClient] = useState<string | null>(null);
+  const [saveRx, setSaveRx] = useState(true);
+  const [rxSaveWarning, setRxSaveWarning] = useState('');
+  const canSeeRx = usePermission('optique.prescriptions.view');
+  const canCreateRx = usePermission('optique.prescriptions.create');
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   const [error, setError] = useState('');
   const [createdOrder, setCreatedOrder] = useState<LensOrder | null>(null);
@@ -366,7 +382,26 @@ export function LensOrderForm({
   const typeLabel = lensBaseLabel(pricing, ltype);
   const availableIndices = lensIndicesForMaterial(lmaterial);
   const effectiveOg = sameForBoth ? odRx : ogRx;
-  const hasAnyRx = Boolean(odRx.sphere || odRx.cylinder || effectiveOg.sphere || effectiveOg.cylinder);
+  const hasAnyRx = (['sphere', 'cylinder', 'axis', 'addition'] as const).some(
+    (f) => parseRx(odRx[f]) !== undefined || parseRx(effectiveOg[f]) !== undefined,
+  );
+  const rxHasError = (['sphere', 'cylinder', 'axis', 'addition', 'prism'] as const).some(
+    (f) => rxInvalid(f, odRx[f]) || rxInvalid(f, effectiveOg[f]),
+  );
+
+  // Dernière ordonnance du client choisi : reprise en un clic.
+  const { data: clientRx } = useQuery({
+    queryKey: ['prescriptions', customerId],
+    queryFn: () => listPrescriptions(customerId!),
+    enabled: Boolean(customerId) && canSeeRx,
+  });
+  const latestRx: Prescription | undefined = clientRx?.[0];
+  function applyClientRx(p: Prescription) {
+    setSameForBoth(false);
+    setOdRx({ sphere: p.odSphere ?? '', cylinder: p.odCylinder ?? '', axis: p.odAxis ?? '', addition: p.odAddition ?? '' });
+    setOgRx({ sphere: p.ogSphere ?? '', cylinder: p.ogCylinder ?? '', axis: p.ogAxis ?? '', addition: p.ogAddition ?? '' });
+    setRxFromClient(p.id);
+  }
 
   const price = computeLensOrderPrice(pricing, { lensType: ltype, index: lindex, treatments: treats });
   const treatLabels = LENS_TREATMENTS.filter((t) => treats.includes(t.key)).map((t) => t.label);
@@ -447,23 +482,25 @@ export function LensOrderForm({
   // Validation : ce qui bloque réellement la création (requis) vs ce qui est
   // juste conseillé (client, labo, prescription) — jamais bloquant, pour ne
   // pas ralentir une commande simple.
+  // Le laboratoire / fournisseur n'est jamais exigé : on peut le préciser plus tard.
   const checks = [
     { label: 'Client', ok: !!customerId, required: false },
-    { label: tr('ui.LensOrderForm.laboratoire'), ok: !!supplierName.trim(), required: false },
     ...(isVerres
       ? [
           { label: tr('ui.LensOrderForm.typeDeVerre'), ok: !!ltype, required: true },
           { label: tr('ui.LensOrderForm.indice'), ok: !!lindex, required: true },
           { label: tr('ui.LensOrderForm.prescription'), ok: hasAnyRx, required: false },
+          ...(rxHasError ? [{ label: tr('lensForm.fixRx'), ok: false, required: true }] : []),
         ]
       : [{ label: 'Description', ok: description.trim().length >= 2, required: true }]),
   ];
   const missingRequired = checks.filter((c) => c.required && !c.ok);
   const canSubmit = missingRequired.length === 0 && finalDescription.length >= 2;
 
+  const willSaveRx = isVerres && saveRx && !!customerId && hasAnyRx && !rxFromClient && canCreateRx;
   const mut = useMutation({
-    mutationFn: () =>
-      createLensOrder({
+    mutationFn: async () => {
+      const order = await createLensOrder({
         customerId: customerId || '',
         category,
         description: finalDescription,
@@ -475,7 +512,28 @@ export function LensOrderForm({
         ogLens: isVerres && ogSummary ? ogSummary : undefined,
         frameProductId: frame?.id,
         lensConfig,
-      }),
+      });
+      // Ordonnance saisie à la main : rangée aussi dans le dossier du client.
+      if (willSaveRx && customerId) {
+        try {
+          await createPrescription(customerId, {
+            odSphere: rxText('sphere', odRx.sphere),
+            odCylinder: rxText('cylinder', odRx.cylinder),
+            odAxis: rxText('axis', odRx.axis),
+            odAddition: rxText('addition', odRx.addition),
+            ogSphere: rxText('sphere', effectiveOg.sphere),
+            ogCylinder: rxText('cylinder', effectiveOg.cylinder),
+            ogAxis: rxText('axis', effectiveOg.axis),
+            ogAddition: rxText('addition', effectiveOg.addition),
+            lensType: typeLabel,
+            notes: tr('lensForm.rxNote', { number: order.number }),
+          });
+        } catch (e) {
+          setRxSaveWarning(apiErrorMessage(e));
+        }
+      }
+      return order;
+    },
     onSuccess: (order) => setCreatedOrder(order),
     onError: (e) => setError(apiErrorMessage(e, tr('ui.LensOrderForm.creationImpossible'))),
   });
@@ -493,6 +551,8 @@ export function LensOrderForm({
             {createdOrder.number}
             {name ? ` — ${name}` : ''}
           </p>
+          {willSaveRx && !rxSaveWarning && <p className="text-xs text-success">✓ {tr('lensForm.rxSaved')}</p>}
+          {rxSaveWarning && <p className="text-xs text-warning">{tr('lensForm.rxNotSaved')} {rxSaveWarning}</p>}
           <div className="mt-2 flex gap-2">
             <Button variant="outline" onClick={() => onCreated(createdOrder, 'close')}>
               {tr('ui.LensOrderForm.retourAuxCommandes')}
@@ -532,116 +592,28 @@ export function LensOrderForm({
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_20rem]">
-          <div className="space-y-5">
+          <div className="space-y-6">
+            {/* Étape 1 — client et ordonnance */}
             <div className="space-y-3">
-              <SectionTitle icon={SlidersHorizontal}>{tr('ui.LensOrderForm.informationsGenerales')}</SectionTitle>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label={tr('ui.LensOrderForm.clientOptionnel')}>
-                  <CustomerSearch
-                    value={customerId}
-                    onChange={(id, c) => {
-                      setCustomerId(id);
-                      setCustomerLabel(c ? `${c.firstName} ${c.lastName}` : '');
-                    }}
-                  />
-                </Field>
-                <Field label={tr('ui.LensOrderForm.laboratoireFournisseur')}>
-                  <SupplierSearch value={supplierName} onChange={setSupplierName} />
-                </Field>
-              </div>
-              <Field label={tr('ui.LensOrderForm.datePrevue')}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative max-w-[10rem]">
-                    <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
-                    <input
-                      className="input pl-9"
-                      type="date"
-                      value={expectedAt}
-                      onChange={(e) => setExpectedAt(e.target.value)}
-                    />
-                  </div>
-                  <button type="button" onClick={() => setExpectedShortcut(0)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    {tr('ui.LensOrderForm.aujourdHui')}
-                  </button>
-                  <button type="button" onClick={() => setExpectedShortcut(1)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    {tr('ui.LensOrderForm.demain')}
-                  </button>
-                  <button type="button" onClick={() => setExpectedShortcut(3)} className="btn-outline h-8 rounded-lg px-2.5 text-xs">
-                    {tr('ui.LensOrderForm.dans3Jours')}
-                  </button>
-                </div>
+              <SectionTitle icon={User}>{tr('lensForm.step1')}</SectionTitle>
+              <Field label={tr('ui.LensOrderForm.clientOptionnel')}>
+                <CustomerSearch
+                  value={customerId}
+                  onChange={(id, c) => {
+                    setCustomerId(id);
+                    setCustomerLabel(c ? `${c.firstName} ${c.lastName}` : '');
+                    setRxFromClient(null);
+                  }}
+                />
               </Field>
-              <Field label={tr('ui.LensOrderForm.montureAssocieeOptionnelVignetteSur')}>
-                <FramePicker value={frame} onChange={handleFrameChange} />
-              </Field>
-            </div>
 
-            {isVerres ? (
-              <div className="space-y-3">
-                <SectionTitle icon={Glasses}>{tr('ui.LensOrderForm.configurationDesVerres')}</SectionTitle>
-                <div>
-                  <span className="label">{tr('ui.LensOrderForm.typeDeVerre')}</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {typeOptions.map((t) => {
-                      const active = ltype === t.key;
-                      return (
-                        <button
-                          key={t.key}
-                          type="button"
-                          onClick={() => setLtype(t.key)}
-                          className={`relative rounded-xl border p-3 text-sm transition ${
-                            active ? 'border-primary bg-primary-soft text-content' : 'border-line text-content-muted'
-                          }`}
-                        >
-                          {t.label}
-                          {active && <CheckCircle className="absolute right-2 top-2 h-3.5 w-3.5 text-primary" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label={tr('ui.LensOrderForm.materiau')}>
-                    <select className="input" value={lmaterial} onChange={(e) => handleMaterialChange(e.target.value)}>
-                      <option value="">—</option>
-                      {LENS_MATERIALS.map((m) => (
-                        <option key={m} value={m}>{trFr(m)}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={tr('ui.LensOrderForm.indiceAmincissement')}>
-                    <select
-                      className="input"
-                      value={lindex}
-                      disabled={availableIndices.length <= 1 && !!lmaterial}
-                      onChange={(e) => setLindex(e.target.value as LensIndexId)}
-                    >
-                      {availableIndices.map((i) => (
-                        <option key={i.id} value={i.id}>{i.label}</option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-
-                <div>
-                  <span className="label flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.traitements')}</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {LENS_TREATMENTS.map((t) => (
-                      <TreatmentChip
-                        key={t.key}
-                        label={t.label}
-                        price={pricing[t.key] ?? 0}
-                        active={treats.includes(t.key)}
-                        onClick={() => toggleTreatment(t.key)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
+              {isVerres && (
+                <div className="space-y-2 rounded-2xl border border-primary/20 bg-primary-soft/30 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="label mb-0 flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.prescription')}</span>
-                    <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-content">
+                      <Eye className="h-4 w-4 text-primary" /> {tr('ui.LensOrderForm.prescription')}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
                       <label className="flex cursor-pointer items-center gap-1.5 text-content-muted">
                         <input type="checkbox" checked={sameForBoth} onChange={(e) => setSameForBoth(e.target.checked)} />
                         {tr('ui.LensOrderForm.memePrescriptionPourLesDeux')}
@@ -653,36 +625,103 @@ export function LensOrderForm({
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <EyeRxFields label={tr('ui.LensOrderForm.odIlDroit')} rx={odRx} onChange={setOdRx} showAdvanced={showAdvancedRx} />
+
+                  {latestRx && rxFromClient !== latestRx.id && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-sm">
+                      <span className="text-content-muted">{tr('lensForm.clientRxAvailable', { date: formatDate(latestRx.date) })}</span>
+                      <Button type="button" className="h-8 px-3 text-xs" onClick={() => applyClientRx(latestRx)}>
+                        <FileText className="h-3.5 w-3.5" /> {tr('lensForm.useClientRx')}
+                      </Button>
+                    </div>
+                  )}
+                  {rxFromClient && <p className="text-xs font-medium text-success">✓ {tr('lensForm.clientRxApplied')}</p>}
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <EyeRxFields label={tr('ui.LensOrderForm.odIlDroit')} rx={odRx} onChange={(v) => { setOdRx(v); setRxFromClient(null); }} showAdvanced={showAdvancedRx} />
                     <EyeRxFields
                       label={tr('ui.LensOrderForm.ogIlGauche')}
                       rx={effectiveOg}
-                      onChange={setOgRx}
+                      onChange={(v) => { setOgRx(v); setRxFromClient(null); }}
                       disabled={sameForBoth}
                       showAdvanced={showAdvancedRx}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedRx((v) => !v)}
-                    className="flex items-center gap-1 text-xs font-medium text-content-muted hover:text-content"
-                  >
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedRx ? 'rotate-180' : ''}`} />
-                    {tr('ui.LensOrderForm.parametresAvancesPrisme')}
-                  </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedRx((v) => !v)}
+                      className="flex items-center gap-1 text-xs font-medium text-content-muted hover:text-content"
+                    >
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedRx ? 'rotate-180' : ''}`} />
+                      {tr('ui.LensOrderForm.parametresAvancesPrisme')}
+                    </button>
+                    {customerId && canCreateRx && !rxFromClient && hasAnyRx && (
+                      <label className="flex cursor-pointer items-center gap-1.5 text-xs text-content-muted">
+                        <input type="checkbox" checked={saveRx} onChange={(e) => setSaveRx(e.target.checked)} />
+                        {tr('lensForm.saveRx')}
+                      </label>
+                    )}
+                  </div>
+                  {(odSummary || ogSummary) && (
+                    <p className="text-xs text-content-muted">
+                      OD : <b className="text-content">{odSummary || '—'}</b> · OG : <b className="text-content">{ogSummary || '—'}</b>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Étape 2 — verres (ou détail de l'article) */}
+            {isVerres ? (
+              <div className="space-y-3">
+                <SectionTitle icon={Glasses}>{tr('lensForm.step2')}</SectionTitle>
+                <div className="grid grid-cols-3 gap-2">
+                  {typeOptions.map((t) => {
+                    const active = ltype === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setLtype(t.key)}
+                        className={`relative rounded-xl border p-3 text-sm transition ${active ? 'border-primary bg-primary-soft font-semibold text-content' : 'border-line text-content-muted hover:border-primary/40'}`}
+                      >
+                        {t.label}
+                        {active && <CheckCircle className="absolute right-2 top-2 h-3.5 w-3.5 text-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label={tr('ui.LensOrderForm.materiau')}>
+                    <select className="input" value={lmaterial} onChange={(e) => handleMaterialChange(e.target.value)}>
+                      <option value="">—</option>
+                      {LENS_MATERIALS.map((m) => (
+                        <option key={m} value={m}>{trFr(m)}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={tr('ui.LensOrderForm.indiceAmincissement')}>
+                    <select className="input" value={lindex} disabled={availableIndices.length <= 1 && !!lmaterial} onChange={(e) => setLindex(e.target.value as LensIndexId)}>
+                      {availableIndices.map((i) => (
+                        <option key={i.id} value={i.id}>{i.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+                <div>
+                  <span className="label flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.traitements')}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {LENS_TREATMENTS.map((t) => (
+                      <TreatmentChip key={t.key} label={t.label} price={pricing[t.key] ?? 0} active={treats.includes(t.key)} onClick={() => toggleTreatment(t.key)} />
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
                 <SectionTitle icon={FileText}>{tr('ui.LensOrderForm.detail')}</SectionTitle>
                 <Field label="Description">
-                  <input
-                    className="input"
-                    placeholder={tr('ui.LensOrderForm.exLentillesMensuellesEtuiCordon')}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
+                  <input className="input" placeholder={tr('ui.LensOrderForm.exLentillesMensuellesEtuiCordon')} value={description} onChange={(e) => setDescription(e.target.value)} />
                 </Field>
                 <Field label={tr('ui.LensOrderForm.coutFcfa', { currency: currencySymbol() })}>
                   <input className="input" type="number" min={0} placeholder={tr('ui.LensOrderForm.prix')} value={cost} onChange={(e) => setCost(e.target.value)} />
@@ -690,14 +729,36 @@ export function LensOrderForm({
               </div>
             )}
 
-            <Field label={tr('ui.LensOrderForm.notesInstructionsSpeciales')}>
-              <input
-                className="input"
-                placeholder={tr('ui.LensOrderForm.ajouterUneNoteOuUne')}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </Field>
+            {/* Étape 3 — laboratoire, délai, monture : tout est facultatif */}
+            <div className="space-y-3">
+              <SectionTitle icon={Building2}>{tr('lensForm.step3')}</SectionTitle>
+              <p className="-mt-1 text-xs text-content-faint">{tr('lensForm.step3Hint')}</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label={tr('lensForm.supplierOptional')}>
+                  <SupplierSearch value={supplierName} onChange={setSupplierName} />
+                </Field>
+                <Field label={tr('ui.LensOrderForm.datePrevue')}>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="relative min-w-[9rem] flex-1">
+                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+                      <input className="input pl-9" type="date" value={expectedAt} onChange={(e) => setExpectedAt(e.target.value)} />
+                    </div>
+                    <button type="button" onClick={() => setExpectedShortcut(1)} className="btn-outline h-9 rounded-lg px-2.5 text-xs">
+                      {tr('ui.LensOrderForm.demain')}
+                    </button>
+                    <button type="button" onClick={() => setExpectedShortcut(3)} className="btn-outline h-9 rounded-lg px-2.5 text-xs">
+                      {tr('ui.LensOrderForm.dans3Jours')}
+                    </button>
+                  </div>
+                </Field>
+              </div>
+              <Field label={tr('ui.LensOrderForm.montureAssocieeOptionnelVignetteSur')}>
+                <FramePicker value={frame} onChange={handleFrameChange} />
+              </Field>
+              <Field label={tr('ui.LensOrderForm.notesInstructionsSpeciales')}>
+                <input className="input" placeholder={tr('ui.LensOrderForm.ajouterUneNoteOuUne')} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </Field>
+            </div>
           </div>
 
           {/* Résumé + prix : colonne latérale sur desktop, sous la config sur mobile. */}
@@ -725,6 +786,16 @@ export function LensOrderForm({
                     <dd className="truncate text-right font-medium text-content">{treatLabels.join(', ')}</dd>
                   </div>
                 )}
+                {isVerres && (odSummary || ogSummary) && (
+                  <div className="rounded-lg bg-surface-2 px-2 py-1.5 text-xs">
+                    <p className="text-content"><b>OD</b> {odSummary || '—'}</p>
+                    <p className="text-content"><b>OG</b> {ogSummary || '—'}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="flex items-center gap-1.5 text-content-muted"><Building2 className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.laboratoire')}</dt>
+                  <dd className="truncate text-right font-medium text-content">{supplierName.trim() || tr('lensForm.later')}</dd>
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <dt className="flex items-center gap-1.5 text-content-muted"><Glasses className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.monture')}</dt>
                   <dd className="truncate text-right font-medium text-content">{frame ? frame.name : '—'}</dd>
