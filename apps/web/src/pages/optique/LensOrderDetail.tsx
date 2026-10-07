@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, MessageCircle, Glasses, Receipt } from 'lucide-react';
+import { CheckCircle2, Circle, MessageCircle, Glasses, Receipt, FileDown } from 'lucide-react';
 import {
   LENS_ORDER_BOARD_STATUSES,
   LENS_ORDER_STATUS_LABELS,
@@ -8,6 +8,7 @@ import {
   type SaleWaStage,
 } from '@oculo/shared-types';
 import {
+  getCustomer,
   getLensOrderTimeline,
   notifyLensOrderClient,
   setLensOrderStatus,
@@ -21,6 +22,8 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Badge, Button } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { openLensOrderSheet } from '../../features/optique/lensOrderSheet';
+import type { CompanyInfo } from '../../features/optique/saleDocument';
 
 /** Étape WhatsApp la plus pertinente selon l'avancement de la commande. */
 function stageForStatus(status: LensOrderStatus): SaleWaStage {
@@ -92,6 +95,21 @@ export function LensOrderDetail({
     return map;
   }, [events]);
   const notifiedEvent = (events ?? []).find((e) => e.action === 'LENS_ORDER_CLIENT_NOTIFIED');
+
+  /** Fiche technique laboratoire (PDF) : complétée avec le dossier client s'il existe. */
+  function downloadSheet() {
+    const user = useAuthStore.getState().user;
+    const company: CompanyInfo = {
+      name: user?.tenantName ?? tenantName,
+      logoUrl: user?.tenantLogoUrl,
+      location: user?.tenantLocation,
+      contactPhone: user?.tenantContactPhone,
+      contactEmail: user?.tenantContactEmail,
+      ...user?.tenantInvoiceSettings,
+    };
+    const createdBy = (events ?? []).find((e) => e.action === 'LENS_ORDER_CREATED')?.userName ?? null;
+    void openLensOrderSheet(order, company, () => (order.customerId ? getCustomer(order.customerId) : Promise.resolve(null)), createdBy);
+  }
   const showNotifiedStep = Boolean(notifiedEvent || order.notifiedAt);
   // order.status couvre aussi CANCELLED (hors plateau) : comparé via une liste
   // non typée pour rester correct même sur une commande annulée.
@@ -246,6 +264,10 @@ export function LensOrderDetail({
           {order.notes && (
             <div className="rounded-xl bg-surface-2 p-3 text-xs text-content-muted">{order.notes}</div>
           )}
+
+          <Button variant="outline" className="w-full" onClick={downloadSheet}>
+            <FileDown className="h-4 w-4" /> {tr('labSheet.button')}
+          </Button>
 
           {canManage && order.customer?.phone && (
             // Établissement bilingue (Rwanda) : un bouton par langue du message.

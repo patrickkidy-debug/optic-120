@@ -470,7 +470,12 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                                 etablissement: user?.tenantName ?? 'OculoSaaS',
                                 numero: s.number,
                                 montant: formatCurrency(Number(s.totalAmount)),
-                                reste: formatCurrency(Number(s.totalAmount) - Number(s.paidAmount)),
+                                paye: Number(s.paidAmount) > 0 ? formatCurrency(Number(s.paidAmount)) : '',
+                                // Soldée : la ligne « Reste à payer » disparaît du message.
+                                reste:
+                                  Number(s.totalAmount) - Number(s.paidAmount) > 0
+                                    ? formatCurrency(Number(s.totalAmount) - Number(s.paidAmount))
+                                    : '',
                               },
                               lang,
                             )

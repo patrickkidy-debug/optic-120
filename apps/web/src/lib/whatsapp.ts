@@ -1,9 +1,8 @@
 import {
-  DEFAULT_WA_TEMPLATES,
-  DEFAULT_WA_TEMPLATES_EN,
-  DEFAULT_WA_TEMPLATES_FR,
   WA_MESSAGE_LANGS_BY_COUNTRY,
   fillWaTemplate,
+  resolveWaTemplate,
+  waLangsForCountry,
   type SaleWaStage,
   type WaMessageLang,
   type WhatsappTemplates,
@@ -61,17 +60,13 @@ export function sendWhatsappForStage(
     alert(tr('ui.whatsapp.ceClientNAPas'));
     return false;
   }
-  const templates: WhatsappTemplates =
-    useAuthStore.getState().user?.tenantWhatsappTemplates ?? {};
-  // Établissement bilingue (Rwanda) : la langue choisie au clic décide du modèle,
-  // indépendamment de la langue de l'interface.
-  const tpl =
-    lang === 'en'
-      ? templates.en?.[stage] ?? DEFAULT_WA_TEMPLATES_EN[stage]
-      : lang === 'fr'
-        ? templates[stage] ?? DEFAULT_WA_TEMPLATES_FR[stage]
-        : templates[stage] ?? DEFAULT_WA_TEMPLATES[stage];
-  const text = fillWaTemplate(tpl, vars);
+  const user = useAuthStore.getState().user;
+  const templates: WhatsappTemplates = user?.tenantWhatsappTemplates ?? {};
+  const country = user?.tenantCountryCode;
+  // La langue du message est celle de l'établissement (ou celle choisie au clic
+  // au Rwanda), jamais celle de l'interface de l'employé.
+  const msgLang = lang ?? waLangsForCountry(country)[0]!;
+  const text = fillWaTemplate(resolveWaTemplate(templates, stage, msgLang, country), vars);
   window.open(`${link}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   return true;
 }

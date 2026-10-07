@@ -2666,52 +2666,130 @@ export const SALE_WA_STAGES = [
 ] as const;
 export type SaleWaStage = (typeof SALE_WA_STAGES)[number]['key'];
 
-/** Modèles par défaut. Variables : {client} {etablissement} {numero} {montant} {reste}. */
-export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = {
-  quote:
-    'Bonjour {client}, voici votre devis {numero} chez {etablissement} : {montant}. Il reste valable quelques jours. Cordialement.',
-  sale_paid:
-    'Bonjour {client}, nous confirmons votre règlement de {montant} chez {etablissement}. Merci de votre confiance !',
-  lens_ordered:
-    'Bonjour {client}, vos verres ont bien été commandés chez {etablissement}. Nous vous préviendrons dès leur arrivée.',
-  lens_ready:
-    'Bonjour {client}, bonne nouvelle : vos verres sont prêts ! Vous pouvez passer les retirer chez {etablissement}.',
-  lens_delivered:
-    'Bonjour {client}, merci d’avoir retiré vos verres chez {etablissement}. Prenez soin de votre vue !',
-  renewal:
-    'Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.',
-  followup: 'Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}.',
-  birthday: 'Joyeux anniversaire {client} ! 🎉 Toute l’équipe de {etablissement} vous souhaite une excellente journée. Au plaisir de vous revoir bientôt.',
+/**
+ * Modèles par défaut, un jeu FIGÉ par langue : la langue d'un message dépend
+ * de l'établissement (et du choix FR/EN au Rwanda), jamais de la langue de
+ * l'interface de l'employé — sinon un même client recevait un jour du
+ * français, le lendemain de l'anglais.
+ *
+ * Variables : {client} {etablissement} {numero} {montant} {paye} {reste}.
+ * Une variable notée {nom?} est facultative : si elle est vide, toute sa
+ * ligne disparaît (ex. « Reste à payer » quand la vente est soldée).
+ */
+export const DEFAULT_WA_TEMPLATES_FR: Record<SaleWaStage, string> = {
+  quote: "Bonjour {client},\n\nVoici votre devis *{numero}* chez *{etablissement}*.\nMontant : *{montant}*\n\nCe devis reste valable quelques jours. Répondez simplement à ce message pour toute question.\n\nÀ bientôt,\nL’équipe {etablissement}",
+  sale_paid: "Bonjour {client},\n\nMerci pour votre achat chez *{etablissement}* !\nVente : {numero?}\nMontant total : *{montant}*\nDéjà réglé : {paye?}\nReste à payer : *{reste?}*\n\nMerci de votre confiance.\nL’équipe {etablissement}",
+  lens_ordered: "Bonjour {client},\n\nVos verres sont commandés auprès de notre laboratoire.\nCommande : {numero?}\n\nNous vous prévenons dès qu’ils sont prêts.\nL’équipe {etablissement}",
+  lens_ready: "Bonjour {client},\n\nBonne nouvelle : vos lunettes sont prêtes ! 👓\nVous pouvez passer les récupérer chez *{etablissement}*.\nCommande : {numero?}\n\nÀ très bientôt,\nL’équipe {etablissement}",
+  lens_delivered: "Bonjour {client},\n\nMerci d’avoir récupéré vos lunettes chez *{etablissement}*.\nSi le confort visuel n’est pas parfait dans les prochains jours, répondez simplement à ce message : nous ferons les ajustements nécessaires.\n\nPrenez soin de votre vue !\nL’équipe {etablissement}",
+  renewal: "Bonjour {client},\n\nVotre dernier contrôle de la vue chez *{etablissement}* date déjà de quelque temps. Nous vous conseillons un nouveau bilan visuel pour vérifier que votre correction est toujours adaptée.\n\nRépondez à ce message pour fixer un rendez-vous.\nL’équipe {etablissement}",
+  followup: "Bonjour {client},\n\nIci l’équipe de *{etablissement}*. Nous prenons de vos nouvelles : tout se passe bien avec vos lunettes ?\n\nRépondez simplement à ce message pour toute question.\nL’équipe {etablissement}",
+  birthday: "Joyeux anniversaire {client} ! 🎉\n\nToute l’équipe de *{etablissement}* vous souhaite une excellente journée.\n\nAu plaisir de vous revoir bientôt !",
+};
+
+export const DEFAULT_WA_TEMPLATES_EN: Record<SaleWaStage, string> = {
+  quote: "Hello {client},\n\nHere is your quote *{numero}* from *{etablissement}*.\nAmount: *{montant}*\n\nThis quote is valid for a few days. Simply reply to this message if you have any questions.\n\nSee you soon,\nThe {etablissement} team",
+  sale_paid: "Hello {client},\n\nThank you for your purchase at *{etablissement}*!\nSale: {numero?}\nTotal amount: *{montant}*\nAlready paid: {paye?}\nBalance due: *{reste?}*\n\nThank you for your trust.\nThe {etablissement} team",
+  lens_ordered: "Hello {client},\n\nYour lenses have been ordered from our laboratory.\nOrder: {numero?}\n\nWe will let you know as soon as they are ready.\nThe {etablissement} team",
+  lens_ready: "Hello {client},\n\nGood news: your glasses are ready! 👓\nYou can collect them at *{etablissement}*.\nOrder: {numero?}\n\nSee you very soon,\nThe {etablissement} team",
+  lens_delivered: "Hello {client},\n\nThank you for collecting your glasses at *{etablissement}*.\nIf your vision does not feel perfectly comfortable over the next few days, simply reply to this message and we will make the necessary adjustments.\n\nTake care of your eyesight!\nThe {etablissement} team",
+  renewal: "Hello {client},\n\nIt has been a while since your last eye test at *{etablissement}*. We recommend a new eye examination to make sure your correction is still right for you.\n\nReply to this message to book an appointment.\nThe {etablissement} team",
+  followup: "Hello {client},\n\nThis is the *{etablissement}* team. We are checking in: is everything going well with your glasses?\n\nSimply reply to this message if you have any questions.\nThe {etablissement} team",
+  birthday: "Happy birthday {client}! 🎉\n\nThe whole *{etablissement}* team wishes you a wonderful day.\n\nWe look forward to seeing you soon!",
+};
+
+export const DEFAULT_WA_TEMPLATES_PT: Record<SaleWaStage, string> = {
+  quote: "Olá {client},\n\nAqui está o seu orçamento *{numero}* da *{etablissement}*.\nValor: *{montant}*\n\nEste orçamento é válido durante alguns dias. Responda a esta mensagem se tiver alguma dúvida.\n\nAté breve,\nA equipa {etablissement}",
+  sale_paid: "Olá {client},\n\nObrigado pela sua compra na *{etablissement}*!\nVenda: {numero?}\nValor total: *{montant}*\nJá pago: {paye?}\nEm falta: *{reste?}*\n\nObrigado pela sua confiança.\nA equipa {etablissement}",
+  lens_ordered: "Olá {client},\n\nAs suas lentes foram encomendadas ao nosso laboratório.\nEncomenda: {numero?}\n\nAvisamos assim que estiverem prontas.\nA equipa {etablissement}",
+  lens_ready: "Olá {client},\n\nBoas notícias: os seus óculos estão prontos! 👓\nPode levantá-los na *{etablissement}*.\nEncomenda: {numero?}\n\nAté muito breve,\nA equipa {etablissement}",
+  lens_delivered: "Olá {client},\n\nObrigado por levantar os seus óculos na *{etablissement}*.\nSe a visão não estiver perfeitamente confortável nos próximos dias, responda a esta mensagem e faremos os ajustes necessários.\n\nCuide da sua visão!\nA equipa {etablissement}",
+  renewal: "Olá {client},\n\nJá passou algum tempo desde o seu último exame visual na *{etablissement}*. Recomendamos um novo exame para confirmar que a sua correção continua adequada.\n\nResponda a esta mensagem para marcar uma consulta.\nA equipa {etablissement}",
+  followup: "Olá {client},\n\nFala a equipa da *{etablissement}*. Queremos saber notícias: está tudo bem com os seus óculos?\n\nResponda a esta mensagem se tiver alguma dúvida.\nA equipa {etablissement}",
+  birthday: "Feliz aniversário {client}! 🎉\n\nToda a equipa da *{etablissement}* deseja-lhe um excelente dia.\n\nAté breve!",
+};
+
+/** Ancien nom, conservé : modèles français. */
+export const DEFAULT_WA_TEMPLATES: Record<SaleWaStage, string> = { ...DEFAULT_WA_TEMPLATES_FR };
+
+export type WaMessageLang = 'fr' | 'en' | 'pt';
+
+export const DEFAULT_WA_TEMPLATES_BY_LANG: Record<WaMessageLang, Record<SaleWaStage, string>> = {
+  fr: DEFAULT_WA_TEMPLATES_FR,
+  en: DEFAULT_WA_TEMPLATES_EN,
+  pt: DEFAULT_WA_TEMPLATES_PT,
 };
 
 /**
- * Modèles par défaut figés en français et en anglais, pour les établissements qui
- * écrivent à leurs clients dans les deux langues (Rwanda). Contrairement à
- * DEFAULT_WA_TEMPLATES, ils ne suivent pas la langue de l'interface.
+ * Anciens textes par défaut (toutes langues). Beaucoup d'établissements les ont
+ * « enregistrés » sans les modifier, parfois dans la langue de l'employé du
+ * moment : un modèle enregistré identique à l'un d'eux n'est pas une
+ * personnalisation, le nouveau texte par défaut de la bonne langue le remplace.
  */
-export const DEFAULT_WA_TEMPLATES_FR: Record<SaleWaStage, string> = { ...DEFAULT_WA_TEMPLATES };
-export const DEFAULT_WA_TEMPLATES_EN: Record<SaleWaStage, string> = {
-  quote:
-    'Hello {client}, here is your quote {numero} from {etablissement}: {montant}. It remains valid for a few days. Kind regards.',
-  sale_paid:
-    'Hello {client}, we confirm your payment of {montant} at {etablissement}. Thank you for your trust!',
-  lens_ordered:
-    'Hello {client}, your lenses have been ordered at {etablissement}. We will let you know as soon as they arrive.',
-  lens_ready:
-    'Hello {client}, good news: your glasses are ready! You can collect them at {etablissement}.',
-  lens_delivered:
-    'Hello {client}, thank you for collecting your glasses at {etablissement}. Take care of your eyesight!',
-  renewal:
-    'Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.',
-  followup: 'Hello {client}, we are contacting you about your follow-up at {etablissement}.',
-  birthday: 'Happy birthday {client}! 🎉 The whole team at {etablissement} wishes you a wonderful day. We look forward to seeing you soon.',
-};
+export const LEGACY_WA_TEMPLATES: readonly string[] = [
+  "Bonjour {client}, voici votre devis {numero} chez {etablissement} : {montant}. Il reste valable quelques jours. Cordialement.",
+  "Bonjour {client}, nous confirmons votre règlement de {montant} chez {etablissement}. Merci de votre confiance !",
+  "Bonjour {client}, vos verres ont bien été commandés chez {etablissement}. Nous vous préviendrons dès leur arrivée.",
+  "Bonjour {client}, bonne nouvelle : vos verres sont prêts ! Vous pouvez passer les retirer chez {etablissement}.",
+  "Bonjour {client}, merci d’avoir retiré vos verres chez {etablissement}. Prenez soin de votre vue !",
+  "Bonjour {client}, votre ordonnance chez {etablissement} arrive à échéance. Pensez à refaire votre bilan visuel : nous serons ravis de vous accueillir.",
+  "Bonjour {client}, nous vous contactons concernant votre suivi chez {etablissement}.",
+  "Joyeux anniversaire {client} ! 🎉 Toute l’équipe de {etablissement} vous souhaite une excellente journée. Au plaisir de vous revoir bientôt.",
+  "Hello {client}, here is your quote {numero} from {etablissement}: {montant}. It remains valid for a few days. Kind regards.",
+  "Hello {client}, we confirm your payment of {montant} at {etablissement}. Thank you for your trust!",
+  "Hello {client}, your lenses have been ordered at {etablissement}. We'll let you know as soon as they arrive.",
+  "Hello {client}, good news: your glasses are ready! You can pick them up at {etablissement}.",
+  "Hello {client}, thank you for picking up your glasses at {etablissement}. Take care of your eyesight!",
+  "Hello {client}, your prescription from {etablissement} is due for renewal. Remember to book a new eye test: we will be happy to see you.",
+  "Hello {client}, we are contacting you about your follow-up at {etablissement}.",
+  "Happy birthday {client}! 🎉 The whole team at {etablissement} wishes you a wonderful day. We look forward to seeing you soon.",
+  "Olá {client}, aqui está o seu orçamento {numero} na {etablissement}: {montant}. É válido durante alguns dias. Com os melhores cumprimentos.",
+  "Olá {client}, confirmamos o seu pagamento de {montant} na {etablissement}. Obrigado pela confiança!",
+  "Olá {client}, as suas lentes foram encomendadas na {etablissement}. Avisamos assim que chegarem.",
+  "Olá {client}, boas notícias: os seus óculos estão prontos! Pode levantá-los na {etablissement}.",
+  "Olá {client}, obrigado por levantar os seus óculos na {etablissement}. Cuide da sua visão!",
+  "Olá {client}, a sua receita na {etablissement} está a chegar ao fim da validade. Marque um novo exame visual: teremos todo o gosto em recebê-lo.",
+  "Olá {client}, contactamo-lo a propósito do seu acompanhamento na {etablissement}.",
+  "Feliz aniversário {client}! 🎉 Toda a equipa da {etablissement} deseja-lhe um excelente dia. Até breve!",
+];
 
-/** Langues des messages WhatsApp clients, par pays (première = par défaut). */
-export const WA_MESSAGE_LANGS_BY_COUNTRY: Partial<Record<string, readonly ('fr' | 'en')[]>> = {
+/** Langues des messages clients bilingues, par pays (première = par défaut). */
+export const WA_MESSAGE_LANGS_BY_COUNTRY: Partial<Record<string, readonly WaMessageLang[]>> = {
   RW: ['en', 'fr'],
 };
-export type WaMessageLang = 'fr' | 'en';
+
+/**
+ * Langues dans lesquelles l'établissement écrit à ses clients : deux au
+ * Rwanda, sinon la langue du pays (français par défaut).
+ */
+export function waLangsForCountry(countryCode?: string | null): readonly WaMessageLang[] {
+  const bilingual = countryCode ? WA_MESSAGE_LANGS_BY_COUNTRY[countryCode] : undefined;
+  if (bilingual) return bilingual;
+  const c = SUPPORTED_COUNTRIES.find((x) => x.code === countryCode);
+  return [(c?.locale as WaMessageLang | undefined) ?? 'fr'];
+}
+
+/**
+ * Langue des modèles enregistrés à la racine de `whatsappTemplates` ; la
+ * version anglaise d'un établissement bilingue est rangée sous `en`.
+ */
+export function waRootLang(countryCode?: string | null): WaMessageLang {
+  const langs = waLangsForCountry(countryCode);
+  return langs.length > 1 ? (langs.find((l) => l !== 'en') ?? langs[0]!) : langs[0]!;
+}
+
+/** Modèle à utiliser pour une étape et une langue : personnalisé s'il existe, sinon le défaut. */
+export function resolveWaTemplate(
+  templates: WhatsappTemplates | null | undefined,
+  stage: SaleWaStage,
+  lang: WaMessageLang,
+  countryCode?: string | null,
+): string {
+  const root = waRootLang(countryCode);
+  const custom = lang === root ? templates?.[stage] : lang === 'en' ? templates?.en?.[stage] : undefined;
+  const usable = custom && custom.trim() && !LEGACY_WA_TEMPLATES.includes(custom.trim()) ? custom : null;
+  return usable ?? DEFAULT_WA_TEMPLATES_BY_LANG[lang][stage];
+}
 
 export const whatsappTemplatesSchema = z
   .object({
@@ -2859,7 +2937,17 @@ export function defaultAnnouncementLinkedin(
 }
 
 export function fillWaTemplate(tpl: string, vars: Record<string, string | number>): string {
-  return tpl.replace(/\{(\w+)\}/g, (_, k: string) => (vars[k] != null ? String(vars[k]) : ''));
+  const val = (k: string) => (vars[k] != null ? String(vars[k]).trim() : '');
+  return tpl
+    .split('\n')
+    // {nom?} vide : la ligne entière n'a plus de sens, on la retire.
+    .filter((line) => ![...line.matchAll(/\{(\w+)\?\}/g)].some((m) => !val(m[1]!)))
+    .join('\n')
+    // Variable vide : on retire aussi l'espace qui la précède (« Bonjour {client}, » → « Bonjour, »).
+    .replace(/ ?\{(\w+)\??\}/g, (all, k: string) => {
+      const v = val(k);
+      return v ? all.replace(/\{.*\}/, () => v) : '';
+    });
 }
 
 /** Barème par défaut (repli quand l'établissement n'a rien configuré). */

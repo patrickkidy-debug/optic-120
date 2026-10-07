@@ -23,6 +23,7 @@ import {
   UserCheck,
   Users,
   X,
+  FolderOpen,
 } from 'lucide-react';
 import {
   getCustomer,
@@ -40,7 +41,8 @@ import { usePosStore } from '../../store/pos';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
-import { sendWhatsappForStage } from '../../lib/whatsapp';
+import { sendWhatsappForStage, waMessageLangs } from '../../lib/whatsapp';
+import type { WaMessageLang } from '@oculo/shared-types';
 import { useToast } from '../../components/Toast';
 import { Avatar } from '../../components/Avatar';
 import { WhatsappSendButton } from '../../components/WhatsappSendButton';
@@ -165,7 +167,7 @@ export function ClientsPage() {
     }
   }
 
-  function whatsapp(c: DirectoryCustomer, lang?: 'fr' | 'en') {
+  function whatsapp(c: DirectoryCustomer, lang?: WaMessageLang) {
     sendWhatsappForStage('followup', c.phone, { client: c.firstName, etablissement: user?.tenantName ?? 'OculoSaaS' }, lang);
   }
 
@@ -175,7 +177,12 @@ export function ClientsPage() {
     if (canRx) items.push({ label: tr('crm.newRx'), icon: Glasses, onClick: () => setProfile({ id: c.id, tab: 'prescriptions', addRx: true }) });
     if (canQuote) items.push({ label: tr('crm.newQuote'), icon: FileText, onClick: () => toPos(c.id) });
     if (canSell) items.push({ label: tr('crm.newSale'), icon: ShoppingCart, onClick: () => toPos(c.id) });
-    if (hasWhatsapp(c.phone)) items.push({ label: tr('crm.sendWhatsapp'), icon: MessageCircle, onClick: () => whatsapp(c) });
+    if (hasWhatsapp(c.phone)) {
+      // Établissement bilingue : une entrée par langue, comme le bouton WhatsApp.
+      const langs = waMessageLangs(user?.tenantCountryCode);
+      if (langs.length > 1) langs.forEach((l) => items.push({ label: `${tr('crm.sendWhatsapp')} (${l.toUpperCase()})`, icon: MessageCircle, onClick: () => whatsapp(c, l) }));
+      else items.push({ label: tr('crm.sendWhatsapp'), icon: MessageCircle, onClick: () => whatsapp(c) });
+    }
     items.push({ label: tr('crm.downloadFile'), icon: Download, onClick: () => void downloadDossier(c.id) });
     return items;
   }
@@ -378,16 +385,17 @@ export function ClientsPage() {
         <div className={`card transition-opacity ${isFetching ? 'opacity-70' : ''}`}>
           {/* Tableau : tablette et ordinateur. Les colonnes secondaires
               apparaissent quand la largeur le permet. */}
-          <table className="hidden w-full md:table">
+          <div className="hidden overflow-x-auto md:block">
+          <table className="w-full">
             <thead>
               <tr className="border-b text-left text-[11px] uppercase tracking-wider text-content-faint">
                 <th className="table-cell font-semibold">{tr('crm.colPatient')}</th>
                 <th className="table-cell hidden font-semibold xl:table-cell">{tr('crm.colContact')}</th>
-                <th className="table-cell font-semibold">{tr('crm.colLastVisit')}</th>
+                <th className="table-cell hidden font-semibold lg:table-cell">{tr('crm.colLastVisit')}</th>
                 <th className="table-cell font-semibold">{tr('crm.colRx')}</th>
-                <th className="table-cell hidden font-semibold lg:table-cell">{tr('crm.colLastPurchase')}</th>
+                <th className="table-cell hidden font-semibold xl:table-cell">{tr('crm.colLastPurchase')}</th>
                 <th className="table-cell font-semibold">{tr('crm.colStatus')}</th>
-                <th className="table-cell w-24 text-right font-semibold">
+                <th className="table-cell sticky right-0 w-px whitespace-nowrap bg-surface text-right font-semibold">
                   <span className="sr-only">{tr('crm.colActions')}</span>
                 </th>
               </tr>
@@ -417,7 +425,7 @@ export function ClientsPage() {
                     <p className="text-content">{c.phone ?? '—'}</p>
                     <p className="max-w-[200px] truncate text-xs text-content-faint">{c.email ?? ''}</p>
                   </td>
-                  <td className="table-cell text-sm">
+                  <td className="table-cell hidden text-sm lg:table-cell">
                     {c.lastVisitAt ? (
                       <>
                         <p className="text-content">{formatDate(c.lastVisitAt)}</p>
@@ -430,7 +438,7 @@ export function ClientsPage() {
                   <td className="table-cell">
                     <RxBadge status={c.rxStatus} />
                   </td>
-                  <td className="table-cell hidden text-sm lg:table-cell">
+                  <td className="table-cell hidden text-sm xl:table-cell">
                     {c.lastPurchase ? (
                       <>
                         <p className="font-medium text-content">{formatCurrency(c.lastPurchase.total)}</p>
@@ -446,8 +454,19 @@ export function ClientsPage() {
                       {c.followUp && <span className="text-[11px] font-medium text-warning">{tr('crm.toFollowUp')}</span>}
                     </div>
                   </td>
-                  <td className="table-cell text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="table-cell sticky right-0 bg-surface text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
+                      {/* Bouton « Dossier » toujours visible sur ordinateur (libellé
+                          masqué sur tablette pour laisser la place aux colonnes). */}
+                      <button
+                        type="button"
+                        onClick={() => setProfile({ id: c.id })}
+                        className="btn-outline h-8 shrink-0 rounded-lg px-2.5 text-xs"
+                        title={tr('crm.viewFile')}
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                        <span className="hidden lg:inline">{tr('crm.fileButton')}</span>
+                      </button>
                       {hasWhatsapp(c.phone) && (
                         <WhatsappSendButton onSend={(lang) => whatsapp(c, lang)} className="btn-ghost h-8 rounded-lg px-2 text-xs text-success" title={tr('crm.sendWhatsapp')}>
                           <MessageCircle className="h-4 w-4" />
@@ -460,6 +479,7 @@ export function ClientsPage() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Cartes : mobile. */}
           <ul className="divide-y md:hidden">
@@ -485,7 +505,7 @@ export function ClientsPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <Button variant="outline" className="h-9 flex-1 text-sm" onClick={() => setProfile({ id: c.id })}>
-                    <Eye className="h-4 w-4" /> {tr('crm.viewFile')}
+                    <FolderOpen className="h-4 w-4" /> {tr('crm.fileButton')}
                   </Button>
                   {hasWhatsapp(c.phone) && (
                     <WhatsappSendButton onSend={(lang) => whatsapp(c, lang)} className="btn-outline h-9 rounded-lg px-3 text-success">

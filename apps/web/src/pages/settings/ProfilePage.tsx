@@ -23,13 +23,12 @@ import { WatchDemoCard } from '../../features/demo/WatchDemoCard';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings, LensPricing, OpticalSettings } from '@oculo/shared-types';
-import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_WA_TEMPLATES_EN, DEFAULT_WA_TEMPLATES_FR, DEFAULT_OPTICAL_SETTINGS } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_OPTICAL_SETTINGS, fillWaTemplate, resolveWaTemplate, waLangsForCountry, waRootLang, type WaMessageLang } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
 import { currencySymbol, getActiveCurrency } from '../../lib/format';
-import { waMessageLangs } from '../../lib/whatsapp';
 import { tr } from '../../lib/tr';
 
 function ImagePicker({
@@ -600,35 +599,49 @@ function OpticalSettingsCard() {
 }
 
 /** Modèles de messages WhatsApp envoyés à chaque étape du parcours de vente. */
+const WA_LANG_NAMES: Record<WaMessageLang, string> = { fr: 'Français', en: 'English', pt: 'Português' };
+/** Exemple affiché sous chaque modèle : l'utilisateur voit le message tel que le client le recevra. */
+const WA_SAMPLE = { client: 'Awa', numero: 'VEN-2026-000124', montant: '90 000', paye: '50 000', reste: '40 000' };
+
 function WhatsappTemplatesCard() {
   const qc = useQueryClient();
   const { data: branding } = useQuery({ queryKey: ['branding'], queryFn: getBranding });
-  const [tpl, setTpl] = useState<Record<string, string>>({});
-  const [tplEn, setTplEn] = useState<Record<string, string>>({});
-  // Établissement bilingue (Rwanda) : modèles français ET anglais.
-  const bilingual = waMessageLangs(useAuthStore((st) => st.user?.tenantCountryCode)).length > 1;
+  const country = useAuthStore((st) => st.user?.tenantCountryCode);
+  const tenantName = useAuthStore((st) => st.user?.tenantName) ?? '';
+  // Langues dans lesquelles l'établissement écrit à ses clients (deux au Rwanda).
+  const langs = waLangsForCountry(country);
+  const root = waRootLang(country);
+  const [tpl, setTpl] = useState<Partial<Record<WaMessageLang, Record<string, string>>>>({});
+  const [lang, setLang] = useState<WaMessageLang>(langs[0]!);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (branding && !hydrated) {
-      const merged: Record<string, string> = {};
-      const mergedEn: Record<string, string> = {};
-      for (const s of SALE_WA_STAGES) {
-        merged[s.key] = branding.whatsappTemplates?.[s.key] ?? (bilingual ? DEFAULT_WA_TEMPLATES_FR : DEFAULT_WA_TEMPLATES)[s.key];
-        mergedEn[s.key] = branding.whatsappTemplates?.en?.[s.key] ?? DEFAULT_WA_TEMPLATES_EN[s.key];
+      const next: Partial<Record<WaMessageLang, Record<string, string>>> = {};
+      for (const l of langs) {
+        next[l] = {};
+        for (const st of SALE_WA_STAGES) next[l]![st.key] = resolveWaTemplate(branding.whatsappTemplates, st.key, l, country);
       }
-      setTpl(merged);
-      setTplEn(mergedEn);
+      setTpl(next);
       setHydrated(true);
     }
-  }, [branding, hydrated, bilingual]);
+  }, [branding, hydrated, langs, country]);
+
+  function resetDefaults() {
+    if (!confirm(tr('waTpl.resetConfirm'))) return;
+    const next = { ...tpl };
+    next[lang] = {};
+    for (const st of SALE_WA_STAGES) next[lang]![st.key] = resolveWaTemplate(null, st.key, lang, country);
+    setTpl(next);
+  }
 
   async function save() {
     setBusy(true);
     try {
-      const payload = bilingual ? { ...tpl, en: tplEn } : tpl;
+      const payload: Record<string, unknown> = { ...(tpl[root] ?? {}) };
+      if (langs.includes('en') && root !== 'en') payload.en = tpl.en ?? {};
       await updateBranding({ whatsappTemplates: payload as Parameters<typeof updateBranding>[0]['whatsappTemplates'] });
       qc.invalidateQueries({ queryKey: ['branding'] });
       setSaved(true);
@@ -640,50 +653,70 @@ function WhatsappTemplatesCard() {
     }
   }
 
+  const current = tpl[lang] ?? {};
+
   return (
     <div className="card p-5">
       <div className="mb-1 flex items-center gap-2">
         <MessageCircle className="h-5 w-5 text-primary" />
         <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.messagesWhatsapp')}</h3>
       </div>
-      <p className="mb-4 text-xs text-content-faint">
+      <p className="mb-2 text-xs text-content-faint">
         {tr('ui.ProfilePage.messagePreRempliProposeA')}{' '}
-        <code className="rounded bg-surface-2 px-1">{'{client}'}</code>{' '}
-        <code className="rounded bg-surface-2 px-1">{'{etablissement}'}</code>{' '}
-        <code className="rounded bg-surface-2 px-1">{'{numero}'}</code>{' '}
-        <code className="rounded bg-surface-2 px-1">{'{montant}'}</code>{' '}
-        <code className="rounded bg-surface-2 px-1">{'{reste}'}</code>{tr('ui.ProfilePage.lEnvoiResteManuelWhatsapp')}
-      </p>
-
-      <div className="space-y-3">
-        {bilingual && <p className="text-sm font-semibold text-content">Français</p>}
-        {SALE_WA_STAGES.map((s) => (
-          <Field key={s.key} label={s.label}>
-            <textarea
-              rows={2}
-              className="input resize-y"
-              value={tpl[s.key] ?? ''}
-              onChange={(e) => setTpl((prev) => ({ ...prev, [s.key]: e.target.value }))}
-            />
-          </Field>
+        {['{client}', '{etablissement}', '{numero}', '{montant}', '{paye}', '{reste}'].map((v) => (
+          <code key={v} className="mr-1 rounded bg-surface-2 px-1">{v}</code>
         ))}
+        {tr('ui.ProfilePage.lEnvoiResteManuelWhatsapp')}
+      </p>
+      <p className="mb-4 text-xs text-content-faint">{tr('waTpl.optionalHint')}</p>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        {langs.length > 1 ? (
+          <div className="inline-flex rounded-lg bg-surface-2 p-1" role="tablist">
+            {langs.map((l) => (
+              <button
+                key={l}
+                type="button"
+                role="tab"
+                aria-selected={lang === l}
+                onClick={() => setLang(l)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${lang === l ? 'bg-surface text-content shadow-sm' : 'text-content-muted hover:text-content'}`}
+              >
+                {WA_LANG_NAMES[l]}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="text-sm text-content-muted">
+            {tr('waTpl.language')} <strong className="text-content">{WA_LANG_NAMES[lang]}</strong>
+          </span>
+        )}
+        <button type="button" onClick={resetDefaults} className="btn-ghost h-8 rounded-lg px-2.5 text-xs">
+          {tr('waTpl.reset')}
+        </button>
       </div>
 
-      {bilingual && (
-        <div className="mt-5 space-y-3 border-t pt-4">
-          <p className="text-sm font-semibold text-content">English</p>
-          {SALE_WA_STAGES.map((s) => (
-            <Field key={s.key} label={s.label}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {SALE_WA_STAGES.map((st) => (
+          <div key={st.key} className="rounded-xl border border-line p-3">
+            <Field label={st.label}>
               <textarea
-                rows={2}
-                className="input resize-y"
-                value={tplEn[s.key] ?? ''}
-                onChange={(e) => setTplEn((prev) => ({ ...prev, [s.key]: e.target.value }))}
+                rows={6}
+                className="input resize-y text-sm"
+                value={current[st.key] ?? ''}
+                onChange={(e) => setTpl((prev) => ({ ...prev, [lang]: { ...(prev[lang] ?? {}), [st.key]: e.target.value } }))}
               />
             </Field>
-          ))}
-        </div>
-      )}
+            <p className="mb-1 mt-2 text-[11px] font-semibold uppercase tracking-wide text-content-faint">{tr('waTpl.preview')}</p>
+            <p className="whitespace-pre-line rounded-lg bg-[#dcf8c6] px-3 py-2 text-xs text-[#111b21]">
+              {/* *texte* = gras dans WhatsApp : rendu tel quel dans l'aperçu. */}
+              {fillWaTemplate(current[st.key] ?? '', { ...WA_SAMPLE, etablissement: tenantName })
+                .split(/(\*[^*\n]+\*)/g)
+                .map((part, i) => (/^\*[^*\n]+\*$/.test(part) ? <strong key={i}>{part.slice(1, -1)}</strong> : part))}
+            </p>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={save} loading={busy}>
