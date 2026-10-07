@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { WhatsNewBell } from './WhatsNewBell';
 import { SyncStatus } from '../SyncStatus';
 import { useTranslation } from 'react-i18next';
@@ -379,7 +380,8 @@ export function Topbar() {
       <div className="mx-1 h-6 w-px bg-line" />
       <UserMenu />
 
-      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {/* Rendue dans <body> : le flou de l'en-tête enfermait le voile de la recherche. */}
+      {createPortal(<CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />, document.body)}
     </header>
   );
 }

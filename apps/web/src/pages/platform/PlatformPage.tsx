@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Chart as ChartJS,
@@ -200,6 +201,9 @@ export function NotificationBell() {
         )}
       </button>
 
+      {/* Rendue dans <body> : la cloche vit dans l'en-tête de la console, dont le
+          flou d'arrière-plan enfermait la fenêtre (voile limité au bandeau, liste coupée). */}
+      {createPortal(
       <Modal open={open} onClose={() => setOpen(false)} title="Notifications" size="md">
         {notifications.length === 0 ? (
           <EmptyState icon={Bell} title="Aucune notification" />
@@ -233,7 +237,9 @@ export function NotificationBell() {
             </div>
           </div>
         )}
-      </Modal>
+      </Modal>,
+        document.body,
+      )}
     </>
   );
 }
