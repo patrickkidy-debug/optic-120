@@ -18,6 +18,7 @@ import { usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateAnomalyViews } from '../../lib/queryInvalidation';
 import { Modal, Field, Button } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 import {
   ANOMALY_CATEGORY_LABELS,
   ANOMALY_REASON_LABELS,
@@ -368,19 +369,18 @@ function SaleLinesEditor({ lines, onChange }: { lines: SaleLine[]; onChange: (li
         {lines.map((l, idx) => (
           <div key={idx} className="grid grid-cols-[1fr_80px_110px_32px] items-center gap-1.5">
             <span className="truncate text-sm text-content">{l.productName}</span>
-            <input
+            <NumberInput
               className="input h-8 text-sm"
-              type="number"
-              min="1"
+              min={1}
               value={l.quantity}
-              onChange={(e) => onChange(lines.map((x, i) => (i === idx ? { ...x, quantity: Math.max(1, Number(e.target.value)) } : x)))}
+              onChange={(n) => onChange(lines.map((x, i) => (i === idx ? { ...x, quantity: n } : x)))}
+              emptyValue={l.quantity}
             />
-            <input
+            <NumberInput
               className="input h-8 text-sm"
-              type="number"
-              min="0"
+              min={0}
               value={l.unitPrice}
-              onChange={(e) => onChange(lines.map((x, i) => (i === idx ? { ...x, unitPrice: Math.max(0, Number(e.target.value)) } : x)))}
+              onChange={(n) => onChange(lines.map((x, i) => (i === idx ? { ...x, unitPrice: n } : x)))}
             />
             <button
               type="button"

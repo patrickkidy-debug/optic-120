@@ -27,6 +27,7 @@ import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_WA_TEMPLATES, DEFAULT_WA_
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 import { currencySymbol, getActiveCurrency } from '../../lib/format';
 import { waMessageLangs } from '../../lib/whatsapp';
 import { tr } from '../../lib/tr';
@@ -528,11 +529,10 @@ function OpticalSettingsCard() {
         <p className="text-xs text-content-faint">{hint}</p>
       </div>
       <span className="flex shrink-0 items-center gap-1.5">
-        <input
-          type="number"
+        <NumberInput
           min={min}
           value={value}
-          onChange={(e) => onChange(Math.max(min, Number(e.target.value) || 0))}
+          onChange={onChange}
           className="input h-9 w-24 text-right"
         />
         <span className="text-xs text-content-faint">{suffix}</span>
@@ -709,12 +709,11 @@ function LensPricingCard() {
 
   const field = (key: Exclude<keyof LensPricing, 'customTypes'>, label: string) => (
     <Field label={label}>
-      <input
-        type="number"
+      <NumberInput
         min={0}
         className="input text-right"
         value={p[key]}
-        onChange={(e) => setP((prev) => ({ ...prev, [key]: Number(e.target.value) || 0 }))}
+        onChange={(n) => setP((prev) => ({ ...prev, [key]: n }))}
       />
     </Field>
   );
@@ -798,13 +797,12 @@ function LensPricingCard() {
                   value={c.name}
                   onChange={(e) => updateCustom(c.id, { name: e.target.value })}
                 />
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   className="input w-32 text-right"
                   placeholder={tr('ui.ProfilePage.prix')}
                   value={c.price}
-                  onChange={(e) => updateCustom(c.id, { price: Number(e.target.value) || 0 })}
+                  onChange={(n) => updateCustom(c.id, { price: n })}
                 />
                 <button
                   type="button"

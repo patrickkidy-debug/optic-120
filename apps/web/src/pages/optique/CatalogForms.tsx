@@ -32,6 +32,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, toLocalDatetimeString } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
 import { tr } from '../../lib/tr';
@@ -368,21 +369,19 @@ export function FrameFormModal({
 
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
             <Field label={tr('ui.CatalogForms.quantiteEnStock')}>
-              <input
-                type="number"
+              <NumberInput
                 min={0}
                 className="input text-right"
                 value={base.qty}
-                onChange={(e) => set({ qty: Math.max(0, Number(e.target.value) || 0) })}
+                onChange={(n) => set({ qty: n })}
               />
             </Field>
             <Field label={tr('ui.CatalogForms.seuilDAlerte')}>
-              <input
-                type="number"
+              <NumberInput
                 min={0}
                 className="input text-right"
                 value={base.minAlert}
-                onChange={(e) => set({ minAlert: Math.max(0, Number(e.target.value) || 0) })}
+                onChange={(n) => set({ minAlert: n })}
               />
             </Field>
           </div>
@@ -1016,21 +1015,19 @@ export function GenericProductFormModal({
           {managesStock ? (
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
               <Field label={tr('ui.CatalogForms.quantiteEnStock')}>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   className="input text-right"
                   value={base.qty}
-                  onChange={(e) => set({ qty: Math.max(0, Number(e.target.value) || 0) })}
+                  onChange={(n) => set({ qty: n })}
                 />
               </Field>
               <Field label={tr('ui.CatalogForms.seuilDAlerte')}>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   className="input text-right"
                   value={base.minAlert}
-                  onChange={(e) => set({ minAlert: Math.max(0, Number(e.target.value) || 0) })}
+                  onChange={(n) => set({ minAlert: n })}
                 />
               </Field>
             </div>

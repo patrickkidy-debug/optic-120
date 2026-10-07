@@ -19,6 +19,7 @@ import {
 import { listCustomers, createCustomer, ensureLensProduct, type Customer } from './api';
 import { useUIStore } from '../../store/ui';
 import { Button, Modal, Field } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency } from '../../lib/format';
 
@@ -74,17 +75,13 @@ export function VatSelect({
       </select>
       {custom && (
         <div className="flex items-center gap-1.5">
-          <input
-            type="number"
+          <NumberInput
             min={0}
             max={100}
-            step="0.1"
             className="input h-9 w-24 text-right"
-            value={value ?? ''}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              onChange(e.target.value === '' ? 0 : Math.min(100, Math.max(0, n)));
-            }}
+            value={value ?? 0}
+            onChange={onChange}
+            decimals={1}
           />
           <span className="text-xs text-content-faint">{t('saleTools.vatAppliedToSale')}</span>
         </div>
@@ -147,17 +144,13 @@ export function LoyaltyRedeem({
         )}
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <input
-          type="number"
+        <NumberInput
           min={0}
           max={max}
           className="input h-8 w-24 text-right"
-          value={value || ''}
+          value={value}
           placeholder="0"
-          onChange={(e) => {
-            const n = Math.floor(Number(e.target.value) || 0);
-            onChange(Math.min(Math.max(0, n), max));
-          }}
+          onChange={onChange}
         />
         <button
           type="button"

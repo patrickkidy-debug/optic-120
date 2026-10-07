@@ -5,6 +5,7 @@ import { previewProductImport, commitProductImport, type ImportPreviewRow } from
 import { apiErrorMessage } from '../../../lib/api';
 import { invalidateProductViews } from '../../../lib/invalidate';
 import { Modal, Button, Badge, PageLoader } from '../../../components/ui';
+import { NumberInput } from '../../../components/NumberInput';
 import { tr } from '../../../lib/tr';
 
 const CATEGORIES = [
@@ -198,19 +199,17 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                       />
                     </td>
                     <td className="table-cell">
-                      <input
-                        type="number"
+                      <NumberInput
                         className="input h-8 w-20 px-2 text-right text-xs"
                         value={r.buyPrice}
-                        onChange={(e) => updateRow(i, { buyPrice: Number(e.target.value) || 0 })}
+                        onChange={(n) => updateRow(i, { buyPrice: n })}
                       />
                     </td>
                     <td className="table-cell">
-                      <input
-                        type="number"
+                      <NumberInput
                         className="input h-8 w-20 px-2 text-right text-xs"
                         value={r.sellPrice}
-                        onChange={(e) => updateRow(i, { sellPrice: Number(e.target.value) || 0 })}
+                        onChange={(n) => updateRow(i, { sellPrice: n })}
                       />
                     </td>
                     <td className="table-cell">

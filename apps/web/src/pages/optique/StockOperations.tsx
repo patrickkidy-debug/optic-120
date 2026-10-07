@@ -17,6 +17,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, Field, PageLoader } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 import { tr } from '../../lib/tr';
 
 interface Line {
@@ -111,11 +112,11 @@ function LineEditor({
             <p className="truncate text-sm font-medium text-content">{l.name}</p>
             <p className="font-mono text-[11px] text-content-faint">{l.sku}</p>
           </div>
-          <input
-            type="number"
+          <NumberInput
             min={1}
             value={l.quantity}
-            onChange={(e) => set(l.productId, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+            onChange={(n) => set(l.productId, { quantity: n })}
+            emptyValue={l.quantity}
             className="input h-8 w-16 px-2 text-center"
             title={tr('ui.StockOperations.quantite')}
           />

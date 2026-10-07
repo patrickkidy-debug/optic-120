@@ -53,6 +53,7 @@ import { sendWhatsappForStage } from '../../lib/whatsapp';
 import { WhatsappSendButton } from '../../components/WhatsappSendButton';
 import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../lib/labels';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 
 function statusTone(status: string) {
   if (status === 'PAID') return 'success' as const;
@@ -1187,11 +1188,10 @@ function QuoteModal({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-content">{l.name}</p>
                       <div className="mt-0.5 flex items-center gap-1">
-                        <input
-                          type="number"
+                        <NumberInput
                           min={0}
-                          value={l.unitPrice || ''}
-                          onChange={(e) => setPrice(l.productId, Number(e.target.value) || 0)}
+                          value={l.unitPrice}
+                          onChange={(n) => setPrice(l.productId, n)}
                           className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
                           title={t('pos.unitPriceEditable')}
                           placeholder={t('pos.pricePlaceholder')}
@@ -1207,11 +1207,11 @@ function QuoteModal({
                         maxLength={80}
                       />
                     </div>
-                    <input
-                      type="number"
+                    <NumberInput
                       min={1}
                       value={l.quantity}
-                      onChange={(e) => setQty(l.productId, Number(e.target.value) || 1)}
+                      onChange={(n) => setQty(l.productId, n)}
+                      emptyValue={l.quantity}
                       className="input h-8 w-16 px-2 text-center"
                     />
                     <button
@@ -1228,23 +1228,20 @@ function QuoteModal({
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className="text-xs text-content-muted">
                 {t('sales.discount')}
-                <input
-                  type="number"
+                <NumberInput
                   className="input mt-1"
-                  value={discount || ''}
-                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  value={discount}
+                  onChange={setDiscount}
+                  placeholder="0"
                 />
               </label>
               <label className="text-xs text-content-muted">
                 {t('sales.coverAmount')}
-                <input
-                  type="number"
+                <NumberInput
                   className="input mt-1"
-                  value={insurance || ''}
-                  onChange={(e) => {
-                    setInsuranceOverridden(true);
-                    setInsurance(Number(e.target.value) || 0);
-                  }}
+                  value={insurance}
+                  onChange={(n) => { setInsuranceOverridden(true); setInsurance(n); }}
+                  placeholder="0"
                 />
               </label>
             </div>

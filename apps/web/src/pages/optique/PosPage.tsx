@@ -52,6 +52,7 @@ import { invalidateSalesViews } from '../../lib/queryInvalidation';
 import { formatCurrency } from '../../lib/format';
 import { paymentMethodLabel } from '../../lib/labels';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
+import { NumberInput } from '../../components/NumberInput';
 
 /**
  * Moyens proposés en caisse : espèces et carte partout, puis les services
@@ -275,11 +276,10 @@ export function PosPage() {
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
                       <div className="mt-0.5 flex items-center gap-1">
-                        <input
-                          type="number"
+                        <NumberInput
                           min={0}
-                          value={l.unitPrice || ''}
-                          onChange={(e) => pos.setUnitPrice(l.productId, Number(e.target.value) || 0)}
+                          value={l.unitPrice}
+                          onChange={(n) => pos.setUnitPrice(l.productId, n)}
                           className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
                           title={t('pos.unitPriceEditable')}
                           placeholder={t('pos.pricePlaceholder')}
@@ -324,20 +324,20 @@ export function PosPage() {
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs text-content-muted">
                 {t('pos.discount')}
-                <input
-                  type="number"
+                <NumberInput
                   className="input mt-1"
-                  value={pos.discountAmount || ''}
-                  onChange={(e) => pos.setDiscount(Number(e.target.value) || 0)}
+                  value={pos.discountAmount}
+                  onChange={(n) => pos.setDiscount(n)}
+                  placeholder="0"
                 />
               </label>
               <label className="text-xs text-content-muted">
                 {t('pos.insurance')}
-                <input
-                  type="number"
+                <NumberInput
                   className="input mt-1"
-                  value={pos.insuranceAmount || ''}
-                  onChange={(e) => pos.setInsurance(Number(e.target.value) || 0)}
+                  value={pos.insuranceAmount}
+                  onChange={(n) => pos.setInsurance(n)}
+                  placeholder="0"
                 />
               </label>
             </div>
@@ -612,13 +612,12 @@ export function PaymentModal({
             </p>
           ) : <label className="mb-3 block text-sm">
             <span className="text-content-muted">{t('pos.amountNow')}</span>
-            <input
-              type="number"
+            <NumberInput
               min={0}
               max={sale.due}
               className="input mt-1 text-right font-semibold"
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              onChange={setAmount}
             />
             {remainingAfter > 0 ? (
               <span className="mt-1 block text-xs text-warning">
