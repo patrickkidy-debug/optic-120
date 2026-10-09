@@ -70,6 +70,7 @@ model Tenant {
   stockMovements         StockMovement[]
   customers              Customer[]
   prescriptions          OpticalPrescription[]
+  opticalMeasurements    OpticalMeasurement[]
   sales                  Sale[]
   payments               Payment[]
   cashRegisters          CashRegister[]
@@ -537,6 +538,7 @@ model Customer {
 
   sales                  Sale[]
   prescriptions          OpticalPrescription[]
+  opticalMeasurements    OpticalMeasurement[]
   lensOrders             LensOrder[]
   repairs                Repair[]
   patient                Patient?               @relation("CustomerPatient")
@@ -582,6 +584,40 @@ model OpticalPrescription {
   createdAt         DateTime  @default(now())
 
   sales Sale[]
+
+  @@index([tenantId, customerId])
+  @@index([tenantId])
+}
+
+/// Mesures de centrage prises au magasin (photo calibrée ou saisie), en mm et
+/// en degrés. Indépendantes de l'ordonnance : elles décrivent le client PORTANT
+/// une monture donnée, et servent à la commande et au montage des verres.
+model OpticalMeasurement {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  takenAt        DateTime  @default(now())
+  /// PHOTO_CARD (carte de référence), PHOTO_FRAME (largeur de monture connue) ou MANUAL.
+  method         String    @default("MANUAL")
+  pdTotal        Float?
+  odMonoPd       Float?
+  ogMonoPd       Float?
+  odHeight       Float?
+  ogHeight       Float?
+  nearPd         Float?
+  lensWidth      Float?
+  lensHeight     Float?
+  bridge         Float?
+  vertex         Float?
+  pantoTilt      Float?
+  wrapAngle      Float?
+  frameLabel     String?
+  frameProductId String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
 
   @@index([tenantId, customerId])
   @@index([tenantId])
@@ -1155,18 +1191,31 @@ model Expense {
 }
 
 model Supplier {
-  id          String       @id @default(uuid())
-  tenantId    String
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  type        SupplierType @default(LOCAL)
-  contactName String?
-  phone       String?
-  email       String?
-  address     String?
-  notes       String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  type         SupplierType @default(LOCAL)
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  notes        String?
+  /// Numéro WhatsApp (s'il diffère du téléphone), pour écrire au fournisseur.
+  whatsapp     String?
+  city         String?
+  country      String?
+  website      String?
+  /// Conditions de paiement (ex. « 30 jours fin de mois », « comptant »).
+  paymentTerms String?
+  /// Délai de livraison habituel, en jours.
+  deliveryDays Int?
+  /// Familles de produits fournis (MONTURE, VERRE, LENTILLE…).
+  categories   String[]     @default([])
+  /// Fournisseur archivé : masqué des listes, historique conservé.
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   stockMovements StockMovement[]
 
@@ -2422,9 +2471,9 @@ model PartnerAuditLog {
 /// apres crash) retrouve sa ligne et recoit le meme resultat, sans rien rejouer.
 /// C'est ce qui empeche une vente envoyee deux fois de devenir deux ventes.
 model SyncOperation {
-  id              String    @id
+  id              String   @id
   tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId          String
   deviceId        String
   /// Nature de l'operation, ex. SALE_CREATE, STOCK_ADJUST.
@@ -2436,8 +2485,8 @@ model SyncOperation {
   error           String?
   /// Instant ou l'utilisateur a agi sur l'appareil — pas celui de l'envoi.
   clientCreatedAt DateTime
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([tenantId, deviceId])
   @@index([tenantId, status])

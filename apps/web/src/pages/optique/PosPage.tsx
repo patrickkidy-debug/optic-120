@@ -257,8 +257,24 @@ export function PosPage() {
         )}
       </div>
 
+      {/* Téléphone / tablette : le panier est sous la liste des produits ; ce
+          bouton flottant y mène directement, avec le nombre d'articles et le total. */}
+      {pos.lines.length > 0 && (
+        <button
+          type="button"
+          onClick={() => document.getElementById('pos-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-between gap-3 rounded-2xl bg-primary px-4 py-3 text-white shadow-card-lg lg:hidden"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingCart className="h-5 w-5" /> {t('pos.cart')} · {t('pos.itemsCount', { count: pos.lines.length })}
+          </span>
+          <span className="font-display text-base font-bold">{formatCurrency(totals.dueFromCustomer)}</span>
+        </button>
+      )}
+
       {/* Panier */}
-      <div className="lg:col-span-2">
+      <div id="pos-cart" className="scroll-mt-20 pb-20 lg:col-span-2 lg:pb-0">
         <div className="card sticky top-20 flex max-h-[calc(100vh-4.5rem)] min-h-[70vh] flex-col">
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <ShoppingCart className="h-5 w-5 text-primary" />

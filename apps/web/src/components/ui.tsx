@@ -161,22 +161,26 @@ export function Modal({
   if (!open) return null;
   const sizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-5xl' };
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+    // Centrage par marges automatiques (my-auto) et non par items-center : une
+    // fenêtre plus haute que l'écran (petit portable, tablette, téléphone) se
+    // coupait en haut sans pouvoir défiler — il fallait dézoomer le navigateur
+    // pour atteindre le premier champ. Ici elle défile entièrement.
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 backdrop-blur-sm sm:p-4">
       <div
         className={clsx(
-          'card w-full animate-fade-in p-0 shadow-card-lg',
+          'card my-auto w-full min-w-0 animate-fade-in p-0 shadow-card-lg',
           sizes[size],
         )}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="font-display text-lg font-bold text-content">{title}</h2>
           <button onClick={onClose} className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label={tr('ui.ui.fermer')}>
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="px-4 py-4 sm:px-5">{children}</div>
       </div>
     </div>
   );

@@ -1404,6 +1404,37 @@ export const regularizeInventoryCountSchema = z.object({
 });
 export type RegularizeInventoryCountInput = z.infer<typeof regularizeInventoryCountSchema>;
 
+/* --- Prise de mesures (centrage) --- */
+
+/** Carte bancaire / d'identité (format ID-1, norme ISO/IEC 7810) : référence de calibrage. */
+export const ID1_CARD_WIDTH_MM = 85.6;
+export const MEASUREMENT_METHODS = ['PHOTO_CARD', 'PHOTO_FRAME', 'MANUAL'] as const;
+export type MeasurementMethod = (typeof MEASUREMENT_METHODS)[number];
+
+const mmValue = (max: number) => z.number().min(0).max(max).nullable().optional();
+
+/** Mesures de centrage (mm, degrés). Toutes facultatives : on enregistre ce qui a été mesuré. */
+export const measurementCreateSchema = z.object({
+  customerId: z.string().uuid().optional().or(z.literal('')),
+  method: z.enum(MEASUREMENT_METHODS).default('MANUAL'),
+  pdTotal: mmValue(90),
+  odMonoPd: mmValue(45),
+  ogMonoPd: mmValue(45),
+  odHeight: mmValue(50),
+  ogHeight: mmValue(50),
+  nearPd: mmValue(90),
+  lensWidth: mmValue(80),
+  lensHeight: mmValue(70),
+  bridge: mmValue(40),
+  vertex: mmValue(30),
+  pantoTilt: z.number().min(-10).max(30).nullable().optional(),
+  wrapAngle: z.number().min(0).max(40).nullable().optional(),
+  frameLabel: z.string().max(160).optional().or(z.literal('')),
+  frameProductId: z.string().uuid().optional().or(z.literal('')),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+});
+export type MeasurementCreateInput = z.infer<typeof measurementCreateSchema>;
+
 /* --- Commandes de verres (laboratoire) & SAV / réparations --- */
 
 /**
@@ -1820,13 +1851,33 @@ export const cashTransferCreateSchema = z.object({
 });
 export type CashTransferCreateInput = z.infer<typeof cashTransferCreateSchema>;
 
+/** Familles de produits qu'un fournisseur peut livrer (étiquettes de la fiche). */
+export const SUPPLIER_CATEGORIES = [
+  { key: 'MONTURE', label: 'Montures' },
+  { key: 'VERRE', label: 'Verres' },
+  { key: 'LENTILLE', label: 'Lentilles' },
+  { key: 'SOLAIRE', label: 'Solaires' },
+  { key: 'ACCESSOIRE', label: 'Accessoires' },
+  { key: 'ENTRETIEN', label: 'Produits d’entretien' },
+  { key: 'MATERIEL', label: 'Matériel / équipement' },
+] as const;
+
 export const supplierCreateSchema = z.object({
   name: z.string().min(1).max(160),
   type: z.enum([SupplierType.LOCAL, SupplierType.INTERNATIONAL]).default(SupplierType.LOCAL),
   contactName: z.string().max(120).optional().or(z.literal('')),
   phone: z.string().max(40).optional().or(z.literal('')),
+  /** Numéro WhatsApp, s'il diffère du téléphone. */
+  whatsapp: z.string().max(40).optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
   address: z.string().max(200).optional().or(z.literal('')),
+  city: z.string().max(80).optional().or(z.literal('')),
+  country: z.string().max(80).optional().or(z.literal('')),
+  website: z.string().max(200).optional().or(z.literal('')),
+  paymentTerms: z.string().max(120).optional().or(z.literal('')),
+  deliveryDays: z.number().int().min(0).max(365).nullable().optional(),
+  categories: z.array(z.string().max(30)).max(10).optional(),
+  isActive: z.boolean().optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
 });
 export type SupplierCreateInput = z.infer<typeof supplierCreateSchema>;

@@ -1,5 +1,6 @@
 import { LENS_ORDER_STATUS_LABELS, LENS_TREATMENTS, type LensOrderEyeRx } from '@oculo/shared-types';
 import type { CustomerDetail, LensOrder, Prescription } from './api';
+import type { Measurement } from './measurements';
 import type { CompanyInfo } from './saleDocument';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
@@ -75,9 +76,14 @@ export function buildLensOrderSheetHtml(
   company: CompanyInfo,
   customer: CustomerDetail | null,
   createdBy?: string | null,
+  measure?: Measurement | null,
 ): string {
   const accent = /^#[0-9a-fA-F]{6}$/.test(company.accentColor ?? '') ? (company.accentColor as string) : '#0d9488';
   const rx = customer?.prescriptions?.[0] ?? null;
+  // Dernière prise de mesures du client (page « Prise de mesures »), prioritaire
+  // sur l'ordonnance pour le centrage : elle décrit le client avec sa monture.
+  const ms = measure ?? null;
+  const mmv = (n: number | null | undefined) => (n == null ? '' : `${String(n).replace('.', ',')}`);
   const cfg = order.lensConfig;
   const od = eyeRx(order, rx, 'od');
   const og = eyeRx(order, rx, 'og');
@@ -106,7 +112,7 @@ export function buildLensOrderSheetHtml(
 
   // Écart pupillaire monoculaire : jamais déduit du binoculaire / 2 (une erreur
   // de centrage coûte une paire) — la case reste à mesurer et remplir.
-  const pdTotal = rx?.pupillaryDistance ? esc(rx.pupillaryDistance) : '';
+  const pdTotal = ms?.pdTotal != null ? mmv(ms.pdTotal) : rx?.pupillaryDistance ? esc(rx.pupillaryDistance) : '';
 
   const info = (label: string, value: string) =>
     `<div class="info"><span>${label}</span><b>${value || '—'}</b></div>`;
@@ -191,15 +197,18 @@ export function buildLensOrderSheetHtml(
         </tr>
       </thead>
       <tbody>
-        ${row(L('od'), od, order.odLens, '', esc(rx?.odHeight ?? ''))}
-        ${row(L('og'), og, order.ogLens, '', esc(rx?.ogHeight ?? ''))}
+        ${row(L('od'), od, order.odLens, mmv(ms?.odMonoPd), ms?.odHeight != null ? mmv(ms.odHeight) : esc(rx?.odHeight ?? ''))}
+        ${row(L('og'), og, order.ogLens, mmv(ms?.ogMonoPd), ms?.ogHeight != null ? mmv(ms.ogHeight) : esc(rx?.ogHeight ?? ''))}
       </tbody>
     </table>
     <div class="note">
       ${pdTotal ? `${esc(L('pdTotal'))} <b>${pdTotal} mm</b> · ` : ''}
       ${rx?.odNearPd || rx?.ogNearPd ? `${esc(L('nearPd'))} <b>${esc(rx?.odNearPd ?? '—')} / ${esc(rx?.ogNearPd ?? '—')}</b> · ` : ''}
-      ${rx?.vertex ? `${esc(L('vertex'))} <b>${esc(rx.vertex)}</b> · ` : ''}
-      ${rx?.pantoTilt ? `${esc(L('panto'))} <b>${esc(rx.pantoTilt)}</b> · ` : ''}
+      ${ms ? `${esc(L('measuredOn', { date: date(ms.takenAt) }))} · ` : ''}
+      ${ms?.vertex != null ? `${esc(L('vertex'))} <b>${mmv(ms.vertex)} mm</b> · ` : ''}
+      ${ms?.pantoTilt != null ? `${esc(L('panto'))} <b>${mmv(ms.pantoTilt)}°</b> · ` : ''}
+      ${rx?.vertex && ms?.vertex == null ? `${esc(L('vertex'))} <b>${esc(rx.vertex)}</b> · ` : ''}
+      ${rx?.pantoTilt && ms?.pantoTilt == null ? `${esc(L('panto'))} <b>${esc(rx.pantoTilt)}</b> · ` : ''}
       ${fromRx && rx ? esc(L('rxSource', { date: date(rx.date) })) : esc(L('rxFromOrder'))}
     </div>
 
@@ -217,7 +226,12 @@ export function buildLensOrderSheetHtml(
     <h2>${esc(L('frame'))}</h2>
     <div class="grid">
       ${info(L('frameModel'), esc(order.frameProduct ? `${order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}${order.frameProduct.name}` : ''))}
-      ${info(L('frameSize'), '<span style="white-space:nowrap"><span class="blank" style="min-width:30px"></span> □ <span class="blank" style="min-width:30px"></span> — <span class="blank" style="min-width:30px"></span></span>')}
+      ${info(
+        L('frameSize'),
+        ms?.lensWidth != null || ms?.bridge != null
+          ? `${mmv(ms?.lensWidth) || '—'} □ ${mmv(ms?.bridge) || '—'}${ms?.lensHeight != null ? ` · B ${mmv(ms.lensHeight)}` : ''}`
+          : '<span style="white-space:nowrap"><span class="blank" style="min-width:30px"></span> □ <span class="blank" style="min-width:30px"></span> — <span class="blank" style="min-width:30px"></span></span>',
+      )}
       ${info(L('frameSupplied'), `□ ${esc(L('fromStock'))} &nbsp; □ ${esc(L('clientOwn'))}`)}
     </div>
     <div class="checks" style="margin-top:6px;">
@@ -265,6 +279,7 @@ export async function openLensOrderSheet(
   company: CompanyInfo,
   loadCustomer: () => Promise<CustomerDetail | null>,
   createdBy?: string | null,
+  loadMeasure?: () => Promise<Measurement | null>,
 ): Promise<void> {
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) {
@@ -281,7 +296,13 @@ export async function openLensOrderSheet(
     customer = null;
   }
   win.document.open();
-  win.document.write(buildLensOrderSheetHtml(order, company, customer, createdBy));
+  let measure: Measurement | null = null;
+  try {
+    measure = loadMeasure ? await loadMeasure() : null;
+  } catch {
+    measure = null; // droits ou réseau : la fiche garde des cases à remplir
+  }
+  win.document.write(buildLensOrderSheetHtml(order, company, customer, createdBy, measure));
   win.document.close();
   win.focus();
 }

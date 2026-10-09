@@ -3,7 +3,14 @@ import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requireAnyPermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
-import { parseImportFile, previewImportRows, commitImport, type CommitRow } from './products-import.service.js';
+import {
+  parseImportFile,
+  previewImportRows,
+  commitImport,
+  CANONICAL_FIELDS,
+  type CanonicalField,
+  type CommitRow,
+} from './products-import.service.js';
 
 const CAN_IMPORT = requireAnyPermission('optique.products.create', 'optique.products.update');
 
@@ -15,18 +22,30 @@ export async function productsImportRoutes(app: FastifyInstance): Promise<void> 
     const file = await req.file();
     if (!file) throw badRequest('Fichier requis (.xlsx ou .csv)');
     const buffer = await file.toBuffer();
+    // Association colonnes choisie dans l'aperçu (facultative), envoyée en
+    // paramètre d'URL : `?mapping={"sellPrice":3,"buyPrice":2}`.
+    let override: Partial<Record<CanonicalField, number>> = {};
+    const rawMapping = (req.query as { mapping?: string }).mapping;
+    if (rawMapping) {
+      try {
+        const m = JSON.parse(rawMapping) as Record<string, unknown>;
+        for (const f of CANONICAL_FIELDS) if (typeof m[f] === 'number') override[f] = m[f] as number;
+      } catch {
+        throw badRequest('Association de colonnes invalide');
+      }
+    }
     let parsed;
     try {
-      parsed = parseImportFile(buffer);
+      parsed = parseImportFile(buffer, override);
     } catch (err) {
       // Les erreurs de structure Excel (titre avant l'en-tête, colonnes non
       // reconnues…) viennent du fichier utilisateur : elles doivent être
       // affichées comme telles, jamais comme une erreur interne 500.
       throw badRequest(err instanceof Error ? err.message : 'Fichier Excel ou CSV illisible');
     }
-    if (parsed.length === 0) throw badRequest('Aucune ligne exploitable dans ce fichier');
-    const rows = await previewImportRows(req.db!, parsed);
-    return reply.send({ rows });
+    if (parsed.rows.length === 0) throw badRequest('Aucune ligne exploitable dans ce fichier');
+    const rows = await previewImportRows(req.db!, parsed.rows);
+    return reply.send({ rows, columns: parsed.columns });
   });
 
   app.post('/commit', { preHandler: CAN_IMPORT }, async (req, reply) => {

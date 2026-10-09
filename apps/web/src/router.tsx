@@ -46,6 +46,7 @@ const SalesPage = lazy(() => named(import('./pages/optique/SalesPage'), 'SalesPa
   ComponentType<{ kind: 'SALE' | 'QUOTE' }>
 >;
 const LensOrdersPage = lazy(() => named(import('./pages/optique/LensOrdersPage'), 'LensOrdersPage'));
+const MeasurementsPage = lazy(() => named(import('./pages/optique/MeasurementsPage'), 'MeasurementsPage'));
 const RepairsPage = lazy(() => named(import('./pages/optique/RepairsPage'), 'RepairsPage'));
 const RenewalsPage = lazy(() => named(import('./pages/optique/RenewalsPage'), 'RenewalsPage'));
 const LabelsPage = lazy(() => named(import('./pages/optique/LabelsPage'), 'LabelsPage'));
@@ -177,6 +178,7 @@ export const router = createBrowserRouter([
               { path: '/optique/ventes', element: perm('optique.sales.view', <SalesPage kind="SALE" />) },
               { path: '/optique/devis', element: perm('optique.quotes.view', <SalesPage kind="QUOTE" />) },
               { path: '/optique/commandes-verres', element: perm('optique.sales.view', <LensOrdersPage />) },
+              { path: '/optique/mesures', element: perm('optique.prescriptions.view', <MeasurementsPage />) },
               { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
               { path: '/optique/renouvellements', element: perm('optique.customers.view', <RenewalsPage />) },
               { path: '/optique/etiquettes', element: perm('optique.products.view', <LabelsPage />) },

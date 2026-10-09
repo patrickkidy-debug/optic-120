@@ -313,7 +313,7 @@ function EyeRxFields({
       <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-muted">
         <Eye className="h-3.5 w-3.5" /> {label}
       </p>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5 min-[420px]:grid-cols-4">
         {cell('sphere', 'Sph', '±0.00')}
         {cell('cylinder', 'Cyl', '±0.00')}
         {cell('axis', 'Axe', '0–180')}
@@ -569,7 +569,7 @@ export function LensOrderForm({
       <div className="space-y-5">
         <div>
           <p className="mb-2 text-sm font-medium text-content">{tr('ui.LensOrderForm.typeDArticle')}</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 sm:gap-2">
             {LENS_ORDER_CATEGORIES.map((c) => {
               const Icon = LENS_CAT[c].icon;
               const active = category === c;
@@ -578,13 +578,13 @@ export function LensOrderForm({
                   key={c}
                   type="button"
                   onClick={() => setCategory(c)}
-                  className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition ${
+                  className={`relative flex flex-col items-center gap-1 rounded-xl border p-2 text-center transition sm:gap-2 sm:rounded-2xl sm:p-3 ${
                     active ? 'border-primary bg-primary-soft shadow-card' : 'border-line hover:border-primary/50'
                   }`}
                 >
-                  <Icon className={`h-6 w-6 ${active ? 'text-primary' : 'text-content-muted'}`} />
+                  <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${active ? 'text-primary' : 'text-content-muted'}`} />
                   <span className="text-[11px] font-medium leading-tight text-content">{LENS_CAT[c].label}</span>
-                  {active && <CheckCircle className="h-3.5 w-3.5 text-primary" />}
+                  {active && <CheckCircle className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-primary sm:static" />}
                 </button>
               );
             })}

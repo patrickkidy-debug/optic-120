@@ -45,9 +45,47 @@ export interface Supplier {
   type: string;
   contactName: string | null;
   phone: string | null;
+  whatsapp?: string | null;
   email: string | null;
   address: string | null;
+  city?: string | null;
+  country?: string | null;
+  website?: string | null;
+  paymentTerms?: string | null;
+  deliveryDays?: number | null;
+  categories?: string[];
+  isActive?: boolean;
   notes: string | null;
+  createdAt?: string;
+  /** Indicateurs calculés par la liste (absents sur une fiche juste créée). */
+  stats?: { openLensOrders: number; lensOrders: number; receptions: number; lastReceptionAt: string | null };
+}
+
+export interface SupplierActivity {
+  lensOrders: {
+    id: string;
+    number: string;
+    status: string;
+    description: string;
+    expectedAt: string | null;
+    createdAt: string;
+    cost: number | null;
+    customer: { firstName: string; lastName: string } | null;
+  }[];
+  receptions: {
+    id: string;
+    quantity: number;
+    unitCost: number | null;
+    reason: string | null;
+    createdAt: string;
+    productName: string;
+    sku: string;
+  }[];
+}
+
+export async function getSupplierActivity(id: string): Promise<SupplierActivity> {
+  const { data } = await api.get<SupplierActivity>(`/suppliers/${id}/activity`);
+  return data;
 }
 export interface Insurer {
   id: string;

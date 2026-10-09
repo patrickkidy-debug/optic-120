@@ -44,50 +44,114 @@ function norm(s: string): string {
   return stripAccents(s).toLowerCase().trim();
 }
 
-type CanonicalField = 'sku' | 'name' | 'category' | 'brand' | 'buyPrice' | 'sellPrice' | 'stock';
+export type CanonicalField = 'sku' | 'name' | 'category' | 'brand' | 'buyPrice' | 'sellPrice' | 'stock';
+export const CANONICAL_FIELDS: CanonicalField[] = ['sku', 'name', 'category', 'brand', 'buyPrice', 'sellPrice', 'stock'];
 
-/** Alias d'en-têtes (FR/EN, insensible casse/accents) reconnus par colonne. */
-const FIELD_ALIASES: Record<CanonicalField, string[]> = {
-  sku: ['sku', 'reference', 'ref', 'code', 'code article', 'code produit'],
-  name: ['nom', 'designation', 'désignation', 'produit', 'article', 'name', 'modele', 'modèle', 'model', 'libelle', 'libellé'],
-  buyPrice: ["prix d'achat", 'prix achat', 'buy price', 'cost', 'cout', 'coût', 'prix coutant'],
-  sellPrice: ['prix de vente', 'prix vente', 'sell price', 'prix', 'price'],
-  category: ['categorie', 'catégorie', 'category', 'type', 'famille'],
-  brand: ['marque', 'brand', 'fabricant'],
-  stock: ['stock initial', 'stock', 'quantite', 'quantité', 'qty', 'quantity'],
-};
-// Ordre de détection : du plus spécifique au plus générique (ex. "prix d'achat"
-// avant le générique "prix" de sellPrice), pour qu'une colonne ne soit jamais
-// captée par le mauvais champ.
-const DETECTION_ORDER: CanonicalField[] = ['sku', 'name', 'buyPrice', 'sellPrice', 'category', 'brand', 'stock'];
+/**
+ * En-tête réduit à des mots simples : sans accents, minuscules, ponctuation
+ * (apostrophes droites OU typographiques, points, tirets…) remplacée par des
+ * espaces. « Prix d’achat (FCFA) » → « prix d achat fcfa », « P.A. » → « p a ».
+ */
+function headerWords(raw: unknown): string[] {
+  return norm(String(raw ?? ''))
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+/**
+ * Score d'un en-tête pour un champ (0 = aucun rapport). Les prix sont traités
+ * à part : « Prix » seul est générique (= vente), « Prix d'achat », « PA »,
+ * « Coût » sont l'achat, « Prix de vente », « PV », « Prix public » la vente.
+ */
+function fieldScore(field: CanonicalField, raw: unknown): number {
+  const w = headerWords(raw);
+  if (w.length === 0) return 0;
+  const joined = w.join(' ');
+  const compact = w.join('');
+  const has = (...words: string[]) => words.some((x) => w.includes(x));
+  const isPrice = has('prix', 'price', 'pu', 'tarif', 'montant', 'cout', 'cost') || compact === 'pa' || compact === 'pv';
+  const buyWords = has('achat', 'achats', 'cout', 'couts', 'cost', 'buy', 'purchase', 'revient', 'fournisseur', 'supplier') || compact === 'pa' || compact === 'pua' || compact === 'paht';
+  const sellWords = has('vente', 'ventes', 'sell', 'selling', 'sale', 'public', 'ttc', 'retail', 'client') || compact === 'pv' || compact === 'puv' || compact === 'pvttc';
+
+  switch (field) {
+    case 'buyPrice':
+      if (buyWords && !sellWords && (isPrice || has('achat', 'cout', 'cost', 'revient'))) return 10;
+      return 0;
+    case 'sellPrice':
+      if (sellWords && !buyWords && (isPrice || has('vente', 'sell', 'public'))) return 10;
+      // Colonne de prix générique (« Prix », « Prix unitaire », « Tarif ») :
+      // retenue pour la vente seulement si aucune colonne explicite n'existe.
+      if (isPrice && !buyWords && !sellWords && !has('remise', 'discount', 'total', 'tva')) return 3;
+      return 0;
+    case 'stock':
+      if (has('stock', 'quantite', 'quantites', 'qte', 'qty', 'quantity', 'qt', 'nombre', 'nb')) return has('alerte', 'min', 'minimum', 'seuil') ? 0 : 10;
+      return 0;
+    case 'sku':
+      if (has('barre', 'barcode', 'ean')) return 2;
+      if (has('sku', 'reference', 'ref', 'refs') || joined === 'code' || joined.startsWith('code article') || joined.startsWith('code produit')) return 10;
+      return 0;
+    case 'name':
+      if (has('prix', 'price', 'marque', 'brand', 'categorie', 'category', 'stock', 'quantite')) return 0;
+      if (has('nom', 'designation', 'design', 'libelle', 'name', 'produit', 'article', 'modele', 'model', 'description', 'intitule')) return 10;
+      return 0;
+    case 'category':
+      if (has('categorie', 'category', 'famille', 'type', 'rayon')) return 10;
+      return 0;
+    case 'brand':
+      if (has('marque', 'brand', 'fabricant', 'griffe', 'manufacturer')) return 10;
+      return 0;
+  }
+}
 
 // `sampleRow` mappe un INDICE de colonne ("0", "1"…) vers le TEXTE de l'en-tête
-// à cet indice (voir les deux appels dans parseImportFile) — jamais un nom de
-// colonne vers une valeur de cellule. Le "match" retourné reste la clé
-// (l'indice), pour indexer ensuite la ligne brute via row[Number(match)].
+// à cet indice. Le "match" retourné reste la clé (l'indice), pour indexer
+// ensuite la ligne brute via row[Number(match)].
 function detectColumns(sampleRow: Record<string, unknown>): Partial<Record<CanonicalField, string>> {
   const keys = Object.keys(sampleRow);
-  const claimed = new Set<string>();
-  const result: Partial<Record<CanonicalField, string>> = {};
-  for (const field of DETECTION_ORDER) {
-    const aliases = FIELD_ALIASES[field];
-    const match = keys.find((k) => {
-      if (claimed.has(k)) return false;
-      const nk = norm(String(sampleRow[k] ?? ''));
-      if (!nk) return false;
-      return aliases.some((a) => {
-        const na = norm(a);
-        // Égalité, en-tête contenant l'alias ("nom du produit" ⊇ "nom"), ou
-        // l'inverse pour un en-tête abrégé ("désig." — l'alias le contient).
-        return nk === na || nk.includes(na) || (nk.length >= 3 && na.startsWith(nk));
-      });
-    });
-    if (match) {
-      result[field] = match;
-      claimed.add(match);
+  // Toutes les paires (champ, colonne) notées, attribuées de la meilleure à la
+  // moins bonne : une colonne n'est jamais prise par deux champs, et un prix
+  // explicite (« Prix de vente ») passe avant un prix générique (« Prix »).
+  const pairs: { field: CanonicalField; key: string; score: number }[] = [];
+  for (const field of CANONICAL_FIELDS) {
+    for (const key of keys) {
+      const score = fieldScore(field, sampleRow[key]);
+      if (score > 0) pairs.push({ field, key, score });
     }
   }
+  pairs.sort((x, y) => y.score - x.score || Number(x.key) - Number(y.key));
+  const result: Partial<Record<CanonicalField, string>> = {};
+  const claimed = new Set<string>();
+  for (const { field, key } of pairs) {
+    if (result[field] !== undefined || claimed.has(key)) continue;
+    result[field] = key;
+    claimed.add(key);
+  }
   return result;
+}
+
+/**
+ * Montant lu dans une cellule. Les nombres Excel arrivent tels quels ; le texte
+ * accepte les écritures courantes : « 15 000 », « 15.000 », « 15,000.00 »,
+ * « 1 500,50 », « 25000 FCFA », « 12 500 F CFA ».
+ */
+export function parseAmount(v: unknown): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  let s = String(v ?? '').replace(/[\s\u00a0\u202f']/g, '').replace(/[^\d.,-]/g, '');
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma >= 0 && lastDot >= 0) {
+    // Les deux : le dernier est le séparateur décimal.
+    s = lastComma > lastDot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    s = /^-?\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.replace(',', '.');
+  } else if (lastDot >= 0 && /^-?\d{1,3}(\.\d{3})+$/.test(s)) {
+    s = s.replace(/\./g, '');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 
 // Signature ZIP ('PK') : un .xlsx est une archive ZIP, un .csv est du texte brut.
@@ -169,18 +233,36 @@ export interface ParsedProductRow {
   stock: number | null;
 }
 
-/** Lit un .xlsx OU .csv (même lecteur) et détecte les colonnes — aucun accès base. */
-export function parseImportFile(buffer: Buffer): ParsedProductRow[] {
+export interface ImportColumns {
+  /** En-têtes du fichier, dans l'ordre des colonnes. */
+  headers: string[];
+  /** Champ → indice de colonne (absent = colonne non trouvée). */
+  mapping: Partial<Record<CanonicalField, number>>;
+}
+
+/**
+ * Lit un .xlsx OU .csv (même lecteur) et détecte les colonnes — aucun accès base.
+ * `override` force l'association d'un champ à une colonne (choix fait par
+ * l'utilisateur dans l'aperçu) ; -1 = ignorer ce champ.
+ */
+export function parseImportFile(
+  buffer: Buffer,
+  override: Partial<Record<CanonicalField, number>> = {},
+): { rows: ParsedProductRow[]; columns: ImportColumns } {
   const workbook = readWorkbook(buffer);
   const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return [];
+  const empty = { rows: [], columns: { headers: [], mapping: {} } };
+  if (!sheetName) return empty;
   const sheet = workbook.Sheets[sheetName];
   // `header: 1` conserve les premières lignes telles quelles. Beaucoup de
   // fichiers Excel commencent par un titre, un logo ou une ligne vide avant
   // les vrais en-têtes : `sheet_to_json` prenait alors ce titre pour en-tête
   // et produisait des produits entièrement vides.
   const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: false });
-  if (grid.length === 0) return [];
+  // Même grille en valeurs brutes : un prix saisi comme nombre dans Excel est
+  // lu tel quel, sans dépendre de son format d'affichage (« 15 000 F »…).
+  const rawGrid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: true });
+  if (grid.length === 0) return empty;
   const headerIndex = grid.slice(0, 30).findIndex((cells) => {
     const header = Object.fromEntries(cells.map((cell, index) => [String(index), cell]));
     const detected = detectColumns(header);
@@ -190,31 +272,42 @@ export function parseImportFile(buffer: Buffer): ParsedProductRow[] {
     throw new Error('En-têtes introuvables : ajoutez au minimum une colonne « Nom », « Désignation » ou « Modèle »');
   }
   const headers = grid[headerIndex].map((cell) => String(cell ?? '').trim());
-  const columns = detectColumns(Object.fromEntries(headers.map((header, index) => [String(index), header])));
+  const detected = detectColumns(Object.fromEntries(headers.map((header, index) => [String(index), header])));
+  const mapping: Partial<Record<CanonicalField, number>> = {};
+  for (const f of CANONICAL_FIELDS) {
+    const forced = override[f];
+    if (forced !== undefined) {
+      if (forced >= 0 && forced < headers.length) mapping[f] = forced;
+    } else if (detected[f] !== undefined) {
+      mapping[f] = Number(detected[f]);
+    }
+  }
 
   const get = (row: unknown[], field: CanonicalField): string => {
-    const key = columns[field];
-    return key !== undefined ? String(row[Number(key)] ?? '').trim() : '';
+    const i = mapping[field];
+    return i !== undefined ? String(row[i] ?? '').trim() : '';
   };
-  const toNumber = (s: string): number => {
-    const n = Number(s.replace(/[^\d.-]/g, ''));
-    return Number.isFinite(n) ? n : 0;
+  const amount = (rawRow: unknown[] | undefined, row: unknown[], field: CanonicalField): number => {
+    const i = mapping[field];
+    if (i === undefined) return 0;
+    const raw = rawRow?.[i];
+    return parseAmount(typeof raw === 'number' ? raw : row[i]);
   };
 
-  return grid.slice(headerIndex + 1)
-    .filter((row) => row.some((cell) => String(cell ?? '').trim() !== ''))
-    .map((row) => {
-    const stockRaw = get(row, 'stock');
-    return {
+  const rows = grid
+    .slice(headerIndex + 1)
+    .map((row, k) => ({ row, raw: rawGrid[headerIndex + 1 + k] }))
+    .filter(({ row }) => row.some((cell) => String(cell ?? '').trim() !== ''))
+    .map(({ row, raw }) => ({
       sku: get(row, 'sku'),
       name: get(row, 'name'),
       category: normalizeCategory(get(row, 'category')),
       brand: get(row, 'brand'),
-      buyPrice: toNumber(get(row, 'buyPrice')),
-      sellPrice: toNumber(get(row, 'sellPrice')),
-      stock: stockRaw ? toNumber(stockRaw) : null,
-    };
-  });
+      buyPrice: amount(raw, row, 'buyPrice'),
+      sellPrice: amount(raw, row, 'sellPrice'),
+      stock: get(row, 'stock') ? Math.round(amount(raw, row, 'stock')) : null,
+    }));
+  return { rows, columns: { headers, mapping } };
 }
 
 export interface PreviewRow extends ParsedProductRow {

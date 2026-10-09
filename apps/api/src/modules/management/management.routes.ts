@@ -193,9 +193,94 @@ async function cashTransfersRoutes(app: FastifyInstance) {
 }
 
 async function suppliersRoutes(app: FastifyInstance) {
+  /**
+   * Liste avec indicateurs : commandes de verres en cours (rattachées par nom
+   * de laboratoire, champ libre de la commande) et réceptions de stock.
+   */
   app.get('/', { preHandler: requirePermission('suppliers.view') }, async (req, reply) => {
-    const suppliers = await req.db!.supplier.findMany({ orderBy: { createdAt: 'desc' }, take: 300 });
-    return reply.send({ suppliers });
+    const suppliers = await req.db!.supplier.findMany({ orderBy: [{ isActive: 'desc' }, { name: 'asc' }], take: 500 });
+    const [lensGroups, receptions] = await Promise.all([
+      req.db!.lensOrder.groupBy({
+        by: ['supplierName', 'status'],
+        where: { supplierName: { not: null } },
+        _count: { _all: true },
+      }),
+      req.db!.stockMovement.groupBy({
+        by: ['supplierId'],
+        where: { supplierId: { not: null } },
+        _count: { _all: true },
+        _max: { createdAt: true },
+      }),
+    ]);
+    const key = (n: string | null) => (n ?? '').trim().toLowerCase();
+    const open = new Map<string, number>();
+    const total = new Map<string, number>();
+    for (const g of lensGroups) {
+      const k = key(g.supplierName);
+      total.set(k, (total.get(k) ?? 0) + g._count._all);
+      if (g.status !== 'DELIVERED' && g.status !== 'CANCELLED') open.set(k, (open.get(k) ?? 0) + g._count._all);
+    }
+    const rec = new Map(receptions.map((r) => [r.supplierId!, r]));
+    return reply.send({
+      suppliers: suppliers.map((s) => ({
+        ...s,
+        stats: {
+          openLensOrders: open.get(key(s.name)) ?? 0,
+          lensOrders: total.get(key(s.name)) ?? 0,
+          receptions: rec.get(s.id)?._count._all ?? 0,
+          lastReceptionAt: rec.get(s.id)?._max.createdAt ?? null,
+        },
+      })),
+    });
+  });
+
+  /** Fiche détaillée : commandes de verres et dernières réceptions de stock. */
+  app.get('/:id/activity', { preHandler: requirePermission('suppliers.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const supplier = await req.db!.supplier.findFirst({ where: { id } });
+    if (!supplier) throw notFound('Fournisseur introuvable');
+    const [lensOrders, movements] = await Promise.all([
+      req.db!.lensOrder.findMany({
+        where: { supplierName: { equals: supplier.name, mode: 'insensitive' } },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          number: true,
+          status: true,
+          description: true,
+          expectedAt: true,
+          createdAt: true,
+          cost: true,
+          customer: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      req.db!.stockMovement.findMany({
+        where: { supplierId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          quantity: true,
+          unitCost: true,
+          reason: true,
+          createdAt: true,
+          stockItem: { select: { product: { select: { name: true, sku: true } } } },
+        },
+      }),
+    ]);
+    return reply.send({
+      lensOrders: lensOrders.map((o) => ({ ...o, cost: o.cost == null ? null : Number(o.cost) })),
+      receptions: movements.map((m) => ({
+        id: m.id,
+        quantity: m.quantity,
+        unitCost: m.unitCost == null ? null : Number(m.unitCost),
+        reason: m.reason,
+        createdAt: m.createdAt,
+        productName: m.stockItem.product.name,
+        sku: m.stockItem.product.sku,
+      })),
+    });
   });
 
   app.post('/', { preHandler: requirePermission('suppliers.create') }, async (req, reply) => {
@@ -207,8 +292,15 @@ async function suppliersRoutes(app: FastifyInstance) {
         type: input.type,
         contactName: input.contactName ?? null,
         phone: input.phone ?? null,
+        whatsapp: input.whatsapp ?? null,
         email: input.email ?? null,
         address: input.address ?? null,
+        city: input.city ?? null,
+        country: input.country ?? null,
+        website: input.website ?? null,
+        paymentTerms: input.paymentTerms ?? null,
+        deliveryDays: input.deliveryDays ?? null,
+        categories: input.categories ?? [],
         notes: input.notes ?? null,
       },
     });

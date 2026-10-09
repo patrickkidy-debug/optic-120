@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileUp, Trash2, Upload } from 'lucide-react';
-import { previewProductImport, commitProductImport, type ImportPreviewRow } from './api';
+import { AlertTriangle, Columns3, FileUp, Trash2, Upload } from 'lucide-react';
+import { previewProductImport, commitProductImport, type ImportPreviewRow, type ImportColumns, type ImportField } from './api';
 import { apiErrorMessage } from '../../../lib/api';
 import { invalidateProductViews } from '../../../lib/invalidate';
 import { Modal, Button, Badge, PageLoader } from '../../../components/ui';
@@ -39,15 +39,17 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
   // demande explicitement et on l'applique à toutes les lignes — modifiable
   // ensuite ligne par ligne si le fichier mélange plusieurs catégories.
   const [defaultCategory, setDefaultCategory] = useState('MONTURE');
+  // Fichier conservé : changer l'association d'une colonne relit le fichier.
+  const [file, setFile] = useState<File | null>(null);
+  const [columns, setColumns] = useState<ImportColumns>({ headers: [], mapping: {} });
 
-  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function load(f: File, mapping?: Partial<Record<ImportField, number>>) {
     setError('');
     setLoading(true);
     try {
-      const preview = await previewProductImport(file);
-      setRows(preview.map((r) => ({ ...r, category: defaultCategory })));
+      const preview = await previewProductImport(f, mapping);
+      setRows(preview.rows.map((r) => ({ ...r, category: defaultCategory })));
+      setColumns(preview.columns);
       setPhase('review');
     } catch (err) {
       setError(apiErrorMessage(err, tr('ui.ProductImportModal.impossibleDeLireCeFichier')));
@@ -55,6 +57,33 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
       setLoading(false);
     }
   }
+
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    await load(f);
+  }
+
+  /** L'utilisateur corrige la colonne d'un champ : on relit le fichier avec ce choix. */
+  function remap(field: ImportField, index: number) {
+    if (!file) return;
+    const next: Partial<Record<ImportField, number>> = { ...columns.mapping, [field]: index };
+    // Une colonne ne sert qu'à un champ : on la retire de l'ancien.
+    for (const k of Object.keys(next) as ImportField[]) if (k !== field && next[k] === index && index >= 0) next[k] = -1;
+    void load(file, next);
+  }
+
+  const MAP_FIELDS: { field: ImportField; label: string }[] = [
+    { field: 'name', label: tr('ui.ProductImportModal.nom') },
+    { field: 'sku', label: tr('ui.ProductImportModal.reference') },
+    { field: 'brand', label: tr('ui.ProductImportModal.marque') },
+    { field: 'buyPrice', label: tr('importMap.buyPrice') },
+    { field: 'sellPrice', label: tr('importMap.sellPrice') },
+    { field: 'stock', label: 'Stock' },
+  ];
+  const missingPrice =
+    columns.headers.length > 0 && (columns.mapping.buyPrice === undefined || columns.mapping.sellPrice === undefined);
 
   function updateRow(i: number, patch: Partial<ImportPreviewRow>) {
     setRows((prev) =>
@@ -141,12 +170,44 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
           <p className="text-sm text-content-muted">
             {tr('ui.ProductImportModal.corrigezCeQuiDoitL')}
           </p>
+          {columns.headers.length > 0 && (
+            <div className="rounded-xl border bg-surface-2/50 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content-faint">
+                <Columns3 className="h-3.5 w-3.5" /> {tr('importMap.title')}
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {MAP_FIELDS.map(({ field, label }) => (
+                  <label key={field} className="block min-w-0 text-xs text-content-muted">
+                    <span className={`mb-0.5 block font-medium ${(field === 'buyPrice' || field === 'sellPrice') && columns.mapping[field] === undefined ? 'text-warning' : ''}`}>{label}</span>
+                    <select
+                      className="input h-8 w-full px-2 text-xs"
+                      value={columns.mapping[field] ?? -1}
+                      disabled={loading}
+                      onChange={(e) => remap(field, Number(e.target.value))}
+                    >
+                      <option value={-1}>{tr('importMap.none')}</option>
+                      {columns.headers.map((h, i) => (
+                        <option key={i} value={i}>
+                          {h || tr('importMap.column', { n: i + 1 })}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              {missingPrice && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-warning">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {tr('importMap.missingPrice')}
+                </p>
+              )}
+            </div>
+          )}
           {rows.some((r) => r.status === 'error') && (
             <div className="rounded-xl bg-[color:var(--danger)]/10 px-3 py-2 text-xs text-danger">
               {tr('ui.ProductImportModal.certainesLignesNePeuventPas')}
             </div>
           )}
-          <div className="max-h-[420px] overflow-y-auto rounded-xl border">
+          <div className="max-h-[55vh] overflow-auto rounded-xl border">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-surface">
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">

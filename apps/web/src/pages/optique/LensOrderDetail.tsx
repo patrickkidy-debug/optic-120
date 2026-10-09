@@ -23,6 +23,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Badge, Button } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { openLensOrderSheet } from '../../features/optique/lensOrderSheet';
+import { listMeasurements } from '../../features/optique/measurements';
 import type { CompanyInfo } from '../../features/optique/saleDocument';
 
 /** Étape WhatsApp la plus pertinente selon l'avancement de la commande. */
@@ -108,7 +109,14 @@ export function LensOrderDetail({
       ...user?.tenantInvoiceSettings,
     };
     const createdBy = (events ?? []).find((e) => e.action === 'LENS_ORDER_CREATED')?.userName ?? null;
-    void openLensOrderSheet(order, company, () => (order.customerId ? getCustomer(order.customerId) : Promise.resolve(null)), createdBy);
+    const cid = order.customerId;
+    void openLensOrderSheet(
+      order,
+      company,
+      () => (cid ? getCustomer(cid) : Promise.resolve(null)),
+      createdBy,
+      async () => (cid ? (await listMeasurements(cid))[0] ?? null : null),
+    );
   }
   const showNotifiedStep = Boolean(notifiedEvent || order.notifiedAt);
   // order.status couvre aussi CANCELLED (hors plateau) : comparé via une liste
