@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, MessageCircle, Glasses, Receipt, FileDown } from 'lucide-react';
+import { CheckCircle2, Circle, MessageCircle, Glasses, Receipt, FileDown, PackageSearch } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   LENS_ORDER_BOARD_STATUSES,
   LENS_ORDER_STATUS_LABELS,
@@ -17,7 +18,7 @@ import {
 import { Avatar } from '../../components/Avatar';
 import { sendWhatsappForStage, waMessageLangs } from '../../lib/whatsapp';
 import type { WaMessageLang } from '@oculo/shared-types';
-import { useAuthStore } from '../../store/auth';
+import { useAuthStore, usePermission } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/format';
 import { Modal, Badge, Button } from '../../components/ui';
@@ -48,6 +49,7 @@ export function LensOrderDetail({
   canManage: boolean;
 }) {
   const qc = useQueryClient();
+  const canTrack = usePermission('oculotrack.manage');
   const tenantName = useAuthStore((s) => s.user?.tenantName) ?? 'OculoSaaS';
   const [notified, setNotified] = useState(Boolean(order.notifiedAt));
 
@@ -276,6 +278,19 @@ export function LensOrderDetail({
           <Button variant="outline" className="w-full" onClick={downloadSheet}>
             <FileDown className="h-4 w-4" /> {tr('labSheet.button')}
           </Button>
+
+          {/* OculoTrack : suivi de la monture jusqu'au laboratoire et retour. */}
+          {order.trackCode ? (
+            <Link to={`/optique/oculotrack?order=${order.id}`} className="btn-outline flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm">
+              <PackageSearch className="h-4 w-4" /> {order.trackCode} · {tr('ot.openInTrack')}
+            </Link>
+          ) : (
+            canTrack && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+              <Link to={`/optique/oculotrack?start=${order.id}`} className="btn-outline flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm">
+                <PackageSearch className="h-4 w-4" /> {tr('ot.trackWithOT')}
+              </Link>
+            )
+          )}
 
           {canManage && order.customer?.phone && (
             // Établissement bilingue (Rwanda) : un bouton par langue du message.

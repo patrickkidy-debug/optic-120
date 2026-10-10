@@ -2,6 +2,7 @@ import 'fastify';
 import type { TenantPrisma } from '../lib/prisma-tenant.js';
 import type { AuthContext } from './auth.js';
 import type { PartnerAuthContext } from './partner-auth.js';
+import type { PortalContext } from '../modules/oculotrack/portal-auth.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -11,5 +12,7 @@ declare module 'fastify' {
     db?: TenantPrisma;
     /** Contexte partenaire (présent après requirePartnerAuth) — jamais mélangé avec `auth`. */
     partnerAuth?: PartnerAuthContext;
+    /** Compte du portail OculoTrack (présent après requirePortalAuth) — jamais mélangé avec `auth`. */
+    portal?: PortalContext;
   }
 }

@@ -88,3 +88,23 @@ export async function verifyPartnerAccessToken(token: string): Promise<string> {
   if (payload.typ !== 'partner') throw new Error('Jeton partenaire invalide');
   return String(payload.sub);
 }
+
+/**
+ * Jeton d'accès du portail OculoTrack (fournisseurs / transporteurs) : réclamation
+ * `typ: 'portal'` distincte, il ne peut jamais servir sur les routes magasin ou
+ * partenaires, et inversement.
+ */
+export async function signPortalAccessToken(accountId: string): Promise<string> {
+  return new SignJWT({ typ: 'portal' })
+    .setProtectedHeader({ alg: ALG })
+    .setSubject(accountId)
+    .setIssuedAt()
+    .setExpirationTime(env.JWT_ACCESS_TTL)
+    .sign(secret);
+}
+
+export async function verifyPortalAccessToken(token: string): Promise<string> {
+  const { payload } = await jwtVerify(token, secret, { algorithms: [ALG] });
+  if (payload.typ !== 'portal') throw new Error('Jeton portail invalide');
+  return String(payload.sub);
+}

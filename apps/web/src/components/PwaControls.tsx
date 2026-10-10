@@ -40,7 +40,11 @@ export function PwaControls() {
   // Le tunnel d'activation est une page de conversion : une invite qui recouvre
   // le bas de l'ecran mobile detourne du bouton principal. Le bandeau « Hors
   // ligne » reste affiche partout, lui : il previent d'une vraie panne.
-  const onFunnel = useLocation().pathname.startsWith('/activation');
+  const path = useLocation().pathname;
+  // Même règle pour le portail fournisseurs / transporteurs et le suivi public
+  // (OculoTrack) : ce ne sont pas l'application du magasin, et l'invite
+  // recouvrait le bouton « Confirmer la réception » sur téléphone.
+  const onFunnel = ['/activation', '/portail', '/track/', '/s/'].some((p) => path.startsWith(p));
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
   // Etat reseau VERIFIE (voir lib/offline/network.ts) plutot que
   // navigator.onLine, qui dit « en ligne » sur un Wi-Fi sans Internet.

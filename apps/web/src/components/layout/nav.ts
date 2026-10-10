@@ -1,5 +1,6 @@
 import {
   Ruler,
+  PackageSearch,
   LayoutDashboard,
   Users,
   Stethoscope,
@@ -75,6 +76,7 @@ export const NAV: NavGroup[] = [
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
       { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view', badge: 'lensOverdue' },
       { to: '/optique/mesures', labelKey: 'nav.measurements', icon: Ruler, permission: 'optique.prescriptions.view' },
+      { to: '/optique/oculotrack', labelKey: 'nav.oculotrack', icon: PackageSearch, permission: 'oculotrack.view' },
       { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },
       { to: '/optique/renouvellements', labelKey: 'nav.renewals', icon: BellRing, permission: 'optique.customers.view' },
       { to: '/optique/etiquettes', labelKey: 'nav.labels', icon: Barcode, permission: 'optique.products.view' },

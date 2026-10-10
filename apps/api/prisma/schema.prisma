@@ -71,6 +71,13 @@ model Tenant {
   customers              Customer[]
   prescriptions          OpticalPrescription[]
   opticalMeasurements    OpticalMeasurement[]
+  trackPackages          TrackPackage[]
+  trackPackageItems      TrackPackageItem[]
+  trackEvents            TrackEvent[]
+  trackAttachments       TrackAttachment[]
+  trackAnomalies         TrackAnomaly[]
+  notifications          TenantNotification[]
+  portalAccesses         PortalAccess[]
   sales                  Sale[]
   payments               Payment[]
   cashRegisters          CashRegister[]
@@ -790,7 +797,29 @@ model LensOrder {
   /// description/odLens/ogLens/cost comme avant, sans aucun changement.
   lensConfig     Json?
 
+  /// OculoTrack — numéro de suivi « OT-2026-000124 » (null = suivi non activé).
+  trackCode        String?
+  /// Étape OculoTrack (voir TRACK_STAGES), plus fine que `status`.
+  trackStage       String?
+  trackStartedAt   DateTime?
+  /// Fournisseur / laboratoire relié (supplierName reste pour l'affichage historique).
+  supplierId       String?
+  supplier         Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  /// Référence de la monture du client (gravée sur la branche).
+  frameRef         String?
+  /// Prise de mesures (assistant de centrage) utilisée pour le montage.
+  measurementId    String?
+  /// Jeton opaque du lien de suivi public (jamais de donnée client dans l'URL).
+  publicToken      String?            @unique
+  packageItems     TrackPackageItem[]
+  trackEvents      TrackEvent[]
+  trackAttachments TrackAttachment[]
+  trackAnomalies   TrackAnomaly[]
+
   @@unique([tenantId, number])
+  @@unique([tenantId, trackCode])
+  @@index([tenantId, trackStage])
+  @@index([supplierId])
   @@index([tenantId, status])
   @@index([tenantId, customerId])
   @@index([frameProductId])
@@ -1233,6 +1262,9 @@ model Supplier {
   updatedAt    DateTime     @updatedAt
 
   stockMovements StockMovement[]
+  lensOrders     LensOrder[]
+  trackPackages  TrackPackage[]
+  portalAccesses PortalAccess[]
 
   @@index([tenantId])
 }
@@ -2505,4 +2537,226 @@ model SyncOperation {
 
   @@index([tenantId, deviceId])
   @@index([tenantId, status])
+}
+
+/**
+ * ============================================================================
+ * OculoTrack — suivi des commandes et colis fournisseurs
+ * ==========================================================================
+ */
+
+/// Colis entre le magasin et un fournisseur (aller ou retour).
+model TrackPackage {
+  id               String             @id @default(uuid())
+  tenantId         String
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// « PKG-2026-000045 »
+  number           String
+  /// Jeton opaque (256 bits) porté par le QR code — jamais de donnée client.
+  token            String             @unique
+  /// OUTBOUND (magasin → fournisseur) ou RETURN (fournisseur → magasin).
+  direction        String             @default("OUTBOUND")
+  /// PREPARING, HANDED_TO_CARRIER, IN_TRANSIT, RECEIVED, CANCELLED.
+  status           String             @default("PREPARING")
+  supplierId       String?
+  supplier         Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  fromCity         String?
+  toCity           String?
+  carrierName      String?
+  /// Compte transporteur (portail) à qui le colis est confié.
+  carrierAccessId  String?
+  /// Numéro de suivi du transporteur (« TRP-458921 »).
+  externalTracking String?
+  /// Code du transporteur pour une future synchronisation par API.
+  carrierCode      String?
+  weightGrams      Int?
+  note             String?
+  handedAt         DateTime?
+  shippedAt        DateTime?
+  expectedAt       DateTime?
+  receivedAt       DateTime?
+  /// Une alerte de retard n'est envoyée qu'une fois.
+  lateNotifiedAt   DateTime?
+  createdById      String?
+  createdByPortal  String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  items            TrackPackageItem[]
+  events           TrackEvent[]
+  attachments      TrackAttachment[]
+  anomalies        TrackAnomaly[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([supplierId])
+}
+
+/// Contenu d'un colis : une ligne par commande, avec la vérification à réception.
+model TrackPackageItem {
+  id          String       @id @default(uuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  packageId   String
+  package     TrackPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  lensOrderId String
+  lensOrder   LensOrder    @relation(fields: [lensOrderId], references: [id], onDelete: Cascade)
+  /// { received, reference, quantity, condition } coché à la réception.
+  checks      Json?
+  checkedAt   DateTime?
+
+  @@unique([packageId, lensOrderId])
+  @@index([tenantId])
+  @@index([lensOrderId])
+}
+
+/// Événement de traçabilité — append-only, jamais modifié ni supprimé.
+model TrackEvent {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lensOrderId   String?
+  lensOrder     LensOrder?    @relation(fields: [lensOrderId], references: [id], onDelete: Cascade)
+  packageId     String?
+  package       TrackPackage? @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  /// ex. ORDER_TRACKING_STARTED, PACKAGE_RECEIVED, STAGE_CHANGED, ANOMALY_REPORTED…
+  type          String
+  /// Étape atteinte (commande) ou statut (colis) après l'événement.
+  stage         String?
+  /// STAFF, SUPPLIER, CARRIER, SYSTEM
+  actorType     String
+  actorId       String?
+  actorName     String
+  message       String?
+  /// Preuve : appareil, IP, position GPS (si autorisée), contrôles, etc.
+  meta          Json?
+  /// Identifiant fourni par l'appareil : une action rejouée hors ligne n'est pas dupliquée.
+  clientEventId String?       @unique
+  /// Heure réelle de l'action (peut précéder l'enregistrement en cas de synchronisation différée).
+  occurredAt    DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+
+  @@index([tenantId, lensOrderId])
+  @@index([tenantId, packageId])
+  @@index([tenantId, occurredAt])
+}
+
+/// Photo ou document associé à une commande, un colis ou une anomalie.
+model TrackAttachment {
+  id             String        @id @default(uuid())
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lensOrderId    String?
+  lensOrder      LensOrder?    @relation(fields: [lensOrderId], references: [id], onDelete: Cascade)
+  packageId      String?
+  package        TrackPackage? @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  anomalyId      String?
+  anomaly        TrackAnomaly? @relation(fields: [anomalyId], references: [id], onDelete: Cascade)
+  eventId        String?
+  kind           String
+  name           String?
+  mime           String
+  sizeBytes      Int
+  /// Contenu (data URL). `storageKey` servira le jour où un stockage objet sera branché.
+  data           String?
+  storageKey     String?
+  uploadedByType String
+  uploadedByName String
+  createdAt      DateTime      @default(now())
+
+  @@index([tenantId, lensOrderId])
+  @@index([tenantId, packageId])
+}
+
+/// Anomalie signalée par le fournisseur, le transporteur ou le magasin.
+model TrackAnomaly {
+  id             String            @id @default(uuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lensOrderId    String?
+  lensOrder      LensOrder?        @relation(fields: [lensOrderId], references: [id], onDelete: Cascade)
+  packageId      String?
+  package        TrackPackage?     @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  type           String
+  comment        String?
+  /// OPEN, RESOLVED
+  status         String            @default("OPEN")
+  reportedByType String
+  reportedByName String
+  resolvedAt     DateTime?
+  resolvedByName String?
+  resolution     String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  attachments    TrackAttachment[]
+
+  @@index([tenantId, status])
+}
+
+/// Notification destinée aux utilisateurs d'un établissement (cloche du logiciel).
+model TenantNotification {
+  id        String    @id @default(uuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// ex. OT_PACKAGE_RECEIVED, OT_ANOMALY, OT_LATE…
+  kind      String
+  title     String
+  body      String
+  /// Lien interne (ex. /optique/oculotrack?order=…).
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+/// Compte du portail externe (laboratoire / fournisseur, ou transporteur).
+/// Global : un même laboratoire peut travailler pour plusieurs magasins, chaque
+/// accès étant cloisonné par magasin (PortalAccess).
+model PortalAccount {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  name            String
+  phone           String?
+  passwordHash    String?
+  /// SUPPLIER ou CARRIER
+  kind            String
+  isActive        Boolean         @default(true)
+  inviteTokenHash String?         @unique
+  inviteExpiresAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  accesses        PortalAccess[]
+  sessions        PortalSession[]
+}
+
+/// Accès d'un compte portail à UN magasin (et, pour un fournisseur, à SA fiche fournisseur).
+model PortalAccess {
+  id          String        @id @default(uuid())
+  accountId   String
+  account     PortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplierId  String?
+  supplier    Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdById String?
+  revokedAt   DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@unique([accountId, tenantId, supplierId])
+  @@index([tenantId])
+}
+
+model PortalSession {
+  id        String        @id @default(uuid())
+  accountId String
+  account   PortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash String        @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime      @default(now())
+
+  @@index([accountId])
 }

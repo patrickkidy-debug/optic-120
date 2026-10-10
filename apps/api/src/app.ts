@@ -39,6 +39,9 @@ import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
 import { demoRoutes } from './modules/demo/demo.routes.js';
 import { crmRoutes } from './modules/crm/crm.routes.js';
 import { partnerRoutes } from './modules/partners/partner.routes.js';
+import { oculotrackRoutes } from './modules/oculotrack/track.routes.js';
+import { portalRoutes } from './modules/oculotrack/portal.routes.js';
+import { trackPublicRoutes } from './modules/oculotrack/public.routes.js';
 
 /** Horodatage de démarrage : distingue un redéploiement d'un simple réveil. */
 const startedAt = new Date();
@@ -174,6 +177,10 @@ export async function buildApp() {
   await app.register(demoRoutes, { prefix: '/demo' });
   await app.register(crmRoutes, { prefix: '/crm' });
   await app.register(partnerRoutes, { prefix: '/partners' });
+  // OculoTrack : magasin, portail fournisseurs / transporteurs, suivi public.
+  await app.register(oculotrackRoutes, { prefix: '/oculotrack' });
+  await app.register(portalRoutes, { prefix: '/portal' });
+  await app.register(trackPublicRoutes, { prefix: '/public/track' });
 
   return app;
 }

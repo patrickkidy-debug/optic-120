@@ -526,6 +526,11 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'suppliers', action: 'create', label: 'Créer des fournisseurs' },
   { module: 'suppliers', action: 'update', label: 'Modifier des fournisseurs' },
 
+  // OculoTrack : suivi des commandes et colis fournisseurs.
+  { module: 'oculotrack', action: 'view', label: 'Voir le suivi OculoTrack' },
+  { module: 'oculotrack', action: 'manage', label: 'Gérer les commandes et colis OculoTrack' },
+  { module: 'oculotrack', action: 'portal', label: 'Gérer les accès au portail fournisseur / transporteur' },
+
   { module: 'insurance', action: 'view', label: 'Voir les assurances' },
   { module: 'insurance', action: 'create', label: 'Créer des assurances' },
   { module: 'insurance', action: 'update', label: 'Modifier des assurances' },
@@ -570,6 +575,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 
   gestionnaire: [
     'dashboard.view',
+    'oculotrack.view', 'oculotrack.manage', 'oculotrack.portal',
     'optique.products.view', 'optique.products.create', 'optique.products.update',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
@@ -593,6 +599,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 
   opticien: [
     'dashboard.view',
+    'oculotrack.view', 'oculotrack.manage',
     'optique.products.view',
     'optique.stock.view', 'optique.stock.adjust',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
@@ -651,6 +658,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 
   responsable_stocks: [
     'dashboard.view',
+    'oculotrack.view', 'oculotrack.manage',
     'optique.products.view', 'optique.products.create', 'optique.products.update', 'optique.products.delete',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
@@ -673,6 +681,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 
   commercial: [
     'dashboard.view',
+    'oculotrack.view',
     'optique.products.view',
     'optique.customers.view', 'optique.customers.create', 'optique.customers.update',
     'optique.prescriptions.view', 'optique.prescriptions.create',
@@ -3901,3 +3910,5 @@ export function tenantCurrencyInfo(tenant: {
   if (c) return { countryCode: c.code, currency: c.currency };
   return { countryCode: null, currency: tenant.currency || 'XOF' };
 }
+
+export * from './oculotrack.js';

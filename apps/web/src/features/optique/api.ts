@@ -834,6 +834,9 @@ export interface LensOrder {
   notes: string | null;
   lensConfig: LensOrderConfig | null;
   createdAt: string;
+  /** OculoTrack : présent quand le suivi fournisseur est activé. */
+  trackCode?: string | null;
+  trackStage?: string | null;
 }
 /** Nombre de commandes de verres en retard (échéance dépassée, non livrées). */
 export async function lensOverdueCount(): Promise<number> {
