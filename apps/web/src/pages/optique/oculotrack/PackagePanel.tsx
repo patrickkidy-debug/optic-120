@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowRight, CheckCircle2, MessageCircle, Package, Printer, Truck, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, KeyRound, MessageCircle, Package, Printer, Truck, XCircle } from 'lucide-react';
 import { ot, type PackageDetail } from '../../../features/oculotrack/api';
 import { PackageBadge, QrImage, StageBadge, Timeline, qrDataUrl } from '../../../features/oculotrack/ui';
 import { Button } from '../../../components/ui';
@@ -41,7 +41,20 @@ ${p.carrierName ? `<b>${esc(tr('ot.f.carrier'))}</b><span>${esc(p.carrierName)}$
   w.document.close();
 }
 
-export function PackagePanel({ id, onClose, onOpenOrder, canManage }: { id: string; onClose: () => void; onOpenOrder: (id: string) => void; canManage: boolean }) {
+export function PackagePanel({
+  id,
+  onClose,
+  onOpenOrder,
+  canManage,
+  onInvite,
+}: {
+  id: string;
+  onClose: () => void;
+  onOpenOrder: (id: string) => void;
+  canManage: boolean;
+  /** Présent si l'utilisateur peut gérer les accès au portail. */
+  onInvite?: (supplierId: string) => void;
+}) {
   const qc = useQueryClient();
   const store = useAuthStore((s) => s.user?.tenantName) ?? '';
   const { data, isLoading, error } = useQuery({ queryKey: ['ot', 'package', id], queryFn: () => ot.package(id) });
@@ -51,6 +64,7 @@ export function PackagePanel({ id, onClose, onOpenOrder, canManage }: { id: stri
     qc.invalidateQueries({ queryKey: ['lens-orders'] });
   };
   const cancel = useMutation({ mutationFn: () => ot.cancelPackage(id), onSuccess: refresh, onError: (e) => alert(apiErrorMessage(e)) });
+  const { data: accesses } = useQuery({ queryKey: ['ot', 'accesses'], queryFn: ot.accesses, enabled: Boolean(onInvite), retry: false });
 
   if (isLoading || !data) {
     return (
@@ -105,6 +119,14 @@ export function PackagePanel({ id, onClose, onOpenOrder, canManage }: { id: stri
           )}
         </div>
       </section>
+
+      {onInvite && accesses && p.supplier && p.direction === 'OUTBOUND' && !accesses.some((a) => a.supplier?.id === p.supplier!.id) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3">
+          <KeyRound className="h-5 w-5 shrink-0 text-amber-600" />
+          <p className="min-w-0 flex-1 text-sm text-content">{tr('ot.noPortalForLab', { name: p.supplier.name })}</p>
+          <Button onClick={() => onInvite(p.supplier!.id)}>{tr('ot.inviteLab')}</Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => printLabel(p, store)}>

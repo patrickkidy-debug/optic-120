@@ -337,10 +337,10 @@ export function AnomalyModal({ lensOrderId, packageId, onClose, onDone }: { lens
 
 /* ----------------------------- Invitation au portail ----------------------------- */
 
-export function InviteModal({ onClose }: { onClose: () => void }) {
+export function InviteModal({ onClose, supplierId: initialSupplier }: { onClose: () => void; supplierId?: string }) {
   const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: listSuppliers });
   const [kind, setKind] = useState<'SUPPLIER' | 'CARRIER'>('SUPPLIER');
-  const [supplierId, setSupplierId] = useState('');
+  const [supplierId, setSupplierId] = useState(initialSupplier ?? '');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');

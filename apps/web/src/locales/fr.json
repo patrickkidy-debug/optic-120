@@ -4930,7 +4930,10 @@
     "scanTitle": "Scanner un colis",
     "scanHint": "Placez le QR code du colis dans le cadre",
     "scanManual": "…ou collez le lien du QR code",
-    "scanCameraError": "Caméra inaccessible : autorisez la caméra ou collez le lien du QR ci-dessous."
+    "scanCameraError": "Caméra inaccessible : autorisez la caméra ou collez le lien du QR ci-dessous.",
+    "inviteLab": "Inviter le laboratoire",
+    "portalAccess": "Accès portail",
+    "noPortalForLab": "{{name}} n’a pas encore accès au portail OculoTrack : invitez-le pour qu’il puisse scanner et confirmer la réception."
   },
   "pt": {
     "portal": "Portail partenaires",

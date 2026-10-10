@@ -39,7 +39,7 @@ export function OculoTrackPage() {
   const [tab, setTab] = useState<Tab>('orders');
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [modal, setModal] = useState<null | { kind: 'start'; orderId?: string } | { kind: 'package' } | { kind: 'invite' }>(null);
+  const [modal, setModal] = useState<null | { kind: 'start'; orderId?: string } | { kind: 'package' } | { kind: 'invite'; supplierId?: string }>(null);
   const [scan, setScan] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q), 300);
@@ -94,6 +94,11 @@ export function OculoTrackPage() {
             <Button variant="outline" onClick={() => setScan(true)}>
               <ScanLine className="h-4 w-4" /> {tr('ot.scan')}
             </Button>
+            {canPortal && (
+              <Button variant="outline" onClick={() => setModal({ kind: 'invite' })}>
+                <KeyRound className="h-4 w-4" /> {tr('ot.inviteLab')}
+              </Button>
+            )}
             {canManage && (
               <>
                 <Button variant="outline" onClick={() => setModal({ kind: 'start' })}>
@@ -217,18 +222,25 @@ export function OculoTrackPage() {
       {/* Onglets + recherche */}
       <div className="card">
         <div className="flex flex-wrap items-center gap-2 border-b p-3">
-          <div className="inline-flex rounded-xl bg-surface-2 p-1">
-            {(['orders', 'packages', 'anomalies', ...(canPortal ? ['portal'] : [])] as Tab[]).map((t) => (
+          {/* Onglets bien marqués : icône, fond et soulignement sur l'onglet actif. */}
+          <div className="flex flex-wrap gap-1" role="tablist">
+            {(['orders', 'packages', 'anomalies', ...(canPortal ? ['portal'] : [])] as Tab[]).map((t) => {
+              const Icon = { orders: Boxes, packages: Package, anomalies: AlertTriangle, portal: KeyRound }[t];
+              return (
               <button
                 key={t}
                 type="button"
+                role="tab"
+                aria-selected={tab === t}
                 onClick={() => setTab(t)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${tab === t ? 'bg-surface text-content shadow-sm' : 'text-content-muted hover:text-content'}`}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition ${tab === t ? 'border-primary bg-primary-soft text-primary' : 'border-line text-content-muted hover:border-primary/50 hover:text-content'}`}
               >
+                <Icon className="h-4 w-4" />
                 {tr(`ot.tab.${t}`)}
                 {t === 'anomalies' && (k?.anomalies ?? 0) > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{k!.anomalies}</span>}
               </button>
-            ))}
+              );
+            })}
           </div>
           {(tab === 'orders' || tab === 'packages') && (
             <div className="relative min-w-[220px] flex-1">
@@ -250,10 +262,12 @@ export function OculoTrackPage() {
       </div>
 
       {orderId && <OrderPanel id={orderId} onClose={closePanel} onOpenPackage={openPackage} canManage={canManage} />}
-      {packageId && !orderId && <PackagePanel id={packageId} onClose={closePanel} onOpenOrder={openOrder} canManage={canManage} />}
+      {packageId && !orderId && (
+        <PackagePanel id={packageId} onClose={closePanel} onOpenOrder={openOrder} canManage={canManage} onInvite={canPortal ? (supplierId) => setModal({ kind: 'invite', supplierId }) : undefined} />
+      )}
       {modal?.kind === 'start' && <StartTrackingModal orderId={modal.orderId} onClose={() => setModal(null)} onDone={(id) => { setModal(null); openOrder(id); }} />}
       {modal?.kind === 'package' && <CreatePackageModal onClose={() => setModal(null)} onDone={(id) => { setModal(null); openPackage(id); }} />}
-      {modal?.kind === 'invite' && <InviteModal onClose={() => setModal(null)} />}
+      {modal?.kind === 'invite' && <InviteModal supplierId={modal.supplierId} onClose={() => setModal(null)} />}
       {scan && <QrScanner onResult={onScan} onClose={() => setScan(false)} />}
     </div>
   );

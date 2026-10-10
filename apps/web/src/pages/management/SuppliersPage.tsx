@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  KeyRound,
   Plus,
   Truck,
   Pencil,
@@ -43,6 +44,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { PageHeader, Button, Modal, Field, Badge, PageLoader, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { InviteModal } from '../optique/oculotrack/modals';
 import { trFr } from '../../lib/sharedLabels';
 
 const digits = (p?: string | null) => (p ?? '').replace(/\D/g, '');
@@ -51,6 +53,8 @@ const waNumber = (s: Supplier) => digits(s.whatsapp) || digits(s.phone);
 export function SuppliersPage() {
   const canCreate = usePermission('suppliers.create');
   const canUpdate = usePermission('suppliers.update');
+  const canPortal = usePermission('oculotrack.portal');
+  const [portalFor, setPortalFor] = useState<string | null>(null);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [detail, setDetail] = useState<Supplier | null>(null);
@@ -145,6 +149,7 @@ export function SuppliersPage() {
               onOpen={() => setDetail(s)}
               onEdit={() => openForm(s)}
               onWrite={() => setWriteTo(s)}
+              onPortal={canPortal ? () => setPortalFor(s.id) : undefined}
             />
           ))}
         </div>
@@ -158,9 +163,11 @@ export function SuppliersPage() {
           onClose={() => setDetail(null)}
           onEdit={(s) => openForm(s)}
           onWrite={(s) => setWriteTo(s)}
+          onPortal={canPortal ? (s) => setPortalFor(s.id) : undefined}
         />
       )}
       {writeTo && <WhatsappComposer s={writeTo} onClose={() => setWriteTo(null)} />}
+      {portalFor && <InviteModal supplierId={portalFor} onClose={() => setPortalFor(null)} />}
     </div>
   );
 }
@@ -208,12 +215,15 @@ function SupplierCard({
   onOpen,
   onEdit,
   onWrite,
+  onPortal,
 }: {
   s: Supplier;
   canUpdate: boolean;
   onOpen: () => void;
   onEdit: () => void;
   onWrite: () => void;
+  /** Accès portail OculoTrack (absent sans la permission). */
+  onPortal?: () => void;
 }) {
   const place = [s.city, s.country].filter(Boolean).join(', ');
   return (
@@ -272,7 +282,14 @@ function SupplierCard({
       )}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
-        <ContactButtons s={s} onWrite={onWrite} />
+        <div className="flex flex-wrap gap-1.5">
+          <ContactButtons s={s} onWrite={onWrite} />
+          {onPortal && (
+            <button type="button" onClick={onPortal} className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary">
+              <KeyRound className="h-4 w-4" /> {tr('ot.portalAccess')}
+            </button>
+          )}
+        </div>
         <div className="flex gap-1">
           <button type="button" onClick={onOpen} className="btn-ghost h-8 rounded-lg px-2.5 text-xs">
             <FileText className="h-4 w-4" /> {tr('sup.file')}
@@ -294,12 +311,14 @@ function SupplierDetail({
   onClose,
   onEdit,
   onWrite,
+  onPortal,
 }: {
   s: Supplier;
   canUpdate: boolean;
   onClose: () => void;
   onEdit: (s: Supplier) => void;
   onWrite: (s: Supplier) => void;
+  onPortal?: (s: Supplier) => void;
 }) {
   const qc = useQueryClient();
   const [tab, setTab] = useState<'orders' | 'receptions'>('orders');
@@ -356,7 +375,14 @@ function SupplierDetail({
           )}
         </div>
 
-        <ContactButtons s={s} onWrite={() => onWrite(s)} size="md" />
+        <div className="flex flex-wrap gap-1.5">
+          <ContactButtons s={s} onWrite={() => onWrite(s)} size="md" />
+          {onPortal && (
+            <button type="button" onClick={() => onPortal(s)} className="btn-outline h-9 rounded-lg px-3 text-sm text-primary">
+              <KeyRound className="h-4 w-4" /> {tr('ot.portalAccess')}
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
           <dl className="space-y-2 rounded-xl border p-3 text-sm">

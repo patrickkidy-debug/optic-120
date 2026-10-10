@@ -4930,7 +4930,10 @@
     "scanTitle": "Scan a parcel",
     "scanHint": "Place the parcel QR code in the frame",
     "scanManual": "…or paste the QR code link",
-    "scanCameraError": "Camera unavailable: allow the camera or paste the QR link below."
+    "scanCameraError": "Camera unavailable: allow the camera or paste the QR link below.",
+    "inviteLab": "Invite the lab",
+    "portalAccess": "Portal access",
+    "noPortalForLab": "{{name}} has no OculoTrack portal access yet: invite them so they can scan and confirm receipt."
   },
   "pt": {
     "portal": "Partner portal",

@@ -4930,7 +4930,10 @@
     "scanTitle": "Ler um volume",
     "scanHint": "Coloque o QR code do volume no enquadramento",
     "scanManual": "…ou cole o link do QR code",
-    "scanCameraError": "Câmara inacessível: autorize a câmara ou cole o link do QR abaixo."
+    "scanCameraError": "Câmara inacessível: autorize a câmara ou cole o link do QR abaixo.",
+    "inviteLab": "Convidar o laboratório",
+    "portalAccess": "Acesso ao portal",
+    "noPortalForLab": "{{name}} ainda não tem acesso ao portal OculoTrack: convide-o para poder ler e confirmar a receção."
   },
   "pt": {
     "portal": "Portal de parceiros",
