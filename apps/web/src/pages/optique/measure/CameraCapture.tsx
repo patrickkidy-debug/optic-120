@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Timer } from 'lucide-react';
+import { ArrowLeft, Camera, CameraOff, RotateCcw, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Timer } from 'lucide-react';
 import { getLandmarker, toFacePoints } from '../../../features/optique/measure/landmarker';
 import { analyzeFace, IRIS_MM, type FaceAnalysis } from '../../../features/optique/measure/geometry';
 import { brightness, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
 import { tr } from '../../../lib/tr';
+
+type CamError = 'denied' | 'notFound' | 'busy' | 'unsupported' | 'other';
+
+/** Vrai dans l'application Android / iOS (Capacitor), faux dans un navigateur. */
+const isNative = () =>
+  Boolean((window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.());
 
 /** Plus grand côté de la photo transmise à l'analyse (précision ~0,2 mm/px avec une carte). */
 export const CAPTURE_MAX = 1600;
@@ -88,7 +94,10 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
-  const [camError, setCamError] = useState('');
+  /** Cause du refus de la caméra (null = caméra active). */
+  const [camError, setCamError] = useState<CamError | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const photoRef = useRef<HTMLInputElement>(null);
   const [engine, setEngine] = useState<'loading' | 'ready' | 'off'>('loading');
   const [torch, setTorch] = useState<{ available: boolean; on: boolean }>({ available: false, on: false });
   const [live, setLive] = useState<Live>(EMPTY);
@@ -102,7 +111,11 @@ export function CameraCapture({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setCamError('');
+      setCamError(null);
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setCamError('unsupported');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1440 } },
@@ -117,8 +130,17 @@ export function CameraCapture({
         const track = stream.getVideoTracks()[0];
         const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean };
         setTorch({ available: Boolean(caps.torch), on: false });
-      } catch {
-        setCamError(tr('cz.cameraError'));
+      } catch (e) {
+        const name = (e as { name?: string })?.name ?? '';
+        setCamError(
+          name === 'NotAllowedError' || name === 'SecurityError'
+            ? 'denied'
+            : name === 'NotFoundError' || name === 'OverconstrainedError'
+              ? 'notFound'
+              : name === 'NotReadableError' || name === 'AbortError'
+                ? 'busy'
+                : 'other',
+        );
       }
     })();
     return () => {
@@ -126,7 +148,7 @@ export function CameraCapture({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [facing]);
+  }, [facing, attempt]);
 
   async function toggleTorch() {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -274,18 +296,35 @@ export function CameraCapture({
 
       {/* Zone vidéo */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* Toujours présente : « Réessayer » doit retrouver l'élément vidéo. */}
+        <video ref={videoRef} playsInline muted className={`absolute inset-0 h-full w-full object-cover ${camError ? 'hidden' : ''}`} />
         {camError ? (
-          <div className="grid h-full place-items-center p-6 text-center">
+          <div className="grid h-full place-items-center overflow-y-auto p-6 text-center">
             <div className="max-w-sm space-y-4">
-              <p className="text-sm text-white/80">{camError}</p>
-              <button type="button" onClick={() => importRef.current?.click()} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black">
-                <ImagePlus className="h-4 w-4" /> {tr('cz.importPhoto')}
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-400/15 text-amber-300">
+                <CameraOff className="h-7 w-7" />
+              </span>
+              <p className="text-base font-semibold">{tr(`cz.camErr.${camError}.title`)}</p>
+              <p className="text-sm text-white/75">
+                {tr(`cz.camErr.${camError}.body${camError === 'denied' ? (isNative() ? 'App' : 'Web') : ''}`)}
+              </p>
+              {/* Solution qui marche partout : l'appareil photo du téléphone, sans flux vidéo. */}
+              <button type="button" onClick={() => photoRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black">
+                <Camera className="h-5 w-5" /> {tr('cz.takePhotoNative')}
               </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setAttempt((n) => n + 1)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-medium">
+                  <RotateCcw className="h-4 w-4" /> {tr('cz.retry')}
+                </button>
+                <button type="button" onClick={() => importRef.current?.click()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-medium">
+                  <ImagePlus className="h-4 w-4" /> {tr('cz.import')}
+                </button>
+              </div>
+              <p className="text-xs text-white/50">{tr('cz.photoModeHint')}</p>
             </div>
           </div>
         ) : (
           <>
-            <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full object-cover" />
             {/* Points détectés, dans le repère de la vidéo (même recadrage que object-cover). */}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${dims.w} ${dims.h}`} preserveAspectRatio="xMidYMid slice">
               {f && (
@@ -359,8 +398,8 @@ export function CameraCapture({
         )}
       </div>
 
-      {/* Bas : consigne, qualité, capture */}
-      <div className="relative z-10 space-y-3 bg-gradient-to-t from-black via-black/90 to-black/60 px-4 pb-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+      {/* Bas : consigne, qualité, capture (masqué si la caméra est indisponible) */}
+      <div className={`relative z-10 ${camError ? 'hidden' : ''} space-y-3 bg-gradient-to-t from-black via-black/90 to-black/60 px-4 pb-4 pt-3`} style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
         <p className={`text-center text-sm font-semibold ${optimal ? 'text-emerald-300' : 'text-amber-200'}`}>
           {engine === 'off' ? tr('cz.hint.manualOnly') : optimal ? tr('cz.hint.ready') : tr(live.hint ?? 'cz.hint.searching')}
         </p>
@@ -392,6 +431,8 @@ export function CameraCapture({
         </div>
       </div>
       <input ref={importRef} type="file" accept="image/*" className="hidden" onChange={(e) => importFile(e.target.files?.[0])} />
+      {/* Appareil photo natif (capture) : fonctionne aussi quand le flux vidéo est refusé. */}
+      <input ref={photoRef} type="file" accept="image/*" capture={facing === 'user' ? 'user' : 'environment'} className="hidden" onChange={(e) => importFile(e.target.files?.[0])} />
     </div>
   );
 }

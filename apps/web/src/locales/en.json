@@ -4646,6 +4646,32 @@
       "tooBright": "Image overexposed",
       "blurry": "Image not sharp",
       "notReviewed": "Markers not checked by the optician"
+    },
+    "takePhotoNative": "Take the photo with the camera",
+    "retry": "Try again",
+    "photoModeHint": "With the camera app, live guidance is not available, but the full analysis (calibration, markers, measurements) works on the photo.",
+    "camErr": {
+      "denied": {
+        "title": "Camera access denied",
+        "bodyApp": "Allow the camera: phone Settings › Apps › OculoSaaS › Permissions › Camera › Allow. If “Camera” is not listed, install the latest version of the app. Meanwhile, use the button below.",
+        "bodyWeb": "Allow the camera for this site: tap the padlock (or ⓘ) left of the address › Permissions › Camera › Allow, then “Try again”. You can also use the button below."
+      },
+      "notFound": {
+        "title": "No camera found",
+        "body": "This device has no usable camera. Import a photo taken with another device."
+      },
+      "busy": {
+        "title": "Camera already in use",
+        "body": "Another app is using the camera. Close it, then tap “Try again”."
+      },
+      "unsupported": {
+        "title": "Live camera not available",
+        "body": "This browser does not give access to the camera stream (insecure connection or old browser). Use the camera below."
+      },
+      "other": {
+        "title": "Unable to start the camera",
+        "body": "Tap “Try again” or use the camera below."
+      }
     }
   }
 }

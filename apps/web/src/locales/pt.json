@@ -4646,6 +4646,32 @@
       "tooBright": "Imagem sobre-exposta",
       "blurry": "Imagem pouco nítida",
       "notReviewed": "Pontos não verificados pelo ótico"
+    },
+    "takePhotoNative": "Tirar a foto com a câmara",
+    "retry": "Tentar novamente",
+    "photoModeHint": "Com a app da câmara, a orientação ao vivo não está disponível, mas toda a análise (calibração, pontos, medidas) funciona na foto.",
+    "camErr": {
+      "denied": {
+        "title": "Acesso à câmara recusado",
+        "bodyApp": "Autorize a câmara: Definições do telefone › Aplicações › OculoSaaS › Permissões › Câmara › Permitir. Se «Câmara» não aparecer, instale a versão mais recente da aplicação. Entretanto, use o botão abaixo.",
+        "bodyWeb": "Autorize a câmara para este site: toque no cadeado (ou ⓘ) à esquerda do endereço › Permissões › Câmara › Permitir e depois «Tentar novamente». Também pode usar o botão abaixo."
+      },
+      "notFound": {
+        "title": "Nenhuma câmara encontrada",
+        "body": "Este aparelho não tem câmara utilizável. Importe uma foto tirada com outro aparelho."
+      },
+      "busy": {
+        "title": "Câmara já em uso",
+        "body": "Outra aplicação está a usar a câmara. Feche-a e toque em «Tentar novamente»."
+      },
+      "unsupported": {
+        "title": "Câmara ao vivo indisponível",
+        "body": "Este navegador não dá acesso à câmara (ligação não segura ou navegador antigo). Use a câmara abaixo."
+      },
+      "other": {
+        "title": "Não foi possível iniciar a câmara",
+        "body": "Toque em «Tentar novamente» ou use a câmara abaixo."
+      }
     }
   }
 }

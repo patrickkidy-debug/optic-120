@@ -4646,6 +4646,32 @@
       "tooBright": "Image surexposée",
       "blurry": "Image peu nette",
       "notReviewed": "Repères non vérifiés par l’opticien"
+    },
+    "takePhotoNative": "Prendre la photo avec l’appareil photo",
+    "retry": "Réessayer",
+    "photoModeHint": "Avec l’appareil photo, le guidage en direct n’est pas disponible, mais toute l’analyse (calibration, repères, mesures) fonctionne sur la photo.",
+    "camErr": {
+      "denied": {
+        "title": "Accès à la caméra refusé",
+        "bodyApp": "Autorisez la caméra : Paramètres du téléphone › Applications › OculoSaaS › Autorisations › Appareil photo › Autoriser. Si « Appareil photo » n’apparaît pas, installez la dernière version de l’application. En attendant, utilisez le bouton ci-dessous.",
+        "bodyWeb": "Autorisez la caméra pour ce site : touchez le cadenas (ou ⓘ) à gauche de l’adresse › Autorisations › Caméra › Autoriser, puis « Réessayer ». Vous pouvez aussi utiliser le bouton ci-dessous."
+      },
+      "notFound": {
+        "title": "Aucune caméra trouvée",
+        "body": "Cet appareil ne présente pas de caméra utilisable. Importez une photo prise avec un autre appareil."
+      },
+      "busy": {
+        "title": "Caméra déjà utilisée",
+        "body": "Une autre application utilise la caméra. Fermez-la puis touchez « Réessayer »."
+      },
+      "unsupported": {
+        "title": "Caméra en direct non disponible",
+        "body": "Ce navigateur ne donne pas accès au flux de la caméra (connexion non sécurisée ou navigateur ancien). Utilisez l’appareil photo ci-dessous."
+      },
+      "other": {
+        "title": "Impossible de démarrer la caméra",
+        "body": "Touchez « Réessayer » ou utilisez l’appareil photo ci-dessous."
+      }
     }
   }
 }
