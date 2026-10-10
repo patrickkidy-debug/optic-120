@@ -462,7 +462,346 @@
     "planGrowthDesc": "Every feature, multi-branch and unlimited users.",
     "testi1": "OculoSaaS transformed how we work: appointments, patient records and the till all in one place.",
     "testi2": "Collecting by mobile right at the till is exactly what we needed.",
-    "testi3": "I run my stores from my phone. The reports clearly show where I make money."
+    "testi3": "I run my stores from my phone. The reports clearly show where I make money.",
+    "navFaq": "FAQ",
+    "heroShotAlt": "OculoTrack dashboard: orders in transit, at suppliers, in fitting",
+    "heroPhoneAlt": "Tracking page sent to the customer",
+    "heroChipTitle": "Fitting completed",
+    "heroChipText": "Updated by the lab",
+    "tour": {
+      "eyebrow": "New",
+      "title": "From store to lab, every frame tracked",
+      "subtitle": "OculoSaaS's new tools, shown exactly as they are in the software.",
+      "track": {
+        "label": "OculoTrack",
+        "title": "Where every order is, at a glance",
+        "text": "Orders in transit, at the supplier, in fitting or due back: all on one screen.",
+        "p1": "A unique tracking number for every order",
+        "p2": "Date, time and person in charge at every step",
+        "p3": "Late alerts and anomalies flagged automatically",
+        "p4": "QR code on the parcel, with no customer data",
+        "alt": "OculoTrack dashboard"
+      },
+      "lab": {
+        "label": "Lab portal",
+        "title": "The lab updates from its phone",
+        "text": "Invite your lab: it scans the parcel and moves the fitting forward, without calling you.",
+        "p1": "Separate account: the lab only sees your orders",
+        "p2": "Receipt checked frame by frame",
+        "p3": "Fitting steps and a photo of the finished job",
+        "p4": "Works even on an unstable network",
+        "alt": "Lab portal on a phone: fitting steps"
+      },
+      "client": {
+        "label": "Customer tracking",
+        "title": "Your customers track their glasses",
+        "text": "A link sent on WhatsApp in one click. Customers see where their glasses are, without calling the store.",
+        "p1": "Private link, unique to each order",
+        "p2": "Simple, easy-to-understand steps",
+        "p3": "No prescription or medical data shown",
+        "p4": "No account or app to install",
+        "alt": "Glasses tracking page as seen by the customer"
+      },
+      "measure": {
+        "label": "Centring assistant",
+        "title": "Measurements taken with the camera",
+        "text": "Pupillary distances, heights, lens size and bridge, measured with a phone or tablet, then checked by the optician.",
+        "p1": "Live guidance and a circle fitted to the head",
+        "p2": "Calibration with a bank card or the frame",
+        "p3": "Movable markers and a reliability score",
+        "p4": "Measurements carried over to the lab sheet",
+        "alt": "OculoSaaS centring assistant"
+      },
+      "suppliers": {
+        "label": "Suppliers & WhatsApp",
+        "title": "The supplier message is already written",
+        "text": "Price request, order, follow-up or invoice: pick, check, send on WhatsApp.",
+        "p1": "Messages in French, English or Portuguese",
+        "p2": "Delivery times and payment terms",
+        "p3": "Open orders and history per supplier",
+        "p4": "Excel stock import, prices detected automatically",
+        "alt": "Prefilled WhatsApp message to a supplier"
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "q1": "Do I need to install anything?",
+      "a1": "No. OculoSaaS runs in the browser on computers, tablets and phones. An Android app is also available.",
+      "q2": "Can I bring in my existing stock?",
+      "a2": "Yes. Import your Excel file: reference, purchase price and selling price columns are detected, and you can adjust them before confirming.",
+      "q3": "How does my lab access the portal?",
+      "a3": "You invite it from OculoTrack or from its supplier page. It sets its password and only sees the orders you send it.",
+      "q4": "Are camera measurements reliable?",
+      "a4": "The assistant shows a reliability score for each measurement. The optician checks and adjusts the markers before saving: the final decision stays with them.",
+      "q5": "How many stores can I manage?",
+      "a5": "Up to 2 stores with Starter, 10 with Standard, and unlimited with Growth.",
+      "q6": "Is my data protected?",
+      "a6": "Each business has its own isolated data. Sensitive data is encrypted and backed up automatically."
+    },
+    "heroToast1": "Parcel scanned at the lab",
+    "heroToast2": "Fitting completed",
+    "heroToast3": "Tracking link sent to the customer",
+    "heroToastSub": "just now",
+    "story": {
+      "eyebrow": "One order, start to finish",
+      "title": "The journey of a pair of glasses",
+      "subtitle": "Scroll down: follow an order from the store to the lab, all the way to a happy customer.",
+      "step": "Step",
+      "c1": {
+        "time": "Day 1 · 9:12 am",
+        "title": "The customer picks her frame",
+        "text": "The optician takes measurements with the tablet camera. Pupillary distances and heights are calculated, then checked."
+      },
+      "c2": {
+        "time": "Day 1 · 9:40 am",
+        "title": "The order gets its number",
+        "text": "A unique tracking number is created and a QR code goes on the parcel. No customer data appears on it."
+      },
+      "c3": {
+        "time": "Day 1 · 11:00 am",
+        "title": "The parcel leaves for the lab",
+        "text": "Handed to the carrier, it is tracked step by step. If it runs late, you get an alert."
+      },
+      "c4": {
+        "time": "Day 2 · 8:30 am",
+        "title": "The lab scans and checks",
+        "text": "From its phone, the lab scans the QR code and checks every frame. A problem? It reports it right away."
+      },
+      "c5": {
+        "time": "Day 3 · 4:45 pm",
+        "title": "The lenses are fitted",
+        "text": "Every fitting step shows up in your software, with a photo of the finished job."
+      },
+      "c6": {
+        "time": "Day 4 · 10:00 am",
+        "title": "Back at the store, a happy customer",
+        "text": "The customer followed her glasses through her WhatsApp link. She comes to collect them without calling once."
+      },
+      "store": "Store",
+      "lab": "Lab",
+      "vMeasure": "Centring assistant",
+      "vPd": "Pupillary distance",
+      "vHeight": "Height",
+      "vReliability": "Reliability",
+      "vOrder": "Tracking record created",
+      "vNoData": "QR printed · no customer data",
+      "vTransit": "Handed to the carrier",
+      "vTransitSub": "On the way to the lab",
+      "vDone": "Fitting completed",
+      "vPhoto": "Photo attached",
+      "vWa": "Hello! Follow your glasses here:"
+    },
+    "all": {
+      "eyebrow": "All-in-one",
+      "title": "Everything you can do with OculoSaaS",
+      "subtitle": "{{count}} tools in a single software, from checkout to clinic.",
+      "new": "New",
+      "tools": "tools",
+      "cat": {
+        "sell": {
+          "label": "Sales & checkout",
+          "lead": "Get paid fast and accurately, with every payment method used in your country."
+        },
+        "stock": {
+          "label": "Products & stock",
+          "lead": "Every frame and lens, in the right place at the right price."
+        },
+        "clients": {
+          "label": "Customers & prescriptions",
+          "lead": "A complete record for every customer, and reasons for them to come back."
+        },
+        "workshop": {
+          "label": "Workshop & lab",
+          "lead": "Lens orders tracked end to end, all the way back to the store."
+        },
+        "clinic": {
+          "label": "Clinic",
+          "lead": "For ophthalmologists: patients, exams, appointments and surgeries."
+        },
+        "manage": {
+          "label": "Management & finance",
+          "lead": "Your numbers made clear, so you can decide fast and well."
+        },
+        "team": {
+          "label": "Team & security",
+          "lead": "Each employee sees what they need, and everything is logged."
+        }
+      },
+      "f": {
+        "pos": {
+          "title": "Checkout",
+          "text": "Cash, card, cheque or mobile money (Wave, Orange Money, MTN MoMo…), with several payments on one sale."
+        },
+        "quotes": {
+          "title": "Quotes",
+          "text": "Prepare a quote, then turn it into a sale in one click."
+        },
+        "sales": {
+          "title": "Sales & returns",
+          "text": "Find any sale, collect an outstanding balance, handle returns and cancellations."
+        },
+        "cash": {
+          "title": "Cash sessions",
+          "text": "Open with a float, close with a count: the difference shows up on its own."
+        },
+        "docs": {
+          "title": "Invoices & receipts",
+          "text": "Invoices, quotes and receipts in A4 or A5, printed or saved as PDF."
+        },
+        "insurancePos": {
+          "title": "Insurance share",
+          "text": "The covered share is calculated from the customer's contract."
+        },
+        "catalog": {
+          "title": "Frames & lenses catalogue",
+          "text": "Photos, references, purchase and selling prices, alert threshold per product."
+        },
+        "import": {
+          "title": "Excel import",
+          "text": "Bring in your existing stock: preview and fix before saving."
+        },
+        "stock": {
+          "title": "Stock & alerts",
+          "text": "Low-stock alerts, goods receipts, adjustments and movement history."
+        },
+        "transfer": {
+          "title": "Transfers between stores",
+          "text": "Send stock from one store to another, confirmed on arrival."
+        },
+        "inventory": {
+          "title": "Stocktake by scanning",
+          "text": "Count your stock by scanning barcodes."
+        },
+        "labels": {
+          "title": "Barcode labels",
+          "text": "Print labels with barcode and price."
+        },
+        "file": {
+          "title": "Customer file & prescriptions",
+          "text": "Sphere, cylinder, axis, addition, pupillary distances, heights and a photo of the prescription."
+        },
+        "measure": {
+          "title": "Camera measurements",
+          "text": "The centring assistant measures PD, heights, lens size and bridge with a phone."
+        },
+        "renewals": {
+          "title": "Renewals",
+          "text": "Spot customers to recontact (old prescription, no recent purchase) and message them on WhatsApp."
+        },
+        "birthdays": {
+          "title": "Birthdays",
+          "text": "Today's birthdays, with a WhatsApp message ready to send."
+        },
+        "tracking": {
+          "title": "Customer tracking link",
+          "text": "Customers follow their glasses online, with no medical data shown."
+        },
+        "clientsIo": {
+          "title": "Customer import & export",
+          "text": "Bring in your customer list from Excel or export it at any time."
+        },
+        "lensOrders": {
+          "title": "Lens orders",
+          "text": "11 steps tracked as a list, board or calendar, with late alerts."
+        },
+        "labSheet": {
+          "title": "Lab work sheet",
+          "text": "Prescription, lenses, frame and measurements on one page, as PDF, without prices."
+        },
+        "oculotrack": {
+          "title": "OculoTrack",
+          "text": "Every order and parcel tracked from store to lab, with QR code and history."
+        },
+        "portal": {
+          "title": "Lab portal",
+          "text": "Your lab receives and updates your orders from its phone."
+        },
+        "repairs": {
+          "title": "After-sales & repairs",
+          "text": "Frame, lens, screw, nose pads: from drop-off to hand-back."
+        },
+        "suppliers": {
+          "title": "Suppliers & WhatsApp",
+          "text": "Lead times, terms, open orders and ready-to-send WhatsApp messages."
+        },
+        "patients": {
+          "title": "Patients",
+          "text": "Create a patient record, even from an existing optical customer."
+        },
+        "consult": {
+          "title": "Consultations",
+          "text": "Visual acuity, refraction, eye pressure, fundus, OCT, visual field and diagnosis."
+        },
+        "appts": {
+          "title": "Appointments",
+          "text": "Schedule, confirm and track attendance and no-shows."
+        },
+        "surgery": {
+          "title": "Surgeries",
+          "text": "Operated eye, surgeon, date, outcome and follow-up notes."
+        },
+        "clinicDash": {
+          "title": "Clinic dashboard",
+          "text": "Clinic activity on a single screen."
+        },
+        "dashboard": {
+          "title": "Dashboard & forecasts",
+          "text": "Revenue forecast for the next 14 days and products at risk of running out."
+        },
+        "reports": {
+          "title": "Reports",
+          "text": "Revenue, collections, average basket, comparison with the previous period, CSV exports."
+        },
+        "receivables": {
+          "title": "Receivables",
+          "text": "Customer balances due and shares owed by insurers."
+        },
+        "finance": {
+          "title": "Finance",
+          "text": "Monthly income, expenses and result, and payback time on your investment."
+        },
+        "expenses": {
+          "title": "Expenses & cash transfers",
+          "text": "Rent, salaries, bills… and every cash deposit or withdrawal."
+        },
+        "insurance": {
+          "title": "Insurance",
+          "text": "Insurers, contracts, claims, refunds and amounts receivable."
+        },
+        "hr": {
+          "title": "Staff",
+          "text": "Your employees, their role, their store and their activity."
+        },
+        "roles": {
+          "title": "Roles & permissions",
+          "text": "Create your roles and choose exactly what each one can do."
+        },
+        "branches": {
+          "title": "Multi-store",
+          "text": "Several stores in one account, with a per-store filter."
+        },
+        "audit": {
+          "title": "Activity log",
+          "text": "Who did what, and when."
+        },
+        "anomalies": {
+          "title": "Approved corrections",
+          "text": "A sales or stock error is fixed through a request, an approval and a history."
+        },
+        "offline": {
+          "title": "Offline mode",
+          "text": "Network down? Sales and stock movements are kept and sent once you are back online."
+        },
+        "apps": {
+          "title": "Web, Android, 3 languages",
+          "text": "Computer, tablet or phone, in French, English or Portuguese."
+        },
+        "setup": {
+          "title": "Guided setup",
+          "text": "9 steps to set up your store, from team to documents."
+        }
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

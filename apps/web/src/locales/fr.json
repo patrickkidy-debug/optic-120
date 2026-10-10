@@ -462,7 +462,346 @@
     "planGrowthDesc": "Toutes les fonctionnalités, multi-agences et utilisateurs illimités.",
     "testi1": "OculoSaaS a transformé notre organisation : rendez-vous, dossiers patients et caisse réunis au même endroit.",
     "testi2": "Encaisser par mobile directement à la caisse, c'est exactement ce qu'il nous fallait.",
-    "testi3": "Je pilote mes magasins depuis mon téléphone. Les rapports montrent clairement où je gagne de l'argent."
+    "testi3": "Je pilote mes magasins depuis mon téléphone. Les rapports montrent clairement où je gagne de l'argent.",
+    "navFaq": "FAQ",
+    "heroShotAlt": "Tableau de bord OculoTrack : commandes en transit, chez les fournisseurs, en montage",
+    "heroPhoneAlt": "Page de suivi envoyée au client",
+    "heroChipTitle": "Montage terminé",
+    "heroChipText": "Mis à jour par le laboratoire",
+    "tour": {
+      "eyebrow": "Nouveau",
+      "title": "Du magasin au laboratoire, chaque monture suivie",
+      "subtitle": "Les nouveaux outils d'OculoSaaS, montrés tels qu'ils sont dans le logiciel.",
+      "track": {
+        "label": "OculoTrack",
+        "title": "Où est chaque commande, en un coup d'œil",
+        "text": "Commandes en transit, chez le fournisseur, en montage ou à retourner : tout est sur un seul écran.",
+        "p1": "Numéro de suivi unique pour chaque commande",
+        "p2": "Date, heure et responsable à chaque étape",
+        "p3": "Alertes de retard et anomalies signalées automatiquement",
+        "p4": "QR code sur le colis, sans aucune donnée client",
+        "alt": "Tableau de bord OculoTrack"
+      },
+      "lab": {
+        "label": "Portail laboratoire",
+        "title": "Le labo met à jour depuis son téléphone",
+        "text": "Invitez votre laboratoire : il scanne le colis et fait avancer le montage, sans vous appeler.",
+        "p1": "Compte séparé : le labo ne voit que vos commandes",
+        "p2": "Réception vérifiée monture par monture",
+        "p3": "Étapes de montage et photo du travail terminé",
+        "p4": "Fonctionne même avec un réseau instable",
+        "alt": "Portail laboratoire sur téléphone : étapes de montage"
+      },
+      "client": {
+        "label": "Suivi client",
+        "title": "Vos clients suivent leurs lunettes",
+        "text": "Un lien envoyé par WhatsApp en un clic. Le client voit où en sont ses lunettes, sans appeler le magasin.",
+        "p1": "Lien privé, propre à chaque commande",
+        "p2": "Étapes simples à comprendre",
+        "p3": "Ni prescription, ni donnée médicale affichée",
+        "p4": "Sans compte ni application à installer",
+        "alt": "Page de suivi des lunettes vue par le client"
+      },
+      "measure": {
+        "label": "Assistant de centrage",
+        "title": "Les mesures prises à la caméra",
+        "text": "Écarts pupillaires, hauteurs, calibre et pont, mesurés avec le téléphone ou la tablette, puis vérifiés par l'opticien.",
+        "p1": "Guidage en direct et cercle ajusté à la tête",
+        "p2": "Calibration par carte bancaire ou monture",
+        "p3": "Repères déplaçables et score de fiabilité",
+        "p4": "Mesures reprises sur la fiche du laboratoire",
+        "alt": "Assistant de centrage d'OculoSaaS"
+      },
+      "suppliers": {
+        "label": "Fournisseurs & WhatsApp",
+        "title": "Le message au fournisseur est déjà écrit",
+        "text": "Demande de prix, commande, relance ou facture : choisissez, vérifiez, envoyez sur WhatsApp.",
+        "p1": "Messages en français, anglais ou portugais",
+        "p2": "Délais de livraison et conditions de paiement",
+        "p3": "Commandes en cours et historique par fournisseur",
+        "p4": "Import Excel du stock, prix reconnus automatiquement",
+        "alt": "Message WhatsApp prérempli pour un fournisseur"
+      }
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "q1": "Faut-il installer quelque chose ?",
+      "a1": "Non. OculoSaaS fonctionne dans le navigateur, sur ordinateur, tablette et téléphone. Une application Android est aussi disponible.",
+      "q2": "Puis-je reprendre mon stock existant ?",
+      "a2": "Oui. Importez votre fichier Excel : les colonnes de référence, de prix d'achat et de prix de vente sont reconnues, et vous pouvez les corriger avant de valider.",
+      "q3": "Comment mon laboratoire accède-t-il au portail ?",
+      "a3": "Vous l'invitez depuis OculoTrack ou depuis sa fiche fournisseur. Il crée son mot de passe et ne voit que les commandes que vous lui envoyez.",
+      "q4": "Les mesures à la caméra sont-elles fiables ?",
+      "a4": "L'assistant affiche un score de fiabilité pour chaque mesure. L'opticien vérifie et ajuste les repères avant d'enregistrer : la décision finale reste la sienne.",
+      "q5": "Combien de magasins puis-je gérer ?",
+      "a5": "Jusqu'à 2 magasins avec Starter, 10 avec Standard, et sans limite avec Growth.",
+      "q6": "Mes données sont-elles protégées ?",
+      "a6": "Chaque établissement a ses propres données, cloisonnées. Les données sensibles sont chiffrées et sauvegardées automatiquement."
+    },
+    "heroToast1": "Colis scanné au laboratoire",
+    "heroToast2": "Montage terminé",
+    "heroToast3": "Lien de suivi envoyé au client",
+    "heroToastSub": "à l'instant",
+    "story": {
+      "eyebrow": "Une commande, du début à la fin",
+      "title": "Le voyage d'une paire de lunettes",
+      "subtitle": "Faites défiler : suivez une commande, du magasin au laboratoire, jusqu'au sourire du client.",
+      "step": "Étape",
+      "c1": {
+        "time": "Jour 1 · 09h12",
+        "title": "La cliente choisit sa monture",
+        "text": "L'opticien prend les mesures à la caméra de sa tablette. Écarts pupillaires et hauteurs sont calculés, puis vérifiés."
+      },
+      "c2": {
+        "time": "Jour 1 · 09h40",
+        "title": "La commande reçoit son numéro",
+        "text": "Un numéro de suivi unique est créé et un QR code est collé sur le colis. Aucune donnée du client n'y figure."
+      },
+      "c3": {
+        "time": "Jour 1 · 11h00",
+        "title": "Le colis part au laboratoire",
+        "text": "Remis au transporteur, il est suivi étape par étape. S'il prend du retard, vous êtes alerté."
+      },
+      "c4": {
+        "time": "Jour 2 · 08h30",
+        "title": "Le laboratoire scanne et vérifie",
+        "text": "Depuis son téléphone, le labo scanne le QR et contrôle chaque monture. Un problème ? Il le signale tout de suite."
+      },
+      "c5": {
+        "time": "Jour 3 · 16h45",
+        "title": "Les verres sont montés",
+        "text": "Chaque étape du montage apparaît dans votre logiciel, avec la photo du travail terminé."
+      },
+      "c6": {
+        "time": "Jour 4 · 10h00",
+        "title": "Retour au magasin, cliente ravie",
+        "text": "La cliente a suivi ses lunettes sur son lien WhatsApp. Elle passe les récupérer, sans avoir appelé une seule fois."
+      },
+      "store": "Magasin",
+      "lab": "Laboratoire",
+      "vMeasure": "Assistant de centrage",
+      "vPd": "Écart pupillaire",
+      "vHeight": "Hauteur",
+      "vReliability": "Fiabilité",
+      "vOrder": "Fiche de suivi créée",
+      "vNoData": "QR imprimé · aucune donnée client",
+      "vTransit": "Remis au transporteur",
+      "vTransitSub": "En route vers le laboratoire",
+      "vDone": "Montage terminé",
+      "vPhoto": "Photo jointe",
+      "vWa": "Bonjour ! Suivez l'avancement de vos lunettes ici :"
+    },
+    "all": {
+      "eyebrow": "Tout-en-un",
+      "title": "Tout ce que vous pouvez faire avec OculoSaaS",
+      "subtitle": "{{count}} outils réunis dans un seul logiciel, de la caisse à la clinique.",
+      "new": "Nouveau",
+      "tools": "outils",
+      "cat": {
+        "sell": {
+          "label": "Vente & caisse",
+          "lead": "Encaissez vite, sans erreur, avec tous les moyens de paiement de votre pays."
+        },
+        "stock": {
+          "label": "Produits & stock",
+          "lead": "Chaque monture et chaque verre, au bon endroit et au bon prix."
+        },
+        "clients": {
+          "label": "Clients & ordonnances",
+          "lead": "Le dossier complet de chaque client, et des raisons de le faire revenir."
+        },
+        "workshop": {
+          "label": "Atelier & laboratoire",
+          "lead": "Des commandes de verres suivies de bout en bout, jusqu'au retour en magasin."
+        },
+        "clinic": {
+          "label": "Clinique",
+          "lead": "Pour les ophtalmologues : patients, examens, rendez-vous et chirurgies."
+        },
+        "manage": {
+          "label": "Gestion & finance",
+          "lead": "Vos chiffres en clair, pour décider vite et bien."
+        },
+        "team": {
+          "label": "Équipe & sécurité",
+          "lead": "Chaque employé voit ce qu'il doit voir, et tout reste tracé."
+        }
+      },
+      "f": {
+        "pos": {
+          "title": "Caisse",
+          "text": "Espèces, carte, chèque ou mobile money (Wave, Orange Money, MTN MoMo…), et plusieurs paiements sur une même vente."
+        },
+        "quotes": {
+          "title": "Devis",
+          "text": "Préparez un devis, puis transformez-le en vente en un clic."
+        },
+        "sales": {
+          "title": "Ventes & retours",
+          "text": "Retrouvez chaque vente, encaissez un reste à payer, gérez retours et annulations."
+        },
+        "cash": {
+          "title": "Sessions de caisse",
+          "text": "Ouverture avec fond de caisse, clôture avec comptage : l'écart s'affiche tout seul."
+        },
+        "docs": {
+          "title": "Factures & reçus",
+          "text": "Factures, devis et reçus en A4 ou A5, imprimés ou enregistrés en PDF."
+        },
+        "insurancePos": {
+          "title": "Part assurance",
+          "text": "La part prise en charge est calculée selon le contrat du client."
+        },
+        "catalog": {
+          "title": "Catalogue montures & verres",
+          "text": "Photos, références, prix d'achat et de vente, seuil d'alerte par produit."
+        },
+        "import": {
+          "title": "Import Excel",
+          "text": "Reprenez votre stock existant : aperçu et correction avant d'enregistrer."
+        },
+        "stock": {
+          "title": "Stock & alertes",
+          "text": "Alertes de stock bas, réceptions, ajustements et historique des mouvements."
+        },
+        "transfer": {
+          "title": "Transferts entre magasins",
+          "text": "Envoyez du stock d'un magasin à l'autre, avec confirmation à l'arrivée."
+        },
+        "inventory": {
+          "title": "Inventaire par scan",
+          "text": "Comptez votre stock en scannant les codes-barres."
+        },
+        "labels": {
+          "title": "Étiquettes code-barres",
+          "text": "Imprimez des étiquettes avec code-barres et prix."
+        },
+        "file": {
+          "title": "Dossier client & ordonnances",
+          "text": "Sphère, cylindre, axe, addition, écarts pupillaires, hauteurs et photo de l'ordonnance."
+        },
+        "measure": {
+          "title": "Mesures à la caméra",
+          "text": "L'assistant de centrage mesure EP, hauteurs, calibre et pont avec un téléphone."
+        },
+        "renewals": {
+          "title": "Renouvellements",
+          "text": "Repérez les clients à relancer (ordonnance ancienne, pas d'achat récent) et écrivez-leur sur WhatsApp."
+        },
+        "birthdays": {
+          "title": "Anniversaires",
+          "text": "Les anniversaires du jour, avec un message WhatsApp prêt à envoyer."
+        },
+        "tracking": {
+          "title": "Lien de suivi client",
+          "text": "Le client suit ses lunettes en ligne, sans aucune donnée médicale affichée."
+        },
+        "clientsIo": {
+          "title": "Import & export clients",
+          "text": "Reprenez votre fichier clients depuis Excel ou exportez-le à tout moment."
+        },
+        "lensOrders": {
+          "title": "Commandes de verres",
+          "text": "11 étapes suivies en liste, en tableau ou en calendrier, avec alertes de retard."
+        },
+        "labSheet": {
+          "title": "Fiche technique labo",
+          "text": "Prescription, verres, monture et mesures sur une page, en PDF, sans les prix."
+        },
+        "oculotrack": {
+          "title": "OculoTrack",
+          "text": "Chaque commande et chaque colis suivis du magasin au labo, avec QR code et historique."
+        },
+        "portal": {
+          "title": "Portail laboratoire",
+          "text": "Votre labo réceptionne et met à jour vos commandes depuis son téléphone."
+        },
+        "repairs": {
+          "title": "SAV & réparations",
+          "text": "Monture, verre, vis, plaquettes : de la réception à la remise au client."
+        },
+        "suppliers": {
+          "title": "Fournisseurs & WhatsApp",
+          "text": "Délais, conditions, commandes en cours et messages WhatsApp prêts à envoyer."
+        },
+        "patients": {
+          "title": "Patients",
+          "text": "Créez un dossier patient, même à partir d'un client de l'optique."
+        },
+        "consult": {
+          "title": "Consultations",
+          "text": "Acuité, réfraction, tension oculaire, fond d'œil, OCT, champ visuel et diagnostic."
+        },
+        "appts": {
+          "title": "Rendez-vous",
+          "text": "Planifiez, confirmez et suivez les présences et les absences."
+        },
+        "surgery": {
+          "title": "Chirurgies",
+          "text": "Œil opéré, chirurgien, date, résultat et notes de suivi."
+        },
+        "clinicDash": {
+          "title": "Tableau de bord clinique",
+          "text": "L'activité de la clinique sur un seul écran."
+        },
+        "dashboard": {
+          "title": "Tableau de bord & prévisions",
+          "text": "Chiffre d'affaires prévu sur 14 jours et produits qui risquent la rupture."
+        },
+        "reports": {
+          "title": "Rapports",
+          "text": "CA, encaissements, panier moyen, comparaison avec la période précédente, exports CSV."
+        },
+        "receivables": {
+          "title": "Créances",
+          "text": "Les restes à payer des clients et les parts dues par les assurances."
+        },
+        "finance": {
+          "title": "Finance",
+          "text": "Recettes, dépenses et résultat du mois, et délai de retour sur investissement."
+        },
+        "expenses": {
+          "title": "Dépenses & versements",
+          "text": "Loyer, salaires, factures… et chaque apport ou retrait d'argent."
+        },
+        "insurance": {
+          "title": "Assurances",
+          "text": "Assureurs, contrats, prises en charge, remboursements et sommes à recevoir."
+        },
+        "hr": {
+          "title": "Personnel",
+          "text": "Vos employés, leur poste, leur magasin et leur activité."
+        },
+        "roles": {
+          "title": "Rôles & permissions",
+          "text": "Créez vos rôles et choisissez précisément ce que chacun peut faire."
+        },
+        "branches": {
+          "title": "Multi-magasins",
+          "text": "Plusieurs magasins dans un même compte, avec un filtre par magasin."
+        },
+        "audit": {
+          "title": "Journal d'activité",
+          "text": "Qui a fait quoi, et quand."
+        },
+        "anomalies": {
+          "title": "Corrections validées",
+          "text": "Une erreur de vente ou de stock se corrige avec une demande, une validation et un historique."
+        },
+        "offline": {
+          "title": "Mode hors connexion",
+          "text": "Coupure de réseau ? Ventes et mouvements de stock sont gardés puis envoyés au retour."
+        },
+        "apps": {
+          "title": "Web, Android, 3 langues",
+          "text": "Ordinateur, tablette ou téléphone, en français, anglais ou portugais."
+        },
+        "setup": {
+          "title": "Démarrage guidé",
+          "text": "9 étapes pour configurer votre boutique, de l'équipe aux documents."
+        }
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

@@ -462,7 +462,346 @@
     "planGrowthDesc": "Todas as funcionalidades, multiagência e utilizadores ilimitados.",
     "testi1": "O OculoSaaS transformou a nossa organização: marcações, processos clínicos e caixa num só lugar.",
     "testi2": "Cobrar por telemóvel diretamente na caixa era exatamente o que precisávamos.",
-    "testi3": "Giro as minhas lojas a partir do telemóvel. Os relatórios mostram claramente onde ganho dinheiro."
+    "testi3": "Giro as minhas lojas a partir do telemóvel. Os relatórios mostram claramente onde ganho dinheiro.",
+    "navFaq": "FAQ",
+    "heroShotAlt": "Painel OculoTrack: encomendas em trânsito, nos fornecedores, em montagem",
+    "heroPhoneAlt": "Página de acompanhamento enviada ao cliente",
+    "heroChipTitle": "Montagem concluída",
+    "heroChipText": "Atualizado pelo laboratório",
+    "tour": {
+      "eyebrow": "Novo",
+      "title": "Da loja ao laboratório, cada armação acompanhada",
+      "subtitle": "As novas ferramentas do OculoSaaS, tal como aparecem no software.",
+      "track": {
+        "label": "OculoTrack",
+        "title": "Onde está cada encomenda, num relance",
+        "text": "Encomendas em trânsito, no fornecedor, em montagem ou para devolver: tudo num só ecrã.",
+        "p1": "Número de acompanhamento único para cada encomenda",
+        "p2": "Data, hora e responsável em cada etapa",
+        "p3": "Alertas de atraso e anomalias sinalizadas automaticamente",
+        "p4": "Código QR na encomenda, sem dados do cliente",
+        "alt": "Painel OculoTrack"
+      },
+      "lab": {
+        "label": "Portal do laboratório",
+        "title": "O laboratório atualiza pelo telemóvel",
+        "text": "Convide o seu laboratório: ele lê a encomenda e avança a montagem, sem lhe ligar.",
+        "p1": "Conta separada: o laboratório só vê as suas encomendas",
+        "p2": "Receção verificada armação a armação",
+        "p3": "Etapas de montagem e foto do trabalho concluído",
+        "p4": "Funciona mesmo com rede instável",
+        "alt": "Portal do laboratório no telemóvel: etapas de montagem"
+      },
+      "client": {
+        "label": "Acompanhamento do cliente",
+        "title": "Os seus clientes acompanham os seus óculos",
+        "text": "Um link enviado por WhatsApp num clique. O cliente vê onde estão os óculos, sem ligar para a loja.",
+        "p1": "Link privado, próprio de cada encomenda",
+        "p2": "Etapas simples de entender",
+        "p3": "Sem receita nem dados médicos visíveis",
+        "p4": "Sem conta nem aplicação para instalar",
+        "alt": "Página de acompanhamento dos óculos vista pelo cliente"
+      },
+      "measure": {
+        "label": "Assistente de centragem",
+        "title": "Medidas tiradas com a câmara",
+        "text": "Distâncias pupilares, alturas, calibre e ponte, medidos com o telemóvel ou tablet e verificados pelo ótico.",
+        "p1": "Orientação em direto e círculo ajustado à cabeça",
+        "p2": "Calibração com cartão bancário ou armação",
+        "p3": "Marcadores ajustáveis e índice de fiabilidade",
+        "p4": "Medidas incluídas na ficha do laboratório",
+        "alt": "Assistente de centragem do OculoSaaS"
+      },
+      "suppliers": {
+        "label": "Fornecedores & WhatsApp",
+        "title": "A mensagem ao fornecedor já está escrita",
+        "text": "Pedido de preço, encomenda, lembrete ou fatura: escolha, verifique, envie por WhatsApp.",
+        "p1": "Mensagens em francês, inglês ou português",
+        "p2": "Prazos de entrega e condições de pagamento",
+        "p3": "Encomendas em curso e histórico por fornecedor",
+        "p4": "Importação Excel do stock, preços reconhecidos automaticamente",
+        "alt": "Mensagem WhatsApp pré-preenchida para um fornecedor"
+      }
+    },
+    "faq": {
+      "title": "Perguntas frequentes",
+      "q1": "É preciso instalar alguma coisa?",
+      "a1": "Não. O OculoSaaS funciona no navegador, em computador, tablet e telemóvel. Também existe uma aplicação Android.",
+      "q2": "Posso importar o meu stock atual?",
+      "a2": "Sim. Importe o seu ficheiro Excel: as colunas de referência, preço de compra e preço de venda são reconhecidas, e pode corrigi-las antes de validar.",
+      "q3": "Como é que o meu laboratório acede ao portal?",
+      "a3": "Convida-o a partir do OculoTrack ou da ficha do fornecedor. Ele cria a palavra-passe e só vê as encomendas que lhe envia.",
+      "q4": "As medidas com a câmara são fiáveis?",
+      "a4": "O assistente mostra um índice de fiabilidade para cada medida. O ótico verifica e ajusta os marcadores antes de guardar: a decisão final é sua.",
+      "q5": "Quantas lojas posso gerir?",
+      "a5": "Até 2 lojas com Starter, 10 com Standard e sem limite com Growth.",
+      "q6": "Os meus dados estão protegidos?",
+      "a6": "Cada estabelecimento tem os seus próprios dados, isolados. Os dados sensíveis são encriptados e guardados automaticamente."
+    },
+    "heroToast1": "Encomenda lida no laboratório",
+    "heroToast2": "Montagem concluída",
+    "heroToast3": "Link de acompanhamento enviado ao cliente",
+    "heroToastSub": "agora mesmo",
+    "story": {
+      "eyebrow": "Uma encomenda, do início ao fim",
+      "title": "A viagem de um par de óculos",
+      "subtitle": "Deslize: acompanhe uma encomenda da loja ao laboratório, até ao sorriso do cliente.",
+      "step": "Etapa",
+      "c1": {
+        "time": "Dia 1 · 09h12",
+        "title": "A cliente escolhe a armação",
+        "text": "O ótico tira as medidas com a câmara do tablet. Distâncias pupilares e alturas são calculadas e verificadas."
+      },
+      "c2": {
+        "time": "Dia 1 · 09h40",
+        "title": "A encomenda recebe o seu número",
+        "text": "É criado um número de acompanhamento único e um código QR é colado na encomenda. Sem dados do cliente."
+      },
+      "c3": {
+        "time": "Dia 1 · 11h00",
+        "title": "A encomenda parte para o laboratório",
+        "text": "Entregue ao transportador, é acompanhada etapa a etapa. Se atrasar, recebe um alerta."
+      },
+      "c4": {
+        "time": "Dia 2 · 08h30",
+        "title": "O laboratório lê e verifica",
+        "text": "Pelo telemóvel, o laboratório lê o QR e verifica cada armação. Um problema? Sinaliza logo."
+      },
+      "c5": {
+        "time": "Dia 3 · 16h45",
+        "title": "As lentes são montadas",
+        "text": "Cada etapa da montagem aparece no seu software, com a foto do trabalho concluído."
+      },
+      "c6": {
+        "time": "Dia 4 · 10h00",
+        "title": "De volta à loja, cliente satisfeita",
+        "text": "A cliente acompanhou os óculos pelo link de WhatsApp. Vem buscá-los sem ter ligado uma única vez."
+      },
+      "store": "Loja",
+      "lab": "Laboratório",
+      "vMeasure": "Assistente de centragem",
+      "vPd": "Distância pupilar",
+      "vHeight": "Altura",
+      "vReliability": "Fiabilidade",
+      "vOrder": "Ficha de acompanhamento criada",
+      "vNoData": "QR impresso · sem dados do cliente",
+      "vTransit": "Entregue ao transportador",
+      "vTransitSub": "A caminho do laboratório",
+      "vDone": "Montagem concluída",
+      "vPhoto": "Foto anexada",
+      "vWa": "Olá! Acompanhe os seus óculos aqui:"
+    },
+    "all": {
+      "eyebrow": "Tudo-em-um",
+      "title": "Tudo o que pode fazer com o OculoSaaS",
+      "subtitle": "{{count}} ferramentas num único software, da caixa à clínica.",
+      "new": "Novo",
+      "tools": "ferramentas",
+      "cat": {
+        "sell": {
+          "label": "Vendas & caixa",
+          "lead": "Receba rápido e sem erros, com todos os meios de pagamento do seu país."
+        },
+        "stock": {
+          "label": "Produtos & stock",
+          "lead": "Cada armação e cada lente, no lugar certo e ao preço certo."
+        },
+        "clients": {
+          "label": "Clientes & receitas",
+          "lead": "O processo completo de cada cliente, e motivos para ele voltar."
+        },
+        "workshop": {
+          "label": "Oficina & laboratório",
+          "lead": "Encomendas de lentes acompanhadas do início ao fim, até voltarem à loja."
+        },
+        "clinic": {
+          "label": "Clínica",
+          "lead": "Para oftalmologistas: pacientes, exames, consultas e cirurgias."
+        },
+        "manage": {
+          "label": "Gestão & finanças",
+          "lead": "Os seus números claros, para decidir depressa e bem."
+        },
+        "team": {
+          "label": "Equipa & segurança",
+          "lead": "Cada funcionário vê o que precisa, e tudo fica registado."
+        }
+      },
+      "f": {
+        "pos": {
+          "title": "Caixa",
+          "text": "Dinheiro, cartão, cheque ou mobile money (Wave, Orange Money, MTN MoMo…), e vários pagamentos na mesma venda."
+        },
+        "quotes": {
+          "title": "Orçamentos",
+          "text": "Prepare um orçamento e transforme-o em venda num clique."
+        },
+        "sales": {
+          "title": "Vendas & devoluções",
+          "text": "Encontre cada venda, receba o valor em falta, gira devoluções e anulações."
+        },
+        "cash": {
+          "title": "Sessões de caixa",
+          "text": "Abertura com fundo de caixa, fecho com contagem: a diferença aparece sozinha."
+        },
+        "docs": {
+          "title": "Faturas & recibos",
+          "text": "Faturas, orçamentos e recibos em A4 ou A5, impressos ou em PDF."
+        },
+        "insurancePos": {
+          "title": "Parte do seguro",
+          "text": "A parte coberta é calculada segundo o contrato do cliente."
+        },
+        "catalog": {
+          "title": "Catálogo de armações & lentes",
+          "text": "Fotos, referências, preços de compra e venda, limite de alerta por produto."
+        },
+        "import": {
+          "title": "Importação Excel",
+          "text": "Importe o seu stock atual: pré-visualize e corrija antes de guardar."
+        },
+        "stock": {
+          "title": "Stock & alertas",
+          "text": "Alertas de stock baixo, receções, ajustes e histórico de movimentos."
+        },
+        "transfer": {
+          "title": "Transferências entre lojas",
+          "text": "Envie stock de uma loja para outra, com confirmação à chegada."
+        },
+        "inventory": {
+          "title": "Inventário por leitura",
+          "text": "Conte o stock lendo os códigos de barras."
+        },
+        "labels": {
+          "title": "Etiquetas com código de barras",
+          "text": "Imprima etiquetas com código de barras e preço."
+        },
+        "file": {
+          "title": "Processo do cliente & receitas",
+          "text": "Esfera, cilindro, eixo, adição, distâncias pupilares, alturas e foto da receita."
+        },
+        "measure": {
+          "title": "Medidas com a câmara",
+          "text": "O assistente de centragem mede DP, alturas, calibre e ponte com um telemóvel."
+        },
+        "renewals": {
+          "title": "Renovações",
+          "text": "Identifique clientes a recontactar (receita antiga, sem compra recente) e escreva-lhes por WhatsApp."
+        },
+        "birthdays": {
+          "title": "Aniversários",
+          "text": "Os aniversários do dia, com uma mensagem WhatsApp pronta a enviar."
+        },
+        "tracking": {
+          "title": "Link de acompanhamento",
+          "text": "O cliente acompanha os óculos online, sem dados médicos visíveis."
+        },
+        "clientsIo": {
+          "title": "Importação & exportação de clientes",
+          "text": "Importe a sua lista de clientes do Excel ou exporte-a a qualquer momento."
+        },
+        "lensOrders": {
+          "title": "Encomendas de lentes",
+          "text": "11 etapas acompanhadas em lista, quadro ou calendário, com alertas de atraso."
+        },
+        "labSheet": {
+          "title": "Ficha técnica do laboratório",
+          "text": "Receita, lentes, armação e medidas numa página, em PDF, sem preços."
+        },
+        "oculotrack": {
+          "title": "OculoTrack",
+          "text": "Cada encomenda e volume acompanhados da loja ao laboratório, com QR e histórico."
+        },
+        "portal": {
+          "title": "Portal do laboratório",
+          "text": "O seu laboratório recebe e atualiza as encomendas pelo telemóvel."
+        },
+        "repairs": {
+          "title": "Pós-venda & reparações",
+          "text": "Armação, lente, parafuso, plaquetas: da receção à entrega."
+        },
+        "suppliers": {
+          "title": "Fornecedores & WhatsApp",
+          "text": "Prazos, condições, encomendas em curso e mensagens WhatsApp prontas."
+        },
+        "patients": {
+          "title": "Pacientes",
+          "text": "Crie um processo de paciente, mesmo a partir de um cliente da ótica."
+        },
+        "consult": {
+          "title": "Consultas",
+          "text": "Acuidade, refração, pressão ocular, fundo de olho, OCT, campo visual e diagnóstico."
+        },
+        "appts": {
+          "title": "Consultas marcadas",
+          "text": "Agende, confirme e acompanhe presenças e faltas."
+        },
+        "surgery": {
+          "title": "Cirurgias",
+          "text": "Olho operado, cirurgião, data, resultado e notas de acompanhamento."
+        },
+        "clinicDash": {
+          "title": "Painel da clínica",
+          "text": "A atividade da clínica num só ecrã."
+        },
+        "dashboard": {
+          "title": "Painel & previsões",
+          "text": "Faturação prevista a 14 dias e produtos em risco de rutura."
+        },
+        "reports": {
+          "title": "Relatórios",
+          "text": "Faturação, recebimentos, cesto médio, comparação com o período anterior, exportação CSV."
+        },
+        "receivables": {
+          "title": "Créditos",
+          "text": "Valores em dívida dos clientes e partes devidas pelos seguros."
+        },
+        "finance": {
+          "title": "Finanças",
+          "text": "Receitas, despesas e resultado do mês, e prazo de retorno do investimento."
+        },
+        "expenses": {
+          "title": "Despesas & depósitos",
+          "text": "Renda, salários, faturas… e cada entrada ou saída de dinheiro."
+        },
+        "insurance": {
+          "title": "Seguros",
+          "text": "Seguradoras, contratos, comparticipações, reembolsos e valores a receber."
+        },
+        "hr": {
+          "title": "Pessoal",
+          "text": "Os seus funcionários, função, loja e atividade."
+        },
+        "roles": {
+          "title": "Funções & permissões",
+          "text": "Crie funções e escolha exatamente o que cada uma pode fazer."
+        },
+        "branches": {
+          "title": "Multi-loja",
+          "text": "Várias lojas na mesma conta, com filtro por loja."
+        },
+        "audit": {
+          "title": "Registo de atividade",
+          "text": "Quem fez o quê, e quando."
+        },
+        "anomalies": {
+          "title": "Correções validadas",
+          "text": "Um erro de venda ou de stock corrige-se com um pedido, uma validação e um histórico."
+        },
+        "offline": {
+          "title": "Modo offline",
+          "text": "Sem rede? Vendas e movimentos de stock ficam guardados e são enviados no regresso."
+        },
+        "apps": {
+          "title": "Web, Android, 3 línguas",
+          "text": "Computador, tablet ou telemóvel, em francês, inglês ou português."
+        },
+        "setup": {
+          "title": "Arranque guiado",
+          "text": "9 etapas para configurar a loja, da equipa aos documentos."
+        }
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

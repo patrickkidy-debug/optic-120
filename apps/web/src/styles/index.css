@@ -229,6 +229,36 @@
     }
   }
 
+  /* Halo qui suit le pointeur (cartes de l'accueil) */
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(124, 58, 237, 0.12), transparent 60%);
+  }
+  .spotlight:hover::before {
+    opacity: 1;
+  }
+
+  /* Changement d'onglet (visite produit de l'accueil) */
+  .tour-fade {
+    animation: tourfade 260ms ease-out;
+  }
+  @keyframes tourfade {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
   /* Flottement doux + dégradé animé */
   .float-slow {
     animation: floaty 7s ease-in-out infinite;
@@ -409,6 +439,7 @@
       transition: none;
     }
     .float-slow,
+    .tour-fade,
     .animate-gradient,
     .mq-track,
     .mini-bar,

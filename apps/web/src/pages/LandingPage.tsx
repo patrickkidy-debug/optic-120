@@ -1,28 +1,42 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ShieldCheck,
-  Stethoscope,
-  Wallet,
   Check,
   ArrowRight,
   Menu,
   X,
   Star,
-  CalendarDays,
-  LineChart,
   Lock,
   CloudUpload,
   Database,
   Gauge,
-  Network,
   Smartphone,
   FolderX,
   EyeOff,
   Hourglass,
+  PackageSearch,
+  FlaskConical,
+  MessageCircle,
+  ScanFace,
+  Truck,
+  ChevronDown,
 } from 'lucide-react';
 import clsx from 'clsx';
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useInView as useMotionInView,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
+import { StorySection, useScrollRoot } from './landing/Story';
+import { AllFeatures } from './landing/AllFeatures';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -92,23 +106,26 @@ const NAV = [
   { href: '#tarifs', key: 'landing.navPricing' },
 ];
 
-const ADVANTAGES = [
-  { icon: Stethoscope, key: 'adv1', tone: 'primary' as const },
-  { icon: Wallet, key: 'adv2', tone: 'accent' as const },
-  { icon: Network, key: 'adv3', tone: 'cyan' as const },
-];
-
 const PROBLEMS = [
   { icon: FolderX, key: 'prob1', tone: 'accent' as const },
   { icon: EyeOff, key: 'prob2', tone: 'primary' as const },
   { icon: Hourglass, key: 'prob3', tone: 'cyan' as const },
 ];
 
-const SHOWCASE = [
-  { icon: CalendarDays, key: 'show1', tone: 'primary' as const },
-  { icon: LineChart, key: 'show2', tone: 'cyan' as const },
-  { icon: Wallet, key: 'show3', tone: 'accent' as const },
-];
+/**
+ * Visite produit : vraies captures du logiciel (public/images/landing, WebP).
+ * Dimensions déclarées pour réserver la place avant chargement (pas de CLS).
+ */
+const TOUR = [
+  { key: 'track', icon: PackageSearch, kind: 'browser', url: 'oculosaas.com/optique/oculotrack', img: '/images/landing/oculotrack.webp', w: 1400, h: 840 },
+  { key: 'lab', icon: FlaskConical, kind: 'phones', img: '/images/landing/portail.webp', img2: '/images/landing/portail-montage.webp', w: 520, h: 1040 },
+  { key: 'client', icon: MessageCircle, kind: 'phone', img: '/images/landing/suivi-client.webp', w: 520, h: 1040 },
+  { key: 'measure', icon: ScanFace, kind: 'browser', url: 'oculosaas.com/optique/mesures', img: '/images/landing/assistant.webp', w: 1400, h: 840 },
+  { key: 'suppliers', icon: Truck, kind: 'browser', url: 'oculosaas.com/fournisseurs', img: '/images/landing/fournisseur-whatsapp.webp', w: 1100, h: 717 },
+] as const;
+
+const FAQ = ['1', '2', '3', '4', '5', '6'] as const;
+const TOUR_DELAY = 6500;
 
 const PAYMENTS = [
   { label: 'Wave', short: 'Wave', bg: '#1DC3F5', fg: '#00263A' },
@@ -195,147 +212,302 @@ function Reveal({
   );
 }
 
-/** Maquette de tableau de bord (CSS pur, sans dépendance ni image externe). */
-function DashboardMock() {
-  const bars = [40, 65, 35, 80, 95, 60, 50];
+/** Cadre de navigateur autour d'une vraie capture du logiciel. */
+function BrowserFrame({
+  src,
+  w,
+  h,
+  alt,
+  url,
+  eager = false,
+}: {
+  src: string;
+  w: number;
+  h: number;
+  alt: string;
+  url: string;
+  eager?: boolean;
+}) {
   return (
-    <div className="relative">
-      <div className="glass-card rounded-[32px] p-4 shadow-card-lg">
-        <div className="overflow-hidden rounded-2xl border border-line bg-bg-subtle">
-          <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
-            <div className="flex gap-2">
-              <span className="h-3 w-3 rounded-full bg-danger/50" />
-              <span className="h-3 w-3 rounded-full bg-accent/50" />
-              <span className="h-3 w-3 rounded-full bg-primary/50" />
-            </div>
-            <div className="font-mono text-xs text-content-muted">oculosaas.com/dashboard</div>
-            <div className="w-10" />
-          </div>
-          <div className="grid grid-cols-3 gap-4 p-6">
-            <div className="col-span-3 rounded-xl border border-primary/10 bg-primary/5 p-4">
-              <div className="mb-3 text-xs font-bold uppercase tracking-wide text-primary">
-                {tr('ui.LandingPage.fluxPatientsHebdomadaire')}
-              </div>
-              <div className="flex h-24 items-end gap-2">
-                {bars.map((h, i) => (
-                  <div
-                    key={i}
-                    className="mini-bar flex-1 rounded-t-sm bg-gradient-to-t from-primary/40 to-primary/80"
-                    style={{ height: `${h}%`, animationDelay: `${i * 0.18}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.ventesJour')}</div>
-              <div className="mt-1 text-xl font-bold text-content">450k</div>
-              <div className="text-[10px] text-cyan">{tr('ui.LandingPage.n12VsHier')}</div>
-            </div>
-            <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.consultations')}</div>
-              <div className="mt-1 text-xl font-bold text-content">18</div>
-              <div className="text-[10px] text-accent">{tr('ui.LandingPage.n8Completees')}</div>
-            </div>
-            <div className="rounded-xl border border-line bg-surface-2/40 p-3">
-              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.alertesStock')}</div>
-              <div className="mt-1 text-xl font-bold text-danger">3</div>
-              <div className="text-[10px] text-content-muted">{tr('ui.LandingPage.lentillesCr39')}</div>
-            </div>
-          </div>
+    <div className="glass-card rounded-[28px] p-2.5 shadow-card-lg">
+      <div className="overflow-hidden rounded-[20px] border border-line bg-surface">
+        <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-danger/50" />
+          <span className="h-2.5 w-2.5 rounded-full bg-accent/50" />
+          <span className="h-2.5 w-2.5 rounded-full bg-primary/50" />
+          <span className="ml-3 truncate rounded-md bg-surface-2 px-3 py-1 font-mono text-[11px] text-content-muted">
+            {url}
+          </span>
         </div>
+        <img
+          src={src}
+          width={w}
+          height={h}
+          alt={alt}
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="async"
+          // React 18 ne connaît pas encore fetchPriority : attribut HTML en minuscules.
+          {...{ fetchpriority: eager ? 'high' : 'auto' }}
+          className="block h-auto w-full"
+        />
       </div>
-      <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[110%] w-[110%] -translate-x-1/2 -translate-y-1/2 bg-primary/15" />
     </div>
   );
 }
 
-const CATALOG_ITEMS = [
-  { get brand() { return tr('ui.LandingPage.arnetteSun'); }, name: 'Arnette Sun', ref: 'MON-942HZ', get price() { return tr('ui.LandingPage.n0Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/sunglasses-red-tortoise.jpg' },
-  { brand: '—', name: 'Gucci', ref: 'MON-HQNX1', get price() { return tr('ui.LandingPage.n180000Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/tortoiseshell-browline.jpg' },
-  { brand: '—', name: 'Dolce et Gabbana', get ref() { return tr('ui.LandingPage.plk13'); }, get price() { return tr('ui.LandingPage.n59000Fcfa'); }, badge: 'Disponible · 11', ok: true, img: '/images/montures/tortoiseshell-oval.jpg' },
-  { get brand() { return tr('ui.LandingPage.rayBan'); }, name: 'Henry Queen', ref: 'H4156LK', get price() { return tr('ui.LandingPage.n30000Fcfa'); }, badge: 'Rupture', ok: false, img: '/images/montures/black-rectangular.jpg' },
-  { get brand() { return tr('ui.LandingPage.arnette'); }, name: 'Arnette', ref: 'ARN789', get price() { return tr('ui.LandingPage.n196000Fcfa'); }, badge: 'Disponible · 32', ok: true, img: '/images/montures/two-eyewear-white.jpg' },
-];
-
-function CatalogMock() {
+/** Cadre de téléphone autour d'une capture mobile (portail labo, suivi client). */
+function PhoneFrame({ src, alt, className, eager = false }: { src: string; alt: string; className?: string; eager?: boolean }) {
   return (
-    <div className="relative">
-      <div className="glass-card rounded-[32px] p-4 shadow-card-lg">
-        <div className="overflow-hidden rounded-2xl border border-line bg-bg-subtle">
-          <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-3">
-            <div className="flex gap-2">
-              <span className="h-3 w-3 rounded-full bg-danger/50" />
-              <span className="h-3 w-3 rounded-full bg-accent/50" />
-              <span className="h-3 w-3 rounded-full bg-primary/50" />
+    <div className={clsx('rounded-[34px] bg-[#0f172a] p-2 shadow-card-lg', className)}>
+      <img
+        src={src}
+        width={520}
+        height={1040}
+        alt={alt}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        className="block h-auto w-full rounded-[27px]"
+      />
+    </div>
+  );
+}
+
+/** Barre de lecture en haut de page (défilement de #root). */
+function ScrollProgress() {
+  const root = useScrollRoot();
+  const { scrollYProgress } = useScroll({ container: root });
+  const scaleX = useSpring(scrollYProgress, { stiffness: 160, damping: 30, mass: 0.3 });
+  return <motion.div className="fixed inset-x-0 top-0 z-[60] h-[3px] origin-left bg-brand" style={{ scaleX }} aria-hidden />;
+}
+
+/** Chiffre clé qui compte jusqu'à sa valeur à l'entrée dans l'écran (« 100 % », « 10+ »). */
+function CountUp({ value }: { value: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const root = useScrollRoot();
+  const inView = useMotionInView(ref, { root, once: true });
+  const reduce = useReducedMotion();
+  const m = /^(\d+)(\D.*)?$/.exec(value);
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!m || !inView || reduce) return;
+    const c = animate(0, Number(m[1]), { duration: 1.4, ease: [0.16, 0.84, 0.3, 1], onUpdate: (v) => setN(Math.round(v)) });
+    return () => c.stop();
+  }, [inView]); // eslint-disable-line react-hooks/exhaustive-deps
+  // « 24/7 » n'est pas une quantité : affiché tel quel.
+  if (!m || m[2]?.startsWith('/') || reduce) return <span ref={ref}>{value}</span>;
+  return (
+    <span ref={ref} className="tabular-nums">
+      {n}
+      {m[2] ?? ''}
+    </span>
+  );
+}
+
+const HERO_TOASTS = ['heroToast1', 'heroToast2', 'heroToast3'] as const;
+
+/** Visuel du hero : tableau de bord OculoTrack + suivi client sur téléphone. */
+function HeroVisual() {
+  const { t } = useTranslation();
+  const reduce = useReducedMotion();
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const rotateY = useSpring(useTransform(px, [-0.5, 0.5], [-7, 7]), { stiffness: 120, damping: 18 });
+  const rotateX = useSpring(useTransform(py, [-0.5, 0.5], [6, -6]), { stiffness: 120, damping: 18 });
+  const phoneX = useSpring(useTransform(px, [-0.5, 0.5], [-14, 14]), { stiffness: 120, damping: 18 });
+  const [toast, setToast] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const id = window.setInterval(() => setToast((v) => (v + 1) % HERO_TOASTS.length), 2800);
+    return () => window.clearInterval(id);
+  }, [reduce]);
+
+  function onMove(e: PointerEvent<HTMLDivElement>) {
+    if (reduce || e.pointerType !== 'mouse') return;
+    const b = e.currentTarget.getBoundingClientRect();
+    px.set((e.clientX - b.left) / b.width - 0.5);
+    py.set((e.clientY - b.top) / b.height - 0.5);
+  }
+
+  return (
+    <motion.div
+      className="relative pb-16 sm:pb-10 lg:pl-6"
+      style={{ rotateX, rotateY, transformPerspective: 1400 }}
+      onPointerMove={onMove}
+      onPointerLeave={() => {
+        px.set(0);
+        py.set(0);
+      }}
+      initial={reduce ? false : { opacity: 0, y: 40, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.9, ease: [0.16, 0.84, 0.3, 1] }}
+    >
+      <BrowserFrame
+        src="/images/landing/oculotrack.webp"
+        w={1400}
+        h={840}
+        alt={t('landing.heroShotAlt')}
+        url="oculosaas.com/optique/oculotrack"
+        eager
+      />
+      <motion.div className="absolute -bottom-2 left-0 w-[31%] max-w-[180px] sm:-left-2 lg:-left-4" style={{ x: phoneX }}>
+        <PhoneFrame src="/images/landing/suivi-client.webp" alt={t('landing.heroPhoneAlt')} className="float-slow" eager />
+      </motion.div>
+      {/* Notifications « en direct » : ce que le magasin reçoit au fil de la journée */}
+      <div className="absolute -top-6 right-2 hidden h-[62px] w-[290px] sm:block" aria-hidden>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={toast}
+            className="absolute right-0 top-0 flex items-center gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 shadow-card-lg backdrop-blur"
+            initial={{ opacity: 0, y: -18, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 14, scale: 0.95, transition: { duration: 0.2 } }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+          >
+            <span className="relative grid h-9 w-9 place-items-center rounded-full bg-success/15">
+              <Check className="h-5 w-5 text-success" />
+              <span className="live-dot absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-success" />
+            </span>
+            <div>
+              <div className="whitespace-nowrap text-sm font-bold text-content">{t(`landing.${HERO_TOASTS[toast]}`)}</div>
+              <div className="text-xs text-content-muted">OT-2026-000003 · {t('landing.heroToastSub')}</div>
             </div>
-            <div className="font-mono text-xs text-content-muted">oculosaas.com/optique/produits</div>
-            <div className="w-10" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[110%] w-[110%] -translate-x-1/2 -translate-y-1/2 bg-primary/15" />
+    </motion.div>
+  );
+}
+
+/** Visite produit à onglets (clavier : flèches gauche/droite). */
+function ProductTour() {
+  const { t } = useTranslation();
+  const [active, setActive] = useState(0);
+  // Défilement automatique tant que le visiteur n'a pas choisi un onglet.
+  const [auto, setAuto] = useState(true);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const sectionRef = useRef<HTMLElement>(null);
+  const root = useScrollRoot();
+  const visible = useMotionInView(sectionRef, { root, amount: 0.35 });
+  const reduce = useReducedMotion();
+  const playing = auto && visible && !reduce;
+  useEffect(() => {
+    if (!playing) return;
+    const id = window.setTimeout(() => setActive((v) => (v + 1) % TOUR.length), TOUR_DELAY);
+    return () => window.clearTimeout(id);
+  }, [playing, active]);
+  const item = TOUR[active];
+  const alt = t(`landing.tour.${item.key}.alt`);
+
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const next = (active + (e.key === 'ArrowRight' ? 1 : TOUR.length - 1)) % TOUR.length;
+    setAuto(false);
+    setActive(next);
+    tabs.current[next]?.focus();
+  }
+
+  return (
+    <section ref={sectionRef} id="apercu" className="scroll-mt-20 px-4 py-24 sm:px-8">
+      <div className="mx-auto max-w-[1280px]">
+        <Reveal className="mb-10 text-center">
+          <span className="mb-4 inline-flex items-center rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent">
+            {t('landing.tour.eyebrow')}
+          </span>
+          <h2 className="mx-auto max-w-3xl text-balance font-display text-3xl font-extrabold text-content sm:text-4xl">
+            {t('landing.tour.title')}
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-content-muted">{t('landing.tour.subtitle')}</p>
+        </Reveal>
+
+        <div
+          role="tablist"
+          aria-label={t('landing.tour.title')}
+          onKeyDown={onKeyDown}
+          className="mx-auto mb-12 flex max-w-5xl flex-wrap justify-center gap-2"
+        >
+          {TOUR.map((it, i) => (
+            <button
+              key={it.key}
+              ref={(el) => {
+                tabs.current[i] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`tour-tab-${it.key}`}
+              aria-selected={i === active}
+              aria-controls="tour-panel"
+              tabIndex={i === active ? 0 : -1}
+              onClick={() => {
+                setAuto(false);
+                setActive(i);
+              }}
+              className={clsx(
+                'relative inline-flex min-h-[44px] cursor-pointer items-center gap-2 overflow-hidden rounded-full border px-4 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
+                i === active
+                  ? 'border-transparent bg-brand text-white shadow-card'
+                  : 'border-line bg-surface text-content-muted hover:border-primary/30 hover:text-content',
+              )}
+            >
+              <it.icon className="h-4 w-4" aria-hidden />
+              {t(`landing.tour.${it.key}.label`)}
+              {i === active && playing && (
+                <motion.span
+                  key={active}
+                  className="absolute bottom-0 left-0 h-[3px] bg-white/70"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: TOUR_DELAY / 1000, ease: 'linear' }}
+                  aria-hidden
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div
+          key={item.key}
+          id="tour-panel"
+          role="tabpanel"
+          aria-labelledby={`tour-tab-${item.key}`}
+          className="tour-fade grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16"
+        >
+          <div className="order-2 lg:order-1">
+            <h3 className="text-balance font-display text-2xl font-extrabold text-content sm:text-3xl">
+              {t(`landing.tour.${item.key}.title`)}
+            </h3>
+            <p className="mt-4 text-lg leading-relaxed text-content-muted">{t(`landing.tour.${item.key}.text`)}</p>
+            <ul className="mt-6 flex flex-col gap-3.5">
+              {(['p1', 'p2', 'p3', 'p4'] as const).map((p) => (
+                <li key={p} className="flex items-start gap-3 text-content">
+                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10">
+                    <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  </span>
+                  {t(`landing.tour.${item.key}.${p}`)}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="p-5">
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {[tr('ui.LandingPage.tous'), tr('ui.LandingPage.montures'), tr('ui.LandingPage.verres'), tr('ui.LandingPage.lentilles'), tr('ui.LandingPage.accessoires')].map((tab) => (
-                <span
-                  key={tab}
-                  className={clsx(
-                    'rounded-full px-3 py-1 text-[10px] font-bold',
-                    tab === 'Montures' ? 'bg-primary text-white' : 'bg-surface-2/70 text-content-muted',
-                  )}
-                >
-                  {tab}
-                </span>
-              ))}
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-content-muted">
-              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">{tr('ui.LandingPage.toutesMarques')}</span>
-              <span className="rounded-lg border border-line bg-surface px-2.5 py-1">{tr('ui.LandingPage.toutesFormes')}</span>
-              <span className="rounded-lg border border-primary/40 px-2.5 py-1 text-primary">{tr('ui.LandingPage.enStock')}</span>
-              <span className="ml-auto text-content-faint">{tr('ui.LandingPage.n5MontureS')}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {CATALOG_ITEMS.map((it, i) => (
-                <div key={it.ref} className="overflow-hidden rounded-xl border border-line bg-surface">
-                  <div className="relative h-14 overflow-hidden bg-surface-2/60">
-                    {it.badge && (
-                      <span
-                        className={clsx(
-                          'absolute left-1.5 top-1.5 z-10 rounded-full px-1.5 py-[1px] text-[7px] font-bold',
-                          it.ok ? 'bg-success/90 text-white' : 'bg-danger/90 text-white',
-                        )}
-                      >
-                        {it.badge}
-                      </span>
-                    )}
-                    <img
-                      src={it.img}
-                      alt={it.name}
-                      width={200}
-                      height={120}
-                      className="h-full w-full object-cover"
-                      loading="eager"
-                      // Visible sans défilement (hero) : priorité haute sur les 2 premières,
-                      // qui déterminent le LCP (Largest Contentful Paint) de la page.
-                      fetchPriority={i < 2 ? 'high' : 'auto'}
-                    />
-                  </div>
-                  <div className="p-2">
-                    <div className="truncate text-[9px] font-bold uppercase tracking-wide text-primary">
-                      {it.brand}
-                    </div>
-                    <div className="truncate text-[10.5px] font-bold text-content">{it.name}</div>
-                    {it.price && (
-                      <div className="mt-1 font-display text-[10.5px] font-extrabold text-content">
-                        {it.price}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+
+          <div className="relative order-1 lg:order-2">
+            {item.kind === 'browser' && (
+              <BrowserFrame src={item.img} w={item.w} h={item.h} alt={alt} url={item.url} />
+            )}
+            {item.kind === 'phone' && (
+              <PhoneFrame src={item.img} alt={alt} className="mx-auto w-[62%] max-w-[300px]" />
+            )}
+            {item.kind === 'phones' && (
+              <div className="flex items-start justify-center gap-4 sm:gap-6">
+                <PhoneFrame src={item.img} alt={alt} className="w-[46%] max-w-[270px]" />
+                <PhoneFrame src={item.img2} alt="" className="mt-10 w-[46%] max-w-[270px]" />
+              </div>
+            )}
+            <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[90%] w-[90%] -translate-x-1/2 -translate-y-1/2 bg-accent/12" />
           </div>
         </div>
       </div>
-      <div className="glow-blob absolute left-1/2 top-1/2 -z-10 h-[110%] w-[110%] -translate-x-1/2 -translate-y-1/2 bg-accent/15" />
-    </div>
+    </section>
   );
 }
 
@@ -345,8 +517,20 @@ export function LandingPage() {
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const year = new Date().getFullYear();
 
+  /** Halo qui suit le pointeur sur les cartes `.spotlight`. */
+  function onSpotlight(e: PointerEvent<HTMLElement>) {
+    const card = (e.target as HTMLElement).closest<HTMLElement>('.spotlight');
+    if (!card) return;
+    const b = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - b.left}px`);
+    card.style.setProperty('--my', `${e.clientY - b.top}px`);
+  }
+
   return (
-    <div style={LANDING_THEME} className="relative min-h-screen overflow-x-hidden bg-bg text-content">
+    // overflow-x-clip (et non hidden) : hidden crée un conteneur de défilement
+    // qui empêche la scène collante du récit de rester à l'écran.
+    <div style={LANDING_THEME} className="relative min-h-screen overflow-x-clip bg-bg text-content">
+      <ScrollProgress />
       {/* Fond : grille fine + halos pastel animés */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="grid-overlay absolute inset-0" />
@@ -435,7 +619,7 @@ export function LandingPage() {
         )}
       </header>
 
-      <main className="relative z-10">
+      <main className="relative z-10" onPointerMove={onSpotlight}>
         {/* Hero */}
         {/* Hero : contenu visible sans défilement, rendu immédiat (pas de
             fondu au scroll — celui-ci retarderait le LCP de la page). */}
@@ -452,7 +636,7 @@ export function LandingPage() {
                 {/* text-balance : réparti les mots équitablement entre les
                     lignes du titre, pour éviter une dernière ligne orpheline. */}
                 <h1 className="text-balance font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
-                  {t('landing.heroTitleA')} <span className="text-gradient">{t('landing.heroTitleAccent')}</span>{' '}
+                  {t('landing.heroTitleA')} <span className="text-gradient animate-gradient">{t('landing.heroTitleAccent')}</span>{' '}
                   {t('landing.heroTitleB')}
                 </h1>
                 <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
@@ -492,7 +676,7 @@ export function LandingPage() {
                   {STATS.map((k) => (
                     <div key={k}>
                       <div className="font-display text-2xl font-extrabold text-content">
-                        {t(`landing.${k}`)}
+                        <CountUp value={t(`landing.${k}`)} />
                       </div>
                       <div className="text-sm text-content-muted">{t(`landing.${k}Label`)}</div>
                     </div>
@@ -501,11 +685,47 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div>
-              <CatalogMock />
+            <HeroVisual />
+          </div>
+        </section>
+
+        {/* Problèmes actuels — mise en contexte avant la solution */}
+        <section className="px-4 py-24 sm:px-8">
+          <div className="mx-auto max-w-[1280px]">
+            <Reveal className="mb-14 text-center">
+              <h2 className="mx-auto max-w-3xl font-display text-3xl font-extrabold text-content sm:text-4xl">
+                {t('landing.probTitle')}
+              </h2>
+            </Reveal>
+            <div className="grid gap-6 md:grid-cols-3">
+              {PROBLEMS.map((p, i) => (
+                <Reveal key={p.key} delay={i * 120} className="h-full">
+                  <div className="spotlight glass-card glass-hover flex h-full flex-col gap-4 rounded-3xl p-8">
+                    <div
+                      className={clsx(
+                        'grid h-14 w-14 place-items-center rounded-2xl border',
+                        TONE_SOFT[p.tone],
+                      )}
+                    >
+                      <p.icon className={clsx('h-7 w-7', TONE_TEXT[p.tone])} />
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-content">{t(`landing.${p.key}`)}</h3>
+                    <p className="text-sm text-content-muted">{t(`landing.${p.key}Text`)}</p>
+                  </div>
+                </Reveal>
+              ))}
             </div>
           </div>
         </section>
+
+        {/* Récit au défilement : le voyage d'une paire de lunettes */}
+        <StorySection />
+
+        {/* Visite produit : vraies captures, une fonctionnalité par onglet */}
+        <ProductTour />
+
+        {/* Tout le logiciel, par domaine */}
+        <AllFeatures />
 
         {/* Démo vidéo */}
         <section className="px-4 pb-8 pt-4 sm:px-8">
@@ -531,108 +751,6 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Problèmes actuels — mise en contexte avant la solution */}
-        <section className="px-4 py-24 sm:px-8">
-          <div className="mx-auto max-w-[1280px]">
-            <Reveal className="mb-14 text-center">
-              <h2 className="mx-auto max-w-3xl font-display text-3xl font-extrabold text-content sm:text-4xl">
-                {t('landing.probTitle')}
-              </h2>
-            </Reveal>
-            <div className="grid gap-6 md:grid-cols-3">
-              {PROBLEMS.map((p, i) => (
-                <Reveal key={p.key} delay={i * 120} className="h-full">
-                  <div className="glass-card glass-hover flex h-full flex-col gap-4 rounded-3xl p-8">
-                    <div
-                      className={clsx(
-                        'grid h-14 w-14 place-items-center rounded-2xl border',
-                        TONE_SOFT[p.tone],
-                      )}
-                    >
-                      <p.icon className={clsx('h-7 w-7', TONE_TEXT[p.tone])} />
-                    </div>
-                    <h3 className="font-display text-lg font-bold text-content">{t(`landing.${p.key}`)}</h3>
-                    <p className="text-sm text-content-muted">{t(`landing.${p.key}Text`)}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Avantages */}
-        <section id="fonctionnalites" className="px-4 py-24 sm:px-8">
-          <div className="mx-auto max-w-[1280px]">
-            <Reveal className="mb-14 text-center">
-              <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">
-                {t('landing.advTitle')}
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-content-muted">
-                {t('landing.advSubtitle')}
-              </p>
-            </Reveal>
-            <div className="grid gap-6 md:grid-cols-3">
-              {ADVANTAGES.map((a, i) => (
-                <Reveal key={a.key} delay={i * 120} className="h-full">
-                  <div className="glass-card glass-hover flex h-full flex-col gap-6 rounded-3xl p-8">
-                    <div
-                      className={clsx(
-                        'grid h-16 w-16 place-items-center rounded-2xl border',
-                        TONE_SOFT[a.tone],
-                      )}
-                    >
-                      <a.icon className={clsx('h-8 w-8', TONE_TEXT[a.tone])} />
-                    </div>
-                    <h3 className="font-display text-xl font-bold text-content">{t(`landing.${a.key}`)}</h3>
-                    <ul className="flex flex-col gap-3">
-                      {(['a', 'b', 'c'] as const).map((sfx) => (
-                        <li key={sfx} className="flex items-center gap-3 text-content-muted">
-                          <Check className={clsx('h-4 w-4 shrink-0', TONE_TEXT[a.tone])} />
-                          {t(`landing.${a.key}${sfx}`)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Aperçu tableau de bord */}
-        <section id="apercu" className="px-4 py-24 sm:px-8">
-          <div className="mx-auto grid max-w-[1280px] items-center gap-16 lg:grid-cols-2">
-            <Reveal>
-              <div>
-                <h2 className="mb-8 font-display text-3xl font-extrabold text-content sm:text-4xl">
-                  {t('landing.previewTitle')}
-                </h2>
-                <div className="flex flex-col gap-8">
-                  {SHOWCASE.map((s) => (
-                    <div key={s.key} className="flex gap-4">
-                      <div
-                        className={clsx(
-                          'grid h-12 w-12 shrink-0 place-items-center rounded-lg',
-                          s.tone === 'primary' ? 'glass-card neon-border' : 'glass-card',
-                        )}
-                      >
-                        <s.icon className={clsx('h-5 w-5', TONE_TEXT[s.tone])} />
-                      </div>
-                      <div>
-                        <h4 className="mb-1 font-bold text-content">{t(`landing.${s.key}`)}</h4>
-                        <p className="text-sm text-content-muted">{t(`landing.${s.key}Text`)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-            <Reveal delay={150}>
-              <DashboardMock />
-            </Reveal>
-          </div>
-        </section>
-
         {/* Mobile Money */}
         <section className="px-4 py-16 sm:px-8">
           <div className="mx-auto max-w-[1280px]">
@@ -646,9 +764,10 @@ export function LandingPage() {
                     {t('landing.paySubtitle')}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-                  {PAYMENTS.map((p) => (
-                    <div key={p.label} className="flex flex-col items-center gap-2">
+                <div className="mq-wrap w-full">
+                  <div className="mq-track py-2">
+                  {[...PAYMENTS, ...PAYMENTS].map((p, i) => (
+                    <div key={`${p.label}-${i}`} className="flex w-28 shrink-0 flex-col items-center gap-2" aria-hidden={i >= PAYMENTS.length || undefined}>
                       <div
                         className="grid h-16 w-16 place-items-center rounded-2xl text-base font-extrabold shadow-card"
                         style={{ background: p.bg, color: p.fg }}
@@ -660,6 +779,7 @@ export function LandingPage() {
                       </span>
                     </div>
                   ))}
+                  </div>
                 </div>
               </div>
             </Reveal>
@@ -682,7 +802,7 @@ export function LandingPage() {
                 <Reveal key={s.key} delay={i * 100} className="h-full">
                   <div
                     className={clsx(
-                      'glass-card glass-hover h-full rounded-2xl border-l-4 p-8',
+                      'spotlight glass-card glass-hover h-full rounded-2xl border-l-4 p-8',
                       s.tone === 'accent'
                         ? 'border-l-accent/50'
                         : s.tone === 'cyan'
@@ -883,6 +1003,29 @@ export function LandingPage() {
                     </div>
                   </div>
                 </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="scroll-mt-20 px-4 py-24 sm:px-8">
+          <div className="mx-auto max-w-[860px]">
+            <Reveal className="mb-12 text-center">
+              <h2 className="font-display text-3xl font-extrabold text-content sm:text-4xl">{t('landing.faq.title')}</h2>
+            </Reveal>
+            <div className="flex flex-col gap-3">
+              {FAQ.map((k) => (
+                <details key={k} className="group glass-card rounded-2xl px-6">
+                  <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 py-4 font-display text-base font-bold text-content focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 [&::-webkit-details-marker]:hidden">
+                    {t(`landing.faq.q${k}`)}
+                    <ChevronDown
+                      className="h-5 w-5 shrink-0 text-content-muted transition-transform duration-200 group-open:rotate-180"
+                      aria-hidden
+                    />
+                  </summary>
+                  <p className="pb-5 leading-relaxed text-content-muted">{t(`landing.faq.a${k}`)}</p>
+                </details>
               ))}
             </div>
           </div>
