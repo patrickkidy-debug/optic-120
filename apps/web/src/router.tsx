@@ -74,6 +74,7 @@ const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionP
 const StoreSetupPage = lazy(() => named(import('./pages/settings/StoreSetupPage'), 'StoreSetupPage'));
 const PlatformPage = lazy(() => named(import('./pages/platform/ConsolePage'), 'ConsolePage'));
 const CrmPage = lazy(() => named(import('./pages/platform/CrmPage'), 'CrmPage'));
+const AdvisorStatsPage = lazy(() => named(import('./pages/platform/AdvisorStatsPage'), 'AdvisorStatsPage'));
 const NotFound = lazy(() => named(import('./pages/NotFound'), 'NotFound'));
 const SupportPage = lazy(() => named(import('./pages/SupportPage'), 'SupportPage'));
 const ClinicDashboardPage = lazy(() => named(import('./pages/clinic/ClinicDashboardPage'), 'ClinicDashboardPage'));
@@ -229,6 +230,7 @@ export const router = createBrowserRouter([
               // `/plateforme/crm` est statique, donc prioritaire sur ce motif.
               { path: '/plateforme/:section', element: <OperatorOnly><PlatformPage /></OperatorOnly> },
               { path: '/plateforme/crm', element: <OperatorOnly><CrmPage /></OperatorOnly> },
+              { path: '/plateforme/conseiller-ia', element: <OperatorOnly><AdvisorStatsPage /></OperatorOnly> },
 
               { path: '/clinique/dashboard', element: perm('clinic.patients.view', <ClinicDashboardPage />) },
               { path: '/clinique/patients', element: perm('clinic.patients.view', <PatientsPage />) },

@@ -60,7 +60,8 @@
     "storeSetup": "Configuration boutique",
     "cashFlow": "Dépenses / Versements",
     "measurements": "Assistant de centrage",
-    "oculotrack": "OculoTrack"
+    "oculotrack": "OculoTrack",
+    "advisor": "Conseiller IA"
   },
   "common": {
     "save": "Enregistrer",

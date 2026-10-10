@@ -2019,6 +2019,7 @@ model ActivationSession {
   utmSource   String?
   utmMedium   String?
   utmCampaign String?
+  advisorConversations AdvisorConversation[]
 
   lastSeenAt DateTime @default(now())
   createdAt  DateTime @default(now())
@@ -2043,6 +2044,49 @@ enum ActivationStepDb {
 
 /// Événement du tunnel : une ligne par franchissement d'étape, pour mesurer
 /// les abandons là où ils se produisent réellement.
+/// Conseiller commercial IA (vocal ou texte) — une conversation de prospect.
+/// AUCUNE transcription stockée : seulement un résumé anonyme du besoin, les
+/// préoccupations détectées et la consommation, pour les statistiques.
+model AdvisorConversation {
+  id                  String    @id @default(uuid())
+  /// Lien vers le tunnel d'activation : la conversion (paidAt) en découle.
+  activationSessionId String?
+  activationSession   ActivationSession? @relation(fields: [activationSessionId], references: [id], onDelete: SetNull)
+  page                String    @default("landing")
+  mode                String    @default("VOICE")
+  lang                String    @default("fr")
+  status              String    @default("OPEN")
+  turns               Int       @default(0)
+  inputTokens         Int       @default(0)
+  outputTokens        Int       @default(0)
+  /// Coût estimé du modèle, en micro-dollars.
+  costMicroUsd        Int       @default(0)
+  summary             Json?
+  concerns            String[]  @default([])
+  unanswered          String[]  @default([])
+  planInterest        String?
+  ipHash              String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  endedAt             DateTime?
+  events              AdvisorEvent[]
+
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+}
+
+model AdvisorEvent {
+  id             String              @id @default(uuid())
+  conversationId String
+  conversation   AdvisorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  name           String
+  payload        Json?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
+  @@index([name, createdAt])
+}
+
 model ActivationEvent {
   id        String            @id @default(uuid())
   sessionId String

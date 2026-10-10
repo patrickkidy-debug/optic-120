@@ -140,6 +140,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional().default(''),
   // Modèle économique et rapide, très bon en français — adapté à un bot commercial.
   ANTHROPIC_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+  // Point d'accès de l'API (surchargé seulement pour les tests locaux du conseiller IA).
+  ANTHROPIC_BASE_URL: z.string().default('https://api.anthropic.com'),
 });
 
 const parsed = envSchema.safeParse(process.env);

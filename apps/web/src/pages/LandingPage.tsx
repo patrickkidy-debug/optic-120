@@ -37,6 +37,7 @@ import {
 } from 'framer-motion';
 import { StorySection, useScrollRoot } from './landing/Story';
 import { AllFeatures } from './landing/AllFeatures';
+import { AdvisorLauncher } from '../features/advisor/AdvisorLauncher';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -531,6 +532,7 @@ export function LandingPage() {
     // qui empêche la scène collante du récit de rester à l'écran.
     <div style={LANDING_THEME} className="relative min-h-screen overflow-x-clip bg-bg text-content">
       <ScrollProgress />
+      <AdvisorLauncher page="landing" />
       {/* Fond : grille fine + halos pastel animés */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="grid-overlay absolute inset-0" />
@@ -660,6 +662,7 @@ export function LandingPage() {
                   >
                     <Smartphone className="h-4 w-4" /> {t('landing.downloadAndroid')}
                   </a>
+                  <AdvisorLauncher page="landing" variant="inline" />
                 </div>
                 <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
                   <span className="inline-flex items-center gap-1.5">

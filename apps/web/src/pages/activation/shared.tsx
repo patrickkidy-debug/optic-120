@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AdvisorLauncher } from '../../features/advisor/AdvisorLauncher';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { ACTIVATION_STEP_COUNT, ACTIVATION_STEP_ORDER, type ActivationStep } from '@oculo/shared-types';
@@ -35,7 +36,11 @@ export function ActivationShell({
   return (
     <div className="light min-h-screen bg-surface-2 text-content">
       <div className={`mx-auto w-full px-4 py-6 sm:py-10 ${wide ? 'max-w-3xl lg:max-w-6xl lg:px-8' : 'max-w-2xl'}`}>
-        <Brand />
+        {/* Conseiller IA : accessible à chaque étape du tunnel. */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <Brand />
+          {step && <AdvisorLauncher page="activation" variant="inline" always className="px-3 py-2 text-xs sm:text-sm" />}
+        </div>
         {step && <StepBar current={step} />}
 
         {title && (

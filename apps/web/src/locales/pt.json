@@ -60,7 +60,8 @@
     "storeSetup": "Configuração da loja",
     "cashFlow": "Despesas / Transferências",
     "measurements": "Assistente de centragem",
-    "oculotrack": "OculoTrack"
+    "oculotrack": "OculoTrack",
+    "advisor": "Consultor IA"
   },
   "common": {
     "save": "Guardar",

@@ -12,6 +12,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { ActivationShell, Glow, Pill, PrimaryAction } from './shared';
+import { AdvisorLauncher } from '../../features/advisor/AdvisorLauncher';
+import { advisorStrings } from '../../features/advisor/strings';
 import { SoftwarePreview } from './SoftwarePreview';
 import { formatTrialDuration } from './PaymentStep';
 import { tr } from '../../lib/tr';
@@ -68,6 +70,7 @@ const ONBOARDING = () => [
 
 export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; trialMinutes?: number }) {
   const trial = trialMinutes > 0 ? tr('ui.Intro.essaiGratuitTrialminutes', { trialMinutes: formatTrialDuration(trialMinutes) }) : null;
+  const agentLabel = advisorStrings(document.documentElement.lang || navigator.language || 'fr').s.talkToAgent;
   return (
     <ActivationShell wide>
       {/* Hero */}
@@ -91,6 +94,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           <PrimaryAction onClick={onStart}>
             {tr('ui.Intro.commencerMonActivation')} <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
+          <AdvisorLauncher page="activation" variant="block" label={agentLabel} always className="mt-3" />
         </div>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:justify-start">
@@ -229,6 +233,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
           >
             {tr('ui.Intro.commencerMonActivation')} <ArrowRight className="h-4 w-4" />
           </button>
+          <AdvisorLauncher page="activation" variant="blockOnBrand" label={agentLabel} always className="mt-3" />
         </div>
       </section>
 

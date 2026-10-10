@@ -36,6 +36,7 @@ import {
   ListChecks,
   ArrowDownUp,
   AlertTriangle,
+  Mic,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -127,6 +128,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/plateforme', labelKey: 'nav.platform', icon: Server, operatorOnly: true },
       { to: '/plateforme/crm', labelKey: 'nav.crm', icon: Target, operatorOnly: true },
+      { to: '/plateforme/conseiller-ia', labelKey: 'nav.advisor', icon: Mic, operatorOnly: true },
     ],
   },
 ];

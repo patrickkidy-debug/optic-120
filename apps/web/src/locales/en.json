@@ -60,7 +60,8 @@
     "storeSetup": "Store setup",
     "cashFlow": "Expenses / Transfers",
     "measurements": "Centring assistant",
-    "oculotrack": "OculoTrack"
+    "oculotrack": "OculoTrack",
+    "advisor": "AI advisor"
   },
   "common": {
     "save": "Save",

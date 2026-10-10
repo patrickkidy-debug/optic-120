@@ -40,6 +40,7 @@ import { Intro } from './Intro';
 import { InformationStep } from './InformationStep';
 import { BankTransferSent, PaymentStep } from './PaymentStep';
 import { tr } from '../../lib/tr';
+import { ADVISOR_CONV_KEY, linkActivation } from '../../features/advisor/api';
 
 /**
  * Tunnel d'activation — parcours commercial obligatoire.
@@ -104,6 +105,24 @@ export function ActivationPage() {
     [branchCount, needs, structureType],
   );
   const currency = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.currency ?? 'XOF';
+
+  // Forfait proposé par le conseiller IA (?plan=), si aucun n'est déjà choisi.
+  useEffect(() => {
+    const wanted = params.get('plan');
+    if (!restoring && wanted && !planCode && PLAN_CATALOG.some((p) => p.code === wanted)) setPlanCode(wanted);
+  }, [restoring]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Conversation avec le conseiller IA : rattachée au parcours pour mesurer la conversion.
+  useEffect(() => {
+    if (!token) return;
+    let conv: string | null = null;
+    try {
+      conv = localStorage.getItem(ADVISOR_CONV_KEY);
+    } catch {
+      /* stockage indisponible */
+    }
+    if (conv) void linkActivation(conv, token);
+  }, [token]);
 
   // Reprise d'un parcours interrompu.
   useEffect(() => {
