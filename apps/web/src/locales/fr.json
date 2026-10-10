@@ -4537,8 +4537,8 @@
       "searching": "Recherche du visage…",
       "noFace": "Placez le visage du client dans le cadre",
       "openEyes": "Le client doit garder les yeux bien ouverts",
-      "closer": "Rapprochez légèrement l’appareil",
-      "farther": "Éloignez légèrement l’appareil",
+      "closer": "Tête trop petite : rapprochez l’appareil",
+      "farther": "Tête trop grande : éloignez l’appareil",
       "straightenHead": "Tête droite : alignez les yeux sur la ligne",
       "faceCamera": "Le client doit être bien de face",
       "eyeLevel": "Tenez l’appareil à hauteur des yeux du client",
@@ -4549,7 +4549,8 @@
       "holdStill": "Image floue : stabilisez l’appareil",
       "frameVisible": "La monture n’est pas entièrement visible",
       "ready": "Conditions optimales — capturez",
-      "manualOnly": "Détection indisponible : capturez, puis placez les repères"
+      "manualOnly": "Détection indisponible : capturez, puis placez les repères",
+      "fitCircle": "Placez la tête du client dans le cercle"
     },
     "analysis": "Analyse du centrage",
     "analyzing": "Analyse de la photo…",
@@ -4672,6 +4673,8 @@
         "title": "Impossible de démarrer la caméra",
         "body": "Touchez « Réessayer » ou utilisez l’appareil photo ci-dessous."
       }
-    }
+    },
+    "headFit": "Tête ajustée ✓",
+    "headSize": "Taille de la tête :"
   }
 }

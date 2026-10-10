@@ -48,6 +48,7 @@ const L = {
   eyeLOuter: 263, eyeLInner: 362, eyeLUp: 386, eyeLLow: 374,
   bridge: 168, noseTip: 1, forehead: 10, chin: 152, cheekR: 234, cheekL: 454,
   browR: [70, 63, 105, 66, 107], browL: [300, 293, 334, 296, 336],
+  oval: [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109],
 };
 
 export interface FaceAnalysis {
@@ -67,6 +68,14 @@ export interface FaceAnalysis {
   /** Ouverture des yeux (hauteur / largeur), la plus faible des deux. */
   eyeOpen: number;
   faceBox: { x0: number; y0: number; x1: number; y1: number };
+  /** Contour du visage (36 points MediaPipe, du front au menton). */
+  oval: Pt[];
+  /**
+   * Ellipse ajustée à la tête du client : centre, demi-largeur (pommettes),
+   * demi-hauteur (menton → haut du crâne, estimé au-delà du front) et
+   * inclinaison en degrés.
+   */
+  head: { cx: number; cy: number; rx: number; ry: number; angle: number };
   browY: number;
   lidLowR: number;
   lidLowL: number;
@@ -120,6 +129,27 @@ export function analyzeFace(f: FacePoints): FaceAnalysis {
   const [upA, lowA] = lid(L.eyeRUp, L.eyeRLow);
   const [upB, lowB] = lid(L.eyeLUp, L.eyeLLow);
   const leftEyeIsR = p[L.eyeROuter]!.x < p[L.eyeLOuter]!.x;
+  const oval = L.oval.map((i) => ({ x: p[i]!.x, y: p[i]!.y }));
+  // Ellipse de la tête, dans le repère incliné de la tête (axe des pupilles).
+  const ang = Math.atan2(pupilL.y - pupilR.y, pupilL.x - pupilR.x);
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const U = (q: Pt) => q.x * ca + q.y * sa;
+  const V = (q: Pt) => -q.x * sa + q.y * ca;
+  const us = oval.map(U);
+  const vs = oval.map(V);
+  const u0 = Math.min(...us), u1 = Math.max(...us);
+  const vChin = Math.max(...vs), vForehead = Math.min(...vs);
+  // Le point 10 est en haut du front : le crâne monte encore d'environ 25 %
+  // de la hauteur front-menton.
+  const vTop = vForehead - 0.25 * (vChin - vForehead);
+  const uc = (u0 + u1) / 2, vc = (vTop + vChin) / 2;
+  const head = {
+    cx: uc * ca - vc * sa,
+    cy: uc * sa + vc * ca,
+    rx: ((u1 - u0) / 2) * 1.04,
+    ry: (vChin - vTop) / 2,
+    angle: deg(ang),
+  };
   return {
     pupilR,
     pupilL,
@@ -132,6 +162,8 @@ export function analyzeFace(f: FacePoints): FaceAnalysis {
     gaze: Math.max(e1.gaze, e2.gaze),
     eyeOpen: Math.min(e1.open, e2.open),
     faceBox: { x0: Math.min(...xs), x1: Math.max(...xs), y0: p[L.forehead]!.y, y1: p[L.chin]!.y },
+    oval,
+    head,
     browY,
     lidLowR: leftEyeIsR ? lowA! : lowB!,
     lidLowL: leftEyeIsR ? lowB! : lowA!,

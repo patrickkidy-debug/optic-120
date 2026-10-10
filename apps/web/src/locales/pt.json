@@ -4537,8 +4537,8 @@
       "searching": "À procura do rosto…",
       "noFace": "Coloque o rosto do cliente no enquadramento",
       "openEyes": "O cliente deve manter os olhos bem abertos",
-      "closer": "Aproxime ligeiramente o aparelho",
-      "farther": "Afaste ligeiramente o aparelho",
+      "closer": "Cabeça demasiado pequena: aproxime o aparelho",
+      "farther": "Cabeça demasiado grande: afaste o aparelho",
       "straightenHead": "Cabeça direita: alinhe os olhos na linha",
       "faceCamera": "O cliente deve estar bem de frente",
       "eyeLevel": "Segure o aparelho à altura dos olhos do cliente",
@@ -4549,7 +4549,8 @@
       "holdStill": "Imagem desfocada: estabilize o aparelho",
       "frameVisible": "A armação não está totalmente visível",
       "ready": "Condições ideais — capture",
-      "manualOnly": "Deteção indisponível: capture e coloque os pontos"
+      "manualOnly": "Deteção indisponível: capture e coloque os pontos",
+      "fitCircle": "Coloque a cabeça do cliente no círculo"
     },
     "analysis": "Análise da centragem",
     "analyzing": "A analisar a foto…",
@@ -4672,6 +4673,8 @@
         "title": "Não foi possível iniciar a câmara",
         "body": "Toque em «Tentar novamente» ou use a câmara abaixo."
       }
-    }
+    },
+    "headFit": "Cabeça ajustada ✓",
+    "headSize": "Tamanho da cabeça:"
   }
 }

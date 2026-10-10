@@ -26,6 +26,10 @@ interface Live {
   /** Position de la jauge de distance : 0 = trop loin, 0,5 = idéal, 1 = trop près. */
   gauge: number;
   distanceCm: number | null;
+  /** Tête ajustée au cercle cible (taille, position, inclinaison). */
+  fit: boolean;
+  /** Taille de la tête / taille cible (1 = parfait). */
+  ratio: number;
 }
 
 const EMPTY: Live = {
@@ -35,39 +39,84 @@ const EMPTY: Live = {
   quality: 0,
   gauge: 0.5,
   distanceCm: null,
+  fit: false,
+  ratio: 0,
 };
 
+/** Ellipse cible (repère vidéo) : taille idéale de la tête pour la mesure. */
+export interface Target {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  /** Zone réellement visible à l'écran (la vidéo est recadrée pour remplir l'écran). */
+  vis: { x0: number; y0: number; x1: number; y1: number };
+}
+
+/**
+ * Cible adaptée à l'écran : la tête doit occuper ~72 % de la hauteur visible
+ * (photo assez grande pour la précision, avec de la marge pour la carte et
+ * la monture), sans dépasser la largeur visible.
+ */
+export function targetOf(vw: number, vh: number, W: number, H: number): Target {
+  let visW = vw;
+  let visH = vh;
+  if (W > 0 && H > 0) {
+    if (W / H < vw / vh) visW = (vh * W) / H;
+    else visH = (vw * H) / W;
+  }
+  const x0 = (vw - visW) / 2;
+  const y0 = (vh - visH) / 2;
+  let ry = 0.36 * visH;
+  let rx = ry / 1.32;
+  if (rx > 0.4 * visW) {
+    rx = 0.4 * visW;
+    ry = rx * 1.32;
+  }
+  return { cx: vw / 2, cy: vh / 2 + 0.02 * visH, rx, ry, vis: { x0, y0, x1: x0 + visW, y1: y0 + visH } };
+}
+
 /** Évalue une image du flux : contrôles, consigne, score de qualité. */
-function evaluate(face: FaceAnalysis | null, vw: number, vh: number, img: { light: number; sharp: number; frame: number } | null): Live {
+function evaluate(
+  face: FaceAnalysis | null,
+  vw: number,
+  img: { light: number; sharp: number; frame: number } | null,
+  t: Target,
+): Live {
   if (!face) return { ...EMPTY, hint: 'cz.hint.noFace' };
-  const fb = face.faceBox;
-  const faceW = (fb.x1 - fb.x0) / vw;
-  const cx = (face.pupilR.x + face.pupilL.x) / 2 / vw;
-  const cy = (face.pupilR.y + face.pupilL.y) / 2 / vh;
+  const hd = face.head;
+  // Taille de la tête comparée à la cible (moyenne largeur / hauteur).
+  const ratio = (hd.rx / t.rx + hd.ry / t.ry) / 2;
+  const dx = (hd.cx - t.cx) / t.rx;
+  const dy = (hd.cy - t.cy) / t.ry;
   // Distance estimée grâce à l'iris (champ horizontal supposé de 65°) : indicative seulement.
   const focal = vw / (2 * Math.tan((65 * Math.PI) / 360));
   const distanceCm = face.irisPx > 2 ? Math.round((IRIS_MM * focal) / face.irisPx / 10) : null;
-  const gauge = Math.max(0, Math.min(1, (faceW - 0.25) / 0.6));
+  const gauge = Math.max(0, Math.min(1, (ratio - 0.6) / 0.8));
 
-  const inFrame = fb.x0 > vw * 0.02 && fb.x1 < vw * 0.98 && fb.y0 > vh * 0.01;
+  const v = t.vis;
+  const inFrame = hd.cx - hd.rx > v.x0 && hd.cx + hd.rx < v.x1 && hd.cy + hd.ry < v.y1 + 0.02 * (v.y1 - v.y0);
+  const sizeOk = ratio >= 0.88 && ratio <= 1.12;
+  const posOk = Math.abs(dx) < 0.18 && Math.abs(dy) < 0.15;
+  const poseOk = Math.abs(face.rollDeg) < 3 && Math.abs(face.yawDeg) < 6 && Math.abs(face.pitchDeg) < 10;
   const checks: Record<CheckKey, boolean> = {
     face: true,
     eyes: face.eyeOpen > 0.17,
     frame: (img?.frame ?? 0) >= 0.35 && inFrame,
-    centered: Math.abs(cx - 0.5) < 0.09 && cy > 0.28 && cy < 0.58 && Math.abs(face.rollDeg) < 3 && Math.abs(face.yawDeg) < 6 && Math.abs(face.pitchDeg) < 10,
+    centered: posOk && poseOk,
     gaze: face.gaze < 0.12,
-    distance: faceW >= 0.4 && faceW <= 0.72 && inFrame,
+    distance: sizeOk && inFrame,
     light: img ? img.light >= 70 && img.light <= 215 && img.sharp >= 25 : true,
   };
 
   let hint: string | null = null;
   if (!checks.eyes) hint = 'cz.hint.openEyes';
-  else if (faceW < 0.4) hint = 'cz.hint.closer';
-  else if (faceW > 0.72 || !inFrame) hint = 'cz.hint.farther';
+  else if (ratio < 0.88) hint = 'cz.hint.closer';
+  else if (ratio > 1.12 || !inFrame) hint = 'cz.hint.farther';
   else if (Math.abs(face.rollDeg) >= 3) hint = 'cz.hint.straightenHead';
   else if (Math.abs(face.yawDeg) >= 6) hint = 'cz.hint.faceCamera';
   else if (Math.abs(face.pitchDeg) >= 10) hint = 'cz.hint.eyeLevel';
-  else if (Math.abs(cx - 0.5) >= 0.09 || cy <= 0.28 || cy >= 0.58) hint = 'cz.hint.center';
+  else if (!posOk) hint = 'cz.hint.fitCircle';
   else if (!checks.gaze) hint = 'cz.hint.lookAtLens';
   else if (img && img.light < 70) hint = 'cz.hint.moreLight';
   else if (img && img.light > 215) hint = 'cz.hint.lessLight';
@@ -75,8 +124,8 @@ function evaluate(face: FaceAnalysis | null, vw: number, vh: number, img: { ligh
   else if (!checks.frame) hint = 'cz.hint.frameVisible';
 
   const w: Record<CheckKey, number> = { face: 15, eyes: 15, frame: 10, centered: 20, gaze: 10, distance: 20, light: 10 };
-  const quality = CHECK_ORDER.reduce((s, k) => s + (checks[k] ? w[k] : 0), 0);
-  return { face, checks, hint, quality, gauge, distanceCm };
+  const quality = CHECK_ORDER.reduce((s2, k) => s2 + (checks[k] ? w[k] : 0), 0);
+  return { face, checks, hint, quality, gauge, distanceCm, fit: sizeOk && posOk && poseOk && inFrame, ratio };
 }
 
 /**
@@ -102,6 +151,18 @@ export function CameraCapture({
   const [torch, setTorch] = useState<{ available: boolean; on: boolean }>({ available: false, on: false });
   const [live, setLive] = useState<Live>(EMPTY);
   const [dims, setDims] = useState({ w: 1280, h: 720 });
+  const zoneRef = useRef<HTMLDivElement>(null);
+  const [zone, setZone] = useState({ W: 0, H: 0 });
+  useEffect(() => {
+    const el = zoneRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setZone({ W: el.clientWidth, H: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const target = targetOf(dims.w, dims.h, zone.W, zone.H);
+  const targetRef = useRef(target);
+  targetRef.current = target;
   const [auto, setAuto] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const goodSince = useRef<number | null>(null);
@@ -240,7 +301,7 @@ export function CameraCapture({
       }
       if (now - lastUi > 120) {
         lastUi = now;
-        const next = evaluate(face, v.videoWidth, v.videoHeight, img);
+        const next = evaluate(face, v.videoWidth, img, targetRef.current);
         setLive(next);
         goodSince.current = next.quality >= 85 ? goodSince.current ?? now : null;
       }
@@ -295,7 +356,7 @@ export function CameraCapture({
       </div>
 
       {/* Zone vidéo */}
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div ref={zoneRef} className="relative min-h-0 flex-1 overflow-hidden">
         {/* Toujours présente : « Réessayer » doit retrouver l'élément vidéo. */}
         <video ref={videoRef} playsInline muted className={`absolute inset-0 h-full w-full object-cover ${camError ? 'hidden' : ''}`} />
         {camError ? (
@@ -325,34 +386,63 @@ export function CameraCapture({
           </div>
         ) : (
           <>
-            {/* Points détectés, dans le repère de la vidéo (même recadrage que object-cover). */}
+            {/* Tout est dessiné dans le repère de la vidéo (même recadrage que object-cover) :
+                cible, tête détectée, yeux et zone de la carte restent alignés. */}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${dims.w} ${dims.h}`} preserveAspectRatio="xMidYMid slice">
-              {f && (
-                <>
-                  <line x1={f.pupilR.x - f.pdPx * 0.6} y1={f.pupilR.y - (f.pupilL.y - f.pupilR.y) * 0.6} x2={f.pupilL.x + f.pdPx * 0.6} y2={f.pupilL.y + (f.pupilL.y - f.pupilR.y) * 0.6} stroke={tone} strokeWidth={dims.w / 500} strokeDasharray={`${dims.w / 120} ${dims.w / 240}`} />
-                  {[f.pupilR, f.pupilL].map((p, i) => (
-                    <g key={i}>
-                      <circle cx={p.x} cy={p.y} r={f.irisPx * 0.75} fill="none" stroke={tone} strokeWidth={dims.w / 600} />
-                      <circle cx={p.x} cy={p.y} r={dims.w / 400} fill={tone} />
-                    </g>
-                  ))}
-                  <line x1={f.bridge.x} y1={f.faceBox.y0} x2={f.bridge.x} y2={f.faceBox.y1} stroke="white" strokeOpacity={0.35} strokeWidth={dims.w / 900} strokeDasharray={`${dims.w / 150} ${dims.w / 150}`} />
-                </>
-              )}
+              {(() => {
+                const t = target;
+                const sw = t.rx / 110; // épaisseur de trait proportionnelle à la cible
+                const eyeY = t.cy - 0.1 * t.ry;
+                const fitCol = live.fit ? '#22c55e' : '#f59e0b';
+                return (
+                  <>
+                    {/* Cible : taille idéale de la tête */}
+                    <ellipse cx={t.cx} cy={t.cy} rx={t.rx} ry={t.ry} fill="none" stroke={live.fit ? '#22c55e' : '#ffffff'} strokeOpacity={live.fit ? 0.9 : 0.55} strokeWidth={sw * 2} strokeDasharray={`${sw * 10} ${sw * 7}`} />
+                    <line x1={t.cx - t.rx * 1.15} y1={eyeY} x2={t.cx + t.rx * 1.15} y2={eyeY} stroke="#fff" strokeOpacity={0.45} strokeWidth={sw} strokeDasharray={`${sw * 6} ${sw * 5}`} />
+                    {[-1, 1].map((d) => (
+                      <g key={d}>
+                        <circle cx={t.cx + d * 0.33 * t.rx} cy={eyeY} r={0.1 * t.rx} fill="none" stroke="#fff" strokeOpacity={0.45} strokeWidth={sw} />
+                        <text x={t.cx + d * 0.33 * t.rx} y={eyeY - 0.17 * t.rx} fill="#fff" fontSize={0.11 * t.rx} fontWeight={700} textAnchor="middle" stroke="#000" strokeWidth={sw * 2.5} paintOrder="stroke">
+                          {d < 0 ? 'OD' : 'OG'}
+                        </text>
+                      </g>
+                    ))}
+                    <rect x={t.cx - 0.66 * t.rx} y={eyeY - 0.98 * t.rx} width={1.32 * t.rx} height={0.6 * t.rx} rx={sw * 4} fill="none" stroke="#fcd34d" strokeOpacity={0.6} strokeWidth={sw} strokeDasharray={`${sw * 5} ${sw * 4}`} />
+                    <text x={t.cx} y={eyeY - 1.02 * t.rx} fill="#fde68a" fontSize={0.085 * t.rx} textAnchor="middle" stroke="#000" strokeWidth={sw * 2} paintOrder="stroke">
+                      {tr('cz.cardZone')}
+                    </text>
+
+                    {f && (
+                      <>
+                        {/* Contour réel du visage et ellipse ajustée à la tête du client */}
+                        <polygon points={f.oval.map((q) => `${q.x},${q.y}`).join(' ')} fill="none" stroke={fitCol} strokeOpacity={0.35} strokeWidth={sw} />
+                        <ellipse
+                          cx={f.head.cx}
+                          cy={f.head.cy}
+                          rx={f.head.rx}
+                          ry={f.head.ry}
+                          transform={`rotate(${f.head.angle} ${f.head.cx} ${f.head.cy})`}
+                          fill="none"
+                          stroke={fitCol}
+                          strokeWidth={sw * 2.6}
+                        />
+                        <text x={f.head.cx} y={f.head.cy + f.head.ry + 0.14 * t.rx} fill={fitCol} fontSize={0.1 * t.rx} fontWeight={700} textAnchor="middle" stroke="#000" strokeWidth={sw * 2.5} paintOrder="stroke">
+                          {live.fit ? tr('cz.headFit') : `${tr('cz.headSize')} ${Math.round(live.ratio * 100)} %`}
+                        </text>
+                        <line x1={f.pupilR.x - f.pdPx * 0.6} y1={f.pupilR.y - (f.pupilL.y - f.pupilR.y) * 0.6} x2={f.pupilL.x + f.pdPx * 0.6} y2={f.pupilL.y + (f.pupilL.y - f.pupilR.y) * 0.6} stroke={tone} strokeWidth={sw * 1.4} strokeDasharray={`${sw * 8} ${sw * 4}`} />
+                        {[f.pupilR, f.pupilL].map((q, i) => (
+                          <g key={i}>
+                            <circle cx={q.x} cy={q.y} r={f.irisPx * 0.75} fill="none" stroke={tone} strokeWidth={sw * 1.2} />
+                            <circle cx={q.x} cy={q.y} r={sw * 2.5} fill={tone} />
+                          </g>
+                        ))}
+                        <line x1={f.bridge.x} y1={f.head.cy - f.head.ry} x2={f.bridge.x} y2={f.head.cy + f.head.ry} stroke="white" strokeOpacity={0.3} strokeWidth={sw} strokeDasharray={`${sw * 5} ${sw * 5}`} />
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </svg>
-            {/* Gabarit fixe de positionnement : contour de tête, ligne des yeux, zones OD / OG. */}
-            <div className="pointer-events-none absolute inset-0 grid place-items-center">
-              <div className="relative aspect-[3/4] h-[78%] max-w-[86%]">
-                <div className="absolute inset-0 rounded-[48%] border-2 transition-colors" style={{ borderColor: optimal ? '#22c55e' : 'rgba(255,255,255,.55)' }} />
-                <div className="absolute inset-x-[-12%] top-[40%] border-t border-dashed border-white/60" />
-                <span className="absolute left-[18%] top-[40%] -translate-x-1/2 -translate-y-[130%] rounded bg-black/50 px-1.5 text-[11px] font-bold">OD</span>
-                <span className="absolute right-[18%] top-[40%] translate-x-1/2 -translate-y-[130%] rounded bg-black/50 px-1.5 text-[11px] font-bold">OG</span>
-                <span className="absolute left-[18%] top-[40%] h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50" />
-                <span className="absolute right-[18%] top-[40%] h-7 w-7 translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50" />
-                <span className="absolute inset-x-[8%] top-[5%] h-[15%] rounded-md border border-dashed border-amber-300/70" />
-                <span className="absolute left-1/2 top-[5%] -translate-x-1/2 -translate-y-full pb-0.5 text-[10px] text-amber-200">{tr('cz.cardZone')}</span>
-              </div>
-            </div>
 
             {/* Contrôles en temps réel : liste complète sur tablette / ordinateur,
                 pastille repliable sur téléphone pour ne pas masquer le visage. */}

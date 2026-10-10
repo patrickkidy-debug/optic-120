@@ -4537,8 +4537,8 @@
       "searching": "Looking for the face…",
       "noFace": "Place the customer’s face inside the frame",
       "openEyes": "The customer should keep their eyes wide open",
-      "closer": "Move the device slightly closer",
-      "farther": "Move the device slightly away",
+      "closer": "Head too small: move the device closer",
+      "farther": "Head too large: move the device away",
       "straightenHead": "Head straight: align the eyes on the line",
       "faceCamera": "The customer must face the camera squarely",
       "eyeLevel": "Hold the device at the customer’s eye level",
@@ -4549,7 +4549,8 @@
       "holdStill": "Blurry image: hold the device still",
       "frameVisible": "The frame is not fully visible",
       "ready": "Optimal conditions — capture now",
-      "manualOnly": "Detection unavailable: capture, then place the markers"
+      "manualOnly": "Detection unavailable: capture, then place the markers",
+      "fitCircle": "Place the customer’s head inside the circle"
     },
     "analysis": "Centring analysis",
     "analyzing": "Analysing the photo…",
@@ -4672,6 +4673,8 @@
         "title": "Unable to start the camera",
         "body": "Tap “Try again” or use the camera below."
       }
-    }
+    },
+    "headFit": "Head aligned ✓",
+    "headSize": "Head size:"
   }
 }
