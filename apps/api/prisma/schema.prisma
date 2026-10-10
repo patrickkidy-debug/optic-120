@@ -616,8 +616,23 @@ model OpticalMeasurement {
   frameLabel     String?
   frameProductId String?
   notes          String?
+  /// Largeur de la monture (bords temporaux des cercles, ou largeur de référence saisie).
+  frameWidth     Float?
+  /// Diamètre effectif (diagonale de la boîte du verre), en mm.
+  ed             Float?
+  /// Fiabilité globale estimée de la mesure automatique (0-100).
+  confidence     Int?
+  /// Référence de calibrage : CARD, FRAME, REFERENCE.
+  calibration    String?
+  /// Photo d'analyse (data URL JPEG réduite) — permet de reprendre et corriger la mesure.
+  photoUrl       String?
+  /// Repères posés (auto et corrigés), dimensions de l'image, échelle, contrôles qualité.
+  markers        Json?
+  /// Valeurs calculées automatiquement avant correction par l'opticien.
+  autoValues     Json?
   createdById    String?
   createdAt      DateTime  @default(now())
+  updatedAt      DateTime? @updatedAt
 
   @@index([tenantId, customerId])
   @@index([tenantId])

@@ -1408,8 +1408,11 @@ export type RegularizeInventoryCountInput = z.infer<typeof regularizeInventoryCo
 
 /** Carte bancaire / d'identité (format ID-1, norme ISO/IEC 7810) : référence de calibrage. */
 export const ID1_CARD_WIDTH_MM = 85.6;
-export const MEASUREMENT_METHODS = ['PHOTO_CARD', 'PHOTO_FRAME', 'MANUAL'] as const;
+export const MEASUREMENT_METHODS = ['PHOTO_CARD', 'PHOTO_FRAME', 'PHOTO_REFERENCE', 'MANUAL'] as const;
 export type MeasurementMethod = (typeof MEASUREMENT_METHODS)[number];
+/** Référence de taille d'une mesure par photo. */
+export const MEASUREMENT_CALIBRATIONS = ['CARD', 'FRAME', 'REFERENCE'] as const;
+export type MeasurementCalibration = (typeof MEASUREMENT_CALIBRATIONS)[number];
 
 const mmValue = (max: number) => z.number().min(0).max(max).nullable().optional();
 
@@ -1432,8 +1435,24 @@ export const measurementCreateSchema = z.object({
   frameLabel: z.string().max(160).optional().or(z.literal('')),
   frameProductId: z.string().uuid().optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  frameWidth: mmValue(200),
+  ed: mmValue(100),
+  confidence: z.number().int().min(0).max(100).nullable().optional(),
+  calibration: z.enum(MEASUREMENT_CALIBRATIONS).nullable().optional(),
+  /** Photo d'analyse en data URL JPEG (réduite côté client, ~1280 px). */
+  photoUrl: z
+    .string()
+    .max(4_000_000)
+    .refine((v) => v.startsWith('data:image/'), 'Photo invalide')
+    .nullable()
+    .optional(),
+  /** Repères et contexte de la mesure (structure libre, versionnée côté client). */
+  markers: z.record(z.unknown()).nullable().optional(),
+  autoValues: z.record(z.number().nullable()).nullable().optional(),
 });
 export type MeasurementCreateInput = z.infer<typeof measurementCreateSchema>;
+export const measurementUpdateSchema = measurementCreateSchema.partial().omit({ customerId: true });
+export type MeasurementUpdateInput = z.infer<typeof measurementUpdateSchema>;
 
 /* --- Commandes de verres (laboratoire) & SAV / réparations --- */
 
