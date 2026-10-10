@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { tr } from '../../lib/tr';
+import { APK_URL, isOutdatedApp } from '../../lib/nativeApp';
 import { formatDateTime } from '../../lib/format';
 import type { TrackEvent } from './api';
 
@@ -219,8 +220,37 @@ export function tokenFromQr(text: string): string | null {
  */
 export function QrScanner({ onResult, onClose, title }: { onResult: (token: string) => void; onClose: () => void; title?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [manual, setManual] = useState('');
+
+  /** Lit le QR sur une photo prise avec l'appareil photo du téléphone (marche sans flux vidéo). */
+  async function decodePhoto(file: File) {
+    setPhotoError('');
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k);
+      c.height = Math.round(img.naturalHeight * k);
+      const ctx = c.getContext('2d', { willReadFrequently: true })!;
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      const jsQR = (await import('jsqr')).default;
+      const text = jsQR(data.data, data.width, data.height)?.data ?? null;
+      const token = text ? tokenFromQr(text) : null;
+      if (token) onResult(token);
+      else setPhotoError(tr('ot.qrNotFound'));
+    } catch {
+      setPhotoError(tr('ot.qrNotFound'));
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
   useEffect(() => {
     let stream: MediaStream | null = null;
     let stop = false;
@@ -283,7 +313,22 @@ export function QrScanner({ onResult, onClose, title }: { onResult: (token: stri
       </div>
       <div className="relative min-h-0 flex-1">
         {error ? (
-          <p className="p-6 text-center text-sm text-white/80">{error}</p>
+          <div className="mx-auto max-w-sm space-y-4 p-6 text-center">
+            <p className="text-sm text-white/80">{error}</p>
+            <button type="button" onClick={() => photoRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black">
+              <Camera className="h-5 w-5" /> {tr('ot.scanFromPhoto')}
+            </button>
+            {photoError && <p className="text-xs text-amber-300">{photoError}</p>}
+            {isOutdatedApp() && (
+            <div className="space-y-2 rounded-2xl bg-amber-400/15 p-3 text-left text-sm text-amber-100">
+              <p className="font-semibold">{tr('cz.updateApp')}</p>
+              <p className="text-xs text-amber-100/85">{tr('cz.updateAppHint')}</p>
+              <button type="button" className="w-full rounded-xl bg-amber-300 px-3 py-2 text-xs font-bold text-black" onClick={() => { void navigator.clipboard?.writeText(APK_URL); alert(APK_URL); }}>
+                {tr('cz.copyApkLink')}
+              </button>
+            </div>
+              )}
+          </div>
         ) : (
           <>
             <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
@@ -298,6 +343,7 @@ export function QrScanner({ onResult, onClose, title }: { onResult: (token: stri
           </>
         )}
       </div>
+      <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void decodePhoto(f); e.target.value = ''; }} />
       <form
         className="flex gap-2 p-3"
         style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}

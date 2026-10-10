@@ -180,7 +180,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                   <label key={field} className="block min-w-0 text-xs text-content-muted">
                     <span className={`mb-0.5 block font-medium ${(field === 'buyPrice' || field === 'sellPrice') && columns.mapping[field] === undefined ? 'text-warning' : ''}`}>{label}</span>
                     <select
-                      className="input h-8 w-full px-2 text-xs"
+                      className="input h-10 w-full px-2 py-0 text-sm lg:h-8 lg:text-xs"
                       value={columns.mapping[field] ?? -1}
                       disabled={loading}
                       onChange={(e) => remap(field, Number(e.target.value))}
@@ -207,7 +207,63 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
               {tr('ui.ProductImportModal.certainesLignesNePeuventPas')}
             </div>
           )}
-          <div className="max-h-[55vh] overflow-auto rounded-xl border">
+          {/* Téléphone et tablette : une carte par produit, champs lisibles en pleine largeur. */}
+          <ul className="max-h-[60vh] space-y-2 overflow-y-auto lg:hidden">
+            {rows.map((r, i) => (
+              <li key={i} className={`rounded-xl border p-3 ${r.status === 'error' ? 'border-red-500/50 bg-red-500/5' : ''}`}>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <Badge tone={STATUS_BADGE[r.status].tone}>{STATUS_BADGE[r.status].label}</Badge>
+                  <button onClick={() => removeRow(i)} className="btn-ghost h-8 w-8 shrink-0 rounded-lg p-0 text-danger" aria-label={tr('ui.ProductImportModal.annuler')}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                {r.status === 'error' && r.error && <p className="mb-2 text-xs font-medium text-danger">{r.error}</p>}
+                {r.note && <p className="mb-2 text-xs font-medium text-amber-600 dark:text-amber-300">{r.note}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="col-span-2 block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.nom')}
+                    <input className="input mt-0.5 h-10 text-sm" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })} />
+                  </label>
+                  <label className="block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.reference')}
+                    <input className="input mt-0.5 h-10 text-sm" value={r.sku} onChange={(e) => updateRow(i, { sku: e.target.value })} />
+                  </label>
+                  <label className="block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.marque')}
+                    <input className="input mt-0.5 h-10 text-sm" value={r.brand} onChange={(e) => updateRow(i, { brand: e.target.value })} />
+                  </label>
+                  <label className="col-span-2 block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.categorie')}
+                    <select className="input mt-0.5 h-10 text-sm" value={r.category} onChange={(e) => updateRow(i, { category: e.target.value })}>
+                      {CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.achat')}
+                    <NumberInput className="input mt-0.5 h-10 text-right text-sm" value={r.buyPrice} onChange={(n) => updateRow(i, { buyPrice: n })} />
+                  </label>
+                  <label className="block text-[11px] text-content-faint">
+                    {tr('ui.ProductImportModal.vente')}
+                    <NumberInput className="input mt-0.5 h-10 text-right text-sm" value={r.sellPrice} onChange={(n) => updateRow(i, { sellPrice: n })} />
+                  </label>
+                  <label className="block text-[11px] text-content-faint">
+                    Stock
+                    <input
+                      type="number"
+                      className="input mt-0.5 h-10 text-center text-sm"
+                      value={r.stock ?? ''}
+                      placeholder="—"
+                      onChange={(e) => updateRow(i, { stock: e.target.value === '' ? null : Number(e.target.value) })}
+                    />
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden max-h-[55vh] overflow-auto rounded-xl border lg:block">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-surface">
                 <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
@@ -288,6 +344,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                       <Badge tone={STATUS_BADGE[r.status].tone}>
                         <span title={r.error}>{r.status === 'error' && r.error ? tr('ui.ProductImportModal.erreurError', { error: r.error }) : STATUS_BADGE[r.status].label}</span>
                       </Badge>
+                      {r.note && <p className="mt-1 max-w-[12rem] text-[11px] leading-tight text-amber-600 dark:text-amber-300">{r.note}</p>}
                     </td>
                     <td className="table-cell">
                       <button onClick={() => removeRow(i)} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">

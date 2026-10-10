@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Camera, CameraOff, RotateCcw, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Timer } from 'lucide-react';
 import { getLandmarker, toFacePoints } from '../../../features/optique/measure/landmarker';
+import { APK_URL, isOutdatedApp } from '../../../lib/nativeApp';
 import { analyzeFace, IRIS_MM, type FaceAnalysis } from '../../../features/optique/measure/geometry';
 import { brightness, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
 import { tr } from '../../../lib/tr';
@@ -382,6 +383,15 @@ export function CameraCapture({
                 </button>
               </div>
               <p className="text-xs text-white/50">{tr('cz.photoModeHint')}</p>
+              {isOutdatedApp() && (
+                <div className="space-y-2 rounded-2xl bg-amber-400/15 p-3 text-left text-sm text-amber-100">
+                  <p className="font-semibold">{tr('cz.updateApp')}</p>
+                  <p className="text-xs text-amber-100/85">{tr('cz.updateAppHint')}</p>
+                  <button type="button" className="w-full rounded-xl bg-amber-300 px-3 py-2 text-xs font-bold text-black" onClick={() => { void navigator.clipboard?.writeText(APK_URL); alert(APK_URL); }}>
+                    {tr('cz.copyApkLink')}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : (

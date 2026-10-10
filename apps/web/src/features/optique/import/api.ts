@@ -10,6 +10,8 @@ export interface ImportPreviewRow {
   stock: number | null;
   status: 'create' | 'update' | 'error';
   error?: string;
+  /** Information non bloquante (ex. référence en double renommée). */
+  note?: string;
   existingProductId?: string;
 }
 

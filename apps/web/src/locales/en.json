@@ -4676,7 +4676,10 @@
       }
     },
     "headFit": "Head aligned ✓",
-    "headSize": "Head size:"
+    "headSize": "Head size:",
+    "updateApp": "Update the OculoSaaS app",
+    "updateAppHint": "Your app is an old version without live camera access. Open Chrome, paste the link below, install the update, then allow the camera.",
+    "copyApkLink": "Copy the new version link"
   },
   "notif": {
     "title": "Notifications",
@@ -4933,7 +4936,9 @@
     "scanCameraError": "Camera unavailable: allow the camera or paste the QR link below.",
     "inviteLab": "Invite the lab",
     "portalAccess": "Portal access",
-    "noPortalForLab": "{{name}} has no OculoTrack portal access yet: invite them so they can scan and confirm receipt."
+    "noPortalForLab": "{{name}} has no OculoTrack portal access yet: invite them so they can scan and confirm receipt.",
+    "scanFromPhoto": "Take a photo of the QR code",
+    "qrNotFound": "QR code not read: take the photo closer and sharper."
   },
   "pt": {
     "portal": "Partner portal",

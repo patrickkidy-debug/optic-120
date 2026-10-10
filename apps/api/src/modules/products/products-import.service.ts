@@ -313,30 +313,53 @@ export function parseImportFile(
 export interface PreviewRow extends ParsedProductRow {
   status: 'create' | 'update' | 'error';
   error?: string;
+  /** Information non bloquante (ex. référence en double renommée). */
+  note?: string;
   existingProductId?: string;
 }
 
-/** Tague chaque ligne nouveau/mise à jour/erreur — une seule requête, pas de N+1. */
+/**
+ * Tague chaque ligne nouveau / mise à jour / erreur.
+ *
+ * Une même référence répétée dans le fichier n'est PLUS bloquante : beaucoup de
+ * catalogues fournisseurs réutilisent la référence du modèle pour chaque
+ * coloris. La première ligne garde la référence (et met à jour le produit
+ * existant s'il y en a un) ; les suivantes deviennent de nouveaux produits avec
+ * une référence suffixée (« RB2140-2 », « RB2140-3 »…), signalée dans l'aperçu.
+ */
 export async function previewImportRows(db: TenantPrisma, rows: ParsedProductRow[]): Promise<PreviewRow[]> {
-  const skus = rows.map((r) => r.sku).filter(Boolean);
+  const skus = rows.map((r) => r.sku.trim()).filter(Boolean);
   const existing = skus.length
     ? await db.product.findMany({ where: { sku: { in: skus, mode: 'insensitive' } }, select: { id: true, sku: true } })
     : [];
   const bySku = new Map(existing.map((p) => [p.sku.toLowerCase(), p.id]));
 
-  const seenSkus = new Set<string>();
+  // Références déjà prises (base + fichier), pour fabriquer des suffixes libres.
+  const taken = new Set<string>(skus.map((x) => x.toLowerCase()));
+  const dupBases = [...new Set(skus.filter((x, i) => skus.findIndex((y) => y.toLowerCase() === x.toLowerCase()) !== i).map((x) => x.toLowerCase()))];
+  if (dupBases.length) {
+    const similar = await db.product.findMany({
+      where: { OR: dupBases.map((d) => ({ sku: { startsWith: `${d}-`, mode: 'insensitive' as const } })) },
+      select: { sku: true },
+    });
+    for (const p of similar) taken.add(p.sku.toLowerCase());
+  }
+
+  const seen = new Set<string>();
   return rows.map((row) => {
     if (!row.name) return { ...row, status: 'error', error: 'Nom manquant' };
-    const normalizedSku = row.sku.trim().toLowerCase();
-    // Deux références identiques dans le même fichier ne pouvaient pas être
-    // détectées par la requête DB ci-dessus. La seconde faisait donc tomber la
-    // transaction au moment du commit — on la signale maintenant, avant toute
-    // écriture, afin que l'utilisateur puisse la corriger.
-    if (normalizedSku && seenSkus.has(normalizedSku)) {
-      return { ...row, status: 'error', error: 'Référence en double dans le fichier' };
+    const sku = row.sku.trim();
+    const key = sku.toLowerCase();
+    if (key && seen.has(key)) {
+      let n = 2;
+      while (taken.has(`${key}-${n}`)) n++;
+      const next = `${sku}-${n}`;
+      taken.add(next.toLowerCase());
+      seen.add(next.toLowerCase());
+      return { ...row, sku: next, status: 'create', note: `Référence en double : enregistrée sous ${next}` };
     }
-    if (normalizedSku) seenSkus.add(normalizedSku);
-    const matchId = row.sku ? bySku.get(row.sku.toLowerCase()) : undefined;
+    if (key) seen.add(key);
+    const matchId = key ? bySku.get(key) : undefined;
     return matchId ? { ...row, status: 'update', existingProductId: matchId } : { ...row, status: 'create' };
   });
 }

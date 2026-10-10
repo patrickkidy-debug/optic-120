@@ -4676,7 +4676,10 @@
       }
     },
     "headFit": "Cabeça ajustada ✓",
-    "headSize": "Tamanho da cabeça:"
+    "headSize": "Tamanho da cabeça:",
+    "updateApp": "Atualize a aplicação OculoSaaS",
+    "updateAppHint": "A sua aplicação é uma versão antiga sem acesso à câmara ao vivo. Abra o Chrome, cole o link abaixo, instale a atualização e autorize a câmara.",
+    "copyApkLink": "Copiar o link da nova versão"
   },
   "notif": {
     "title": "Notificações",
@@ -4933,7 +4936,9 @@
     "scanCameraError": "Câmara inacessível: autorize a câmara ou cole o link do QR abaixo.",
     "inviteLab": "Convidar o laboratório",
     "portalAccess": "Acesso ao portal",
-    "noPortalForLab": "{{name}} ainda não tem acesso ao portal OculoTrack: convide-o para poder ler e confirmar a receção."
+    "noPortalForLab": "{{name}} ainda não tem acesso ao portal OculoTrack: convide-o para poder ler e confirmar a receção.",
+    "scanFromPhoto": "Tirar uma foto do QR code",
+    "qrNotFound": "QR code não lido: tire a foto mais perto e nítida."
   },
   "pt": {
     "portal": "Portal de parceiros",
