@@ -50,14 +50,23 @@ export function AdvisorLauncher({
           variant === 'floating'
             ? 'fixed bottom-5 right-4 z-[70] rounded-full bg-[#0f172a] px-5 py-3.5 text-sm text-white shadow-[0_18px_40px_-12px_rgba(15,23,42,0.6)] hover:-translate-y-0.5 sm:bottom-6 sm:right-6'
             : variant === 'block'
-              ? 'min-h-[48px] w-full justify-center rounded-xl border-2 border-primary/30 bg-white px-4 py-3 font-display font-bold text-primary hover:border-primary hover:bg-primary/5 active:scale-[0.98]'
+              ? 'min-h-[52px] w-full justify-center rounded-xl border-2 border-[#0f172a] bg-[#0f172a] px-4 py-3 font-display font-bold text-white shadow-[0_8px_24px_-10px_rgba(15,23,42,0.75)] hover:-translate-y-0.5 hover:bg-[#1e293b] hover:shadow-[0_12px_28px_-10px_rgba(15,23,42,0.8)] active:translate-y-0 active:scale-[0.98]'
               : variant === 'blockOnBrand'
-                ? 'min-h-[48px] w-full justify-center rounded-xl border-2 border-white/60 bg-white/10 px-4 py-3 font-display font-bold text-white hover:bg-white/20 active:scale-[0.98]'
+                ? 'min-h-[52px] w-full justify-center rounded-xl border-2 border-white bg-white px-4 py-3 font-display font-bold text-primary shadow-[0_8px_24px_-10px_rgba(15,23,42,0.55)] hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-[0_12px_28px_-10px_rgba(15,23,42,0.65)] active:translate-y-0 active:scale-[0.98]'
                 : 'rounded-full border border-primary/30 bg-white px-5 py-3 text-sm text-primary hover:bg-primary/5',
           className,
         )}
       >
-        <span className={clsx('grid h-7 w-7 place-items-center rounded-full', variant === 'floating' ? 'bg-brand' : variant === 'blockOnBrand' ? 'bg-white/20' : 'bg-primary/10')}>
+        <span className={clsx(
+          'grid h-7 w-7 place-items-center rounded-full',
+          variant === 'floating'
+            ? 'bg-brand'
+            : variant === 'block'
+              ? 'bg-white/15'
+              : variant === 'blockOnBrand'
+                ? 'bg-primary/10'
+                : 'bg-primary/10',
+        )}>
           <Mic className="h-4 w-4" aria-hidden />
         </span>
         {label ?? s.launch}
