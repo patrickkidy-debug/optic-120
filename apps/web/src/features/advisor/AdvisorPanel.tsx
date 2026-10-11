@@ -21,6 +21,9 @@ const THEME = {
 type Phase = 'consent' | 'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle' | 'ended' | 'error';
 type Msg = Turn & { cards?: UiEvent[] };
 
+/** Texte brut : retire le gras markdown que le modèle laisserait passer. */
+const plain = (t: string) => t.replace(/\*\*|__/g, '').replace(/^#+\s*/gm, '');
+
 const ACTIVATION_TOKEN_KEY = 'oculo_activation_token';
 const readToken = () => {
   try {
@@ -479,14 +482,14 @@ export function AdvisorPanel({ open, onClose, page }: { open: boolean; onClose: 
                   {(showTranscript || mode === 'TEXT') &&
                     msgs.map((m, i) => (
                       <div key={i} className={clsx('max-w-[88%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed', m.role === 'user' ? 'ml-auto bg-primary text-white' : 'bg-surface-2 text-content')}>
-                        {m.content}
+                        {plain(m.content)}
                       </div>
                     ))}
-                  {(showTranscript || mode === 'TEXT') && live && <div className="max-w-[88%] rounded-2xl bg-surface-2 px-4 py-2.5 text-sm leading-relaxed">{live}</div>}
+                  {(showTranscript || mode === 'TEXT') && live && <div className="max-w-[88%] rounded-2xl bg-surface-2 px-4 py-2.5 text-sm leading-relaxed">{plain(live)}</div>}
                   {/* Sous-titres en mode vocal : ce que dit le conseiller, lisible sans le son. */}
                   {!showTranscript && mode === 'VOICE' && (live || msgs.some((m) => m.role === 'assistant')) && (
                     <p className="px-2 text-center font-display text-lg font-semibold leading-snug text-content">
-                      {live || [...msgs].reverse().find((m) => m.role === 'assistant')?.content}
+                      {plain(live || [...msgs].reverse().find((m) => m.role === 'assistant')?.content || '')}
                     </p>
                   )}
 

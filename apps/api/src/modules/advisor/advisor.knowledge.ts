@@ -156,7 +156,7 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
     id: 'security',
     title: 'Sécurité des données',
     keywords: ['sécurité', 'données', 'confidentialité', 'sauvegarde', 'piratage', 'mot de passe', 'protégé'],
-    text: "Faits vérifiés : chaque établissement a ses données cloisonnées des autres ; mots de passe stockés hachés ; accès par rôles et permissions ; journal d'activité ; connexion chiffrée (HTTPS). Pour toute question plus précise (certifications, localisation des serveurs, fréquence des sauvegardes), ne pas inventer : proposer le support.",
+    text: "Faits vérifiés : chaque établissement a ses données cloisonnées des autres ; mots de passe stockés hachés ; accès par rôles et permissions ; journal d'activité ; échanges entre le navigateur et le serveur protégés par HTTPS. Ne pas affirmer d'autre chiffrement. Pour toute question plus précise (certifications, localisation des serveurs, fréquence des sauvegardes), ne pas inventer : proposer le support.",
   },
   {
     id: 'offline',
