@@ -133,6 +133,7 @@ const PAYMENTS = [
   { label: 'Orange Money', short: 'OM', bg: '#FF6600', fg: '#ffffff' },
   { label: 'MTN MoMo', short: 'MTN', bg: '#FFCC00', fg: '#111111' },
   { label: 'M-Pesa', short: 'M-P', bg: '#E30613', fg: '#ffffff' },
+  { label: 'Airtel Money', short: 'AM', bg: '#ED1C24', fg: '#ffffff' },
   { label: 'Multicaixa', short: 'MCX', bg: '#0B3D91', fg: '#ffffff' },
   { label: 'Vinti4', short: 'V4', bg: '#0F7B3E', fg: '#ffffff' },
   { label: 'Moov Money', get short() { return tr('ui.LandingPage.moov'); }, bg: '#0A56A5', fg: '#ffffff' },

@@ -91,6 +91,7 @@ export const PaymentMethod = {
   MULTICAIXA: 'MULTICAIXA', // Angola (Multicaixa Express)
   UNITEL_MONEY: 'UNITEL_MONEY', // Angola
   VINTI4: 'VINTI4', // Cap-Vert
+  AIRTEL_MONEY: 'AIRTEL_MONEY', // Gabon (Airtel)
   // Facturation de l'editeur (console fondateur) : volontairement absents de
   // PAYMENT_METHODS_BY_COUNTRY, la caisse des opticiens ne les propose pas.
   BANK_TRANSFER: 'BANK_TRANSFER',
@@ -117,6 +118,8 @@ export const PAYMENT_METHODS_BY_COUNTRY: Record<string, PaymentMethod[]> = {
   MZ: [PaymentMethod.MPESA, PaymentMethod.EMOLA, PaymentMethod.MKESH],
   AO: [PaymentMethod.MULTICAIXA, PaymentMethod.UNITEL_MONEY],
   CV: [PaymentMethod.VINTI4],
+  // Afrique centrale
+  GA: [PaymentMethod.AIRTEL_MONEY, PaymentMethod.MOOV_MONEY],
   // Europe : pas de Mobile Money. Espèces, carte et chèque, déjà proposés partout.
   FR: [],
   BE: [],
@@ -731,6 +734,7 @@ export const DEFAULT_VAT_BY_COUNTRY: Record<string, number> = {
   AO: 14, // Angola
   MZ: 16, // Mozambique
   RW: 18, // Rwanda
+  GA: 18, // Gabon
   FR: 20, // France
   BE: 21, // Belgique
   CH: 8.1, // Suisse
@@ -755,8 +759,8 @@ const passwordSchema = z
  * ET de la devise attribuée à l'établissement (déduite de son indicatif, le
  * formulaire ne demandant pas le pays séparément).
  *
- * Couvre la CEDEAO + Mauritanie, l'Europe francophone, plus les marchés lusophones hors Afrique de
- * l'Ouest (Angola, Mozambique) ouverts en test, et le Rwanda en Afrique de l'Est.
+ * Couvre la CEDEAO + Mauritanie, le Gabon (CEMAC), l'Europe francophone, plus les marchés
+ * lusophones hors Afrique de l'Ouest (Angola, Mozambique) ouverts en test, et le Rwanda en Afrique de l'Est.
  */
 export const SUPPORTED_COUNTRIES = [
   { code: 'BJ', name: 'Bénin', dial: '+229', flag: '🇧🇯', currency: 'XOF', locale: 'fr' },
@@ -775,6 +779,8 @@ export const SUPPORTED_COUNTRIES = [
   { code: 'SN', name: 'Sénégal', dial: '+221', flag: '🇸🇳', currency: 'XOF', locale: 'fr' },
   { code: 'SL', name: 'Sierra Leone', dial: '+232', flag: '🇸🇱', currency: 'XOF', locale: 'en' },
   { code: 'TG', name: 'Togo', dial: '+228', flag: '🇹🇬', currency: 'XOF', locale: 'fr' },
+  // Afrique centrale (CEMAC) : franc CFA d'Afrique centrale, à parité avec le XOF.
+  { code: 'GA', name: 'Gabon', dial: '+241', flag: '🇬🇦', currency: 'XAF', locale: 'fr' },
   // Afrique de l'Est / Grands Lacs
   { code: 'RW', name: 'Rwanda', dial: '+250', flag: '🇷🇼', currency: 'RWF', locale: 'fr' },
   // Marchés lusophones ouverts en test (hors CEDEAO).
@@ -1644,6 +1650,7 @@ export const paymentMethodEnum = z.enum([
   PaymentMethod.MTN_MOMO,
   PaymentMethod.MOOV_MONEY,
   PaymentMethod.FREE_MONEY,
+  PaymentMethod.AIRTEL_MONEY,
   PaymentMethod.CARD,
   PaymentMethod.CHEQUE,
 ]);
@@ -3542,6 +3549,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   MULTICAIXA: 'Multicaixa Express',
   UNITEL_MONEY: 'Unitel Money',
   VINTI4: 'Vinti4',
+  AIRTEL_MONEY: 'Airtel Money',
   BANK_TRANSFER: 'Virement bancaire',
   OTHER: 'Autre',
 };

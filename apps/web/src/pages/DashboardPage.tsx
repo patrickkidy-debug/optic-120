@@ -170,6 +170,7 @@ const METHOD_LABELS: Record<string, string> = {
   get FREE_MONEY() { return tr('ui.DashboardPage.free'); },
   get CARD() { return tr('ui.DashboardPage.carte'); },
   get CHEQUE() { return tr('ui.DashboardPage.cheque'); },
+  AIRTEL_MONEY: 'Airtel Money',
 };
 const METHOD_COLORS = ['#3b82f6', '#22d3ee', '#f97316', '#20c997', '#a855f7', '#f59e0b', '#ef4444'];
 

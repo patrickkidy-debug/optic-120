@@ -29,6 +29,7 @@ const METHOD_LABELS: Record<string, string> = {
   EMOLA: 'e-Mola',
   MKESH: 'mKesh',
   MULTICAIXA: 'Multicaixa',
+  AIRTEL_MONEY: 'Airtel Money',
   get BANK_TRANSFER() { return tr('ui.PaymentStep.virementBancaire'); },
 };
 

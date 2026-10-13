@@ -924,7 +924,8 @@
     "VINTI4": "Vinti4",
     "BANK_TRANSFER": "Transferência bancária",
     "OTHER": "Outro",
-    "INSURANCE": "Seguro"
+    "INSURANCE": "Seguro",
+    "AIRTEL_MONEY": "Airtel Money"
   },
   "expenseCategories": {
     "SUPPLIES": "Material",

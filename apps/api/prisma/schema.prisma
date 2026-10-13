@@ -870,6 +870,8 @@ enum PaymentMethod {
   MULTICAIXA
   UNITEL_MONEY
   VINTI4
+  // Afrique centrale
+  AIRTEL_MONEY
   /// Facturation de l'éditeur (console fondateur). Volontairement absents de
   /// PAYMENT_METHODS_BY_COUNTRY : la caisse des opticiens ne les propose pas.
   BANK_TRANSFER

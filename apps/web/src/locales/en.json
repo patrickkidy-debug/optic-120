@@ -924,7 +924,8 @@
     "VINTI4": "Vinti4",
     "BANK_TRANSFER": "Bank transfer",
     "OTHER": "Other",
-    "INSURANCE": "Insurance"
+    "INSURANCE": "Insurance",
+    "AIRTEL_MONEY": "Airtel Money"
   },
   "expenseCategories": {
     "SUPPLIES": "Supplies",

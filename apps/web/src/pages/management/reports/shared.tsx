@@ -41,6 +41,7 @@ export const METHOD_LABEL: Record<string, string> = {
   EMOLA: 'e-Mola',
   MKESH: 'mKesh',
   MULTICAIXA: 'Multicaixa',
+  AIRTEL_MONEY: 'Airtel Money',
 };
 
 export function methodLabel(method: string): string {
