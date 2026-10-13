@@ -4756,7 +4756,8 @@
       "PHOTO_CARD": "Foto · cartão",
       "PHOTO_FRAME": "Foto · armação",
       "MANUAL": "Manual",
-      "PHOTO_REFERENCE": "Foto · referência"
+      "PHOTO_REFERENCE": "Foto · referência",
+      "PHOTO_AUTO": "Foto · auto"
     },
     "step": {
       "refLCard": "Toque na borda ESQUERDA do cartão",
@@ -4917,8 +4918,13 @@
       "mode": {
         "CARD": "Referência: cartão bancário 85,60 mm",
         "FRAME": "Referência: largura da armação",
-        "REFERENCE": "Referência: medida introduzida"
-      }
+        "REFERENCE": "Referência: medida introduzida",
+        "AUTO": "Calibração automática (íris)"
+      },
+      "auto": "Calibração automática",
+      "autoReady": "Escala calculada automaticamente a partir da íris",
+      "autoUnavailable": "Íris não mensurável nesta foto: escolha outra referência",
+      "autoHint": "Sem acessório: cerca de ±2 mm na DP. Para ±0,5 mm, segure um cartão bancário acima da armação: é detetado automaticamente."
     },
     "review": "Verificar pontos",
     "validate": "Validar",
@@ -4987,7 +4993,8 @@
       "tooDark": "Iluminação insuficiente",
       "tooBright": "Imagem sobre-exposta",
       "blurry": "Imagem pouco nítida",
-      "notReviewed": "Pontos não verificados pelo ótico"
+      "notReviewed": "Pontos não verificados pelo ótico",
+      "refIris": "Calibração automática pela íris: cerca de ±2 mm. Adicione um cartão bancário para mais precisão."
     },
     "takePhotoNative": "Tirar a foto com a câmara",
     "retry": "Tentar novamente",
@@ -5019,7 +5026,11 @@
     "headSize": "Tamanho da cabeça:",
     "updateApp": "Atualize a aplicação OculoSaaS",
     "updateAppHint": "A sua aplicação é uma versão antiga sem acesso à câmara ao vivo. Abra o Chrome, cole o link abaixo, instale a atualização e autorize a câmara.",
-    "copyApkLink": "Copiar o link da nova versão"
+    "copyApkLink": "Copiar o link da nova versão",
+    "live": {
+      "cardOn": "Cartão detetado — calibração precisa",
+      "irisOn": "Calibração automática pela íris"
+    }
   },
   "notif": {
     "title": "Notificações",

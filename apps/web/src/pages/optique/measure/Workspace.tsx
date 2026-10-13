@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Sparkles,
   ArrowLeft,
   Check,
   ChevronDown,
@@ -31,6 +32,8 @@ import {
   defaultRims,
   FACE_KEYS,
   IRIS_MM,
+  IRIS_REL_ERROR,
+  cardAspect,
   lensBox,
   refKeys,
   reliability,
@@ -44,7 +47,7 @@ import {
   type ValueKey,
   type Values,
 } from '../../../features/optique/measure/geometry';
-import { brightness, detectCard, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
+import { brightness, detectCard, detectRims, measureIris, sharpness, toGray } from '../../../features/optique/measure/vision';
 import { createMeasurement, updateMeasurement, type Measurement } from '../../../features/optique/measurements';
 import { NumberInput } from '../../../components/NumberInput';
 import { apiErrorMessage } from '../../../lib/api';
@@ -177,6 +180,9 @@ export function Workspace({
         // Référence « largeur de monture » : bords extérieurs, un peu au-delà des cercles.
         m.ref1 = ax.at(ax.X(m.rTemple!) - 0.05 * f.pdPx, ax.Y(m.pupilR));
         m.ref2 = ax.at(ax.X(m.lTemple!) + 0.05 * f.pdPx, ax.Y(m.pupilL));
+        const iris = measureIris(photo, w, h, f);
+        next.irisPx = iris.px;
+        next.irisConf = iris.conf;
         const fb = f.faceBox;
         next.brightness = brightness(g, fb);
         next.sharpness = sharpness(g, {
@@ -205,8 +211,20 @@ export function Workspace({
       setMarkers(m);
       setAuto(structuredClone(m));
       setCtx(next);
-      setCal({ mode: 'CARD', mm: ID1_CARD_WIDTH_MM });
-      setPhase('calibrate');
+      // Calibrage automatique : la carte si elle est nettement détectée (le plus
+      // précis), sinon l'iris. Sans visage, l'opticien choisit lui-même.
+      const asp = cardAspect(m);
+      const cardSure = next.refConf >= 0.45 && asp != null && Math.abs(asp - 1.586) < 0.12;
+      if (cardSure) {
+        setCal({ mode: 'CARD', mm: ID1_CARD_WIDTH_MM });
+        setPhase('measure');
+      } else if (next.irisPx) {
+        setCal({ mode: 'AUTO', mm: IRIS_MM, irisPx: next.irisPx });
+        setPhase('measure');
+      } else {
+        setCal({ mode: 'CARD', mm: ID1_CARD_WIDTH_MM });
+        setPhase('calibrate');
+      }
     })();
     return () => {
       cancelled = true;
@@ -231,6 +249,8 @@ export function Workspace({
   // Incertitude indicative sur l'écart pupillaire : ±1,5 px par repère + erreur relative de la référence.
   const precision = useMemo(() => {
     if (!scale || !values.pdTotal) return null;
+    // Iris : la variabilité entre personnes domine (≈ 3,5 % de l'EP).
+    if (cal.mode === 'AUTO') return Math.hypot(2.1 * scale, values.pdTotal * IRIS_REL_ERROR);
     const refPx = cal.mode === 'CARD' ? ID1_CARD_WIDTH_MM / scale : cal.mm / scale;
     return Math.hypot(2.1 * scale, (values.pdTotal * 3) / Math.max(1, refPx));
   }, [scale, values.pdTotal, cal]);
@@ -366,9 +386,10 @@ export function Workspace({
 
   /* ---------- Calibration ---------- */
   function chooseCal(mode: MeasurementCalibration) {
+    if (mode === 'AUTO') return setCal({ mode, mm: IRIS_MM, irisPx: ctx.irisPx });
     setCal({ mode, mm: mode === 'CARD' ? ID1_CARD_WIDTH_MM : mode === 'FRAME' ? frameMm : refMm });
   }
-  const calReady = cal.mode === 'CARD' ? scale != null : cal.mm > 0 && scale != null;
+  const calReady = cal.mode === 'CARD' || cal.mode === 'AUTO' ? scale != null : cal.mm > 0 && scale != null;
 
   /* ---------- Enregistrement ---------- */
   async function save() {
@@ -395,7 +416,14 @@ export function Workspace({
       };
       const common = {
         ...numbers,
-        method: cal.mode === 'CARD' ? ('PHOTO_CARD' as const) : cal.mode === 'FRAME' ? ('PHOTO_FRAME' as const) : ('PHOTO_REFERENCE' as const),
+        method:
+          cal.mode === 'AUTO'
+            ? ('PHOTO_AUTO' as const)
+            : cal.mode === 'CARD'
+              ? ('PHOTO_CARD' as const)
+              : cal.mode === 'FRAME'
+                ? ('PHOTO_FRAME' as const)
+                : ('PHOTO_REFERENCE' as const),
         calibration: cal.mode,
         confidence: rel.score,
         markers: saved as unknown as Record<string, unknown>,
@@ -559,6 +587,7 @@ export function Workspace({
             cal={cal}
             choose={chooseCal}
             cardConf={ctx.refConf}
+            irisReady={Boolean(ctx.irisPx)}
             frameMm={frameMm}
             setFrameMm={(n) => { setFrameMm(n); if (cal.mode === 'FRAME') setCal({ mode: 'FRAME', mm: n }); }}
             refMm={refMm}
@@ -667,7 +696,16 @@ function Overlay({
           {label({ x: (m.c1.x + m.c2.x) / 2, y: (m.c1.y + m.c2.y) / 2 - 12 * u }, `${fmt(ID1_CARD_WIDTH_MM)} mm`, refColor)}
         </g>
       )}
-      {cal.mode !== 'CARD' && m.ref1 && m.ref2 && (
+      {/* Calibrage automatique : les iris mesurés servent d'étalon (11,7 mm). */}
+      {cal.mode === 'AUTO' && cal.irisPx && m.pupilR && m.pupilL && (
+        <g>
+          {[m.pupilR, m.pupilL].map((c, i) => (
+            <circle key={i} cx={c.x} cy={c.y} r={cal.irisPx! / 2} fill="none" stroke={refColor} strokeWidth={1.5 * u} strokeDasharray={`${4 * u} ${3 * u}`} />
+          ))}
+          {label({ x: m.pupilL.x, y: m.pupilL.y - cal.irisPx / 2 - 12 * u }, `Iris ${fmt(IRIS_MM)} mm`, refColor)}
+        </g>
+      )}
+      {(cal.mode === 'FRAME' || cal.mode === 'REFERENCE') && m.ref1 && m.ref2 && (
         <g>
           {line(m.ref1, m.ref2, refColor, 2, `${6 * u} ${4 * u}`)}
           {cal.mm > 0 && label({ x: (m.ref1.x + m.ref2.x) / 2, y: (m.ref1.y + m.ref2.y) / 2 - 12 * u }, `${fmt(cal.mm)} mm`, refColor)}
@@ -756,6 +794,7 @@ function CalibrationPanel({
   cal,
   choose,
   cardConf,
+  irisReady,
   frameMm,
   setFrameMm,
   refMm,
@@ -770,6 +809,7 @@ function CalibrationPanel({
   cal: Calibration;
   choose: (m: MeasurementCalibration) => void;
   cardConf: number;
+  irisReady: boolean;
   frameMm: number;
   setFrameMm: (n: number) => void;
   refMm: number;
@@ -803,6 +843,16 @@ function CalibrationPanel({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {engineOff ? tr('cz.engineOffAnalysis') : tr('cz.noFaceFound')}
         </p>
       )}
+      {opt('AUTO', 0, <Sparkles className="h-4 w-4 text-amber-300" />, tr('cz.cal.auto'), (
+        <>
+          {irisReady ? (
+            <span className="font-semibold text-emerald-300">✓ {tr('cz.cal.autoReady')}</span>
+          ) : (
+            <span className="text-amber-200">{tr('cz.cal.autoUnavailable')}</span>
+          )}
+          <span className="mt-1 block">{tr('cz.cal.autoHint')}</span>
+        </>
+      ))}
       {opt('CARD', 1, <CreditCard className="h-4 w-4 text-amber-300" />, tr('cz.cal.card'), (
         <>
           {cardConf >= 0.45 ? (
@@ -842,7 +892,7 @@ function CalibrationPanel({
             </p>
           </>
         ) : (
-          <p className="text-amber-200">{tr(cal.mode === 'CARD' ? 'cz.cal.placeCard' : 'cz.cal.enterLength')}</p>
+          <p className="text-amber-200">{tr(cal.mode === 'AUTO' ? 'cz.cal.autoUnavailable' : cal.mode === 'CARD' ? 'cz.cal.placeCard' : 'cz.cal.enterLength')}</p>
         )}
       </div>
       <button type="button" disabled={!ready} onClick={onDone} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold disabled:opacity-40">

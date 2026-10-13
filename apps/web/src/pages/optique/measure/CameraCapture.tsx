@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, CameraOff, RotateCcw, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Timer } from 'lucide-react';
+import { ArrowLeft, Camera, CameraOff, RotateCcw, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Sparkles, Timer } from 'lucide-react';
 import { getLandmarker, toFacePoints } from '../../../features/optique/measure/landmarker';
 import { APK_URL, isOutdatedApp } from '../../../lib/nativeApp';
 import { analyzeFace, IRIS_MM, type FaceAnalysis } from '../../../features/optique/measure/geometry';
-import { brightness, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
+import { brightness, detectCard, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
 import { tr } from '../../../lib/tr';
 
 type CamError = 'denied' | 'notFound' | 'busy' | 'unsupported' | 'other';
@@ -168,6 +168,8 @@ export function CameraCapture({
   const [countdown, setCountdown] = useState<number | null>(null);
   const goodSince = useRef<number | null>(null);
   const [showChecks, setShowChecks] = useState(false);
+  // Calibrage qui sera appliqué à la photo : carte (précis) ou iris (automatique).
+  const [liveCal, setLiveCal] = useState<'card' | 'iris' | null>(null);
 
   /* ---------- Caméra ---------- */
   useEffect(() => {
@@ -260,6 +262,7 @@ export function CameraCapture({
     let lastImg = 0;
     let lastUi = 0;
     let img: { light: number; sharp: number; frame: number } | null = null;
+    let cardSeen = false;
     let face: FaceAnalysis | null = null;
     let landmarker: Awaited<ReturnType<typeof getLandmarker>> | null = null;
 
@@ -294,6 +297,8 @@ export function CameraCapture({
           y1: face.pupilR.y + 0.25 * face.pdPx,
         };
         const rims = detectRims(g, face);
+        const card = detectCard(g, face);
+        cardSeen = Boolean(card && card.confidence >= 0.45);
         img = {
           light: brightness(g, { x0: fb.x0, x1: fb.x1, y0: fb.y0, y1: fb.y1 }),
           sharp: sharpness(g, eyeBox),
@@ -304,6 +309,7 @@ export function CameraCapture({
         lastUi = now;
         const next = evaluate(face, v.videoWidth, img, targetRef.current);
         setLive(next);
+        setLiveCal(face ? (cardSeen ? 'card' : 'iris') : null);
         goodSince.current = next.quality >= 85 ? goodSince.current ?? now : null;
       }
     };
@@ -483,6 +489,14 @@ export function CameraCapture({
               <span className="text-[10px] text-white/70">{tr('cz.far')}</span>
               {live.distanceCm != null && <span className="mt-1 rounded bg-black/50 px-1.5 text-[11px]">≈ {live.distanceCm} cm</span>}
             </div>
+
+            {/* Calibrage automatique : indique la référence qui sera utilisée */}
+            {engine === 'ready' && liveCal && (
+              <div className={`pointer-events-none absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur ${liveCal === 'card' ? 'bg-emerald-500/30 text-emerald-100' : 'bg-black/55 text-white/85'}`}>
+                {liveCal === 'card' ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Sparkles className="h-3.5 w-3.5 text-amber-300" />}
+                {tr(liveCal === 'card' ? 'cz.live.cardOn' : 'cz.live.irisOn')}
+              </div>
+            )}
 
             {countdown != null && (
               <div className="pointer-events-none absolute inset-0 grid place-items-center">

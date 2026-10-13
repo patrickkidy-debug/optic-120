@@ -4756,7 +4756,8 @@
       "PHOTO_CARD": "Photo · carte",
       "PHOTO_FRAME": "Photo · monture",
       "MANUAL": "Saisie",
-      "PHOTO_REFERENCE": "Photo · référence"
+      "PHOTO_REFERENCE": "Photo · référence",
+      "PHOTO_AUTO": "Photo · auto"
     },
     "step": {
       "refLCard": "Touchez le bord GAUCHE de la carte",
@@ -4917,8 +4918,13 @@
       "mode": {
         "CARD": "Référence : carte bancaire 85,60 mm",
         "FRAME": "Référence : largeur de monture",
-        "REFERENCE": "Référence : cote saisie"
-      }
+        "REFERENCE": "Référence : cote saisie",
+        "AUTO": "Calibrage automatique (iris)"
+      },
+      "auto": "Calibrage automatique",
+      "autoReady": "Échelle calculée automatiquement à partir de l’iris",
+      "autoUnavailable": "Iris non mesurable sur cette photo : choisissez une autre référence",
+      "autoHint": "Aucun accessoire : précision d’environ ±2 mm sur l’EP. Pour ±0,5 mm, tenez une carte bancaire au-dessus de la monture : elle est détectée toute seule."
     },
     "review": "Vérifier les repères",
     "validate": "Valider",
@@ -4987,7 +4993,8 @@
       "tooDark": "Éclairage insuffisant",
       "tooBright": "Image surexposée",
       "blurry": "Image peu nette",
-      "notReviewed": "Repères non vérifiés par l’opticien"
+      "notReviewed": "Repères non vérifiés par l’opticien",
+      "refIris": "Calibrage automatique par l’iris : ±2 mm environ. Ajoutez une carte bancaire pour plus de précision."
     },
     "takePhotoNative": "Prendre la photo avec l’appareil photo",
     "retry": "Réessayer",
@@ -5019,7 +5026,11 @@
     "headSize": "Taille de la tête :",
     "updateApp": "Mettez à jour l’application OculoSaaS",
     "updateAppHint": "Votre application est une ancienne version sans accès à la caméra en direct. Ouvrez Chrome, collez le lien ci-dessous, installez la mise à jour puis autorisez la caméra.",
-    "copyApkLink": "Copier le lien de la nouvelle version"
+    "copyApkLink": "Copier le lien de la nouvelle version",
+    "live": {
+      "cardOn": "Carte détectée — calibrage précis",
+      "irisOn": "Calibrage automatique par l’iris"
+    }
   },
   "notif": {
     "title": "Notifications",

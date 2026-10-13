@@ -4756,7 +4756,8 @@
       "PHOTO_CARD": "Photo · card",
       "PHOTO_FRAME": "Photo · frame",
       "MANUAL": "Manual",
-      "PHOTO_REFERENCE": "Photo · reference"
+      "PHOTO_REFERENCE": "Photo · reference",
+      "PHOTO_AUTO": "Photo · auto"
     },
     "step": {
       "refLCard": "Tap the LEFT edge of the card",
@@ -4917,8 +4918,13 @@
       "mode": {
         "CARD": "Reference: bank card 85.60 mm",
         "FRAME": "Reference: frame width",
-        "REFERENCE": "Reference: entered distance"
-      }
+        "REFERENCE": "Reference: entered distance",
+        "AUTO": "Automatic calibration (iris)"
+      },
+      "auto": "Automatic calibration",
+      "autoReady": "Scale calculated automatically from the iris",
+      "autoUnavailable": "Iris could not be measured on this photo: choose another reference",
+      "autoHint": "No accessory needed: about ±2 mm on the PD. For ±0.5 mm, hold a bank card above the frame: it is detected automatically."
     },
     "review": "Check markers",
     "validate": "Confirm",
@@ -4987,7 +4993,8 @@
       "tooDark": "Insufficient lighting",
       "tooBright": "Image overexposed",
       "blurry": "Image not sharp",
-      "notReviewed": "Markers not checked by the optician"
+      "notReviewed": "Markers not checked by the optician",
+      "refIris": "Automatic calibration from the iris: about ±2 mm. Add a bank card for higher precision."
     },
     "takePhotoNative": "Take the photo with the camera",
     "retry": "Try again",
@@ -5019,7 +5026,11 @@
     "headSize": "Head size:",
     "updateApp": "Update the OculoSaaS app",
     "updateAppHint": "Your app is an old version without live camera access. Open Chrome, paste the link below, install the update, then allow the camera.",
-    "copyApkLink": "Copy the new version link"
+    "copyApkLink": "Copy the new version link",
+    "live": {
+      "cardOn": "Card detected — precise calibration",
+      "irisOn": "Automatic calibration from the iris"
+    }
   },
   "notif": {
     "title": "Notifications",

@@ -1417,10 +1417,11 @@ export type RegularizeInventoryCountInput = z.infer<typeof regularizeInventoryCo
 
 /** Carte bancaire / d'identité (format ID-1, norme ISO/IEC 7810) : référence de calibrage. */
 export const ID1_CARD_WIDTH_MM = 85.6;
-export const MEASUREMENT_METHODS = ['PHOTO_CARD', 'PHOTO_FRAME', 'PHOTO_REFERENCE', 'MANUAL'] as const;
+export const MEASUREMENT_METHODS = ['PHOTO_AUTO', 'PHOTO_CARD', 'PHOTO_FRAME', 'PHOTO_REFERENCE', 'MANUAL'] as const;
 export type MeasurementMethod = (typeof MEASUREMENT_METHODS)[number];
 /** Référence de taille d'une mesure par photo. */
-export const MEASUREMENT_CALIBRATIONS = ['CARD', 'FRAME', 'REFERENCE'] as const;
+/** AUTO : échelle déduite du diamètre de l'iris (sans accessoire), ±2 mm environ sur l'EP. */
+export const MEASUREMENT_CALIBRATIONS = ['AUTO', 'CARD', 'FRAME', 'REFERENCE'] as const;
 export type MeasurementCalibration = (typeof MEASUREMENT_CALIBRATIONS)[number];
 
 const mmValue = (max: number) => z.number().min(0).max(max).nullable().optional();

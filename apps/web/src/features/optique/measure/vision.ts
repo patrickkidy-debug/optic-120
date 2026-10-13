@@ -50,6 +50,91 @@ export function toGray(src: CanvasImageSource, srcW: number, srcH: number, maxW 
 
 const clampI = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
 
+/**
+ * Diamètre de l'iris affiné sur la photo en pleine résolution.
+ *
+ * Les repères MediaPipe donnent un diamètre approximatif. Pour chaque œil, on
+ * suit quelques lignes horizontales autour du centre de l'iris (loin des
+ * paupières) et on cherche le limbe : passage iris sombre → blanc de l'œil,
+ * à gauche et à droite. La médiane des lignes donne le diamètre ; les deux
+ * yeux et l'estimation MediaPipe se contrôlent mutuellement.
+ */
+export function measureIris(src: CanvasImageSource, srcW: number, srcH: number, f: FaceAnalysis): { px: number; conf: number } {
+  const r0 = f.irisPx / 2;
+  if (!(r0 > 3)) return { px: f.irisPx, conf: 0 };
+  // Agrandit les petits iris pour gagner en précision sous-pixel.
+  const up = r0 < 24 ? Math.min(4, 24 / r0) : 1;
+  const per: number[] = [];
+  for (const c of [f.pupilR, f.pupilL]) {
+    const x0 = Math.max(0, Math.round(c.x - 1.8 * r0));
+    const x1 = Math.min(srcW, Math.round(c.x + 1.8 * r0));
+    const y0 = Math.max(0, Math.round(c.y - 0.4 * r0));
+    const y1 = Math.min(srcH, Math.round(c.y + 0.4 * r0));
+    const w = Math.round((x1 - x0) * up);
+    const h = Math.max(3, Math.round((y1 - y0) * up));
+    if (w < 10) continue;
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, x0, y0, x1 - x0, y1 - y0, 0, 0, w, h);
+    const px = ctx.getImageData(0, 0, w, h).data;
+    const cx = (c.x - x0) * up;
+    const R = r0 * up;
+    const rows: number[] = [];
+    for (let y = 1; y < h - 1; y += Math.max(1, Math.round(h / 7))) {
+      // Profil de luminance lissé (moyenne sur 3 lignes, fenêtre de 3 pixels).
+      const lum = new Float32Array(w);
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          const j = ((y + dy) * w + x) * 4;
+          s += 0.299 * px[j]! + 0.587 * px[j + 1]! + 0.114 * px[j + 2]!;
+        }
+        lum[x] = s / 3;
+      }
+      const d = (x: number) => (lum[Math.min(w - 1, x + 2)]! - lum[Math.max(0, x - 2)]!) / 4;
+      // Bord gauche : la luminance chute en entrant dans l'iris (dérivée négative).
+      let bl = 0, xl = -1;
+      for (let x = Math.round(cx - 1.4 * R); x <= Math.round(cx - 0.65 * R); x++) {
+        if (x < 2 || x > w - 3) continue;
+        const v = -d(x);
+        if (v > bl) { bl = v; xl = x; }
+      }
+      // Bord droit : la luminance remonte en sortant de l'iris (dérivée positive).
+      let br = 0, xr = -1;
+      for (let x = Math.round(cx + 0.65 * R); x <= Math.round(cx + 1.4 * R); x++) {
+        if (x < 2 || x > w - 3) continue;
+        const v = d(x);
+        if (v > br) { br = v; xr = x; }
+      }
+      if (xl > 0 && xr > 0 && bl > 4 && br > 4) {
+        // Une ligne décalée du centre coupe le cercle selon une corde : on
+        // remonte au diamètre (Pythagore) avec l'écart vertical au centre.
+        const chord = (xr - xl) / up;
+        const dy = y / up + y0 - c.y;
+        rows.push(Math.sqrt(chord * chord + 4 * dy * dy));
+      }
+    }
+    if (rows.length >= 2) {
+      rows.sort((a, b) => a - b);
+      per.push(rows[Math.floor(rows.length / 2)]!);
+    }
+  }
+  const lm = f.irisPx;
+  const near = (v: number) => Math.abs(v - lm) / lm < 0.15;
+  const good = per.filter(near);
+  if (good.length === 2) {
+    const agree = Math.abs(good[0]! - good[1]!) / lm;
+    const px = (good[0]! + good[1]!) / 2;
+    // Deux yeux concordants : confiance élevée ; on garde un peu du repère MediaPipe.
+    return agree < 0.06 ? { px: 0.9 * px + 0.1 * lm, conf: 0.9 } : { px: 0.75 * px + 0.25 * lm, conf: 0.7 };
+  }
+  if (good.length === 1) return { px: 0.6 * good[0]! + 0.4 * lm, conf: 0.6 };
+  return { px: lm, conf: 0.45 };
+}
+
 /** Luminosité moyenne (0-255) d'une zone (coordonnées photo). */
 export function brightness(g: Gray, box: { x0: number; y0: number; x1: number; y1: number }): number {
   const x0 = clampI(box.x0 * g.k, 0, g.w - 1), x1 = clampI(box.x1 * g.k, 0, g.w - 1);

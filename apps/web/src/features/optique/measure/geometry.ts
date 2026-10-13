@@ -6,8 +6,14 @@ export interface Pt {
   y: number;
 }
 
-/** Diamètre moyen de l'iris humain visible (mm) — sert au guidage de distance, jamais au calcul final. */
+/**
+ * Diamètre horizontal visible moyen de l'iris adulte (mm). Sert au guidage de
+ * distance et au calibrage automatique ; l'écart-type entre personnes
+ * (≈ 0,4 mm, soit ≈ 3,5 %) fixe la précision de ce mode.
+ */
 export const IRIS_MM = 11.7;
+/** Incertitude relative du calibrage par l'iris (variabilité entre personnes). */
+export const IRIS_REL_ERROR = 0.035;
 export const CARD_HEIGHT_MM = 53.98;
 
 /* ------------------------------------------------------------------ */
@@ -32,7 +38,8 @@ export type MarkerKey =
 export type Markers = Partial<Record<MarkerKey, Pt>>;
 
 export function refKeys(cal: MeasurementCalibration): readonly MarkerKey[] {
-  return cal === 'CARD' ? CARD_KEYS : REF_KEYS;
+  // Calibrage automatique : aucun repère de référence à placer.
+  return cal === 'AUTO' ? [] : cal === 'CARD' ? CARD_KEYS : REF_KEYS;
 }
 export function allKeys(cal: MeasurementCalibration): MarkerKey[] {
   return [...FACE_KEYS, ...RIM_KEYS, ...refKeys(cal)];
@@ -178,12 +185,15 @@ export function analyzeFace(f: FacePoints): FaceAnalysis {
 
 export interface Calibration {
   mode: MeasurementCalibration;
-  /** Longueur réelle de la référence (mm) : 85,6 pour une carte, largeur de monture, ou cote saisie. */
+  /** Longueur réelle de la référence (mm) : 85,6 pour une carte, largeur de monture, cote saisie, ou iris (11,7). */
   mm: number;
+  /** Mode AUTO : diamètre de l'iris mesuré sur la photo (px). */
+  irisPx?: number;
 }
 
 /** Échelle en mm par pixel, à partir des repères de référence. */
 export function scaleOf(m: Markers, cal: Calibration): number | null {
+  if (cal.mode === 'AUTO') return cal.irisPx && cal.irisPx > 3 ? IRIS_MM / cal.irisPx : null;
   if (cal.mode === 'CARD') {
     const { c1, c2, c3, c4 } = m;
     if (!c1 || !c2 || !c3 || !c4) return null;
@@ -306,6 +316,9 @@ export interface CaptureContext {
   /** Confiance de détection automatique (0-1) de la référence et de chaque bord de monture. */
   refConf: number;
   rimConf: Partial<Record<(typeof RIM_KEYS)[number], number>>;
+  /** Diamètre de l'iris mesuré (px) et confiance de la mesure (0-1), pour le calibrage automatique. */
+  irisPx?: number;
+  irisConf?: number;
   brightness: number;
   sharpness: number;
 }
@@ -328,7 +341,11 @@ export function reliability(ctx: CaptureContext, cal: Calibration, m: Markers, c
   // Référence de taille
   let ref = 0;
   const refCorrected = refKeys(cal.mode).some((k) => corrected.has(k));
-  if (cal.mode === 'CARD') {
+  if (cal.mode === 'AUTO') {
+    // Juste pour l'EP à ±2 mm environ : suffisant pour un contrôle, pas pour un progressif exigeant.
+    ref = 0.55 + 0.15 * Math.min(1, ctx.irisConf ?? 0.5);
+    checks.push({ ok: false, key: 'refIris' });
+  } else if (cal.mode === 'CARD') {
     const asp = cardAspect(m);
     const aspOk = asp != null && Math.abs(asp - ID1_CARD_WIDTH_MM / CARD_HEIGHT_MM) < 0.12;
     ref = Math.max(ctx.refConf, refCorrected ? 0.85 : 0) * (aspOk ? 1 : 0.7);
