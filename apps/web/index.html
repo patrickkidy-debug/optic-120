@@ -125,6 +125,9 @@
 
     <!-- Meta Pixel Code -->
     <script>
+      // Pas de pixel publicitaire dans l'application Android (WebView) :
+      // la politique de confidentialité et la fiche Play Store l'engagent.
+      if (!/; wv\)/.test(navigator.userAgent)) {
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -135,6 +138,7 @@
       'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', '1247725803989922');
       fbq('track', 'PageView');
+      }
     </script>
     <!-- End Meta Pixel Code -->
   </head>

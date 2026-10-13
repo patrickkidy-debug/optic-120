@@ -476,6 +476,21 @@ export function ProfilePage() {
           <WhatsappTemplatesCard />
         </div>
       )}
+
+      {active === 'profil' && (
+        <div className="card mt-6 flex flex-wrap items-center justify-between gap-3 border-danger/20 p-5">
+          <div>
+            <h3 className="font-semibold text-content">Supprimer mon compte</h3>
+            <p className="text-sm text-content-muted">
+              Demandez la suppression de votre compte ou de tout l’établissement et de ses données.{' '}
+              <a href="/confidentialite" className="text-primary underline">Politique de confidentialité</a>
+            </p>
+          </div>
+          <a href="/suppression-compte" className="btn-outline text-danger">
+            <Trash2 className="h-4 w-4" /> Demander la suppression
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,7 +35,7 @@ import { activationRoutes } from './modules/activation/activation.routes.js';
 import { advisorPublicRoutes, advisorPlatformRoutes } from './modules/advisor/advisor.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { storeSetupRoutes } from './modules/store-setup/store-setup.routes.js';
-import { supportRoutes } from './modules/support/support.routes.js';
+import { accountDeletionRoutes, supportRoutes } from './modules/support/support.routes.js';
 import { whatsappWebhookRoutes } from './modules/whatsapp/whatsapp.routes.js';
 import { demoRoutes } from './modules/demo/demo.routes.js';
 import { crmRoutes } from './modules/crm/crm.routes.js';
@@ -176,6 +176,7 @@ export async function buildApp() {
   await app.register(settingsRoutes, { prefix: '/settings' });
   await app.register(storeSetupRoutes, { prefix: '/store-setup' });
   await app.register(supportRoutes, { prefix: '/support' });
+  await app.register(accountDeletionRoutes, { prefix: '/public/account-deletion' });
   await app.register(whatsappWebhookRoutes, { prefix: '/webhooks' });
   await app.register(demoRoutes, { prefix: '/demo' });
   await app.register(crmRoutes, { prefix: '/crm' });

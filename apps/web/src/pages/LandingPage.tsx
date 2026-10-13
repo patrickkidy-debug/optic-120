@@ -1100,6 +1100,12 @@ export function LandingPage() {
             <a href="#faq" className="text-sm text-content-muted hover:text-primary">
               FAQ
             </a>
+            <Link to="/confidentialite" className="text-sm text-content-muted hover:text-primary">
+              Confidentialité
+            </Link>
+            <Link to="/suppression-compte" className="text-sm text-content-muted hover:text-primary">
+              Suppression du compte
+            </Link>
           </div>
         </div>
         <div className="mx-auto mt-12 max-w-[1280px] border-t border-line px-4 pt-8 text-center sm:px-8">

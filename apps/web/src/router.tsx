@@ -74,6 +74,8 @@ const SubscriptionPage = lazy(() => named(import('./pages/settings/SubscriptionP
 const StoreSetupPage = lazy(() => named(import('./pages/settings/StoreSetupPage'), 'StoreSetupPage'));
 const PlatformPage = lazy(() => named(import('./pages/platform/ConsolePage'), 'ConsolePage'));
 const CrmPage = lazy(() => named(import('./pages/platform/CrmPage'), 'CrmPage'));
+const PrivacyPage = lazy(() => named(import('./pages/legal/LegalPages'), 'PrivacyPage'));
+const AccountDeletionPage = lazy(() => named(import('./pages/legal/LegalPages'), 'AccountDeletionPage'));
 const AdvisorStatsPage = lazy(() => named(import('./pages/platform/AdvisorStatsPage'), 'AdvisorStatsPage'));
 const NotFound = lazy(() => named(import('./pages/NotFound'), 'NotFound'));
 const SupportPage = lazy(() => named(import('./pages/SupportPage'), 'SupportPage'));
@@ -193,6 +195,9 @@ export const router = createBrowserRouter([
         ],
       },
       { path: '/track/:token', element: pub(<TrackPublicPage />) },
+      // Pages légales (Google Play) : accessibles sans compte, y compris connecté.
+      { path: '/confidentialite', element: pub(<PrivacyPage />) },
+      { path: '/suppression-compte', element: pub(<AccountDeletionPage />) },
       { path: '/s/:token', element: pub(<ScanLanding />) },
       {
         element: <RequireAuth />,
