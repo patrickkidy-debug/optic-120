@@ -375,7 +375,7 @@ export function LensComposer({
   onAdd,
 }: {
   pricing: LensPricing;
-  onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number }) => void;
+  onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number; category: string }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [base, setBase] = useState<string>('');
@@ -386,7 +386,7 @@ export function LensComposer({
   const mut = useMutation({
     mutationFn: () => ensureLensProduct({ base, treatments }),
     onSuccess: (p) => {
-      onAdd({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice) });
+      onAdd({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice), category: 'VERRE' });
       setBase('');
       setTreatments([]);
       setError('');
@@ -433,6 +433,50 @@ export function LensComposer({
         </Button>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Œil d'une ligne de verre : OD, OG ou les deux (quantité). « OD + OG »
+ * remplace une ligne à quantité 2 par une ligne OD et une ligne OG sur le devis
+ * et la facture.
+ */
+export function EyeSelector({
+  eye,
+  quantity,
+  onEye,
+  onSplit,
+}: {
+  eye: 'OD' | 'OG' | null;
+  quantity: number;
+  onEye: (eye: 'OD' | 'OG' | null) => void;
+  onSplit: () => void;
+}) {
+  const { t } = useTranslation();
+  const chip = (active: boolean) =>
+    `h-6 rounded-md border px-2 text-[11px] font-semibold transition ${
+      active ? 'border-primary bg-primary text-white' : 'bg-surface text-content-muted hover:border-primary'
+    }`;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={t('saleTools.eye')}>
+      <button type="button" className={chip(eye === 'OD')} onClick={() => onEye('OD')} title={t('saleTools.eyeOdTitle')}>
+        OD
+      </button>
+      <button type="button" className={chip(eye === 'OG')} onClick={() => onEye('OG')} title={t('saleTools.eyeOgTitle')}>
+        OG
+      </button>
+      {eye ? (
+        <button type="button" className={chip(false)} onClick={() => onEye(null)}>
+          {t('saleTools.eyeNone')}
+        </button>
+      ) : (
+        quantity >= 2 && (
+          <button type="button" className={chip(false)} onClick={onSplit} title={t('saleTools.eyeSplitTitle')}>
+            {t('saleTools.eyeSplit')}
+          </button>
+        )
+      )}
     </div>
   );
 }

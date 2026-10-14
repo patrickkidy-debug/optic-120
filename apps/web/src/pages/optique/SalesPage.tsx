@@ -8,7 +8,6 @@ import {
   XCircle,
   ArrowRightLeft,
   Undo2,
-  Download,
   Plus,
   Trash2,
   Loader2,
@@ -21,6 +20,7 @@ import {
   Printer,
   MessageCircle,
   Search,
+  ClipboardList,
 } from 'lucide-react';
 import {
   listSales,
@@ -29,6 +29,7 @@ import {
   convertQuote,
   createSaleReturn,
   getSale,
+  getCustomer,
   getStock,
   createSale,
   updateSale,
@@ -36,13 +37,16 @@ import {
   type SaleListItem,
   type SaleDetail,
 } from '../../features/optique/api';
-import { CustomerSearch, LensComposer, VatSelect } from '../../features/optique/SaleTools';
+import { CustomerSearch, LensComposer, VatSelect, EyeSelector } from '../../features/optique/SaleTools';
+import { addCartLine, computeTotals, lineKey, setCartLineEye, splitCartLineEyes, type CartLine } from '../../store/pos';
 import { PrescriptionForm } from '../../features/optique/PrescriptionForm';
 import { DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listInsurers } from '../../features/management/api';
 import { useCustomerCoverage, decideCoverage } from '../../features/management/coverage';
 import { invalidateSalesViews } from '../../lib/queryInvalidation';
-import { printSaleDocument } from '../../features/optique/saleDocument';
+import { printSaleDocument, type CompanyInfo } from '../../features/optique/saleDocument';
+import { openSaleTechnicalSheet } from '../../features/optique/lensOrderSheet';
+import { listMeasurements } from '../../features/optique/measurements';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
 import { useAuthStore, usePermission } from '../../store/auth';
@@ -54,6 +58,29 @@ import { WhatsappSendButton } from '../../components/WhatsappSendButton';
 import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../lib/labels';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
+
+/** En-tête des documents imprimés : identité de l'établissement. */
+function companyInfo(): CompanyInfo {
+  const user = useAuthStore.getState().user;
+  return {
+    name: user?.tenantName ?? 'OculoSaaS',
+    logoUrl: user?.tenantLogoUrl,
+    location: user?.tenantLocation,
+    contactPhone: user?.tenantContactPhone,
+    contactEmail: user?.tenantContactEmail,
+    ...user?.tenantInvoiceSettings,
+  };
+}
+
+/** Fiche technique (fiche de réservation) d'une vente ou d'un devis. */
+function openTechnicalSheet(sale: SaleDetail | (() => Promise<SaleDetail>)) {
+  return openSaleTechnicalSheet(
+    sale,
+    companyInfo(),
+    (s) => (s.customerId ? getCustomer(s.customerId) : Promise.resolve(null)),
+    async (s) => (s.customerId ? (await listMeasurements(s.customerId))[0] ?? null : null),
+  );
+}
 
 function statusTone(status: string) {
   if (status === 'PAID') return 'success' as const;
@@ -80,6 +107,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const [detail, setDetail] = useState<SaleDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [sheetId, setSheetId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string } | null>(null);
 
@@ -146,18 +174,23 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     setDownloadingId(id);
     try {
       const sale = await getSale(id);
-      printSaleDocument(sale, {
-        name: user?.tenantName ?? 'OculoSaaS',
-        logoUrl: user?.tenantLogoUrl,
-        location: user?.tenantLocation,
-        contactPhone: user?.tenantContactPhone,
-        contactEmail: user?.tenantContactEmail,
-        ...user?.tenantInvoiceSettings,
-      });
+      printSaleDocument(sale, companyInfo());
     } catch (e) {
       alert(apiErrorMessage(e));
     } finally {
       setDownloadingId(null);
+    }
+  }
+
+  /** Fiche technique : la fenêtre s'ouvre tout de suite (anti-popup), les données suivent. */
+  async function handleSheet(id: string) {
+    setSheetId(id);
+    try {
+      await openTechnicalSheet(() => getSale(id));
+    } catch (e) {
+      alert(apiErrorMessage(e));
+    } finally {
+      setSheetId(null);
     }
   }
 
@@ -495,9 +528,22 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                         {downloadingId === s.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <Download className="h-3.5 w-3.5" />
+                          <Printer className="h-3.5 w-3.5" />
                         )}
-                        PDF
+                        {t('sales.print')}
+                      </button>
+                      <button
+                        onClick={() => handleSheet(s.id)}
+                        disabled={sheetId === s.id}
+                        className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+                        title={t('sales.techSheetTitle')}
+                      >
+                        {sheetId === s.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ClipboardList className="h-3.5 w-3.5" />
+                        )}
+                        {t('sales.techSheet')}
                       </button>
                       <button
                         onClick={() => openDetail(s.id)}
@@ -757,7 +803,10 @@ function SaleDetailModal({
               {sale.items.map((i) => (
                 <tr key={i.id} className="border-b last:border-0">
                   <td className="table-cell">
-                    <div className="text-content">{i.product.name}</div>
+                    <div className="text-content">
+                      {i.product.name}
+                      {i.eye && <span className="ml-1.5"><Badge tone="info">{i.eye}</Badge></span>}
+                    </div>
                     <div className="font-mono text-[11px] text-content-faint">{i.product.sku}</div>
                     {i.reference && (
                       <div className="text-[11px] text-content-faint">{t('sales.ref', { ref: i.reference })}</div>
@@ -780,10 +829,28 @@ function SaleDetailModal({
           {Number(sale.discountAmount) > 0 && (
             <AmountRow label={t('sales.discount')} value={-Number(sale.discountAmount)} />
           )}
-          <AmountRow
-            label={Number(sale.taxAmount) === 0 ? t('pos.vatExempt') : t('sales.vat')}
-            value={Number(sale.taxAmount)}
-          />
+          {sale.taxDetails && sale.taxDetails.length > 0 ? (
+            sale.taxDetails
+              .filter((tl) => tl.code === 'VAT' || tl.amount > 0)
+              .map((tl) => (
+                <AmountRow
+                  key={tl.code + tl.label}
+                  label={
+                    tl.code === 'EXTRA'
+                      ? `${tl.label} (${tl.rate} %)`
+                      : tl.rate === 0
+                        ? t('pos.vatExempt')
+                        : t('pos.vatRate', { rate: tl.rate })
+                  }
+                  value={tl.amount}
+                />
+              ))
+          ) : (
+            <AmountRow
+              label={Number(sale.taxAmount) === 0 ? t('pos.vatExempt') : t('sales.vat')}
+              value={Number(sale.taxAmount)}
+            />
+          )}
           {Number(sale.insuranceAmount) > 0 && (
             <AmountRow label={t('sales.insuranceCover')} value={Number(sale.insuranceAmount)} />
           )}
@@ -894,9 +961,15 @@ function SaleDetailModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t pt-3">
+        <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
           <Button variant="outline" onClick={onClose}>
             {t('common.close')}
+          </Button>
+          <Button variant="outline" onClick={() => void openTechnicalSheet(sale)}>
+            <ClipboardList className="h-4 w-4" /> {t('sales.techSheet')}
+          </Button>
+          <Button variant="outline" onClick={() => printSaleDocument(sale, companyInfo())}>
+            <Printer className="h-4 w-4" /> {t('sales.print')}
           </Button>
           {onCollect && (
             <Button variant="accent" onClick={onCollect}>
@@ -918,16 +991,8 @@ function AmountRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-interface QuoteLine {
-  productId: string;
-  name: string;
-  sku: string;
-  unitPrice: number;
-  quantity: number;
-  // Référence libre de l'article remis (ex. référence fabricant d'une
-  // monture), indépendante du stock — voir SaleItem.reference côté API.
-  reference?: string;
-}
+// Même forme qu'une ligne de caisse : clé produit + œil (OD / OG pour un verre).
+type QuoteLine = CartLine;
 
 /**
  * Modale de composition d'une vente / d'un devis. Sans `editing`, elle crée un
@@ -946,6 +1011,7 @@ function QuoteModal({
   const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
   const vatPct = useAuthStore((s) => s.user?.tenantVatRate) ?? 18;
+  const extraTaxes = useAuthStore((s) => s.user?.tenantOpticalSettings?.extraTaxes) ?? [];
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   const isEdit = Boolean(editing);
   const [search, setSearch] = useState('');
@@ -956,12 +1022,15 @@ function QuoteModal({
   const [lines, setLines] = useState<QuoteLine[]>(
     editing
       ? editing.items.map((i) => ({
+          key: lineKey(i.productId, i.eye),
           productId: i.productId,
           name: i.product.name,
           sku: i.product.sku,
           unitPrice: Number(i.unitPrice),
           quantity: i.quantity,
           reference: i.reference ?? undefined,
+          eye: i.eye ?? null,
+          category: i.product.category,
         }))
       : [],
   );
@@ -969,6 +1038,8 @@ function QuoteModal({
   // repart du taux réellement appliqué à la pièce.
   const [vatRate, setVatRate] = useState<number | null>(() => {
     if (!editing) return null;
+    const vatLine = editing.taxDetails?.find((x) => x.code === 'VAT');
+    if (vatLine) return vatLine.rate;
     const base = Math.max(0, Number(editing.subtotal) - Number(editing.discountAmount));
     if (base <= 0) return null;
     return Math.round((Number(editing.taxAmount) / base) * 10000) / 100;
@@ -1013,43 +1084,42 @@ function QuoteModal({
       p.sku.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function addLine(p: { productId: string; name: string; sku: string; sellPrice: number }) {
-    setLines((prev) => {
-      const existing = prev.find((l) => l.productId === p.productId);
-      if (existing) {
-        return prev.map((l) =>
-          l.productId === p.productId ? { ...l, quantity: l.quantity + 1 } : l,
-        );
-      }
-      return [...prev, { productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice, quantity: 1 }];
-    });
-  }
-  function setQty(productId: string, qty: number) {
-    if (qty <= 0) return setLines((prev) => prev.filter((l) => l.productId !== productId));
-    setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, quantity: qty } : l)));
-  }
-  function setPrice(productId: string, price: number) {
+  function addLine(p: { productId: string; name: string; sku: string; sellPrice: number; category?: string }) {
     setLines((prev) =>
-      prev.map((l) => (l.productId === productId ? { ...l, unitPrice: Math.max(0, price) } : l)),
+      addCartLine(prev, { productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice, category: p.category }),
     );
   }
-  function setReference(productId: string, reference: string) {
-    setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, reference } : l)));
+  function setQty(key: string, qty: number) {
+    if (qty <= 0) return setLines((prev) => prev.filter((l) => l.key !== key));
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, quantity: qty } : l)));
   }
+  function setPrice(key: string, price: number) {
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, unitPrice: Math.max(0, price) } : l)));
+  }
+  function setReference(key: string, reference: string) {
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, reference } : l)));
+  }
+  const categoryOfLine = (l: QuoteLine) =>
+    l.category ?? (stock ?? []).find((p) => p.productId === l.productId)?.category ?? 'AUTRE';
 
   // Taux effectif : celui choisi pour ce devis, sinon celui de l'établissement.
+  // Taxes supplémentaires (ex. CSS) : celles figées sur la pièce en modification.
   const effectiveVat = vatRate ?? vatPct;
-  const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
-  const taxBase = Math.max(0, subtotal - discount);
-  const taxAmount = Math.round(taxBase * (effectiveVat / 100));
-  const total = taxBase + taxAmount;
+  const effectiveExtra = editing?.taxDetails
+    ? editing.taxDetails.filter((x) => x.code === 'EXTRA').map((x) => ({ label: x.label, rate: x.rate }))
+    : extraTaxes;
+  const { subtotal, taxAmount, taxLines, total } = computeTotals(
+    { lines, discountAmount: discount, insuranceAmount: 0 },
+    effectiveVat,
+    effectiveExtra,
+  );
 
   // Prise en charge synchronisée avec l'assureur : garanties du contrat du
   // client si elles existent, sinon taux de l'assureur — même règle qu'en caisse.
   const selectedInsurer = insurers?.find((x) => x.id === insurerId);
   const { data: coverage } = useCustomerCoverage(customerId || null, insurerId, canSeeInsurers);
   const coverageLines = lines.map((l) => ({
-    category: (stock ?? []).find((p) => p.productId === l.productId)?.category ?? 'AUTRE',
+    category: categoryOfLine(l),
     lineTotal: l.unitPrice * l.quantity,
   }));
   const decision = decideCoverage(coverageLines, total, selectedInsurer, coverage);
@@ -1079,6 +1149,7 @@ function QuoteModal({
     quantity: l.quantity,
     unitPrice: l.unitPrice,
     reference: l.reference || undefined,
+    eye: l.eye ?? null,
   }));
 
   const createMut = useMutation({
@@ -1141,7 +1212,7 @@ function QuoteModal({
               <LensComposer
                 pricing={pricing}
                 onAdd={(line) =>
-                  addLine({ productId: line.productId, name: line.name, sku: line.sku, sellPrice: line.unitPrice })
+                  addLine({ productId: line.productId, name: line.name, sku: line.sku, sellPrice: line.unitPrice, category: line.category })
                 }
               />
             </div>
@@ -1154,14 +1225,20 @@ function QuoteModal({
                 products.map((p) => (
                   <button
                     key={p.productId}
-                    onClick={() => addLine({ productId: p.productId, name: p.name, sku: p.sku, sellPrice: p.sellPrice })}
+                    onClick={() =>
+                      addLine({ productId: p.productId, name: p.name, sku: p.sku, sellPrice: p.sellPrice, category: p.category })
+                    }
                     className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition hover:border-primary"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-content">{p.name}</p>
                       <p className="font-mono text-[11px] text-content-faint">{p.sku}</p>
                       <p className="text-xs text-content-faint">
-                        {p.unlimited ? t('pos.stockUnlimited') : t('pos.stockQty', { count: p.quantity })}
+                        {p.trackStock === false
+                          ? t('pos.displayFrame')
+                          : p.unlimited
+                            ? t('pos.stockUnlimited')
+                            : t('pos.stockQty', { count: p.quantity })}
                       </p>
                     </div>
                     <span className="ml-2 shrink-0 font-semibold text-primary">{formatCurrency(p.sellPrice)}</span>
@@ -1189,14 +1266,22 @@ function QuoteModal({
                 <p className="py-8 text-center text-sm text-content-muted">{t('sales.addProducts')}</p>
               ) : (
                 lines.map((l) => (
-                  <div key={l.productId} className="flex items-center gap-2 rounded-lg bg-surface-2 p-2">
+                  <div key={l.key} className="flex items-center gap-2 rounded-lg bg-surface-2 p-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-content">{l.name}</p>
+                      {categoryOfLine(l) === 'VERRE' && (
+                        <EyeSelector
+                          eye={l.eye ?? null}
+                          quantity={l.quantity}
+                          onEye={(eye) => setLines((prev) => setCartLineEye(prev, l.key, eye))}
+                          onSplit={() => setLines((prev) => splitCartLineEyes(prev, l.key))}
+                        />
+                      )}
                       <div className="mt-0.5 flex items-center gap-1">
                         <NumberInput
                           min={0}
                           value={l.unitPrice}
-                          onChange={(n) => setPrice(l.productId, n)}
+                          onChange={(n) => setPrice(l.key, n)}
                           className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
                           title={t('pos.unitPriceEditable')}
                           placeholder={t('pos.pricePlaceholder')}
@@ -1206,7 +1291,7 @@ function QuoteModal({
                       <input
                         type="text"
                         value={l.reference ?? ''}
-                        onChange={(e) => setReference(l.productId, e.target.value)}
+                        onChange={(e) => setReference(l.key, e.target.value)}
                         className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
                         placeholder={t('pos.referenceOptional')}
                         maxLength={80}
@@ -1215,12 +1300,12 @@ function QuoteModal({
                     <NumberInput
                       min={1}
                       value={l.quantity}
-                      onChange={(n) => setQty(l.productId, n)}
+                      onChange={(n) => setQty(l.key, n)}
                       emptyValue={l.quantity}
                       className="input h-8 w-16 px-2 text-center"
                     />
                     <button
-                      onClick={() => setQty(l.productId, 0)}
+                      onClick={() => setQty(l.key, 0)}
                       className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -1351,10 +1436,18 @@ function QuoteModal({
                 <span>{t('common.subtotal')}</span>
                 <span className="text-content">{formatCurrency(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-content-muted">
-                <span>{effectiveVat === 0 ? t('pos.vatExempt') : t('pos.vatRate', { rate: effectiveVat })}</span>
-                <span className="text-content">{formatCurrency(taxAmount)}</span>
-              </div>
+              {taxLines.map((tl) => (
+                <div key={tl.code + tl.label} className="flex justify-between text-content-muted">
+                  <span>
+                    {tl.code === 'EXTRA'
+                      ? `${tl.label} (${tl.rate} %)`
+                      : effectiveVat === 0
+                        ? t('pos.vatExempt')
+                        : t('pos.vatRate', { rate: effectiveVat })}
+                  </span>
+                  <span className="text-content">{formatCurrency(tl.amount)}</span>
+                </div>
+              ))}
               <div className="flex justify-between font-display text-lg font-bold text-content">
                 <span>{t('common.total')}</span>
                 <span>{formatCurrency(total)}</span>

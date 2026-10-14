@@ -1,5 +1,14 @@
-import { LENS_ORDER_STATUS_LABELS, LENS_TREATMENTS, type LensOrderEyeRx } from '@oculo/shared-types';
-import type { CustomerDetail, LensOrder, Prescription } from './api';
+import {
+  LENS_ORDER_STATUS_LABELS,
+  LENS_TREATMENTS,
+  DEFAULT_LENS_PRICING,
+  lensBaseOptions,
+  transposeRx,
+  type LensOrderEyeRx,
+  type OpticalSettings,
+} from '@oculo/shared-types';
+import type { CustomerDetail, LensOrder, Prescription, SaleDetail } from './api';
+import { useAuthStore } from '../../store/auth';
 import type { Measurement } from './measurements';
 import type { CompanyInfo } from './saleDocument';
 import { tr } from '../../lib/tr';
@@ -71,22 +80,46 @@ function eyeRx(order: LensOrder, rx: Prescription | null, eye: 'od' | 'og'): Len
     : { sphere: n(rx.ogSphere), cylinder: n(rx.ogCylinder), axis: n(rx.ogAxis), addition: n(rx.ogAddition), fromRx: true };
 }
 
+/** Convention de cylindre de l'établissement appliquée à l'affichage (cylindre positif / négatif). */
+function withConvention(e: LensOrderEyeRx & { fromRx?: boolean }, conv: OpticalSettings['cylinderConvention'] | undefined) {
+  if (!conv || conv === 'AS_ENTERED' || e.cylinder == null) return e;
+  const r = transposeRx(
+    e.sphere == null ? null : String(e.sphere),
+    String(e.cylinder),
+    e.axis == null ? null : String(e.axis),
+    conv,
+  );
+  if (!r.changed) return e;
+  const n = (v: string | null | undefined) => (v == null || v === '' ? undefined : Number(v));
+  return { ...e, sphere: n(r.sphere), cylinder: n(r.cylinder), axis: n(r.axis) };
+}
+
+/** Variantes d'en-tête : fiche issue d'une vente ou d'un devis plutôt que d'une commande. */
+export interface SheetOptions {
+  /** Ordonnance à reprendre en priorité (celle jointe à la vente / au devis). */
+  rx?: Prescription | null;
+  /** Ligne de statut sous le numéro (remplace « Commandé le … · statut »). */
+  statusLine?: string;
+}
+
 export function buildLensOrderSheetHtml(
   order: LensOrder,
   company: CompanyInfo,
   customer: CustomerDetail | null,
   createdBy?: string | null,
   measure?: Measurement | null,
+  opts: SheetOptions = {},
 ): string {
   const accent = /^#[0-9a-fA-F]{6}$/.test(company.accentColor ?? '') ? (company.accentColor as string) : '#0d9488';
-  const rx = customer?.prescriptions?.[0] ?? null;
+  const rx = opts.rx ?? customer?.prescriptions?.[0] ?? null;
+  const conv = useAuthStore.getState().user?.tenantOpticalSettings?.cylinderConvention;
   // Dernière prise de mesures du client (page « Prise de mesures »), prioritaire
   // sur l'ordonnance pour le centrage : elle décrit le client avec sa monture.
   const ms = measure ?? null;
   const mmv = (n: number | null | undefined) => (n == null ? '' : `${String(n).replace('.', ',')}`);
   const cfg = order.lensConfig;
-  const od = eyeRx(order, rx, 'od');
-  const og = eyeRx(order, rx, 'og');
+  const od = withConvention(eyeRx(order, rx, 'od'), conv);
+  const og = withConvention(eyeRx(order, rx, 'og'), conv);
   const fromRx = od.fromRx || og.fromRx;
   const treatments = (cfg?.treatments ?? [])
     .map((k) => trFr(LENS_TREATMENTS.find((t) => t.key === k)?.label ?? k))
@@ -173,7 +206,7 @@ export function buildLensOrderSheetHtml(
       <div class="num">
         <div class="t">${esc(L('title'))}</div>
         <div class="n">${esc(order.number)}</div>
-        <div class="s">${esc(L('orderedOn'))} ${date(order.createdAt)} · ${esc(trFr(LENS_ORDER_STATUS_LABELS[order.status]))}</div>
+        <div class="s">${opts.statusLine ? esc(opts.statusLine) : `${esc(L('orderedOn'))} ${date(order.createdAt)} · ${esc(trFr(LENS_ORDER_STATUS_LABELS[order.status]))}`}</div>
         ${order.expectedAt ? `<div class="s"><b>${esc(L('dueOn'))} ${date(order.expectedAt)}</b></div>` : ''}
       </div>
     </div>
@@ -303,6 +336,87 @@ export async function openLensOrderSheet(
     measure = null; // droits ou réseau : la fiche garde des cases à remplir
   }
   win.document.write(buildLensOrderSheetHtml(order, company, customer, createdBy, measure));
+  win.document.close();
+  win.focus();
+}
+
+/**
+ * Fiche technique d'une vente ou d'un devis (fiche de réservation) : reprend
+ * l'ordonnance jointe (sinon la dernière du client), les verres ligne par œil,
+ * le type de verre et ses traitements, et la monture vendue.
+ */
+export function saleToLensOrder(sale: SaleDetail): LensOrder {
+  const pricing = useAuthStore.getState().user?.tenantLensPricing ?? DEFAULT_LENS_PRICING;
+  const lenses = sale.items.filter((i) => i.product.category === 'VERRE');
+  const frame = sale.items.find((i) => i.product.category === 'MONTURE');
+  const lensName = (eye: 'OD' | 'OG') =>
+    lenses
+      .filter((i) => !i.eye || i.eye === eye)
+      .map((i) => i.product.name + (i.reference ? ` (${i.reference})` : ''))
+      .join(' + ') || null;
+  const attrs = (lenses[0]?.product.attributes ?? {}) as { lensBase?: string; treatments?: string[] };
+  const baseLabel = attrs.lensBase ? lensBaseOptions(pricing).find((o) => o.key === attrs.lensBase)?.label : undefined;
+  const treatments = [...new Set(lenses.flatMap((i) => ((i.product.attributes ?? {}) as { treatments?: string[] }).treatments ?? []))];
+  return {
+    id: sale.id,
+    number: sale.number,
+    customerId: sale.customerId ?? null,
+    customer: sale.customer ? { firstName: sale.customer.firstName, lastName: sale.customer.lastName, phone: sale.customer.phone } : null,
+    category: lenses.length ? 'VERRES' : null,
+    supplierName: null,
+    description: sale.items
+      .map((i) => `${i.quantity} × ${i.product.name}${i.eye ? ` — ${i.eye}` : ''}${i.reference ? ` (${i.reference})` : ''}`)
+      .join(' · '),
+    odLens: lensName('OD'),
+    ogLens: lensName('OG'),
+    frameProductId: frame?.productId ?? null,
+    frameProduct: frame
+      ? { id: frame.productId, name: frame.product.name + (frame.reference ? ` (${frame.reference})` : ''), brand: frame.product.brand ?? null, photoUrl: null }
+      : null,
+    status: 'TO_ORDER',
+    expectedAt: null,
+    deliveredAt: null,
+    notifiedAt: null,
+    cost: null,
+    notes: null,
+    lensConfig: lenses.length
+      ? { lensType: baseLabel ? trFr(baseLabel) : lenses[0].product.name, treatments: treatments as never }
+      : null,
+    createdAt: sale.createdAt,
+  };
+}
+
+export async function openSaleTechnicalSheet(
+  loadSale: SaleDetail | (() => Promise<SaleDetail>),
+  company: CompanyInfo,
+  loadCustomer: (sale: SaleDetail) => Promise<CustomerDetail | null>,
+  loadMeasure?: (sale: SaleDetail) => Promise<Measurement | null>,
+): Promise<void> {
+  // Fenêtre ouverte AVANT tout chargement, sinon le navigateur la bloque.
+  const win = window.open('', '_blank', 'width=900,height=1100');
+  if (!win) {
+    alert(tr('doc.allowPopupsRx'));
+    return;
+  }
+  win.document.write(`<p style="font-family:sans-serif;padding:24px;color:#475569;">${esc(L('loading'))}</p>`);
+  let sale: SaleDetail;
+  try {
+    sale = typeof loadSale === 'function' ? await loadSale() : loadSale;
+  } catch (e) {
+    win.close();
+    throw e;
+  }
+  const customer = await loadCustomer(sale).catch(() => null);
+  const measure = loadMeasure ? await loadMeasure(sale).catch(() => null) : null;
+  const kind = sale.type === 'QUOTE' ? L('fromQuote') : L('fromSale');
+  const createdBy = sale.cashier ? `${sale.cashier.firstName} ${sale.cashier.lastName}` : null;
+  win.document.open();
+  win.document.write(
+    buildLensOrderSheetHtml(saleToLensOrder(sale), company, customer, createdBy, measure, {
+      rx: sale.prescription ?? null,
+      statusLine: `${kind} · ${date(sale.createdAt)}`,
+    }),
+  );
   win.document.close();
   win.focus();
 }

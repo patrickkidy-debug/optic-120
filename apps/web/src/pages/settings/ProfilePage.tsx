@@ -23,7 +23,7 @@ import { WatchDemoCard } from '../../features/demo/WatchDemoCard';
 import { printSaleDocument } from '../../features/optique/saleDocument';
 import type { SaleDetail } from '../../features/optique/api';
 import type { InvoiceSettings, LensPricing, OpticalSettings } from '@oculo/shared-types';
-import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_OPTICAL_SETTINGS, fillWaTemplate, resolveWaTemplate, waLangsForCountry, waRootLang, type WaMessageLang } from '@oculo/shared-types';
+import { DEFAULT_LENS_PRICING, SALE_WA_STAGES, DEFAULT_OPTICAL_SETTINGS, DEFAULT_EXTRA_TAXES_BY_COUNTRY, fillWaTemplate, resolveWaTemplate, waLangsForCountry, waRootLang, type WaMessageLang } from '@oculo/shared-types';
 import { Avatar } from '../../components/Avatar';
 import { Logo } from '../../components/Logo';
 import { PageHeader, Badge, Button, Field, PasswordInput } from '../../components/ui';
@@ -509,9 +509,16 @@ function OpticalSettingsCard() {
   // Valeurs du serveur au premier chargement, puis état local pendant l'édition.
   const values = form ?? { ...DEFAULT_OPTICAL_SETTINGS, ...(branding?.opticalSettings ?? {}) };
   const set = (patch: Partial<OpticalSettings>) => setForm({ ...values, ...patch });
+  // Taxes usuelles du pays (ex. CSS 1 % au Gabon), proposées en un clic.
+  const country = useAuthStore((st) => st.user?.tenantCountryCode);
+  const countryTaxes = (country && DEFAULT_EXTRA_TAXES_BY_COUNTRY[country]) || [];
 
   const mut = useMutation({
-    mutationFn: () => updateBranding({ opticalSettings: values }),
+    // Taxe sans libellé ou à 0 % : ignorée plutôt que refusée par le serveur.
+    mutationFn: () =>
+      updateBranding({
+        opticalSettings: { ...values, extraTaxes: values.extraTaxes.filter((x) => x.label.trim() && x.rate > 0) },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['branding'] });
       // Les relances dépendent de ces seuils.
@@ -602,6 +609,89 @@ function OpticalSettingsCard() {
         onChange={(n) => set({ loyaltyPointValue: n })}
         suffix={currencySymbol()}
       />
+
+      {/* Ordonnances et documents de vente */}
+      <div className="flex items-center justify-between gap-3 border-b py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-content">{tr('optSettings.cylinder')}</p>
+          <p className="text-xs text-content-faint">{tr('optSettings.cylinderHint')}</p>
+        </div>
+        <select
+          className="input h-9 w-48 shrink-0"
+          value={values.cylinderConvention}
+          onChange={(e) => set({ cylinderConvention: e.target.value as OpticalSettings['cylinderConvention'] })}
+        >
+          <option value="AS_ENTERED">{tr('optSettings.cylAsEntered')}</option>
+          <option value="PLUS">{tr('optSettings.cylPlus')}</option>
+          <option value="MINUS">{tr('optSettings.cylMinus')}</option>
+        </select>
+      </div>
+      <label className="flex cursor-pointer items-center justify-between gap-3 border-b py-2.5">
+        <span className="min-w-0">
+          <span className="block text-sm font-medium text-content">{tr('optSettings.splitEyes')}</span>
+          <span className="block text-xs text-content-faint">{tr('optSettings.splitEyesHint')}</span>
+        </span>
+        <input
+          type="checkbox"
+          className="h-5 w-5 shrink-0 accent-[color:var(--primary)]"
+          checked={values.splitLensEyes}
+          onChange={(e) => set({ splitLensEyes: e.target.checked })}
+        />
+      </label>
+
+      {/* Taxes ajoutées à la TVA (ex. CSS 1 % au Gabon), détaillées sur devis et factures */}
+      <div className="border-b py-2.5">
+        <p className="text-sm font-medium text-content">{tr('optSettings.extraTaxes')}</p>
+        <p className="text-xs text-content-faint">{tr('optSettings.extraTaxesHint')}</p>
+        <div className="mt-2 space-y-2">
+          {values.extraTaxes.map((tax, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                className="input h-9 flex-1"
+                value={tax.label}
+                maxLength={24}
+                placeholder={tr('optSettings.taxLabel')}
+                onChange={(e) =>
+                  set({ extraTaxes: values.extraTaxes.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })
+                }
+              />
+              <NumberInput
+                min={0}
+                value={tax.rate}
+                onChange={(n) =>
+                  set({ extraTaxes: values.extraTaxes.map((x, j) => (j === i ? { ...x, rate: Math.min(50, n) } : x)) })
+                }
+                className="input h-9 w-20 text-right"
+              />
+              <span className="text-xs text-content-faint">%</span>
+              <button
+                type="button"
+                className="btn-ghost h-9 w-9 rounded-lg p-0 text-danger"
+                aria-label={tr('optSettings.removeTax')}
+                onClick={() => set({ extraTaxes: values.extraTaxes.filter((_, j) => j !== i) })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            {values.extraTaxes.length < 3 && (
+              <Button
+                variant="outline"
+                onClick={() => set({ extraTaxes: [...values.extraTaxes, { label: '', rate: 0 }] })}
+              >
+                <Plus className="h-4 w-4" /> {tr('optSettings.addTax')}
+              </Button>
+            )}
+            {values.extraTaxes.length === 0 && countryTaxes.length > 0 && (
+              <Button variant="outline" onClick={() => set({ extraTaxes: countryTaxes })}>
+                <Plus className="h-4 w-4" />{' '}
+                {tr('optSettings.addCountryTax', { taxes: countryTaxes.map((x) => `${x.label} ${x.rate} %`).join(', ') })}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={() => mut.mutate()} loading={mut.isPending}>

@@ -1,5 +1,6 @@
-import { CURRENCY_FORMAT, type SupportedCurrency } from '@oculo/shared-types';
+import { CURRENCY_FORMAT, applyCylinderConvention, type SupportedCurrency } from '@oculo/shared-types';
 import type { SaleDetail } from './api';
+import { useAuthStore } from '../../store/auth';
 import { tr } from '../../lib/tr';
 import { displayLocale } from '../../lib/format';
 import { saleStatusLabel } from '../../lib/labels';
@@ -140,7 +141,9 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
       (it, i) => `
       <tr style="${i % 2 ? 'background:#f8fafc;' : ''}">
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
-          <div style="font-weight:600;color:#0f172a;">${esc(it.product.name)}</div>
+          <div style="font-weight:600;color:#0f172a;">${esc(it.product.name)}${
+            it.eye ? ` <span style="font-weight:700;color:${accent};">— ${esc(tr(it.eye === 'OD' ? 'doc.eyeOd' : 'doc.eyeOg'))}</span>` : ''
+          }</div>
           <div style="font-size:11px;color:#94a3b8;">${esc(it.product.sku)}</div>
         </td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;">${it.quantity}</td>
@@ -178,7 +181,11 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     company.quoteValidityDays && company.quoteValidityDays > 0 ? company.quoteValidityDays : 30;
   // Ordonnance jointe (facultative) : correction reprise sur le document pour
   // que le client ait le devis et sa correction sur la même page.
-  const rx = sale.prescription;
+  // Ordonnance affichée selon la convention de cylindre de l'établissement
+  // (transposition automatique en cylindre positif / négatif).
+  const rx = sale.prescription
+    ? applyCylinderConvention(sale.prescription, useAuthStore.getState().user?.tenantOpticalSettings?.cylinderConvention)
+    : null;
   const rxCell = (v: string | null | undefined) =>
     `<td style="padding:8px 12px;text-align:center;border-bottom:1px solid #e2e8f0;">${
       v ? esc(v) : '—'
@@ -289,7 +296,19 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
       <table style="width:320px;border-collapse:collapse;font-size:13px;">
         ${totalRow(tr('doc.subtotal'), money(sale.subtotal, currency))}
         ${Number(sale.discountAmount) > 0 ? totalRow(tr('doc.discount'), `- ${money(sale.discountAmount, currency)}`) : ''}
-        ${totalRow(tr('doc.vat'), money(sale.taxAmount, currency))}
+        ${
+          sale.taxDetails && sale.taxDetails.length > 0
+            ? sale.taxDetails
+                .filter((tl) => tl.code === 'VAT' || tl.amount > 0)
+                .map((tl) =>
+                  totalRow(
+                    tl.code === 'VAT' ? tr('doc.vatRate', { rate: tl.rate }) : `${esc(tl.label)} (${tl.rate} %)`,
+                    money(tl.amount, currency),
+                  ),
+                )
+                .join('')
+            : totalRow(tr('doc.vat'), money(sale.taxAmount, currency))
+        }
         ${Number(sale.insuranceAmount) > 0 ? totalRow(tr('doc.insurance'), `- ${money(sale.insuranceAmount, currency)}`) : ''}
         <tr><td colspan="2" style="padding:4px 0;"><div style="border-top:2px solid ${accent};"></div></td></tr>
         ${totalRow(tr('doc.grandTotal'), money(sale.totalAmount, currency), { strong: true })}

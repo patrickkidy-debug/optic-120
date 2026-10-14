@@ -86,7 +86,7 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     prisma.customer.count({ where: { tenantId } }),
     prisma.stockItem.findMany({
       where: { tenantId, ...branchFilter },
-      select: { quantity: true, minAlert: true, product: { select: { category: true } } },
+      select: { quantity: true, minAlert: true, product: { select: { category: true, trackStock: true } } },
     }),
     prisma.sale.findMany({
       where: { tenantId, ...branchFilter },
@@ -220,7 +220,7 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     customersCount,
     // Verres (fabriqués sur commande) exclus des alertes de stock bas.
     lowStockCount: lowStockItems.filter(
-      (i) => !isMadeToOrderCategory(i.product.category) && i.quantity <= i.minAlert,
+      (i) => !isMadeToOrderCategory(i.product.category) && i.product.trackStock && i.quantity <= i.minAlert,
     ).length,
     recentSales: recentSales.map((s) => ({
       id: s.id,

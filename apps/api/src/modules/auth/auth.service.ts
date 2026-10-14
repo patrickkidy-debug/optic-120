@@ -10,7 +10,8 @@ import type {
   LensPricing,
   WhatsappTemplates,
 } from '@oculo/shared-types';
-import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY, tenantCurrencyInfo } from '@oculo/shared-types';
+import { countryFromPhone, DEFAULT_VAT_BY_COUNTRY,
+  DEFAULT_EXTRA_TAXES_BY_COUNTRY, tenantCurrencyInfo } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { verifyGoogleIdToken } from '../../lib/google-auth.js';
 import { prisma } from '../../lib/prisma.js';
@@ -264,6 +265,10 @@ export async function createTenantSkeleton(
       countryCode: country?.code ?? null,
       currency: country?.currency ?? 'XOF',
       vatRate: country ? DEFAULT_VAT_BY_COUNTRY[country.code] ?? null : null,
+      // Taxes ajoutées à la TVA (ex. CSS 1 % au Gabon), détaillées sur les documents.
+      ...(country && DEFAULT_EXTRA_TAXES_BY_COUNTRY[country.code]
+        ? { opticalSettings: { extraTaxes: DEFAULT_EXTRA_TAXES_BY_COUNTRY[country.code] } }
+        : {}),
       isDemo: opts.isDemo ?? false,
     },
   });

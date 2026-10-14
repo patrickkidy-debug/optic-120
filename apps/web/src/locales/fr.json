@@ -250,7 +250,8 @@
     "insurerMethod": "Mode de règlement de l’assurance",
     "receivedRemaining": "Reçu {{received}} · reste",
     "autoClose": "Fermeture automatique dans {{seconds}}s…",
-    "autoNewSale": "Nouvelle vente automatique dans {{seconds}}s…"
+    "autoNewSale": "Nouvelle vente automatique dans {{seconds}}s…",
+    "displayFrame": "Présentation · sans stock"
   },
   "sales": {
     "title": "Historique des ventes",
@@ -343,7 +344,9 @@
     "noneToAttach": "aucune à joindre.",
     "customerPrescription": "Ordonnance du client",
     "saveChanges": "Enregistrer les modifications",
-    "createQuote": "Créer le devis"
+    "createQuote": "Créer le devis",
+    "techSheet": "Fiche technique",
+    "techSheetTitle": "Fiche technique / de réservation : corrections, verres et monture"
   },
   "settings": {
     "title": "Paramètres",
@@ -1031,7 +1034,13 @@
     "phoneOptional": "Téléphone (optionnel)",
     "customLens": "Verre sur mesure",
     "lensType": "— Type de verre —",
-    "price": "Prix :"
+    "price": "Prix :",
+    "eye": "Œil",
+    "eyeOdTitle": "Verre de l'œil droit",
+    "eyeOgTitle": "Verre de l'œil gauche",
+    "eyeNone": "Sans œil",
+    "eyeSplit": "OD + OG",
+    "eyeSplitTitle": "Une ligne OD et une ligne OG au lieu d'une quantité 2"
   },
   "shell": {
     "search": "Rechercher...",
@@ -1319,7 +1328,9 @@
       "verres": "Verres",
       "dateDAjout": "Date d'ajout",
       "prestationRealiseeALaDemande": "Prestation réalisée à la demande : aucun stock à gérer.",
-      "ajouterAuCatalogue": "Ajouter au catalogue"
+      "ajouterAuCatalogue": "Ajouter au catalogue",
+      "displayFrame": "Monture de présentation (sans stock)",
+      "displayFrameHint": "Exposée en vitrine et vendue sans contrôle ni sortie de stock, puis commandée au fournisseur."
     },
     "ClientRecord": {
       "vente": "Vente",
@@ -1401,7 +1412,8 @@
       "apercu": "Aperçu",
       "marque": "Marque",
       "modele": "Modèle",
-      "referenceAuto": "Référence auto"
+      "referenceAuto": "Référence auto",
+      "presentation": "Présentation"
     },
     "LensCatalog": {
       "premium": "Premium",
@@ -4299,7 +4311,10 @@
     "paperFormatSetting": "Format d'impression (factures, devis, reçus)",
     "paperA4Hint": "Feuille standard 21 × 29,7 cm",
     "paperA5Hint": "Demi-feuille 14,8 × 21 cm",
-    "optometrist": "Opticien optométriste"
+    "optometrist": "Opticien optométriste",
+    "eyeOd": "œil droit (OD)",
+    "eyeOg": "œil gauche (OG)",
+    "vatRate": "TVA ({{rate}} %)"
   },
   "crm": {
     "title": "Clients",
@@ -4675,7 +4690,9 @@
     "signMounted": "Monté par / date",
     "signChecked": "Contrôlé par / date",
     "printedOn": "Imprimé le",
-    "measuredOn": "Centrage mesuré le {{date}}"
+    "measuredOn": "Centrage mesuré le {{date}}",
+    "fromQuote": "Devis",
+    "fromSale": "Vente"
   },
   "importMap": {
     "title": "Colonnes détectées dans votre fichier — corrigez si besoin",
@@ -5385,5 +5402,20 @@
       "returning": "En route vers le magasin",
       "ready": "Disponible au magasin"
     }
+  },
+  "optSettings": {
+    "cylinder": "Cylindre des ordonnances",
+    "cylinderHint": "Transposition automatique à l'enregistrement et sur les documents.",
+    "cylAsEntered": "Tel que saisi",
+    "cylPlus": "Cylindre positif (+)",
+    "cylMinus": "Cylindre négatif (−)",
+    "splitEyes": "Verres : une ligne OD et une ligne OG",
+    "splitEyesHint": "Sur les devis et factures, au lieu d'un verre en quantité 2.",
+    "extraTaxes": "Taxes en plus de la TVA",
+    "extraTaxesHint": "Calculées sur le montant HT et détaillées sur les devis et factures (ex. CSS 1 % au Gabon).",
+    "taxLabel": "Libellé (ex. CSS)",
+    "removeTax": "Retirer cette taxe",
+    "addTax": "Ajouter une taxe",
+    "addCountryTax": "Ajouter {{taxes}}"
   }
 }

@@ -8,6 +8,7 @@ import type {
   SaleUpdateInput,
   PaymentMethod,
   LensProductInput,
+  TaxLine,
 } from '@oculo/shared-types';
 
 export interface Branch {
@@ -42,6 +43,8 @@ export interface Product {
   photoUrl?: string | null;
   /** Photos secondaires : absentes des listes, présentes sur la fiche. */
   photos?: string[] | null;
+  /** false = monture de présentation, vendue sans gestion de stock. */
+  trackStock?: boolean;
   createdAt?: string;
 }
 
@@ -129,8 +132,10 @@ export interface StockRow {
   quantity: number;
   minAlert: number;
   low: boolean;
-  /** Stock illimité (verres fabriqués sur commande). */
+  /** Stock illimité (verres fabriqués sur commande, montures de présentation). */
   unlimited?: boolean;
+  /** false = monture de présentation (sans gestion de stock). */
+  trackStock?: boolean;
   createdAt?: string;
 }
 
@@ -456,7 +461,9 @@ export interface SaleDetailItem {
   lineTotal: string;
   /** Référence libre saisie à la vente (ex. référence fabricant), indépendante du stock. */
   reference: string | null;
-  product: { name: string; sku: string };
+  /** Verre : œil concerné (OD / OG). */
+  eye?: 'OD' | 'OG' | null;
+  product: { name: string; sku: string; category?: string; brand?: string | null; attributes?: Record<string, unknown> | null };
 }
 
 /** Encaissement rattaché à une vente (détail des moyens de paiement). */
@@ -477,6 +484,8 @@ export interface SaleDetail {
   subtotal: string;
   discountAmount: string;
   taxAmount: string;
+  /** Détail des taxes figé sur la pièce (TVA + taxes supplémentaires, ex. CSS). */
+  taxDetails?: TaxLine[] | null;
   insuranceAmount: string;
   totalAmount: string;
   paidAmount: string;

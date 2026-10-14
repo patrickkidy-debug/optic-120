@@ -250,7 +250,8 @@
     "insurerMethod": "Meio de pagamento da seguradora",
     "receivedRemaining": "Recebido {{received}} · resta",
     "autoClose": "Fecho automático em {{seconds}}s…",
-    "autoNewSale": "Nova venda automática em {{seconds}}s…"
+    "autoNewSale": "Nova venda automática em {{seconds}}s…",
+    "displayFrame": "Exposição · sem stock"
   },
   "sales": {
     "title": "Histórico de vendas",
@@ -343,7 +344,9 @@
     "noneToAttach": "nenhuma para anexar.",
     "customerPrescription": "Receita do cliente",
     "saveChanges": "Guardar alterações",
-    "createQuote": "Criar orçamento"
+    "createQuote": "Criar orçamento",
+    "techSheet": "Ficha técnica",
+    "techSheetTitle": "Ficha técnica / de reserva: correções, lentes e armação"
   },
   "settings": {
     "title": "Definições",
@@ -1031,7 +1034,13 @@
     "phoneOptional": "Telefone (opcional)",
     "customLens": "Lente à medida",
     "lensType": "— Tipo de lente —",
-    "price": "Preço:"
+    "price": "Preço:",
+    "eye": "Olho",
+    "eyeOdTitle": "Lente do olho direito",
+    "eyeOgTitle": "Lente do olho esquerdo",
+    "eyeNone": "Sem olho",
+    "eyeSplit": "OD + OE",
+    "eyeSplitTitle": "Uma linha OD e uma linha OE em vez de quantidade 2"
   },
   "shell": {
     "search": "Pesquisar...",
@@ -1319,7 +1328,9 @@
       "verres": "Lentes",
       "dateDAjout": "Data de adição",
       "prestationRealiseeALaDemande": "Serviço realizado a pedido: sem stock a gerir.",
-      "ajouterAuCatalogue": "Adicionar ao catálogo"
+      "ajouterAuCatalogue": "Adicionar ao catálogo",
+      "displayFrame": "Armação de exposição (sem stock)",
+      "displayFrameHint": "Exposta na loja e vendida sem controlo nem saída de stock, depois encomendada ao fornecedor."
     },
     "ClientRecord": {
       "vente": "Venda",
@@ -1401,7 +1412,8 @@
       "apercu": "Pré-visualização",
       "marque": "Marca",
       "modele": "Modelo",
-      "referenceAuto": "Referência automática"
+      "referenceAuto": "Referência automática",
+      "presentation": "Exposição"
     },
     "LensCatalog": {
       "premium": "Premium",
@@ -4299,7 +4311,10 @@
     "paperFormatSetting": "Formato de impressão (faturas, orçamentos, recibos)",
     "paperA4Hint": "Folha padrão 21 × 29,7 cm",
     "paperA5Hint": "Meia folha 14,8 × 21 cm",
-    "optometrist": "Optometrista"
+    "optometrist": "Optometrista",
+    "eyeOd": "olho direito (OD)",
+    "eyeOg": "olho esquerdo (OE)",
+    "vatRate": "IVA ({{rate}} %)"
   },
   "crm": {
     "title": "Clientes",
@@ -4675,7 +4690,9 @@
     "signMounted": "Montado por / data",
     "signChecked": "Controlado por / data",
     "printedOn": "Impresso em",
-    "measuredOn": "Centragem medida em {{date}}"
+    "measuredOn": "Centragem medida em {{date}}",
+    "fromQuote": "Orçamento",
+    "fromSale": "Venda"
   },
   "importMap": {
     "title": "Colunas detetadas no seu ficheiro — corrija se necessário",
@@ -5385,5 +5402,20 @@
       "returning": "A caminho da loja",
       "ready": "Disponível na loja"
     }
+  },
+  "optSettings": {
+    "cylinder": "Cilindro das receitas",
+    "cylinderHint": "Transposição automática ao gravar e nos documentos.",
+    "cylAsEntered": "Como introduzido",
+    "cylPlus": "Cilindro positivo (+)",
+    "cylMinus": "Cilindro negativo (−)",
+    "splitEyes": "Lentes: uma linha OD e uma linha OE",
+    "splitEyesHint": "Nos orçamentos e faturas, em vez de uma lente em quantidade 2.",
+    "extraTaxes": "Impostos além do IVA",
+    "extraTaxesHint": "Calculados sobre o valor sem impostos e detalhados nos orçamentos e faturas (ex. CSS 1 % no Gabão).",
+    "taxLabel": "Designação (ex. CSS)",
+    "removeTax": "Remover este imposto",
+    "addTax": "Adicionar imposto",
+    "addCountryTax": "Adicionar {{taxes}}"
   }
 }

@@ -223,7 +223,7 @@ export function ProductsPage() {
   /** Envoie le produit en caisse, prêt à encaisser. */
   function sellProduct(p: Product) {
     const pos = usePosStore.getState();
-    pos.addLine({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice) });
+    pos.addLine({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice), category: p.category });
     navigate('/optique/caisse');
   }
 

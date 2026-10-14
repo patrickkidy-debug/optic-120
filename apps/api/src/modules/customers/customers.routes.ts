@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { customerCreateSchema, prescriptionCreateSchema, type Gender } from '@oculo/shared-types';
+import { applyCylinderConvention, customerCreateSchema, prescriptionCreateSchema, type Gender } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { notFound, badRequest, forbidden } from '../../lib/http-error.js';
@@ -303,7 +303,8 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
           date: issuedAt,
           expiresAt: toDate(expiresAt) ?? addMonths(issuedAt, settings.prescriptionValidityMonths),
           createdById: req.auth!.userId,
-          ...rest,
+          // Transposition automatique (cylindre positif ou négatif) selon les réglages.
+          ...applyCylinderConvention(rest, settings.cylinderConvention),
         },
       });
       return reply.status(201).send({ prescription });
@@ -321,12 +322,23 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
       if (!existing) throw notFound('Ordonnance introuvable');
       const input = clean(prescriptionCreateSchema.partial().parse(req.body));
       const { date, expiresAt, ...rest } = input;
+      // Transposition : sur la correction complète (ancienne + modifiée), pour
+      // qu'une modification partielle d'un œil reste cohérente.
+      const settings = await getOpticalSettings(req.auth!.tenantId);
+      const RX = ['odSphere', 'odCylinder', 'odAxis', 'ogSphere', 'ogCylinder', 'ogAxis'] as const;
+      let rxFields: Partial<Record<(typeof RX)[number], string | null | undefined>> = {};
+      if (settings.cylinderConvention !== 'AS_ENTERED' && RX.some((k) => k in rest)) {
+        const merged = { ...Object.fromEntries(RX.map((k) => [k, existing[k]])), ...Object.fromEntries(RX.filter((k) => k in rest).map((k) => [k, rest[k]])) };
+        const t = applyCylinderConvention(merged, settings.cylinderConvention);
+        rxFields = Object.fromEntries(RX.map((k) => [k, t[k]]));
+      }
       const result = await req.db!.opticalPrescription.updateMany({
         where: { id: prescriptionId },
         data: {
           ...(date ? { date: new Date(date) } : {}),
           ...(expiresAt !== undefined ? { expiresAt: toDate(expiresAt) } : {}),
           ...rest,
+          ...rxFields,
         },
       });
       if (result.count === 0) throw notFound('Ordonnance introuvable');

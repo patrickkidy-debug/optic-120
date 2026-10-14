@@ -49,6 +49,8 @@ interface BaseState {
   photos: string[];
   qty: number;
   minAlert: number;
+  /** false = monture de présentation : vendue sans gestion de stock. */
+  trackStock: boolean;
 }
 
 function baseFrom(product: Product | null, stockRow?: StockRow): BaseState {
@@ -62,6 +64,7 @@ function baseFrom(product: Product | null, stockRow?: StockRow): BaseState {
     photos: product?.photos ?? [],
     qty: stockRow?.quantity ?? 0,
     minAlert: stockRow?.minAlert ?? 0,
+    trackStock: product?.trackStock ?? true,
   };
 }
 
@@ -109,6 +112,7 @@ function useSaveProduct({
         photoUrl: base.photoUrl,
         photos: base.photos,
         attributes,
+        trackStock: base.trackStock,
         ...(createdAt ? { createdAt: new Date(createdAt).toISOString() } : {}),
       };
       // Une duplication arrive avec un identifiant vide : c'est une création,
@@ -125,7 +129,7 @@ function useSaveProduct({
           "La photo n'a pas été conservée par le serveur. Réessayez dans un instant ; si le problème persiste, signalez-le.",
         );
       }
-      if (applyStock && branchId) {
+      if (applyStock && branchId && base.trackStock) {
         const delta = base.qty - (stockRow?.quantity ?? 0);
         if (delta !== 0 || base.minAlert !== (stockRow?.minAlert ?? 0)) {
           await adjustStock({ productId: saved.id, branchId, delta, minAlert: base.minAlert });
@@ -367,6 +371,22 @@ export function FrameFormModal({
             </Field>
           </div>
 
+          {/* Monture de présentation : exposée en vitrine, vendue sans contrôle
+              ni sortie de stock (commandée au fournisseur après la vente). */}
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-[color:var(--primary)]"
+              checked={!base.trackStock}
+              onChange={(e) => set({ trackStock: !e.target.checked })}
+            />
+            <span>
+              <span className="font-semibold text-content">{tr('ui.CatalogForms.displayFrame')}</span>
+              <span className="block text-xs text-content-muted">{tr('ui.CatalogForms.displayFrameHint')}</span>
+            </span>
+          </label>
+
+          {base.trackStock && (
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-surface-2/40 p-3">
             <Field label={tr('ui.CatalogForms.quantiteEnStock')}>
               <NumberInput
@@ -385,6 +405,7 @@ export function FrameFormModal({
               />
             </Field>
           </div>
+          )}
         </div>
 
         {/* Aperçu : la carte telle qu'elle sortira au catalogue */}

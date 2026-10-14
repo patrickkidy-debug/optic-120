@@ -250,7 +250,8 @@
     "insurerMethod": "Insurer payment method",
     "receivedRemaining": "Received {{received}} · remaining",
     "autoClose": "Closing automatically in {{seconds}}s…",
-    "autoNewSale": "New sale automatically in {{seconds}}s…"
+    "autoNewSale": "New sale automatically in {{seconds}}s…",
+    "displayFrame": "Display · no stock"
   },
   "sales": {
     "title": "Sales history",
@@ -343,7 +344,9 @@
     "noneToAttach": "none to attach.",
     "customerPrescription": "Customer prescription",
     "saveChanges": "Save changes",
-    "createQuote": "Create quote"
+    "createQuote": "Create quote",
+    "techSheet": "Technical sheet",
+    "techSheetTitle": "Technical / booking sheet: prescription, lenses and frame"
   },
   "settings": {
     "title": "Settings",
@@ -1031,7 +1034,13 @@
     "phoneOptional": "Phone (optional)",
     "customLens": "Custom lens",
     "lensType": "— Lens type —",
-    "price": "Price:"
+    "price": "Price:",
+    "eye": "Eye",
+    "eyeOdTitle": "Right-eye lens",
+    "eyeOgTitle": "Left-eye lens",
+    "eyeNone": "No eye",
+    "eyeSplit": "OD + OS",
+    "eyeSplitTitle": "One right-eye line and one left-eye line instead of quantity 2"
   },
   "shell": {
     "search": "Search...",
@@ -1319,7 +1328,9 @@
       "verres": "Lenses",
       "dateDAjout": "Date added",
       "prestationRealiseeALaDemande": "Service performed on demand: no stock to manage.",
-      "ajouterAuCatalogue": "Add to catalogue"
+      "ajouterAuCatalogue": "Add to catalogue",
+      "displayFrame": "Display frame (no stock)",
+      "displayFrameHint": "Shown in store and sold without stock checks or stock movements, then ordered from the supplier."
     },
     "ClientRecord": {
       "vente": "Sale",
@@ -1401,7 +1412,8 @@
       "apercu": "Preview",
       "marque": "Brand",
       "modele": "Model",
-      "referenceAuto": "Auto reference"
+      "referenceAuto": "Auto reference",
+      "presentation": "Display"
     },
     "LensCatalog": {
       "premium": "Premium",
@@ -4299,7 +4311,10 @@
     "paperFormatSetting": "Print format (invoices, quotes, receipts)",
     "paperA4Hint": "Standard sheet 21 × 29.7 cm",
     "paperA5Hint": "Half sheet 14.8 × 21 cm",
-    "optometrist": "Optometrist optician"
+    "optometrist": "Optometrist optician",
+    "eyeOd": "right eye (OD)",
+    "eyeOg": "left eye (OS)",
+    "vatRate": "VAT ({{rate}} %)"
   },
   "crm": {
     "title": "Customers",
@@ -4675,7 +4690,9 @@
     "signMounted": "Mounted by / date",
     "signChecked": "Checked by / date",
     "printedOn": "Printed on",
-    "measuredOn": "Centring measured on {{date}}"
+    "measuredOn": "Centring measured on {{date}}",
+    "fromQuote": "Quote",
+    "fromSale": "Sale"
   },
   "importMap": {
     "title": "Columns detected in your file — adjust if needed",
@@ -5385,5 +5402,20 @@
       "returning": "On the way to the store",
       "ready": "Ready at the store"
     }
+  },
+  "optSettings": {
+    "cylinder": "Prescription cylinder",
+    "cylinderHint": "Automatic transposition when saving and on documents.",
+    "cylAsEntered": "As entered",
+    "cylPlus": "Plus cylinder (+)",
+    "cylMinus": "Minus cylinder (−)",
+    "splitEyes": "Lenses: one OD line and one OS line",
+    "splitEyesHint": "On quotes and invoices, instead of one lens with quantity 2.",
+    "extraTaxes": "Taxes on top of VAT",
+    "extraTaxesHint": "Computed on the pre-tax amount and itemised on quotes and invoices (e.g. CSS 1 % in Gabon).",
+    "taxLabel": "Label (e.g. CSS)",
+    "removeTax": "Remove this tax",
+    "addTax": "Add a tax",
+    "addCountryTax": "Add {{taxes}}"
   }
 }

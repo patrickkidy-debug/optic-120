@@ -31,6 +31,8 @@ export function frameAttrs(p: Product): FrameAttributes {
 /** État de stock affiché sur la carte. */
 function stockState(row: StockRow | undefined) {
   const qty = row?.quantity ?? 0;
+  // Monture de présentation : vendue sans gestion de stock.
+  if (row?.trackStock === false) return { label: tr('ui.FrameCatalog.presentation'), tone: 'info' as const, qty: null };
   if (row?.unlimited) return { label: tr('ui.FrameCatalog.disponible'), tone: 'success' as const, qty: null };
   if (qty <= 0) return { label: tr('ui.FrameCatalog.rupture'), tone: 'danger' as const, qty };
   if (qty <= (row?.minAlert ?? 0)) return { label: tr('ui.FrameCatalog.stockFaible'), tone: 'warning' as const, qty };

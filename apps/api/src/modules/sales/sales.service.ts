@@ -4,7 +4,8 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
-  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo } from '@oculo/shared-types';
+  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo, computeTaxes } from '@oculo/shared-types';
+import type { TaxLine, ExtraTax } from '@oculo/shared-types';
 import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
@@ -90,6 +91,15 @@ interface ComputedLine {
   // Référence libre saisie à la vente (ex. référence fabricant d'une
   // monture), indépendante du stock — voir SaleItem.reference.
   reference: string | null;
+  /** Verre détaillé œil par œil (OD / OG). */
+  eye: string | null;
+  /** false = article de présentation : aucun mouvement de stock. */
+  trackStock: boolean;
+}
+
+/** Vrai si l'article ne consomme pas de stock (verre sur commande ou article de présentation). */
+function skipsStock(category: string, trackStock: boolean | undefined): boolean {
+  return trackStock === false || MADE_TO_ORDER_CATEGORIES.includes(category as (typeof MADE_TO_ORDER_CATEGORIES)[number]);
 }
 
 /**
@@ -157,6 +167,8 @@ export async function createSale(
         name: p.name,
         category: p.category,
         reference: i.reference?.trim() || null,
+        eye: i.eye ?? null,
+        trackStock: p.trackStock,
       };
     });
 
@@ -198,7 +210,10 @@ export async function createSale(
     const discount = (input.discountAmount ?? 0) + loyaltyDiscount;
     const insurance = input.insuranceAmount ?? 0;
     const taxBase = Math.max(0, subtotal - discount);
-    const taxAmount = Math.round(taxBase * vatFraction);
+    // TVA + taxes supplémentaires de l'établissement (ex. CSS 1 % au Gabon),
+    // détaillées sur les documents.
+    const taxes = computeTaxes(taxBase, vatFraction * 100, settings.extraTaxes);
+    const taxAmount = taxes.total;
     const total = taxBase + taxAmount;
     const isSale = input.type === SaleType.SALE;
 
@@ -219,6 +234,7 @@ export async function createSale(
         subtotal,
         discountAmount: discount,
         taxAmount,
+        taxDetails: taxes.lines as unknown as Prisma.InputJsonArray,
         insuranceAmount: insurance,
         insurerId: input.insurerId ?? null,
         prescriptionId: input.prescriptionId ?? null,
@@ -243,6 +259,7 @@ export async function createSale(
             unitPrice: l.unitPrice,
             lineTotal: l.lineTotal,
             reference: l.reference,
+            eye: l.eye,
           })),
         },
       },
@@ -267,8 +284,8 @@ export async function createSale(
 
     if (isSale) {
       for (const line of lines) {
-        // Verres (fabriqués sur commande) : pas de gestion de stock, on ne bloque pas.
-        if (MADE_TO_ORDER_CATEGORIES.includes(line.category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
+        // Verres (fabriqués sur commande) et articles de présentation : pas de stock.
+        if (skipsStock(line.category, line.trackStock)) continue;
         const item = await tx.stockItem.findFirst({
           where: { productId: line.productId, branchId: input.branchId, tenantId },
         });
@@ -380,6 +397,8 @@ export async function updateSale(
             name: p.name,
             category: p.category,
             reference: i.reference?.trim() || null,
+            eye: i.eye ?? null,
+            trackStock: p.trackStock,
           };
         })
       : sale.items.map((i) => ({
@@ -390,6 +409,8 @@ export async function updateSale(
           name: byId.get(i.productId)?.name ?? '',
           category: byId.get(i.productId)?.category ?? '',
           reference: i.reference,
+          eye: i.eye,
+          trackStock: byId.get(i.productId)?.trackStock ?? true,
         }));
 
     const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
@@ -398,9 +419,16 @@ export async function updateSale(
 
     // Taux de TVA : celui fourni, sinon on conserve celui appliqué à l'origine
     // (déduit des montants enregistrés) pour ne pas retaxer une vente exonérée.
+    // Taxes figées à l'origine (détail enregistré) : la TVA et les taxes
+    // supplémentaires de la pièce sont conservées, pas celles d'aujourd'hui.
+    const prevTaxes = (sale.taxDetails as TaxLine[] | null) ?? null;
+    const prevVat = prevTaxes?.find((t) => t.code === 'VAT');
+    const extraTaxes: ExtraTax[] = (prevTaxes ?? []).filter((t) => t.code === 'EXTRA').map((t) => ({ label: t.label, rate: t.rate }));
     let vatPercent: number;
     if (input.vatRate != null) {
       vatPercent = input.vatRate;
+    } else if (prevVat) {
+      vatPercent = prevVat.rate;
     } else {
       const prevBase = Math.max(0, Number(sale.subtotal) - Number(sale.discountAmount));
       const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, select: { vatRate: true } });
@@ -410,7 +438,8 @@ export async function updateSale(
           : (tenant?.vatRate ?? VAT_RATE * 100);
     }
     const taxBase = Math.max(0, subtotal - discount);
-    const taxAmount = Math.round(taxBase * (vatPercent / 100));
+    const taxes = computeTaxes(taxBase, vatPercent, extraTaxes);
+    const taxAmount = taxes.total;
     const total = taxBase + taxAmount;
 
     // Encaissements réels déjà enregistrés : le nouveau total ne peut pas
@@ -439,8 +468,8 @@ export async function updateSale(
 
       for (const productId of new Set([...oldQty.keys(), ...newQty.keys()])) {
         const category = byId.get(productId)?.category ?? '';
-        // Verres fabriqués sur commande : pas de stock à réajuster.
-        if (MADE_TO_ORDER_CATEGORIES.includes(category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
+        // Verres sur commande et articles de présentation : pas de stock à réajuster.
+        if (skipsStock(category, byId.get(productId)?.trackStock)) continue;
         const delta = (newQty.get(productId) ?? 0) - (oldQty.get(productId) ?? 0);
         if (delta === 0) continue;
 
@@ -516,6 +545,7 @@ export async function updateSale(
         subtotal,
         discountAmount: discount,
         taxAmount,
+        taxDetails: taxes.lines as unknown as Prisma.InputJsonArray,
         insuranceAmount: insurance,
         totalAmount: total,
         paidAmount: newPaid,
@@ -529,6 +559,7 @@ export async function updateSale(
                   unitPrice: l.unitPrice,
                   lineTotal: l.lineTotal,
                   reference: l.reference,
+                  eye: l.eye,
                 })),
               },
             }
@@ -565,7 +596,7 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
   return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findFirst({
       where: { id: saleId, tenantId, type: SaleType.SALE },
-      include: { items: true },
+      include: { items: { include: { product: { select: { category: true, trackStock: true } } } } },
     });
     if (!sale) throw notFound('Vente introuvable');
     if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente annulée');
@@ -586,6 +617,7 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
         subtotal: sale.subtotal,
         discountAmount: sale.discountAmount,
         taxAmount: sale.taxAmount,
+        taxDetails: (sale.taxDetails ?? undefined) as Prisma.InputJsonValue | undefined,
         insuranceAmount: sale.insuranceAmount,
         totalAmount: sale.totalAmount,
         paidAmount: sale.totalAmount,
@@ -595,14 +627,16 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
             quantity: i.quantity,
             unitPrice: i.unitPrice,
             lineTotal: i.lineTotal,
+            eye: i.eye,
           })),
         },
       },
       include: { items: { include: { product: true } }, customer: true },
     });
 
-    // Réapprovisionne le stock des articles retournés.
+    // Réapprovisionne le stock des articles retournés (hors articles sans stock).
     for (const i of sale.items) {
+      if (skipsStock(i.product.category, i.product.trackStock)) continue;
       const item = await tx.stockItem.findFirst({
         where: { productId: i.productId, branchId: sale.branchId, tenantId },
       });
@@ -640,7 +674,10 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
 /** Annule une vente et réapprovisionne le stock le cas échéant. */
 export async function cancelSale(tenantId: string, saleId: string, userId: string) {
   return prisma.$transaction(async (tx) => {
-    const sale = await tx.sale.findFirst({ where: { id: saleId, tenantId }, include: { items: true } });
+    const sale = await tx.sale.findFirst({
+      where: { id: saleId, tenantId },
+      include: { items: { include: { product: { select: { category: true, trackStock: true } } } } },
+    });
     if (!sale) throw notFound('Vente introuvable');
     if (sale.status === SaleStatus.CANCELLED) throw conflict('Vente déjà annulée');
 
@@ -652,6 +689,7 @@ export async function cancelSale(tenantId: string, saleId: string, userId: strin
 
     if (wasStockMoved) {
       for (const line of sale.items) {
+        if (skipsStock(line.product.category, line.product.trackStock)) continue;
         const item = await tx.stockItem.findFirst({
           where: { productId: line.productId, branchId: sale.branchId, tenantId },
         });
@@ -691,8 +729,8 @@ export async function convertQuote(tenantId: string, saleId: string, userId: str
     if (quote.type !== SaleType.QUOTE) throw conflict("Cette vente n'est pas un devis");
 
     for (const line of quote.items) {
-      // Verres fabriqués sur commande : pas de décrément de stock.
-      if (MADE_TO_ORDER_CATEGORIES.includes(line.product.category as (typeof MADE_TO_ORDER_CATEGORIES)[number])) continue;
+      // Verres sur commande et articles de présentation : pas de décrément de stock.
+      if (skipsStock(line.product.category, line.product.trackStock)) continue;
       const item = await tx.stockItem.findFirst({
         where: { productId: line.productId, branchId: quote.branchId, tenantId },
       });

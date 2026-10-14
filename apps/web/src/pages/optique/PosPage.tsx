@@ -39,6 +39,7 @@ import {
   VatSelect,
   LoyaltyRedeem,
   WarrantySelect,
+  EyeSelector,
 } from '../../features/optique/SaleTools';
 import { listInsurers } from '../../features/management/api';
 import { useCustomerCoverage, decideCoverage } from '../../features/management/coverage';
@@ -131,6 +132,7 @@ export function PosPage() {
   const totals = computeTotals(
     { ...pos, discountAmount: pos.discountAmount + loyaltyDiscount },
     effectiveVat,
+    optical.extraTaxes,
   );
 
   // Prise en charge synchronisée avec l'assureur choisi. Si le client est
@@ -170,6 +172,7 @@ export function PosPage() {
           quantity: l.quantity,
           unitPrice: l.unitPrice,
           reference: l.reference || undefined,
+          eye: l.eye ?? undefined,
         })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,
@@ -232,7 +235,7 @@ export function PosPage() {
                 <button
                   key={p.productId}
                   onClick={() =>
-                    pos.addLine({ productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice })
+                    pos.addLine({ productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice, category: p.category })
                   }
                   className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
                 >
@@ -243,7 +246,11 @@ export function PosPage() {
                   <div className="mt-0.5 font-mono text-[11px] text-content-faint">{p.sku}</div>
                   <div className="mt-1.5 font-display font-bold text-primary">{formatCurrency(p.sellPrice)}</div>
                   <div className="text-xs text-content-faint">
-                    {p.unlimited ? t('pos.stockUnlimited') : t('pos.stockQty', { count: p.quantity })}
+                    {p.trackStock === false
+                      ? t('pos.displayFrame')
+                      : p.unlimited
+                        ? t('pos.stockUnlimited')
+                        : t('pos.stockQty', { count: p.quantity })}
                   </div>
                 </button>
               ))}
@@ -288,14 +295,22 @@ export function PosPage() {
             ) : (
               <div className="space-y-2">
                 {pos.lines.map((l) => (
-                  <div key={l.productId} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
+                  <div key={l.key} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
+                      {categoryOf(l.productId) === 'VERRE' && (
+                        <EyeSelector
+                          eye={l.eye ?? null}
+                          quantity={l.quantity}
+                          onEye={(eye) => pos.setEye(l.key, eye)}
+                          onSplit={() => pos.splitEyes(l.key)}
+                        />
+                      )}
                       <div className="mt-0.5 flex items-center gap-1">
                         <NumberInput
                           min={0}
                           value={l.unitPrice}
-                          onChange={(n) => pos.setUnitPrice(l.productId, n)}
+                          onChange={(n) => pos.setUnitPrice(l.key, n)}
                           className="h-7 w-24 rounded-lg border bg-surface px-2 text-xs text-content"
                           title={t('pos.unitPriceEditable')}
                           placeholder={t('pos.pricePlaceholder')}
@@ -310,22 +325,22 @@ export function PosPage() {
                       <input
                         type="text"
                         value={l.reference ?? ''}
-                        onChange={(e) => pos.setReference(l.productId, e.target.value)}
+                        onChange={(e) => pos.setReference(l.key, e.target.value)}
                         className="mt-1 h-7 w-full rounded-lg border bg-surface px-2 text-xs text-content"
                         placeholder={t('pos.referenceOptional')}
                         maxLength={80}
                       />
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => pos.setQuantity(l.productId, l.quantity - 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
+                      <button onClick={() => pos.setQuantity(l.key, l.quantity - 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
                         <Minus className="h-3.5 w-3.5" />
                       </button>
                       <span className="w-6 text-center text-sm font-semibold">{l.quantity}</span>
-                      <button onClick={() => pos.setQuantity(l.productId, l.quantity + 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
+                      <button onClick={() => pos.setQuantity(l.key, l.quantity + 1)} className="btn-ghost h-7 w-7 rounded-lg p-0">
                         <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <button onClick={() => pos.removeLine(l.productId)} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
+                    <button onClick={() => pos.removeLine(l.key)} className="btn-ghost h-7 w-7 rounded-lg p-0 text-danger">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -417,10 +432,19 @@ export function PosPage() {
                   value={`- ${formatCurrency(Math.round(loyaltyPoints * optical.loyaltyPointValue))}`}
                 />
               )}
-              <Row
-                label={effectiveVat === 0 ? t('pos.vatExempt') : t('pos.vatRate', { rate: effectiveVat })}
-                value={formatCurrency(totals.taxAmount)}
-              />
+              {totals.taxLines.map((tl) => (
+                <Row
+                  key={tl.code + tl.label}
+                  label={
+                    tl.code === 'EXTRA'
+                      ? `${tl.label} (${tl.rate} %)`
+                      : effectiveVat === 0
+                        ? t('pos.vatExempt')
+                        : t('pos.vatRate', { rate: effectiveVat })
+                  }
+                  value={formatCurrency(tl.amount)}
+                />
+              ))}
               <div className="my-1 border-t" />
               <div className="flex justify-between font-display text-lg font-bold text-content">
                 <span>{t('pos.due')}</span>

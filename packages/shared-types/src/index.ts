@@ -1222,6 +1222,8 @@ export const productCreateSchema = z.object({
   photos: z.array(z.string()).max(MAX_PRODUCT_PHOTOS).optional(),
   buyPrice: z.number().nonnegative(),
   sellPrice: z.number().nonnegative(),
+  /** false = monture de présentation : vendue sans contrôle ni sortie de stock. */
+  trackStock: z.boolean().optional(),
   createdAt: z.string().optional(),
 });
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
@@ -1320,8 +1322,21 @@ export const opticalSettingsSchema = z.object({
   defaultWarrantyMonths: z.number().int().min(0).max(120).default(12),
   /** Valeur d'un point de fidélité, en unité monétaire. */
   loyaltyPointValue: z.number().min(0).max(10000).default(25),
+  /**
+   * Convention de cylindre des ordonnances : telles que saisies, ou transposées
+   * automatiquement en cylindre positif / négatif (enregistrement et documents).
+   */
+  cylinderConvention: z.enum(['AS_ENTERED', 'PLUS', 'MINUS']).default('AS_ENTERED'),
+  /** Verres : une ligne OD et une ligne OG sur devis et factures au lieu d'une quantité 2. */
+  splitLensEyes: z.boolean().default(false),
+  /**
+   * Taxes ajoutées à la TVA, détaillées sur les devis et factures
+   * (ex. CSS 1 % au Gabon). Calculées sur la même base hors taxe que la TVA.
+   */
+  extraTaxes: z.array(z.object({ label: z.string().trim().min(1).max(24), rate: z.number().min(0).max(50) })).max(3).default([]),
 });
 export type OpticalSettings = z.infer<typeof opticalSettingsSchema>;
+export type ExtraTax = OpticalSettings['extraTaxes'][number];
 
 export const DEFAULT_OPTICAL_SETTINGS: OpticalSettings = {
   prescriptionValidityMonths: 18,
@@ -1329,7 +1344,86 @@ export const DEFAULT_OPTICAL_SETTINGS: OpticalSettings = {
   purchaseReminderMonths: 12,
   defaultWarrantyMonths: 12,
   loyaltyPointValue: 25,
+  cylinderConvention: 'AS_ENTERED',
+  splitLensEyes: false,
+  extraTaxes: [],
 };
+
+/** Taxes ajoutées à la TVA par défaut selon le pays (modifiables dans les réglages). */
+export const DEFAULT_EXTRA_TAXES_BY_COUNTRY: Record<string, ExtraTax[]> = {
+  GA: [{ label: 'CSS', rate: 1 }], // Gabon : Contribution Spéciale de Solidarité
+};
+
+/** Détail d'une taxe appliquée à une vente (figé sur la vente). */
+export interface TaxLine {
+  code: 'VAT' | 'EXTRA';
+  label: string;
+  rate: number;
+  amount: number;
+}
+
+/**
+ * Taxes d'une vente : TVA puis taxes supplémentaires, toutes calculées sur la
+ * même base hors taxe (après remise), arrondies à l'unité.
+ */
+export function computeTaxes(base: number, vatPercent: number, extraTaxes: readonly ExtraTax[] = []): { lines: TaxLine[]; total: number } {
+  const b = Math.max(0, base);
+  const lines: TaxLine[] = [{ code: 'VAT', label: 'TVA', rate: vatPercent, amount: Math.round((b * vatPercent) / 100) }];
+  for (const t of extraTaxes) {
+    if (t.rate > 0) lines.push({ code: 'EXTRA', label: t.label, rate: t.rate, amount: Math.round((b * t.rate) / 100) });
+  }
+  return { lines, total: lines.reduce((s, l) => s + l.amount, 0) };
+}
+
+/* ------------------------- Transposition d'ordonnance ------------------------- */
+
+const rxNum = (v: string | number | null | undefined): number | null => {
+  if (v == null) return null;
+  const s = String(v).trim().replace(',', '.').replace(/^plan$/i, '0');
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+const fmtDpt = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '').replace('−', '-') + Math.abs(n).toFixed(2);
+
+/**
+ * Transpose une correction (sphère / cylindre / axe) vers la convention
+ * demandée : sphère + cylindre, cylindre de signe opposé, axe ± 90°.
+ * Ne touche à rien si le cylindre est nul, absent ou déjà dans la bonne
+ * convention, ou si une valeur n'est pas numérique.
+ */
+export function transposeRx(
+  sph: string | null | undefined,
+  cyl: string | null | undefined,
+  axis: string | null | undefined,
+  to: 'PLUS' | 'MINUS',
+): { sphere: string | null | undefined; cylinder: string | null | undefined; axis: string | null | undefined; changed: boolean } {
+  const c = rxNum(cyl);
+  const s = rxNum(sph) ?? (sph == null || String(sph).trim() === '' ? 0 : null);
+  const a = rxNum(axis);
+  if (c == null || c === 0 || s == null || (to === 'PLUS' ? c > 0 : c < 0)) return { sphere: sph, cylinder: cyl, axis, changed: false };
+  const na = a == null ? null : a <= 90 ? a + 90 : a - 90;
+  return {
+    sphere: fmtDpt(s + c),
+    cylinder: fmtDpt(-c),
+    axis: na == null ? axis : String(Math.round(na)),
+    changed: true,
+  };
+}
+
+/** Applique la convention de l'établissement aux deux yeux d'une ordonnance. */
+export function applyCylinderConvention<
+  T extends { odSphere?: string | null; odCylinder?: string | null; odAxis?: string | null; ogSphere?: string | null; ogCylinder?: string | null; ogAxis?: string | null },
+>(rx: T, convention: OpticalSettings['cylinderConvention'] | undefined): T {
+  if (!convention || convention === 'AS_ENTERED') return rx;
+  const od = transposeRx(rx.odSphere, rx.odCylinder, rx.odAxis, convention);
+  const og = transposeRx(rx.ogSphere, rx.ogCylinder, rx.ogAxis, convention);
+  return {
+    ...rx,
+    odSphere: od.sphere, odCylinder: od.cylinder, odAxis: od.axis,
+    ogSphere: og.sphere, ogCylinder: og.cylinder, ogAxis: og.axis,
+  };
+}
 
 /** Garanties proposées en caisse (en mois). */
 export const WARRANTY_PRESETS = [0, 3, 6, 12, 24] as const;
@@ -1596,6 +1690,8 @@ export const saleItemSchema = z.object({
   // monture), indépendante du stock : plusieurs ventes peuvent partager la
   // même fiche produit/prix tout en distinguant l'article réellement remis.
   reference: z.string().max(80).optional().or(z.literal('')),
+  /** Verre : œil concerné (une ligne OD et une ligne OG au lieu d'une quantité 2). */
+  eye: z.enum(['OD', 'OG']).nullable().optional(),
 });
 
 export const saleCreateSchema = z.object({

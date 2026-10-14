@@ -329,6 +329,9 @@ model Product {
   buyPrice   Decimal         @db.Decimal(12, 2)
   sellPrice  Decimal         @db.Decimal(12, 2)
   isActive   Boolean         @default(true)
+  /// false = article de présentation (ex. monture d'exposition) : vendu sans
+  /// contrôle ni sortie de stock.
+  trackStock Boolean         @default(true)
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
@@ -701,6 +704,8 @@ model Sale {
   subtotal          Decimal              @db.Decimal(12, 2)
   discountAmount    Decimal              @default(0) @db.Decimal(12, 2)
   taxAmount         Decimal              @default(0) @db.Decimal(12, 2)
+  /// Détail des taxes figé à la vente : TVA + taxes supplémentaires (ex. CSS 1 %).
+  taxDetails        Json?
   insuranceAmount   Decimal              @default(0) @db.Decimal(12, 2)
   // Assureur qui prend en charge insuranceAmount (suivi des paiements trimestriels).
   insurerId         String?
@@ -758,6 +763,8 @@ model SaleItem {
   // indépendante du stock : plusieurs articles peuvent partager la même fiche
   // produit/prix au catalogue sans qu'on ait à créer un SKU par référence.
   reference String? @db.VarChar(80)
+  /// Verre : œil concerné (OD / OG) quand les verres sont détaillés œil par œil.
+  eye       String? @db.VarChar(2)
 
   @@index([saleId])
 }

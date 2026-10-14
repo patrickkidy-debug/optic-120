@@ -423,7 +423,8 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
   const rows = products.map((p) => {
     const item = p.stockItems[0];
     // Verres (fabriqués sur commande) : stock illimité, jamais en alerte.
-    const unlimited = isMadeToOrderCategory(p.category);
+    // Montures de présentation (trackStock = false) : vendues sans gestion de stock.
+    const unlimited = isMadeToOrderCategory(p.category) || !p.trackStock;
     return {
       productId: p.id,
       sku: p.sku,
@@ -436,6 +437,7 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
       minAlert: item?.minAlert ?? 0,
       low: unlimited ? false : item ? item.quantity <= item.minAlert : false,
       unlimited,
+      trackStock: p.trackStock,
       createdAt: p.createdAt,
     };
   });
@@ -457,10 +459,10 @@ export async function getMovements(tenantId: string, productId: string, branchId
 export async function getLowStockCount(tenantId: string, branchId?: string): Promise<number> {
   const items = await prisma.stockItem.findMany({
     where: { tenantId, ...(branchId ? { branchId } : {}) },
-    select: { quantity: true, minAlert: true, product: { select: { category: true } } },
+    select: { quantity: true, minAlert: true, product: { select: { category: true, trackStock: true } } },
   });
-  // Les verres (fabriqués sur commande) ne comptent jamais comme stock bas.
+  // Les verres (fabriqués sur commande) et montures de présentation ne comptent jamais comme stock bas.
   return items.filter(
-    (i) => !isMadeToOrderCategory(i.product.category) && i.quantity <= i.minAlert,
+    (i) => !isMadeToOrderCategory(i.product.category) && i.product.trackStock && i.quantity <= i.minAlert,
   ).length;
 }

@@ -47,7 +47,7 @@ export async function createInventoryCount(
   });
 
   // Lunettes fabriquées sur commande : stock illimité, jamais comptées (même règle que l'ancien module).
-  let scoped = products.filter((p) => !isMadeToOrderCategory(p.category));
+  let scoped = products.filter((p) => !isMadeToOrderCategory(p.category) && p.trackStock);
   if (input.scopeLocation) {
     scoped = scoped.filter((p) => p.stockItems[0]?.location === input.scopeLocation);
   }

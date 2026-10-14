@@ -89,6 +89,7 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
           buyPrice: true,
           sellPrice: true,
           isActive: true,
+          trackStock: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -148,6 +149,7 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
           photos: input.photos as object | undefined,
           buyPrice: input.buyPrice,
           sellPrice: input.sellPrice,
+          trackStock: input.trackStock ?? true,
           createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
         },
       });
