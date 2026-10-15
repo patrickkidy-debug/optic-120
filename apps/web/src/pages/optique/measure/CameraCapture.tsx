@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Camera, CameraOff, RotateCcw, Check, AlertTriangle, Flashlight, FlashlightOff, ImagePlus, Loader2, RefreshCw, Sparkles, Timer } from 'lucide-react';
-import { getLandmarker, toFacePoints } from '../../../features/optique/measure/landmarker';
+import { getLandmarker, toFacePoints, videoAgreesWithCpu } from '../../../features/optique/measure/landmarker';
 import { APK_URL, isOutdatedApp } from '../../../lib/nativeApp';
 import { analyzeFace, IRIS_MM, type FaceAnalysis } from '../../../features/optique/measure/geometry';
 import { brightness, detectCard, detectRims, sharpness, toGray } from '../../../features/optique/measure/vision';
@@ -265,6 +265,7 @@ export function CameraCapture({
     let cardSeen = false;
     let face: FaceAnalysis | null = null;
     let landmarker: Awaited<ReturnType<typeof getLandmarker>> | null = null;
+    let gpuChecked = false;
 
     getLandmarker('VIDEO')
       .then((l) => { if (!stop) { landmarker = l; setEngine('ready'); } })
@@ -281,6 +282,16 @@ export function CameraCapture({
         try {
           const fp = toFacePoints(landmarker.detectForVideo(v, now), v.videoWidth, v.videoHeight);
           face = fp ? analyzeFace(fp) : null;
+          // Premier visage : le suivi GPU est comparé au processeur. Sur les
+          // appareils où le GPU décale les points, on bascule sur le processeur.
+          if (fp && !gpuChecked) {
+            gpuChecked = true;
+            void videoAgreesWithCpu(v, fp)
+              .then(async (ok) => {
+                if (!ok && !stop) landmarker = await getLandmarker('VIDEO', 'CPU');
+              })
+              .catch(() => {});
+          }
         } catch {
           face = null;
         }

@@ -412,3 +412,97 @@ export function defaultRims(f: FaceAnalysis): Record<(typeof RIM_KEYS)[number], 
     lTemple: ax.at(pl.X + 0.42 * D, pl.Y),
   };
 }
+
+type RimKey = (typeof RIM_KEYS)[number];
+
+/**
+ * Pose la monture d'un seul bloc sur le visage. Une monture est symétrique
+ * autour de son pont : les deux verres ont la même largeur, la même hauteur et
+ * le même niveau. Chaque bord est donc confronté à son symétrique (repère des
+ * pupilles, centré sur le pont de la monture) :
+ * - les deux côtés concordent : moyenne pondérée par la confiance ;
+ * - ils divergent : le côté le mieux détecté l'emporte (l'autre a vu un reflet,
+ *   un sourcil ou la joue) ;
+ * - un bord qui laisserait la pupille hors du verre est rejeté au profit des
+ *   proportions moyennes.
+ * Résultat : des boîtes alignées et cohérentes avec la forme du visage, sans
+ * verre décalé d'un côté.
+ */
+export function fitFrame(
+  points: Partial<Record<RimKey, Pt>>,
+  conf: Partial<Record<RimKey, number>>,
+  f: FaceAnalysis,
+): { points: Record<RimKey, Pt>; conf: Partial<Record<RimKey, number>> } {
+  const D = f.pdPx;
+  const ax = axes({ pupilR: f.pupilR, pupilL: f.pupilL })!;
+  const def = defaultRims(f);
+  const P = (k: RimKey) => points[k] ?? def[k];
+  const C = (k: RimKey) => (points[k] ? conf[k] ?? 0 : 0);
+  const pr = { X: ax.X(f.pupilR), Y: ax.Y(f.pupilR) };
+  const pl = { X: ax.X(f.pupilL), Y: ax.Y(f.pupilL) };
+
+  // Centre de la monture : milieu des bords nasaux s'ils sont nets et cohérents
+  // avec l'arête du nez (la monture repose dessus), sinon l'arête du nez.
+  const noseX = ax.X(f.bridge);
+  let Xc = noseX;
+  const cn = Math.min(C('rNasal'), C('lNasal'));
+  if (cn >= 0.3) {
+    const mid = (ax.X(P('rNasal')) + ax.X(P('lNasal'))) / 2;
+    if (Math.abs(mid - noseX) < 0.08 * D) Xc = mid;
+  }
+
+  const pair = (a: number, ca: number, b: number, cb: number, tol: number) => {
+    if (Math.abs(a - b) > tol && Math.abs(ca - cb) > 0.1) {
+      return ca > cb ? { v: a, c: ca * 0.85 } : { v: b, c: cb * 0.85 };
+    }
+    const wa = ca + 0.05;
+    const wb = cb + 0.05;
+    return { v: (a * wa + b * wb) / (wa + wb), c: Math.max(ca, cb) };
+  };
+
+  // Demi-distances au centre (côté nez, côté tempe) et niveaux haut / bas.
+  const nasal = pair(Xc - ax.X(P('rNasal')), C('rNasal'), ax.X(P('lNasal')) - Xc, C('lNasal'), 0.06 * D);
+  const temple = pair(Xc - ax.X(P('rTemple')), C('rTemple'), ax.X(P('lTemple')) - Xc, C('lTemple'), 0.1 * D);
+  // En hauteur, un écart OD / OG peut être réel (visage asymétrique) : deux bords
+  // nets sont gardés tels quels ; la symétrie ne sert qu'à compléter un côté faible.
+  const level = (k1: RimKey, k2: RimKey) => {
+    const a = ax.Y(P(k1)), b = ax.Y(P(k2)), ca = C(k1), cb = C(k2);
+    if (ca >= 0.5 && cb >= 0.5) return { r: { v: a, c: ca }, l: { v: b, c: cb } };
+    const one = pair(a, ca, b, cb, 0.06 * D);
+    return { r: { ...one }, l: { ...one } };
+  };
+  const tops = level('rTop', 'lTop');
+  const bottoms = level('rBottom', 'lBottom');
+
+  // Garde-fous : la pupille doit être dans le verre, avec des proportions plausibles.
+  const halfPd = Math.min(Xc - pr.X, pl.X - Xc);
+  const defNasal = Xc - ax.X(def.rNasal);
+  const defTemple = Xc - ax.X(def.rTemple);
+  if (!(nasal.v > 0.03 * D && nasal.v < halfPd - 0.05 * D)) Object.assign(nasal, { v: Math.min(defNasal, halfPd - 0.12 * D), c: 0 });
+  if (!(temple.v > halfPd + 0.15 * D && temple.v < halfPd + 0.75 * D)) Object.assign(temple, { v: defTemple, c: 0 });
+  for (const [side, py] of [['r', pr.Y], ['l', pl.Y]] as const) {
+    const t = tops[side];
+    const b = bottoms[side];
+    if (!(t.v < py - 0.1 * D && t.v > py - 0.7 * D)) Object.assign(t, { v: py - 0.27 * D, c: 0 });
+    if (!(b.v > py + 0.15 * D && b.v < py + 0.8 * D)) Object.assign(b, { v: py + 0.32 * D, c: 0 });
+  }
+
+  // Repères posés au droit des pupilles (haut / bas) et sur leur ligne (nez / tempe).
+  const out: Record<RimKey, Pt> = {
+    rTop: ax.at(pr.X, tops.r.v),
+    rBottom: ax.at(pr.X, bottoms.r.v),
+    rNasal: ax.at(Xc - nasal.v, pr.Y),
+    rTemple: ax.at(Xc - temple.v, pr.Y),
+    lTop: ax.at(pl.X, tops.l.v),
+    lBottom: ax.at(pl.X, bottoms.l.v),
+    lNasal: ax.at(Xc + nasal.v, pl.Y),
+    lTemple: ax.at(Xc + temple.v, pl.Y),
+  };
+  const c: Partial<Record<RimKey, number>> = {
+    rTop: Math.min(0.45, tops.r.c), lTop: Math.min(0.45, tops.l.c),
+    rBottom: bottoms.r.c, lBottom: bottoms.l.c,
+    rNasal: nasal.c, lNasal: nasal.c,
+    rTemple: temple.c, lTemple: temple.c,
+  };
+  return { points: out, conf: c };
+}

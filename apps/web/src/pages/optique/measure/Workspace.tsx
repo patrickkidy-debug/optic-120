@@ -30,6 +30,7 @@ import {
 
   computeValues,
   defaultRims,
+  fitFrame,
   FACE_KEYS,
   IRIS_MM,
   IRIS_REL_ERROR,
@@ -157,12 +158,15 @@ export function Workspace({
         m.pupilR = { x: f.pupilR.x, y: f.pupilR.y };
         m.pupilL = { x: f.pupilL.x, y: f.pupilL.y };
         m.bridge = { x: f.bridge.x, y: (f.pupilR.y + f.pupilL.y) / 2 };
+        // Monture posée d'un bloc : bords détectés, confrontés à leur symétrique
+        // autour du pont, avec les proportions moyennes en dernier recours.
         const rims = detectRims(g, f);
-        const fallback = defaultRims(f);
+        const kept: typeof rims.points = {};
+        for (const k of RIM_KEYS) if ((rims.conf[k] ?? 0) >= 0.3 && rims.points[k]) kept[k] = rims.points[k];
+        const frame = fitFrame(kept, rims.conf, f);
         for (const k of RIM_KEYS) {
-          const c = rims.conf[k] ?? 0;
-          m[k] = c >= 0.3 && rims.points[k] ? rims.points[k] : fallback[k];
-          next.rimConf[k] = c >= 0.3 ? c : 0;
+          m[k] = frame.points[k];
+          next.rimConf[k] = frame.conf[k] ?? 0;
         }
         const card = detectCard(g, f);
         const ax = axes(m)!;
