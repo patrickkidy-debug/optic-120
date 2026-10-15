@@ -90,7 +90,7 @@ export function WhatsNewBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 max-h-[70vh] w-[min(92vw,26rem)] overflow-auto rounded-2xl border bg-surface shadow-xl">
+        <div className="fixed inset-x-2 top-[calc(4rem+env(safe-area-inset-top))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto z-50 mt-2 max-h-[70vh] sm:w-[min(92vw,26rem)] overflow-auto rounded-2xl border bg-surface shadow-xl">
           <div className="flex items-center justify-between gap-2 border-b p-3">
             <p className="font-display font-bold text-content">{t('shell.whatsNew')}</p>
             <div className="flex items-center gap-1">

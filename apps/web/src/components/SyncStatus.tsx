@@ -88,7 +88,7 @@ export function SyncStatus() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-80 max-w-[90vw] rounded-2xl border bg-surface p-4 text-sm shadow-card-lg">
+        <div className="fixed inset-x-2 top-[calc(4rem+env(safe-area-inset-top))] z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:w-80 rounded-2xl border bg-surface p-4 text-sm shadow-card-lg">
           <p className="font-semibold text-content">{label}</p>
           <p className="mt-1 text-content-muted">
             {isOffline

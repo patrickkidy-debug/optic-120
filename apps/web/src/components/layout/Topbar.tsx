@@ -136,17 +136,18 @@ function BranchSelector() {
   const active = branches?.find((b) => b.id === activeBranchId);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative min-w-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="btn-outline h-9 rounded-xl px-3 text-sm"
+        className="btn-outline h-9 max-w-full rounded-xl px-2.5 text-sm sm:px-3"
+        title={active?.name}
       >
-        <Store className="h-4 w-4 text-primary" />
-        <span className="max-w-[140px] truncate">{active?.name ?? '—'}</span>
-        <ChevronDown className="h-3.5 w-3.5 text-content-faint" />
+        <Store className="h-4 w-4 shrink-0 text-primary" />
+        <span className="min-w-0 max-w-[28vw] truncate sm:max-w-[140px]">{active?.name ?? '—'}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-faint" />
       </button>
       {open && branches && (
-        <div className="absolute left-0 z-30 mt-2 w-56 rounded-xl border bg-surface p-1.5 shadow-card-lg">
+        <div className="absolute left-0 z-30 mt-2 w-56 max-w-[calc(100vw-1rem)] rounded-xl border bg-surface p-1.5 shadow-card-lg">
           {branches.map((b) => (
             <button
               key={b.id}
@@ -162,6 +163,57 @@ function BranchSelector() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Thème et langue dans le menu utilisateur, sur téléphone uniquement. */
+function MobilePrefs() {
+  const theme = useUIStore((s) => s.theme);
+  const setTheme = useUIStore((s) => s.setTheme);
+  const locale = useUIStore((s) => s.locale);
+  const setLocale = useUIStore((s) => s.setLocale);
+  const themes: { mode: ThemeMode; icon: typeof Sun }[] = [
+    { mode: 'light', icon: Sun },
+    { mode: 'dark', icon: Moon },
+    { mode: 'auto', icon: Monitor },
+  ];
+  const chip = (active: boolean) =>
+    clsx(
+      'flex h-8 flex-1 items-center justify-center rounded-lg border text-xs font-bold uppercase transition',
+      active ? 'border-primary bg-primary-soft text-primary' : 'text-content-muted hover:bg-surface-2',
+    );
+  return (
+    <div className="space-y-2 border-b px-2 py-2 sm:hidden">
+      <div className="flex gap-1.5">
+        {themes.map(({ mode, icon: Icon }) => (
+          <button
+            key={mode}
+            type="button"
+            className={chip(theme === mode)}
+            onClick={() => setTheme(mode)}
+            aria-label={tr('ui.Topbar.themeTheme', { theme: mode })}
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        {LOCALES.map((l) => (
+          <button
+            key={l.code}
+            type="button"
+            className={chip(locale === l.code)}
+            onClick={() => {
+              setLocale(l.code);
+              void i18n.changeLanguage(l.code);
+            }}
+            aria-label={l.label}
+          >
+            {l.short}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -182,7 +234,7 @@ function UserMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-xl p-1 pr-2 hover:bg-surface-2">
+      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-xl p-1 hover:bg-surface-2 sm:pr-2">
         <Avatar
           photoUrl={user?.photoUrl}
           firstName={user?.firstName}
@@ -195,10 +247,18 @@ function UserMenu() {
           </span>
           <span className="block text-[11px] leading-tight text-content-muted">{trFr(user?.roleName)}</span>
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-content-faint" />
+        <ChevronDown className="hidden h-3.5 w-3.5 text-content-faint sm:block" />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-52 rounded-xl border bg-surface p-1.5 shadow-card-lg">
+        <div className="absolute right-0 z-30 mt-2 w-60 max-w-[calc(100vw-1rem)] rounded-xl border bg-surface p-1.5 shadow-card-lg">
+          {/* Téléphone : identité, thème et langue (masqués de la barre faute de place). */}
+          <div className="border-b px-3 pb-2 pt-1 sm:hidden">
+            <p className="truncate text-sm font-semibold text-content">
+              {user?.firstName} {user?.lastName}
+            </p>
+            <p className="truncate text-[11px] text-content-muted">{trFr(user?.roleName)}</p>
+          </div>
+          <MobilePrefs />
           <button
             onClick={() => {
               navigate('/parametres/profil');
@@ -351,10 +411,10 @@ export function Topbar() {
 
   return (
     <header
-      className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-bg/80 px-4 backdrop-blur-md"
+      className="sticky top-0 z-20 flex h-16 items-center gap-1 border-b bg-bg/80 px-2 backdrop-blur-md sm:gap-3 sm:px-4"
       style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(4rem + env(safe-area-inset-top))' }}
     >
-      <button onClick={toggleSidebar} className="btn-ghost h-9 w-9 rounded-xl p-0 lg:hidden">
+      <button onClick={toggleSidebar} className="btn-ghost h-9 w-9 shrink-0 rounded-xl p-0 lg:hidden">
         <Menu className="h-5 w-5" />
       </button>
       <BranchSelector />
@@ -374,13 +434,17 @@ export function Topbar() {
       </div>
 
       <div className="flex-1" />
-      <SyncStatus />
-      <NotificationsBell />
-      <WhatsNewBell />
-      <ThemeToggle />
-      <LanguageToggle />
-      <div className="mx-1 h-6 w-px bg-line" />
-      <UserMenu />
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-3">
+        <SyncStatus />
+        <NotificationsBell />
+        <WhatsNewBell />
+        <div className="hidden items-center gap-3 sm:flex">
+          <ThemeToggle />
+          <LanguageToggle />
+          <div className="mx-1 h-6 w-px bg-line" />
+        </div>
+        <UserMenu />
+      </div>
 
       {/* Rendue dans <body> : le flou de l'en-tête enfermait le voile de la recherche. */}
       {createPortal(<CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />, document.body)}

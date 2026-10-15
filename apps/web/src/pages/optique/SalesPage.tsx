@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import clsx from 'clsx';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -352,6 +353,148 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
     }
   }
 
+  /** Boutons d'une pièce : dans le tableau (écran large) et sur les cartes (téléphone). */
+  const rowActions = (s: SaleListItem, inTable: boolean) => (
+      <div className={clsx('flex gap-1', inTable ? 'justify-end' : 'flex-wrap')}>
+        {s.customer?.phone && s.status !== 'CANCELLED' && (
+          <WhatsappSendButton
+            onSend={(lang) =>
+              sendWhatsappForStage(
+                isQuote ? 'quote' : 'sale_paid',
+                s.customer?.phone,
+                {
+                  client: s.customer?.firstName ?? '',
+                  etablissement: user?.tenantName ?? 'OculoSaaS',
+                  numero: s.number,
+                  montant: formatCurrency(Number(s.totalAmount)),
+                  paye: Number(s.paidAmount) > 0 ? formatCurrency(Number(s.paidAmount)) : '',
+                  // Soldée : la ligne « Reste à payer » disparaît du message.
+                  reste:
+                    Number(s.totalAmount) - Number(s.paidAmount) > 0
+                      ? formatCurrency(Number(s.totalAmount) - Number(s.paidAmount))
+                      : '',
+                },
+                lang,
+              )
+            }
+            className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
+            title={t('sales.whatsappTitle')}
+          >
+            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+          </WhatsappSendButton>
+        )}
+        <button
+          onClick={() => handleDownload(s.id)}
+          disabled={downloadingId === s.id}
+          className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+          title={isQuote ? t('sales.downloadQuote') : t('sales.downloadInvoice')}
+        >
+          {downloadingId === s.id ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Printer className="h-3.5 w-3.5" />
+          )}
+          {t('sales.print')}
+        </button>
+        <button
+          onClick={() => handleSheet(s.id)}
+          disabled={sheetId === s.id}
+          className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+          title={t('sales.techSheetTitle')}
+        >
+          {sheetId === s.id ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ClipboardList className="h-3.5 w-3.5" />
+          )}
+          {t('sales.techSheet')}
+        </button>
+        <button
+          onClick={() => openDetail(s.id)}
+          disabled={loadingDetail === s.id}
+          className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
+          title={t('sales.detailTitle')}
+        >
+          {loadingDetail === s.id ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Eye className="h-3.5 w-3.5" />
+          )}
+          {t('sales.details')}
+        </button>
+        {canUpdate && s.status !== 'CANCELLED' && (
+          <button
+            onClick={() => openEdit(s.id)}
+            disabled={loadingEdit === s.id}
+            className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+            title={isQuote ? t('sales.editQuote') : t('sales.editSale')}
+          >
+            {loadingEdit === s.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Pencil className="h-3.5 w-3.5" />
+            )}
+            {t('sales.edit')}
+          </button>
+        )}
+        {!isQuote &&
+          canPay &&
+          s.status !== 'CANCELLED' &&
+          Number(s.totalAmount) - Number(s.paidAmount) > 0 && (
+            <button
+              onClick={() =>
+                setPaySale({
+                  id: s.id,
+                  due: Number(s.totalAmount) - Number(s.paidAmount),
+                  number: s.number,
+                })
+              }
+              className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
+              title={t('sales.collectBalance')}
+            >
+              <Banknote className="h-3.5 w-3.5" /> {t('sales.collect')}
+            </button>
+          )}
+        {isQuote && canConvert && s.status !== 'CANCELLED' && (
+          <button
+            onClick={() => convertMut.mutate(s.id)}
+            disabled={convertMut.isPending}
+            className="btn-outline h-8 rounded-lg px-2.5 text-xs"
+            title={t('sales.convertToSale')}
+          >
+            {convertMut.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+            )}
+            {t('sales.convertShort')}
+          </button>
+        )}
+        {!isQuote && canRefund && s.status !== 'CANCELLED' && (
+          <button
+            onClick={() => {
+              if (confirm(t('sales.confirmReturn', { number: s.number })))
+                returnMut.mutate(s.id);
+            }}
+            className="btn-outline h-8 rounded-lg px-2.5 text-xs text-accent"
+            title={t('sales.returnCredit')}
+          >
+            <Undo2 className="h-3.5 w-3.5" /> {t('sales.returnShort')}
+          </button>
+        )}
+        {!isQuote && canCancel && s.status !== 'CANCELLED' && (
+          <button
+            onClick={() => {
+              if (confirm(t('sales.confirmCancel', { number: s.number }))) cancelMut.mutate(s.id);
+            }}
+            className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
+            title={t('sales.cancelSale')}
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+  );
   return (
     <div>
       <PageHeader
@@ -414,7 +557,41 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
           }
         />
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/* Téléphone : une carte par pièce, actions visibles sans défilement horizontal. */}
+        <div className="space-y-3 md:hidden">
+          {data.items.map((s: SaleListItem) => {
+            const due = Number(s.totalAmount) - Number(s.paidAmount);
+            return (
+              <div key={s.id} className="card space-y-2.5 p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm font-semibold text-content">{s.number}</p>
+                    <p className="truncate text-sm text-content-muted">
+                      {s.customer ? `${s.customer.firstName} ${s.customer.lastName}` : '—'}
+                    </p>
+                  </div>
+                  <Badge tone={statusTone(s.status)}>{saleStatusLabel(s.status)}</Badge>
+                </div>
+                <div className="flex items-end justify-between gap-2 text-sm">
+                  <span className="text-xs text-content-faint">{formatDateTime(s.createdAt)}</span>
+                  <span className="text-right">
+                    <span className="block font-display text-base font-bold text-content">
+                      {formatCurrency(Number(s.totalAmount))}
+                    </span>
+                    {!isQuote && s.status !== 'CANCELLED' && (
+                      <span className={clsx('block text-xs', due > 0 ? 'font-semibold text-warning' : 'text-success')}>
+                        {due > 0 ? `${t('sales.remaining')} : ${formatCurrency(due)}` : t('sales.settled')}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="border-t pt-2.5">{rowActions(s, false)}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="card hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-content-faint">
@@ -491,151 +668,14 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
                     {formatDateTime(s.createdAt)}
                   </td>
                   <td className="table-cell">
-                    <div className="flex justify-end gap-1">
-                      {s.customer?.phone && s.status !== 'CANCELLED' && (
-                        <WhatsappSendButton
-                          onSend={(lang) =>
-                            sendWhatsappForStage(
-                              isQuote ? 'quote' : 'sale_paid',
-                              s.customer?.phone,
-                              {
-                                client: s.customer?.firstName ?? '',
-                                etablissement: user?.tenantName ?? 'OculoSaaS',
-                                numero: s.number,
-                                montant: formatCurrency(Number(s.totalAmount)),
-                                paye: Number(s.paidAmount) > 0 ? formatCurrency(Number(s.paidAmount)) : '',
-                                // Soldée : la ligne « Reste à payer » disparaît du message.
-                                reste:
-                                  Number(s.totalAmount) - Number(s.paidAmount) > 0
-                                    ? formatCurrency(Number(s.totalAmount) - Number(s.paidAmount))
-                                    : '',
-                              },
-                              lang,
-                            )
-                          }
-                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-success"
-                          title={t('sales.whatsappTitle')}
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                        </WhatsappSendButton>
-                      )}
-                      <button
-                        onClick={() => handleDownload(s.id)}
-                        disabled={downloadingId === s.id}
-                        className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                        title={isQuote ? t('sales.downloadQuote') : t('sales.downloadInvoice')}
-                      >
-                        {downloadingId === s.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Printer className="h-3.5 w-3.5" />
-                        )}
-                        {t('sales.print')}
-                      </button>
-                      <button
-                        onClick={() => handleSheet(s.id)}
-                        disabled={sheetId === s.id}
-                        className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                        title={t('sales.techSheetTitle')}
-                      >
-                        {sheetId === s.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <ClipboardList className="h-3.5 w-3.5" />
-                        )}
-                        {t('sales.techSheet')}
-                      </button>
-                      <button
-                        onClick={() => openDetail(s.id)}
-                        disabled={loadingDetail === s.id}
-                        className="btn-ghost h-8 rounded-lg px-2.5 text-xs"
-                        title={t('sales.detailTitle')}
-                      >
-                        {loadingDetail === s.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Eye className="h-3.5 w-3.5" />
-                        )}
-                        {t('sales.details')}
-                      </button>
-                      {canUpdate && s.status !== 'CANCELLED' && (
-                        <button
-                          onClick={() => openEdit(s.id)}
-                          disabled={loadingEdit === s.id}
-                          className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                          title={isQuote ? t('sales.editQuote') : t('sales.editSale')}
-                        >
-                          {loadingEdit === s.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Pencil className="h-3.5 w-3.5" />
-                          )}
-                          {t('sales.edit')}
-                        </button>
-                      )}
-                      {!isQuote &&
-                        canPay &&
-                        s.status !== 'CANCELLED' &&
-                        Number(s.totalAmount) - Number(s.paidAmount) > 0 && (
-                          <button
-                            onClick={() =>
-                              setPaySale({
-                                id: s.id,
-                                due: Number(s.totalAmount) - Number(s.paidAmount),
-                                number: s.number,
-                              })
-                            }
-                            className="btn-outline h-8 rounded-lg px-2.5 text-xs text-primary"
-                            title={t('sales.collectBalance')}
-                          >
-                            <Banknote className="h-3.5 w-3.5" /> {t('sales.collect')}
-                          </button>
-                        )}
-                      {isQuote && canConvert && s.status !== 'CANCELLED' && (
-                        <button
-                          onClick={() => convertMut.mutate(s.id)}
-                          disabled={convertMut.isPending}
-                          className="btn-outline h-8 rounded-lg px-2.5 text-xs"
-                          title={t('sales.convertToSale')}
-                        >
-                          {convertMut.isPending ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                          )}
-                          {t('sales.convertShort')}
-                        </button>
-                      )}
-                      {!isQuote && canRefund && s.status !== 'CANCELLED' && (
-                        <button
-                          onClick={() => {
-                            if (confirm(t('sales.confirmReturn', { number: s.number })))
-                              returnMut.mutate(s.id);
-                          }}
-                          className="btn-outline h-8 rounded-lg px-2.5 text-xs text-accent"
-                          title={t('sales.returnCredit')}
-                        >
-                          <Undo2 className="h-3.5 w-3.5" /> {t('sales.returnShort')}
-                        </button>
-                      )}
-                      {!isQuote && canCancel && s.status !== 'CANCELLED' && (
-                        <button
-                          onClick={() => {
-                            if (confirm(t('sales.confirmCancel', { number: s.number }))) cancelMut.mutate(s.id);
-                          }}
-                          className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
-                          title={t('sales.cancelSale')}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                    {rowActions(s, true)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Historique paginé : une boutique accumule des milliers de pièces, on
