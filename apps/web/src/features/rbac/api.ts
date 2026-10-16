@@ -54,7 +54,7 @@ export interface UserDto {
   phone: string | null;
   isActive: boolean;
   lastLoginAt: string | null;
-  role: { id: string; name: string; code: string };
+  role: { id: string; name: string; code: string; allBranches?: boolean };
   branches: { id: string; name: string }[];
 }
 

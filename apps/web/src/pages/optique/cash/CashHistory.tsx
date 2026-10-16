@@ -94,7 +94,10 @@ export function CashHistory({ branchId, refreshKey }: { branchId: string; refres
   const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ['cash-history', branchId, range.from, range.to, page, refreshKey],
     queryFn: () => getCashHistory({ branchId, ...range, page, pageSize: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    // Garde la page précédente pendant une recherche / pagination, mais JAMAIS
+    // après un changement de magasin (les données d'un autre magasin
+    // s'afficheraient le temps du chargement).
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === branchId ? keepPreviousData(prev) : undefined),
   });
   const pageCount = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const PERIODS: { id: Period; label: string }[] = [

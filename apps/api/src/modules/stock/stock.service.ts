@@ -171,6 +171,8 @@ export async function transferStock(
     ]);
     if (!from) throw notFound('Magasin source introuvable');
     if (!to) throw notFound('Magasin destination introuvable');
+    if (from.archivedAt || to.archivedAt) throw badRequest('Un magasin archivé ne peut ni envoyer ni recevoir de transfert.');
+    if (from.id === to.id) throw badRequest("Le magasin destinataire doit être différent du magasin d'origine.");
 
     const number = `TRF-${Date.now().toString(36).toUpperCase()}`;
 
@@ -243,7 +245,13 @@ export async function confirmTransfer(tenantId: string, userId: string, transfer
       include: { fromBranch: true, toBranch: true, items: { include: { product: true } } },
     });
     if (!transfer) throw notFound('Transfert introuvable');
-    if (transfer.status !== 'PENDING') throw badRequest('Ce transfert n\'est plus en attente');
+    // Passage PENDING → CONFIRMED conditionnel et AVANT tout crédit de stock :
+    // deux validations simultanées ne peuvent pas créditer deux fois.
+    const claimed = await tx.stockTransfer.updateMany({
+      where: { id: transferId, tenantId, status: 'PENDING' },
+      data: { status: 'CONFIRMED', confirmedById: userId, confirmedAt: new Date() },
+    });
+    if (claimed.count === 0) throw badRequest('Ce transfert n\'est plus en attente');
 
     for (const item of transfer.items) {
       const target = await ensureStockItem(tx, tenantId, item.productId, transfer.toBranchId);
@@ -260,13 +268,8 @@ export async function confirmTransfer(tenantId: string, userId: string, transfer
       });
     }
 
-    return tx.stockTransfer.update({
+    return tx.stockTransfer.findUniqueOrThrow({
       where: { id: transferId },
-      data: {
-        status: 'CONFIRMED',
-        confirmedById: userId,
-        confirmedAt: new Date(),
-      },
       include: {
         fromBranch: true,
         toBranch: true,
@@ -286,7 +289,8 @@ export async function cancelTransfer(tenantId: string, userId: string, transferI
       include: { fromBranch: true, toBranch: true, items: { include: { product: true } } },
     });
     if (!transfer) throw notFound('Transfert introuvable');
-    if (transfer.status !== 'PENDING') throw badRequest('Seul un transfert en attente peut être annulé');
+    const claimed = await tx.stockTransfer.updateMany({ where: { id: transferId, tenantId, status: 'PENDING' }, data: { status: 'CANCELLED' } });
+    if (claimed.count === 0) throw badRequest('Seul un transfert en attente peut être annulé');
 
     for (const item of transfer.items) {
       const source = await ensureStockItem(tx, tenantId, item.productId, transfer.fromBranchId);
@@ -303,9 +307,8 @@ export async function cancelTransfer(tenantId: string, userId: string, transferI
       });
     }
 
-    return tx.stockTransfer.update({
+    return tx.stockTransfer.findUniqueOrThrow({
       where: { id: transferId },
-      data: { status: 'CANCELLED' },
       include: {
         fromBranch: true,
         toBranch: true,
@@ -320,10 +323,15 @@ export async function cancelTransfer(tenantId: string, userId: string, transferI
  */
 export async function listTransfers(
   tenantId: string,
-  options: { branchId?: string; direction?: 'incoming' | 'outgoing' | 'all'; status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED' } = {},
+  options: { branchId?: string; direction?: 'incoming' | 'outgoing' | 'all'; status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED'; allowedBranchIds?: string[] | null } = {},
 ) {
   const where: Record<string, unknown> = { tenantId };
   if (options.status) where.status = options.status;
+  // Sans magasin précis, un rôle limité ne voit que les transferts touchant SES magasins.
+  if (!options.branchId && options.allowedBranchIds) {
+    const ids = options.allowedBranchIds.length ? options.allowedBranchIds : ['__none__'];
+    where.OR = [{ fromBranchId: { in: ids } }, { toBranchId: { in: ids } }];
+  }
 
   if (options.branchId) {
     if (options.direction === 'incoming') {

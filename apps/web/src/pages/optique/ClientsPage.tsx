@@ -125,7 +125,10 @@ export function ClientsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ['customer-directory', branchId, debounced, segments, visit, sort, page],
     queryFn: () => getCustomerDirectory({ search: debounced, branchId, segments, visit: visit || undefined, sort, page, pageSize: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    // Garde la page précédente pendant une recherche / pagination, mais JAMAIS
+    // après un changement de magasin (les données d'un autre magasin
+    // s'afficheraient le temps du chargement).
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === branchId ? keepPreviousData(prev) : undefined),
   });
 
   const rows = data?.customers ?? [];

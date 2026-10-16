@@ -273,8 +273,10 @@ export async function createTenantSkeleton(
     },
   });
   const branch = await tx.branch.create({
-    data: { tenantId: tenant.id, name: opts.branchName, city: '' },
+    data: { tenantId: tenant.id, name: opts.branchName, city: '', code: 'MAG-001', countryCode: country?.code ?? null },
   });
+  // Premier magasin = magasin principal de l'établissement.
+  await tx.tenant.update({ where: { id: tenant.id }, data: { mainBranchId: branch.id } });
 
   let adminRoleId: string | null = null;
   for (const tpl of templates) {

@@ -124,6 +124,7 @@ export async function createSale(
   return retryOnDuplicateNumber(() => prisma.$transaction(async (tx) => {
     const branch = await tx.branch.findFirst({ where: { id: input.branchId, tenantId } });
     if (!branch) throw notFound('Succursale introuvable');
+    if (branch.archivedAt) throw badRequest('Ce magasin est archivé : aucune nouvelle vente ne peut y être enregistrée.');
 
     // Assureur (prise en charge) : doit appartenir à l'établissement.
     if (input.insurerId) {

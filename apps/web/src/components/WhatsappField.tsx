@@ -6,11 +6,11 @@ import { tr } from '../lib/tr';
 /** Indicatif présélectionné : Sénégal. */
 const DEFAULT_DIAL = '+221';
 
-function splitNumber(value: string): { dial: string; local: string } {
+function splitNumber(value: string, fallbackDial = DEFAULT_DIAL): { dial: string; local: string } {
   const cleaned = value.replace(/[\s().-]/g, '');
   const match = SUPPORTED_COUNTRIES.find((c) => cleaned.startsWith(c.dial));
   if (match) return { dial: match.dial, local: cleaned.slice(match.dial.length) };
-  return { dial: DEFAULT_DIAL, local: '' };
+  return { dial: fallbackDial, local: '' };
 }
 
 /**
@@ -25,12 +25,17 @@ export function WhatsappField({
   value,
   onChange,
   autoFocus,
+  defaultDial,
+  id,
 }: {
   value: string;
   onChange: (full: string) => void;
   autoFocus?: boolean;
+  /** Indicatif proposé quand le champ est vide (ex. celui du pays du magasin). */
+  defaultDial?: string;
+  id?: string;
 }) {
-  const initial = splitNumber(value);
+  const initial = splitNumber(value, defaultDial);
   const [dial, setDial] = useState(initial.dial);
   const [local, setLocal] = useState(initial.local);
   const [open, setOpen] = useState(false);
@@ -105,6 +110,7 @@ export function WhatsappField({
         type="tel"
         inputMode="tel"
         autoFocus={autoFocus}
+        id={id}
         placeholder="77 123 45 67"
         value={local}
         onChange={(e) => {

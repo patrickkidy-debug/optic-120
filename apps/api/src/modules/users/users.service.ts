@@ -19,7 +19,7 @@ export async function listUsers(tenantId: string) {
     phone: u.phone,
     isActive: u.isActive,
     lastLoginAt: u.lastLoginAt,
-    role: { id: u.role.id, name: u.role.name, code: u.role.code },
+    role: { id: u.role.id, name: u.role.name, code: u.role.code, allBranches: u.role.allBranches },
     branches: u.branches.map((b) => ({ id: b.branch.id, name: b.branch.name })),
   }));
 }

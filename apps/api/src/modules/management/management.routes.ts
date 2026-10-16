@@ -11,9 +11,20 @@ import {
   SaleStatus,
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
+import { requirePermission, branchScope } from '../../middlewares/rbac-guard.js';
+import type { FastifyRequest } from 'fastify';
 import { notFound } from '../../lib/http-error.js';
 import { insuranceRoutes } from './insurance.routes.js';
+
+/**
+ * Périmètre des dépenses / versements : magasin demandé (vérifié), ou les
+ * magasins autorisés + les écritures communes à l'établissement (sans magasin).
+ */
+function scopeWithShared(req: FastifyRequest, branchId?: string) {
+  const scope = branchScope(req, branchId);
+  if (branchId || !scope.branchId) return scope;
+  return { OR: [scope, { branchId: null }] };
+}
 
 function toDate(v?: string | null): Date | null {
   return v ? new Date(v) : null;
@@ -76,7 +87,7 @@ async function expensesRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
     const q = req.query as { branchId?: string };
     const expenses = await req.db!.expense.findMany({
-      where: q.branchId ? { branchId: q.branchId } : {},
+      where: scopeWithShared(req, q.branchId),
       orderBy: { date: 'desc' },
       take: 300,
     });
@@ -152,7 +163,7 @@ async function cashTransfersRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
     const q = req.query as { branchId?: string };
     const transfers = await req.db!.cashTransfer.findMany({
-      where: q.branchId ? { branchId: q.branchId } : {},
+      where: scopeWithShared(req, q.branchId),
       orderBy: { date: 'desc' },
       take: 300,
     });

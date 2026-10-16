@@ -8,7 +8,7 @@ import {
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
-import { assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import { assertBranchAccess, hasAllBranches } from '../../middlewares/rbac-guard.js';
 import { badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as stockService from './stock.service.js';
@@ -99,7 +99,10 @@ export async function stockRoutes(app: FastifyInstance): Promise<void> {
   app.get('/transfers', { preHandler: requirePermission('optique.stock.view') }, async (req, reply) => {
     const q = req.query as { branchId?: string; direction?: 'incoming' | 'outgoing' | 'all'; status?: 'PENDING' | 'CONFIRMED' | 'CANCELLED' };
     if (q.branchId) assertBranchAccess(req, q.branchId);
-    const transfers = await stockService.listTransfers(req.auth!.tenantId, q);
+    const transfers = await stockService.listTransfers(req.auth!.tenantId, {
+      ...q,
+      allowedBranchIds: hasAllBranches(req) ? null : req.auth!.branchIds,
+    });
     return reply.send({ transfers });
   });
 

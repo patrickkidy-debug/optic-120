@@ -59,6 +59,7 @@ import { WhatsappSendButton } from '../../components/WhatsappSendButton';
 import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../lib/labels';
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
+import { useBranchSwitchGuard } from '../../features/branches/context';
 
 /** En-tête des documents imprimés : identité de l'établissement. */
 function companyInfo(): CompanyInfo {
@@ -1074,6 +1075,7 @@ function QuoteModal({
         }))
       : [],
   );
+  useBranchSwitchGuard(lines.length > 0, t('br.switch.quote'));
   // Taux de TVA appliqué (null = taux de l'établissement). En modification, on
   // repart du taux réellement appliqué à la pièce.
   const [vatRate, setVatRate] = useState<number | null>(() => {

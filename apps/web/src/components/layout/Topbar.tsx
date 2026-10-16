@@ -4,7 +4,7 @@ import { WhatsNewBell } from './WhatsNewBell';
 import { NotificationsBell } from './NotificationsBell';
 import { SyncStatus } from '../SyncStatus';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Menu,
   Sun,
@@ -37,6 +37,7 @@ import { trFr } from '../../lib/sharedLabels';
 import type { ThemeMode } from '../../lib/theme';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { tr } from '../../lib/tr';
+import { rememberedBranch, switchBranch } from '../../features/branches/context';
 
 function ThemeToggle() {
   const theme = useUIStore((s) => s.theme);
@@ -113,24 +114,50 @@ function LanguageToggle() {
 
 function BranchSelector() {
   const activeBranchId = useUIStore((s) => s.activeBranchId);
-  const setActiveBranch = useUIStore((s) => s.setActiveBranch);
+  const userId = useAuthStore((s) => s.user?.id);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const canManage = useAuthStore((s) => s.user?.permissions?.includes('settings.branches.view'));
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
+  // Magasins autorisés et non archivés (le serveur applique le périmètre du rôle).
+  const { data: branches, isError } = useQuery({ queryKey: ['branches'], queryFn: listBranches });
+
+  // Contexte valide en permanence : magasin mémorisé pour cet utilisateur,
+  // sinon le magasin principal, sinon le premier autorisé.
+  // À la connexion (ou changement de compte sur l'appareil), on reprend le
+  // dernier magasin choisi par CET utilisateur plutôt que celui du précédent.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!branches || branches.length === 0 || !userId || restoredFor.current === userId) return;
+    restoredFor.current = userId;
+    const remembered = rememberedBranch(userId);
+    if (remembered && remembered !== activeBranchId && branches.some((b) => b.id === remembered)) {
+      switchBranch(remembered, qc, { silent: true });
+    }
+  }, [branches, userId, activeBranchId, qc]);
 
   useEffect(() => {
-    if (branches && branches.length > 0 && !branches.find((b) => b.id === activeBranchId)) {
-      setActiveBranch(branches[0].id);
-    }
-  }, [branches, activeBranchId, setActiveBranch]);
+    if (!branches || branches.length === 0) return;
+    if (branches.some((b) => b.id === activeBranchId)) return;
+    const remembered = rememberedBranch(userId);
+    const next =
+      branches.find((b) => b.id === remembered) ?? branches.find((b) => b.isMain) ?? branches[0];
+    switchBranch(next.id, qc, { silent: true });
+  }, [branches, activeBranchId, userId, qc]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
   }, []);
 
   const active = branches?.find((b) => b.id === activeBranchId);
@@ -140,27 +167,52 @@ function BranchSelector() {
       <button
         onClick={() => setOpen((o) => !o)}
         className="btn-outline h-9 max-w-full rounded-xl px-2.5 text-sm sm:px-3"
-        title={active?.name}
+        title={active ? tr('br.ctx.activeTitle', { name: active.name }) : undefined}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={tr('br.ctx.switch')}
       >
         <Store className="h-4 w-4 shrink-0 text-primary" />
-        <span className="min-w-0 max-w-[28vw] truncate sm:max-w-[140px]">{active?.name ?? '—'}</span>
+        <span className="min-w-0 max-w-[28vw] truncate sm:max-w-[160px]">{active?.name ?? (isError ? tr('br.ctx.unavailable') : '…')}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-faint" />
       </button>
       {open && branches && (
-        <div className="absolute left-0 z-30 mt-2 w-56 max-w-[calc(100vw-1rem)] rounded-xl border bg-surface p-1.5 shadow-card-lg">
-          {branches.map((b) => (
+        <div role="listbox" aria-label={tr('br.ctx.switch')} className="absolute left-0 z-30 mt-2 w-64 max-w-[calc(100vw-1rem)] rounded-xl border bg-surface p-1.5 shadow-card-lg">
+          <p className="px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-content-faint">{tr('br.ctx.switch')}</p>
+          <div className="max-h-72 overflow-y-auto">
+            {branches.map((b) => (
+              <button
+                key={b.id}
+                role="option"
+                aria-selected={b.id === activeBranchId}
+                onClick={() => {
+                  if (switchBranch(b.id, qc)) setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-2"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{b.name}</span>
+                  {(b.city || b.isMain) && (
+                    <span className="block truncate text-[11px] text-content-muted">
+                      {[b.city, b.isMain ? tr('br.mainBadge') : ''].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                </span>
+                {b.id === activeBranchId && <Check className="h-4 w-4 shrink-0 text-primary" />}
+              </button>
+            ))}
+          </div>
+          {canManage && (
             <button
-              key={b.id}
               onClick={() => {
-                setActiveBranch(b.id);
                 setOpen(false);
+                navigate('/parametres/magasins');
               }}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-content hover:bg-surface-2"
+              className="mt-1 flex w-full items-center gap-2 rounded-lg border-t px-3 py-2 text-left text-xs font-semibold text-primary hover:bg-surface-2"
             >
-              <span className="truncate">{b.name}</span>
-              {b.id === activeBranchId && <Check className="h-4 w-4 text-primary" />}
+              <Store className="h-3.5 w-3.5" /> {tr('br.ctx.manage')}
             </button>
-          ))}
+          )}
         </div>
       )}
     </div>

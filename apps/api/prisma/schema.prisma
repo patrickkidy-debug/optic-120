@@ -43,6 +43,8 @@ model Tenant {
   vatRate           Float?
   // Tarifs verres/traitements propres à l'établissement (configurateur). null = barème par défaut.
   lensPricing       Json?
+  // Magasin principal (siège) : distinct du magasin sélectionné par chaque utilisateur.
+  mainBranchId      String?
   // Investissement initial, pour la projection d'amortissement (page Finance).
   initialInvestment Float?
   // Modèles de messages WhatsApp par étape de vente.
@@ -158,6 +160,23 @@ model Branch {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  /// Code interne unique par établissement (ex. MAG-002), généré puis modifiable.
+  code         String?
+  /// Pays (ISO-2) — défaut : celui de l'établissement.
+  countryCode  String?
+  email        String?
+  whatsapp     String?
+  /// Logo propre au magasin (data URL), sinon celui de l'établissement.
+  logoUrl      String?
+  /// Responsable du magasin (collaborateur de l'établissement).
+  managerId    String?
+  manager      User?     @relation("BranchManager", fields: [managerId], references: [id], onDelete: SetNull)
+  /// Horaires d'ouverture : { mon: { open: "08:30", close: "19:00" } | null, ... }
+  openingHours Json?
+  /// Archivé : retiré des sélecteurs, historique conservé (ventes, stock, dossiers).
+  archivedAt   DateTime?
+  updatedAt    DateTime? @updatedAt
+
   stockItems      StockItem[]
   sales           Sale[]
   cashRegisters   CashRegister[]
@@ -168,6 +187,7 @@ model Branch {
   anomalies       Anomaly[]
   customers       Customer[]
 
+  @@unique([tenantId, code])
   @@index([tenantId])
 }
 
@@ -214,6 +234,7 @@ model User {
   countedInventoryLines    InventoryCountLine[] @relation("InventoryCountLineCountedBy")
   demoVideoProgress        DemoVideoProgress[]
   createdTransfers         StockTransfer[]      @relation("TransferCreatedBy")
+  managedBranches          Branch[]             @relation("BranchManager")
   confirmedTransfers       StockTransfer[]      @relation("TransferConfirmedBy")
   declaredAnomalies        Anomaly[]            @relation("AnomalyDeclaredBy")
   approvedAnomalies        Anomaly[]            @relation("AnomalyApprovedBy")

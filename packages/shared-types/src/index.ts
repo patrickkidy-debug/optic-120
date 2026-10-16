@@ -1674,11 +1674,48 @@ export const repairCreateSchema = z.object({
 export type RepairCreateInput = z.infer<typeof repairCreateSchema>;
 export const repairStatusSchema = z.object({ status: z.enum(REPAIR_STATUSES) });
 
+/* ---------------------------- Magasins & succursales ---------------------------- */
+
+export const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export type WeekDay = (typeof WEEK_DAYS)[number];
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Heure invalide (HH:MM)');
+/** Horaires d'ouverture : un créneau par jour, ou null (fermé). */
+export const openingHoursSchema = z
+  .record(z.enum(WEEK_DAYS), z.object({ open: hhmm, close: hhmm }).nullable())
+  .refine((h) => Object.values(h).every((d) => !d || d.open < d.close), "L'heure de fermeture doit suivre l'ouverture");
+export type OpeningHours = z.infer<typeof openingHoursSchema>;
+
+const optText = (max: number) => z.string().trim().max(max).optional().or(z.literal(''));
+/**
+ * Création d'un magasin : seul le nom est obligatoire, le reste se complète
+ * ensuite depuis la fiche (coordonnées, responsable, horaires…).
+ */
 export const branchCreateSchema = z.object({
-  name: z.string().min(2).max(120),
-  city: z.string().max(80).optional(),
+  name: z.string().trim().min(2, 'Nom trop court').max(120),
+  /** Code interne unique (ex. MAG-002) ; généré par le serveur si absent. */
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{1,19}$/, 'Code : 2 à 20 caractères (lettres, chiffres, - ou _)').optional().or(z.literal('')),
+  city: optText(80),
+  countryCode: z.string().trim().length(2).toUpperCase().optional().or(z.literal('')),
+  address: optText(200),
+  phone: optText(40),
+  whatsapp: optText(40),
+  email: z.string().trim().email('Adresse e-mail invalide').max(160).optional().or(z.literal('')),
+  /** Logo (data URL image, 400 Ko max) ; chaîne vide = retiré. */
+  logoUrl: z.string().max(560_000, 'Logo trop lourd (400 Ko max)').refine((v) => v === '' || v.startsWith('data:image/'), 'Image invalide').optional(),
+  managerId: z.string().uuid().nullable().optional(),
+  openingHours: openingHoursSchema.nullable().optional(),
+  isActive: z.boolean().optional(),
 });
 export type BranchCreateInput = z.infer<typeof branchCreateSchema>;
+export const branchUpdateSchema = branchCreateSchema.partial();
+export type BranchUpdateInput = z.infer<typeof branchUpdateSchema>;
+
+/** Équipe d'un magasin : collaborateurs affectés (remplace la liste). */
+export const branchTeamSchema = z.object({ userIds: z.array(z.string().uuid()).max(500) });
+
+/** Période des indicateurs de la page Magasins. */
+export const BRANCH_PERIODS = ['today', 'month', '30d'] as const;
+export type BranchPeriod = (typeof BRANCH_PERIODS)[number];
 
 export const saleItemSchema = z.object({
   productId: z.string().uuid(),

@@ -19,6 +19,7 @@ import { formatCurrency, formatDateTime } from '../../lib/format';
 import { Modal, Button, Field, PageLoader } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
 import { tr } from '../../lib/tr';
+import { useBranchSwitchGuard } from '../../features/branches/context';
 
 interface Line {
   productId: string;
@@ -164,6 +165,7 @@ export function ReceiveStockModal({ branchId, onClose }: { branchId: string; onC
   const [supplierId, setSupplierId] = useState('');
   const [reference, setReference] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
+  useBranchSwitchGuard(lines.length > 0, tr('br.switch.stockOp'));
   const [error, setError] = useState('');
 
   const { data: rows } = useQuery({
@@ -257,6 +259,7 @@ export function TransferStockModal({ branchId, onClose }: { branchId: string; on
   const [toBranchId, setToBranchId] = useState('');
   const [reason, setReason] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
+  useBranchSwitchGuard(lines.length > 0, tr('br.switch.stockOp'));
   const [error, setError] = useState('');
 
   const { data: rows } = useQuery({

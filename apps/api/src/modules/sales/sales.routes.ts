@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import { requirePermission, assertBranchAccess, branchScope } from '../../middlewares/rbac-guard.js';
 import { forbidden, notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as salesService from './sales.service.js';
@@ -22,8 +22,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     };
     const page = Math.max(1, parseInt(q.page ?? '1', 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(q.pageSize ?? '25', 10)));
-    const where: Record<string, unknown> = {};
-    if (q.branchId) where.branchId = q.branchId;
+    // Magasin demandé vérifié ; sans magasin, uniquement ceux autorisés.
+    const where: Record<string, unknown> = { ...branchScope(req, q.branchId) };
     if (q.status) where.status = q.status;
     if (q.type) where.type = q.type;
     // Recherche sur toute l'historique, sans restriction de période : numéro de
@@ -77,8 +77,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     const where: Record<string, unknown> = {
       type: SaleType.SALE,
       status: { in: ['CONFIRMED', 'PARTIALLY_PAID', 'PAID'] },
+      ...branchScope(req, q.branchId),
     };
-    if (q.branchId) where.branchId = q.branchId;
     const sales = await req.db!.sale.findMany({
       where,
       orderBy: { createdAt: 'asc' },
@@ -239,6 +239,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     if (!sale) throw notFound('Vente introuvable');
+    // Une pièce d'un magasin non autorisé n'est pas consultable (même par son id).
+    assertBranchAccess(req, sale.branchId);
     // Nom de l'assureur exposé à plat : la part prise en charge s'affiche comme
     // un moyen de règlement dans le détail de la vente.
     return reply.send({ sale: { ...sale, insurerName: sale.insurer?.name ?? null } });

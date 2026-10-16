@@ -16,6 +16,10 @@ export interface Branch {
   name: string;
   city?: string | null;
   isActive: boolean;
+  code?: string | null;
+  /** Magasin principal de l'établissement (distinct du magasin sélectionné). */
+  isMain?: boolean;
+  archivedAt?: string | null;
 }
 
 export async function listBranches(): Promise<Branch[]> {
