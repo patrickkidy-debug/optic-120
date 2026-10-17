@@ -2,12 +2,13 @@ import { type ReactNode } from 'react';
 import { ShieldCheck, Smartphone, Store } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../../components/Logo';
+import { AuthMobileHero } from './AuthMobileHero';
 import { tr } from '../../lib/tr';
 
 const FEATURES = [
-  { icon: Smartphone, key: 'auth.panelFeat1' },
-  { icon: Store, key: 'auth.panelFeat2' },
-  { icon: ShieldCheck, key: 'auth.panelFeat3' },
+  { icon: Smartphone, key: 'auth.panelFeat1', chip: 'auth.chip1' },
+  { icon: Store, key: 'auth.panelFeat2', chip: 'auth.chip2' },
+  { icon: ShieldCheck, key: 'auth.panelFeat3', chip: 'auth.chip3' },
 ];
 
 export function AuthLayout({
@@ -59,19 +60,20 @@ export function AuthLayout({
         <p className="relative text-xs text-content-faint">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
       </div>
 
-      <div className="flex items-center justify-center bg-bg p-6">
-        <div className="w-full max-w-md animate-fade-in">
-          {/* Sur mobile (et l'app Android, simple webview du même site), le
-              panneau visuel de gauche est masqué (hidden lg:flex) faute de
-              place : l'illustration réapparaît ici, en compact, pour garder
-              la page visuelle sans manger l'espace réservé au formulaire. */}
-          <div className="mb-6 flex flex-col items-center gap-4 text-center lg:hidden">
-            {illustration && <div className="w-36 sm:w-44">{illustration}</div>}
-            <Logo />
+      <div className="flex min-h-screen flex-col bg-bg lg:items-center lg:justify-center lg:p-6">
+        {/* Mobile (et app Android, webview du même site) : le panneau de gauche
+            est masqué faute de place. Il est remplacé par un bandeau compact
+            aux couleurs de la marque, sur lequel la carte du formulaire vient
+            se poser. */}
+        <AuthMobileHero variant={illustration ? 'signup' : 'login'} />
+
+        <div className="relative -mt-8 flex flex-1 justify-center rounded-t-[28px] bg-bg px-5 pb-8 pt-7 shadow-[0_-16px_40px_rgba(76,29,149,0.12)] lg:mt-0 lg:flex-none lg:rounded-none lg:p-0 lg:shadow-none">
+          <div className="w-full max-w-md animate-fade-in">
+            <h2 className="font-display text-2xl font-bold text-content">{title}</h2>
+            <p className="mt-1 text-sm text-content-muted">{subtitle}</p>
+            <div className="mt-6">{children}</div>
+            <p className="mt-8 text-center text-[11px] text-content-faint lg:hidden">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
           </div>
-          <h2 className="font-display text-2xl font-bold text-content">{title}</h2>
-          <p className="mt-1 text-sm text-content-muted">{subtitle}</p>
-          <div className="mt-6">{children}</div>
         </div>
       </div>
     </div>

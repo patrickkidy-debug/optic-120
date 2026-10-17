@@ -61,6 +61,11 @@ export default {
         glow: '0 0 0 1px var(--primary-soft), 0 8px 24px rgba(124,58,237,0.18)',
       },
       keyframes: {
+        // Cartes flottantes de l'écran de connexion mobile.
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
         'fade-in': {
           '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
@@ -80,6 +85,8 @@ export default {
       },
       animation: {
         'fade-in': 'fade-in 0.25s ease-out',
+        float: 'float 4.5s ease-in-out infinite',
+        'float-slow': 'float 6s ease-in-out infinite',
         'slide-in': 'slide-in 0.2s ease-out',
         'slide-in-right': 'slide-in-right 0.22s ease-out',
       },

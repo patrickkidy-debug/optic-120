@@ -18,6 +18,9 @@ declare global {
  * dans index.html). Ne s'affiche pas si VITE_GOOGLE_CLIENT_ID n'est pas
  * configuré — évite un bouton cassé tant que Google Cloud n'est pas paramétré.
  */
+/** Connexion Google configurée (sinon le bouton ne s'affiche pas). */
+export const hasGoogleSignIn = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+
 export function GoogleSignInButton({
   onCredential,
   text = 'continue_with',

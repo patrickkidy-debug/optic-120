@@ -11,7 +11,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { safeRedirect } from '../../lib/safeRedirect';
 import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
-import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { GoogleSignInButton, hasGoogleSignIn } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
 import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
@@ -252,9 +252,11 @@ export function LoginPage() {
     <AuthLayout title={t('auth.signInTitle')} subtitle={t('auth.signInSubtitle')}>
       <GoogleSignInButton text="signin_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
       {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
-      <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
-        <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
-      </div>
+      {hasGoogleSignIn && (
+        <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
+          <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
+        </div>
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.identifier')}>
           <input className="input" autoFocus placeholder="awa@visionplus.sn" {...register('identifier')} />

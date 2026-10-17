@@ -145,7 +145,17 @@
     "panelSubtitle": "A modern SaaS platform designed for opticians and ophthalmologists across Africa.",
     "panelFeat1": "Mobile payments — Wave, Orange, MTN, M-Pesa, Multicaixa",
     "panelFeat2": "Multi-store, multi-clinic & multi-user",
-    "panelFeat3": "Isolated, encrypted and compliant data"
+    "panelFeat3": "Isolated, encrypted and compliant data",
+    "chip1": "Mobile Money",
+    "chip2": "Multi-store",
+    "chip3": "Encrypted data",
+    "heroPayLabel": "Payment received",
+    "heroPayValue": "Wave · 45,000 FCFA",
+    "heroMeasureLabel": "Pupillary distance",
+    "heroMeasureValue": "65.3 mm · measured",
+    "heroOrder": "Glasses ready · customer notified",
+    "heroTitleA": "Your optical store,",
+    "heroTitleB": "in your pocket."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -5722,5 +5732,9 @@
       "quote": "A quote or sale is being entered.",
       "stockOp": "A stock operation is being entered."
     }
+  },
+  "sec": {
+    "currentPwd": "Current password",
+    "changePwdHint": "For security, confirm your current password (and your 2FA code if enabled). Other devices will be signed out."
   }
 }
