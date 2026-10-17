@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { takeGoogleRedirectResult } from './googleRedirect';
 import { useNavigate } from 'react-router-dom';
 import type { SignupInput } from '@oculo/shared-types';
 import { googleLogin, googleSignup, loginTwoFactor } from './api';
@@ -21,6 +22,14 @@ export function useGoogleAuthFlow(redirectTo: string, plan?: SignupInput['plan']
   const [step, setStep] = useState<GoogleStep>({ kind: 'idle' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Retour d'une connexion Google par redirection (PWA iPhone).
+  useEffect(() => {
+    const r = takeGoogleRedirectResult();
+    if (r?.idToken) void handleCredential(r.idToken);
+    else if (r?.error) setError(tr(r.error === 'cancelled' ? 'auth.googleCancelled' : 'auth.googleFailed'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleCredential(idToken: string) {
     setError('');

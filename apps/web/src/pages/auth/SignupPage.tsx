@@ -159,20 +159,20 @@ export function SignupPage() {
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('auth.firstName')}>
-            <input className="input" {...register('adminFirstName')} />
+            <input className="input" autoComplete="given-name" {...register('adminFirstName')} />
             {errors.adminFirstName && (
               <p className="mt-1 text-xs text-danger">{trFr(errors.adminFirstName.message)}</p>
             )}
           </Field>
           <Field label={t('auth.lastName')}>
-            <input className="input" {...register('adminLastName')} />
+            <input className="input" autoComplete="family-name" {...register('adminLastName')} />
             {errors.adminLastName && (
               <p className="mt-1 text-xs text-danger">{trFr(errors.adminLastName.message)}</p>
             )}
           </Field>
         </div>
         <Field label={t('auth.email')}>
-          <input className="input" type="email" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
+          <input className="input" type="email" autoComplete="username" autoCapitalize="none" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
           {errors.adminEmail && <p className="mt-1 text-xs text-danger">{trFr(errors.adminEmail.message)}</p>}
         </Field>
         <Field label={t('auth.whatsapp')}>
@@ -187,7 +187,7 @@ export function SignupPage() {
           )}
         </Field>
         <Field label={t('auth.password')}>
-          <PasswordInput placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
+          <PasswordInput autoComplete="new-password" placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
           {errors.adminPassword && (
             <p className="mt-1 text-xs text-danger">{trFr(errors.adminPassword.message)}</p>
           )}

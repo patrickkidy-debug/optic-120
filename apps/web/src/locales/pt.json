@@ -155,7 +155,12 @@
     "heroMeasureValue": "65,3 mm · medido",
     "heroOrder": "Óculos prontos · cliente avisado",
     "heroTitleA": "A sua ótica,",
-    "heroTitleB": "no seu bolso."
+    "heroTitleB": "no seu bolso.",
+    "googleSignin": "Entrar com o Google",
+    "googleSignup": "Registar com o Google",
+    "googleContinue": "Continuar com o Google",
+    "googleCancelled": "Início de sessão Google cancelado.",
+    "googleFailed": "O início de sessão Google não foi concluído. Tente novamente."
   },
   "dashboard": {
     "title": "Painel",

@@ -155,7 +155,12 @@
     "heroMeasureValue": "65.3 mm · measured",
     "heroOrder": "Glasses ready · customer notified",
     "heroTitleA": "Your optical store,",
-    "heroTitleB": "in your pocket."
+    "heroTitleB": "in your pocket.",
+    "googleSignin": "Sign in with Google",
+    "googleSignup": "Sign up with Google",
+    "googleContinue": "Continue with Google",
+    "googleCancelled": "Google sign-in cancelled.",
+    "googleFailed": "Google sign-in did not complete. Please try again."
   },
   "dashboard": {
     "title": "Dashboard",

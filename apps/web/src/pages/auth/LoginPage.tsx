@@ -259,11 +259,11 @@ export function LoginPage() {
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label={t('auth.identifier')}>
-          <input className="input" autoFocus placeholder="awa@visionplus.sn" {...register('identifier')} />
+          <input className="input" autoFocus autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" placeholder="awa@visionplus.sn" {...register('identifier')} />
           {errors.identifier && <p className="mt-1 text-xs text-danger">{trFr(errors.identifier.message)}</p>}
         </Field>
         <Field label={t('auth.password')}>
-          <PasswordInput placeholder="••••••••" {...register('password')} />
+          <PasswordInput autoComplete="current-password" placeholder="••••••••" {...register('password')} />
           {errors.password && <p className="mt-1 text-xs text-danger">{trFr(errors.password.message)}</p>}
         </Field>
 

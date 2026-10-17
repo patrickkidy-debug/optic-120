@@ -67,6 +67,7 @@ const LabelsPage = lazy(() => named(import('./pages/optique/LabelsPage'), 'Label
 const CashRegisterPage = lazy(() => named(import('./pages/optique/CashRegisterPage'), 'CashRegisterPage'));
 const RolesPage = lazy(() => named(import('./pages/settings/RolesPage'), 'RolesPage'));
 const UsersPage = lazy(() => named(import('./pages/settings/UsersPage'), 'UsersPage'));
+const GoogleCallbackPage = lazy(() => named(import('./pages/auth/GoogleCallbackPage'), 'GoogleCallbackPage'));
 const BranchesPage = lazy(() => named(import('./pages/settings/BranchesPage'), 'BranchesPage'));
 const BranchDetailPage = lazy(() => named(import('./pages/settings/BranchDetailPage'), 'BranchDetailPage'));
 const AuditPage = lazy(() => named(import('./pages/settings/AuditPage'), 'AuditPage'));
@@ -169,6 +170,7 @@ export const router = createBrowserRouter([
       })),
       { path: '/login', element: <PublicOnly>{pub(<LoginPage />)}</PublicOnly> },
       { path: '/signup', element: <PublicOnly>{pub(<SignupPage />)}</PublicOnly> },
+      { path: '/auth/google/callback', element: pub(<GoogleCallbackPage />) },
       // Lien d'activation partagé aux prospects (WhatsApp) : volontairement hors
       // PublicOnly, il doit fonctionner aussi pour un client déjà connecté.
       { path: '/activer', element: pub(<ActivateSubscriptionPage />) },

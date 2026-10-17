@@ -155,7 +155,12 @@
     "heroMeasureValue": "65,3 mm · mesuré",
     "heroOrder": "Lunettes prêtes · client prévenu",
     "heroTitleA": "Votre magasin d'optique,",
-    "heroTitleB": "dans votre poche."
+    "heroTitleB": "dans votre poche.",
+    "googleSignin": "Se connecter avec Google",
+    "googleSignup": "S'inscrire avec Google",
+    "googleContinue": "Continuer avec Google",
+    "googleCancelled": "Connexion Google annulée.",
+    "googleFailed": "La connexion Google n'a pas abouti. Réessayez."
   },
   "dashboard": {
     "title": "Tableau de bord",
