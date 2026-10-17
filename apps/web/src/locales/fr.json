@@ -815,7 +815,9 @@
           "text": "9 étapes pour configurer votre boutique, de l'équipe aux documents."
         }
       }
-    }
+    },
+    "androidSmall": "Application mobile",
+    "androidBig": "Télécharger pour Android"
   },
   "planFeatures": {
     "STARTER": [

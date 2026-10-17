@@ -815,7 +815,9 @@
           "text": "9 steps to set up your store, from team to documents."
         }
       }
-    }
+    },
+    "androidSmall": "Mobile app",
+    "androidBig": "Download for Android"
   },
   "planFeatures": {
     "STARTER": [

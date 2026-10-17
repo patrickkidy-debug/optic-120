@@ -12,7 +12,6 @@ import {
   CloudUpload,
   Database,
   Gauge,
-  Smartphone,
   FolderX,
   EyeOff,
   Hourglass,
@@ -656,12 +655,20 @@ export function LandingPage() {
                   >
                     {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
+                  {/* Badge de téléchargement façon store : bien visible à côté du CTA. */}
                   <a
                     href="/downloads/OculoSaaS.apk"
                     download
-                    className="inline-flex w-fit items-center gap-2 px-2 py-3 text-sm font-semibold text-content-muted transition hover:text-primary"
+                    aria-label={t('landing.downloadAndroid')}
+                    className="group inline-flex w-fit items-center gap-3 rounded-2xl bg-slate-900 py-2.5 pl-3.5 pr-5 text-white shadow-[0_12px_28px_rgba(15,23,42,0.28)] ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                   >
-                    <Smartphone className="h-4 w-4" /> {t('landing.downloadAndroid')}
+                    <svg viewBox="0 0 24 24" className="h-8 w-8 shrink-0 text-[#3ddc84]" fill="currentColor" aria-hidden="true">
+                      <path d="M17.6 9.48l1.84-3.18a.5.5 0 0 0-.86-.5l-1.87 3.23A11.3 11.3 0 0 0 12 8.08c-1.7 0-3.3.36-4.71.95L5.42 5.8a.5.5 0 0 0-.86.5L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
+                    </svg>
+                    <span className="text-left leading-tight">
+                      <span className="block text-[11px] font-medium opacity-75">{t('landing.androidSmall')}</span>
+                      <span className="block text-base font-bold tracking-tight">{t('landing.androidBig')}</span>
+                    </span>
                   </a>
                   <AdvisorLauncher page="landing" variant="inline" />
                 </div>

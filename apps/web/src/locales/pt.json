@@ -815,7 +815,9 @@
           "text": "9 etapas para configurar a loja, da equipa aos documentos."
         }
       }
-    }
+    },
+    "androidSmall": "Aplicação móvel",
+    "androidBig": "Transferir para Android"
   },
   "planFeatures": {
     "STARTER": [
