@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AdvisorLauncher } from '../../features/advisor/AdvisorLauncher';
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Eye } from 'lucide-react';
 import { ACTIVATION_STEP_COUNT, ACTIVATION_STEP_ORDER, type ActivationStep } from '@oculo/shared-types';
 import { tr } from '../../lib/tr';
 
@@ -25,6 +25,7 @@ export function ActivationShell({
   children,
   footer,
   wide,
+  headerAction,
 }: {
   step?: ActivationStep;
   title?: string;
@@ -32,6 +33,8 @@ export function ActivationShell({
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  /** Lien à droite du logo (ex. « Nous contacter » sur la présentation). */
+  headerAction?: ReactNode;
 }) {
   return (
     <div className="light min-h-screen bg-surface-2 text-content">
@@ -39,6 +42,7 @@ export function ActivationShell({
         {/* Conseiller IA : accessible à chaque étape du tunnel. */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <Brand />
+          {headerAction}
           {step && <AdvisorLauncher page="activation" variant="inline" always className="px-3 py-2 text-xs sm:text-sm" />}
         </div>
         {step && <StepBar current={step} />}
@@ -74,10 +78,13 @@ export function Brand() {
       aria-label={tr('ui.shared.oculosaasRevenirALaPresentation')}
       className="mb-6 inline-flex items-center gap-2 rounded-xl transition-opacity hover:opacity-80"
     >
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-sm">
-        O
+      {/* Même logo que le site et l'application (voir components/Logo). */}
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand shadow-card">
+        <Eye className="h-5 w-5 text-white" strokeWidth={2.6} />
       </span>
-      <span className="font-display text-lg font-extrabold tracking-tight text-content">OculoSaaS</span>
+      <span className="font-display text-lg font-extrabold tracking-tight text-content">
+        Oculo<span className="text-gradient">SaaS</span>
+      </span>
     </Link>
   );
 }

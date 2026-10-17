@@ -2157,7 +2157,14 @@
       "pretAMieuxGererVotre": "Pronto para gerir melhor a sua loja?",
       "quelquesMinutesSuffisentLaSession": "Bastam alguns minutos. A sessão de configuração está incluída.",
       "oculosaasTousDroitsReserves": "OculoSaaS. Todos os direitos reservados.",
-      "utilisezLeLogiciel": "Utilize o software"
+      "essayezLeLogiciel": "Experimente o software",
+      "chipPaiements": "Wave, Orange Money, MTN MoMo",
+      "chipOrdonnances": "Receitas e medições",
+      "chipMultiSupport": "Computador, tablet, telemóvel",
+      "commencer": "Começar",
+      "essayer": "Experimentar",
+      "nousContacter": "Contacte-nos",
+      "messageContact": "Olá, gostaria de informações sobre o OculoSaaS para a minha loja."
     },
     "PaymentStep": {
       "especes": "Dinheiro",
