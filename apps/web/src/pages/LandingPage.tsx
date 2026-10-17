@@ -42,6 +42,7 @@ import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { displayLocale } from '../lib/format';
 import { tr } from '../lib/tr';
+import { reopenConsent } from '../lib/consent';
 
 /* ============================================================
  * Page d'accueil publique (vitrine commerciale) — thème CLAIR
@@ -1114,6 +1115,9 @@ export function LandingPage() {
             <Link to="/suppression-compte" className="text-sm text-content-muted hover:text-primary">
               Suppression du compte
             </Link>
+            <button type="button" onClick={reopenConsent} className="text-left text-sm text-content-muted hover:text-primary">
+              {tr('ui.CookieBanner.gerer')}
+            </button>
           </div>
         </div>
         <div className="mx-auto mt-12 max-w-[1280px] border-t border-line px-4 pt-8 text-center sm:px-8">

@@ -3616,6 +3616,20 @@
       "auMoins8Caracteres": "At least 8 characters",
       "choisir": "— Choose —",
       "creer": "Create"
+    },
+    "CookieBanner": {
+      "titre": "Cookies and privacy",
+      "texte": "We use cookies required for the site to work and, with your consent, advertising cookies (Meta) to measure our campaigns.",
+      "enSavoirPlus": "Learn more",
+      "necessaires": "Necessary",
+      "necessairesDesc": "Sign-in, security, preferences. Always on.",
+      "publicite": "Advertising",
+      "publiciteDesc": "Meta Pixel: Facebook and Instagram campaign measurement.",
+      "personnaliser": "Customize",
+      "refuser": "Reject all",
+      "accepter": "Accept all",
+      "enregistrer": "Save my choices",
+      "gerer": "Manage cookies"
     }
   },
   "shared": {

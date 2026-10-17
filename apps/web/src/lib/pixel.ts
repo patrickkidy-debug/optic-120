@@ -1,3 +1,5 @@
+import { hasMarketingConsent } from './consent';
+
 declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
@@ -10,6 +12,7 @@ declare global {
  * un PageView Meta Pixel à chaque changement de route côté client.
  */
 export function trackPixelPageView(): void {
+  if (!hasMarketingConsent()) return;
   window.fbq?.('track', 'PageView');
 }
 
@@ -24,6 +27,7 @@ export function trackPixelPageView(): void {
  * déduplique les deux signaux au lieu de compter la conversion deux fois.
  */
 export function trackPixelEvent(name: string, params?: Record<string, unknown>, eventId?: string): void {
+  if (!hasMarketingConsent()) return;
   if (eventId) {
     window.fbq?.('track', name, params, { eventID: eventId });
   } else {

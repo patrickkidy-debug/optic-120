@@ -3616,6 +3616,20 @@
       "auMoins8Caracteres": "Pelo menos 8 caracteres",
       "choisir": "— Escolher —",
       "creer": "Criar"
+    },
+    "CookieBanner": {
+      "titre": "Cookies e privacidade",
+      "texte": "Utilizamos cookies necessários ao funcionamento do site e, com o seu consentimento, cookies publicitários (Meta) para medir as nossas campanhas.",
+      "enSavoirPlus": "Saiba mais",
+      "necessaires": "Necessários",
+      "necessairesDesc": "Sessão, segurança, preferências. Sempre ativos.",
+      "publicite": "Publicidade",
+      "publiciteDesc": "Meta Pixel: medição das campanhas Facebook e Instagram.",
+      "personnaliser": "Personalizar",
+      "refuser": "Recusar tudo",
+      "accepter": "Aceitar tudo",
+      "enregistrer": "Guardar as minhas escolhas",
+      "gerer": "Gerir cookies"
     }
   },
   "shared": {

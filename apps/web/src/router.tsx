@@ -1,6 +1,7 @@
 import { LOCALES } from './lib/locale-resolve';
 import { Outlet } from 'react-router-dom';
 import { PwaControls } from './components/PwaControls';
+import { CookieBanner } from './components/CookieBanner';
 import { ToastProvider } from './components/Toast';
 import { ActivationPage } from './pages/activation/ActivationPage';
 import { ActivationReturnPage } from './pages/activation/ActivationReturnPage';
@@ -146,6 +147,7 @@ function RootLayout() {
     <ToastProvider>
       <Outlet />
       <PwaControls />
+      <CookieBanner />
     </ToastProvider>
   );
 }

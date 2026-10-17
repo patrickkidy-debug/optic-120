@@ -125,34 +125,28 @@
 
     <!-- Meta Pixel Code -->
     <script>
-      // Pas de pixel publicitaire dans l'application Android (WebView) :
-      // la politique de confidentialité et la fiche Play Store l'engagent.
-      if (!/; wv\)/.test(navigator.userAgent)) {
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1247725803989922');
-      fbq('track', 'PageView');
-      }
+      // Pixel chargé UNIQUEMENT après consentement (RGPD / CNIL) — voir
+      // src/lib/consent.ts. Jamais dans l'application Android (WebView).
+      window.__loadMetaPixel = function () {
+        if (/; wv\)/.test(navigator.userAgent) || window.fbq) return;
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1247725803989922');
+        fbq('track', 'PageView');
+      };
+      try {
+        if (JSON.parse(localStorage.getItem('oculo_consent') || 'null')?.marketing === true) window.__loadMetaPixel();
+      } catch (e) {}
     </script>
     <!-- End Meta Pixel Code -->
   </head>
   <body>
-    <!-- Meta Pixel Code (noscript) -->
-    <noscript>
-      <img
-        height="1"
-        width="1"
-        style="display:none"
-        src="https://www.facebook.com/tr?id=1247725803989922&ev=PageView&noscript=1"
-      />
-    </noscript>
-    <!-- End Meta Pixel Code (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
