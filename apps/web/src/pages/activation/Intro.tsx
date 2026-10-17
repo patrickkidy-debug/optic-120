@@ -7,6 +7,7 @@ import {
   CreditCard,
   Glasses,
   Headphones,
+  MousePointerClick,
   Smartphone,
   Users,
   Wallet,
@@ -16,6 +17,7 @@ import { AdvisorLauncher } from '../../features/advisor/AdvisorLauncher';
 import { advisorStrings } from '../../features/advisor/strings';
 import { SoftwarePreview } from './SoftwarePreview';
 import { formatTrialDuration } from './PaymentStep';
+import { Link } from 'react-router-dom';
 import { tr } from '../../lib/tr';
 
 /**
@@ -95,6 +97,13 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
             {tr('ui.Intro.commencerMonActivation')} <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
           <AdvisorLauncher page="activation" variant="block" label={agentLabel} always className="mt-3" />
+          <Link
+            to="/signup"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-primary bg-surface px-5 py-3.5 text-base font-semibold text-primary transition hover:bg-primary/5 active:scale-[0.98]"
+          >
+            <MousePointerClick className="h-5 w-5" aria-hidden="true" />
+            {tr('ui.Intro.utilisezLeLogiciel')}
+          </Link>
         </div>
 
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:justify-start">

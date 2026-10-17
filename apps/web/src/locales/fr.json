@@ -2156,7 +2156,8 @@
       "assistanceWhatsapp": "Assistance WhatsApp",
       "pretAMieuxGererVotre": "Prêt à mieux gérer votre magasin ?",
       "quelquesMinutesSuffisentLaSession": "Quelques minutes suffisent. La session de configuration est comprise.",
-      "oculosaasTousDroitsReserves": "OculoSaaS. Tous droits réservés."
+      "oculosaasTousDroitsReserves": "OculoSaaS. Tous droits réservés.",
+      "utilisezLeLogiciel": "Utilisez le logiciel"
     },
     "PaymentStep": {
       "especes": "Espèces",

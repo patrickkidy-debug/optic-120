@@ -2156,7 +2156,8 @@
       "assistanceWhatsapp": "WhatsApp support",
       "pretAMieuxGererVotre": "Ready to run your store better?",
       "quelquesMinutesSuffisentLaSession": "A few minutes is all it takes. The setup session is included.",
-      "oculosaasTousDroitsReserves": "OculoSaaS. All rights reserved."
+      "oculosaasTousDroitsReserves": "OculoSaaS. All rights reserved.",
+      "utilisezLeLogiciel": "Use the software"
     },
     "PaymentStep": {
       "especes": "Cash",
