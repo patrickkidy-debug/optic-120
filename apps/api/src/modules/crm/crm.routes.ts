@@ -12,6 +12,7 @@ import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { getOperatorEmails } from '../../lib/operators.js';
 import * as crm from './crm.service.js';
 import type { ImportPreviewRow } from './crm.service.js';
+import * as finder from './prospect-finder.js';
 
 /**
  * CRM strictement privé au fondateur : la garde est appliquée côté SERVEUR sur
@@ -305,5 +306,33 @@ export async function crmRoutes(app: FastifyInstance): Promise<void> {
     const { templateId } = req.query as { templateId?: string };
     if (!templateId) throw badRequest('templateId requis');
     return reply.send(await crm.renderMessage(id, templateId));
+  });
+
+  /* ------------------------- Agent de prospection ------------------------- */
+
+  app.get('/finder/countries', async (_req, reply) => {
+    return reply.send({ countries: finder.finderCountries(), google: Boolean(process.env.GOOGLE_PLACES_API_KEY) });
+  });
+
+  /** Recherche de magasins d'optique (rien n'est enregistré à ce stade). */
+  app.post('/finder/search', async (req, reply) => {
+    const b = req.body as { country?: string; city?: string; limit?: number };
+    if (!b.country || !/^[A-Za-z]{2}$/.test(b.country)) throw badRequest('Pays requis');
+    return reply.send(await finder.searchOpticians({ country: b.country, city: b.city, limit: Number(b.limit) || 40 }));
+  });
+
+  app.post('/finder/import', async (req, reply) => {
+    const b = req.body as { candidates?: finder.FinderCandidate[] };
+    if (!Array.isArray(b.candidates) || b.candidates.length === 0) throw badRequest('Aucun magasin sélectionné');
+    if (b.candidates.length > 100) throw badRequest('100 magasins maximum par import');
+    const result = await finder.importCandidates(b.candidates, req.auth!.userId);
+    return reply.send(result);
+  });
+
+  /** Premier message personnalisé par l'IA (null si l'IA n'est pas configurée). */
+  app.get('/prospects/:id/ai-draft', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { channel } = req.query as { channel?: string };
+    return reply.send({ draft: await finder.draftMessage(id, channel === 'email' ? 'email' : 'whatsapp') });
   });
 }

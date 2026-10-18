@@ -2297,6 +2297,8 @@ enum ProspectSource {
   DEMO
   REFERRAL
   MANUAL
+  /// Trouvé par l'agent de prospection (OpenStreetMap / Google Maps).
+  AUTO_SEARCH
 }
 
 /// Joignabilité WhatsApp. Meta n'expose aucun moyen officiel de savoir si un
@@ -2327,6 +2329,9 @@ model Prospect {
   city              String?
   address           String?
   website           String?
+  /// Identifiant de la fiche d'origine (« osm:node/123 », « google:ChIJ… ») :
+  /// l'agent de prospection ne réimporte jamais deux fois le même magasin.
+  externalId        String? @unique
 
   segment       ProspectSegment  @default(STANDARD)
   leadScore     Int              @default(0)

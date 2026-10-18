@@ -18,7 +18,8 @@ export type ProspectSource =
   | 'LANDING_PAGE'
   | 'DEMO'
   | 'REFERRAL'
-  | 'MANUAL';
+  | 'MANUAL'
+  | 'AUTO_SEARCH';
 export type WhatsappStatus =
   | 'WHATSAPP_VERIFIED'
   | 'PHONE_VALID_WHATSAPP_UNCONFIRMED'
@@ -249,4 +250,48 @@ export async function renderEmail(prospectId: string, templateId: string) {
     email: string | null;
   }>(`/crm/prospects/${prospectId}/email`, { params: { templateId } });
   return data;
+}
+
+/* ------------------------- Agent de prospection ------------------------- */
+
+export interface FinderCandidate {
+  externalId: string;
+  origin: 'osm' | 'google';
+  establishmentName: string;
+  phone: string | null;
+  phoneNormalized: string | null;
+  phoneCountry: string | null;
+  email: string | null;
+  website: string | null;
+  address: string | null;
+  city: string | null;
+  country: string;
+  alreadyInCrm: boolean;
+}
+
+export async function getFinderCountries() {
+  const { data } = await api.get<{ countries: { code: string; name: string; flag: string }[]; google: boolean }>('/crm/finder/countries');
+  return data;
+}
+
+export async function searchOpticians(input: { country: string; city: string; limit: number }) {
+  const { data } = await api.post<{ candidates: FinderCandidate[]; sources: { osm: boolean; google: boolean }; errors: string[] }>(
+    '/crm/finder/search',
+    input,
+    { timeout: 120000 },
+  );
+  return data;
+}
+
+export async function importFinderCandidates(candidates: FinderCandidate[]) {
+  const { data } = await api.post<{ created: number; skipped: number }>('/crm/finder/import', { candidates });
+  return data;
+}
+
+export async function aiDraft(prospectId: string, channel: 'whatsapp' | 'email') {
+  const { data } = await api.get<{ draft: { subject: string; body: string } | null }>(`/crm/prospects/${prospectId}/ai-draft`, {
+    params: { channel },
+    timeout: 60000,
+  });
+  return data.draft;
 }

@@ -16,6 +16,8 @@ import {
   HelpCircle,
   Flame,
   Mail,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -39,11 +41,13 @@ import {
   renderEmail,
   listProspectCountries,
   createProspect,
+  aiDraft,
   type Prospect,
   type ImportRow,
   type WhatsappStatus,
   type ProspectStatus,
 } from '../../features/crm/api';
+import { FinderTab } from '../../features/crm/FinderTab';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { PageHeader, Button, Badge, PageLoader, EmptyState, Modal, Field } from '../../components/ui';
@@ -92,7 +96,7 @@ function scoreBandLabel(score: number): string {
   return 'LOW';
 }
 
-type CrmTab = 'overview' | 'prospects' | 'pipeline' | 'import' | 'messages' | 'settings';
+type CrmTab = 'overview' | 'finder' | 'prospects' | 'pipeline' | 'import' | 'messages' | 'settings';
 
 export function CrmPage() {
   const [tab, setTab] = useState<CrmTab>('overview');
@@ -107,6 +111,7 @@ export function CrmPage() {
       <div className="mb-5 flex gap-1 overflow-x-auto border-b">
         {[
           { id: 'overview' as CrmTab, label: "Vue d'ensemble", icon: BarChart3 },
+          { id: 'finder' as CrmTab, label: 'Agent', icon: Bot },
           { id: 'prospects' as CrmTab, label: 'Prospects', icon: Users },
           { id: 'pipeline' as CrmTab, label: 'Pipeline', icon: Flame },
           { id: 'import' as CrmTab, label: 'Import', icon: Upload },
@@ -129,6 +134,7 @@ export function CrmPage() {
       </div>
 
       {tab === 'overview' && <OverviewTab onGoToDue={() => setTab('prospects')} />}
+      {tab === 'finder' && <FinderTab onImported={() => setTab('prospects')} />}
       {tab === 'prospects' && <ProspectsTab />}
       {tab === 'pipeline' && <PipelineTab />}
       {tab === 'import' && <ImportTab />}
@@ -873,6 +879,26 @@ function ContactModal({
   }, [templateId, prospect.id, channel]);
 
   const unconfirmed = prospect.whatsappStatus === 'PHONE_VALID_WHATSAPP_UNCONFIRMED';
+  const [drafting, setDrafting] = useState(false);
+
+  // Premier message personnalisé par l'IA (nom du magasin, ville, langue du pays).
+  async function draftWithAi() {
+    setDrafting(true);
+    setError('');
+    try {
+      const d = await aiDraft(prospect.id, channel);
+      if (!d) setError("L'IA n'est pas configurée sur le serveur (ANTHROPIC_API_KEY).");
+      else {
+        setPreview(d.body);
+        if (channel === 'email' && d.subject) setSubject(d.subject);
+        setTemplateName("Message IA");
+      }
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   function open() {
     // L'envoi n'est JAMAIS automatique, quel que soit le canal : on ouvre
@@ -949,6 +975,10 @@ function ContactModal({
             <input className='input' value={subject} onChange={(e) => setSubject(e.target.value)} />
           </Field>
         )}
+
+        <Button variant="outline" loading={drafting} onClick={() => void draftWithAi()} className="w-full">
+          <Sparkles className="h-4 w-4" /> Rédiger un message personnalisé avec l&apos;IA
+        </Button>
 
         <Field label="Aperçu (modifiable)">
           <textarea
