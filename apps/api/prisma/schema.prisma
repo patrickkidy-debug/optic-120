@@ -606,6 +606,21 @@ model OpticalPrescription {
   ogNearPd          String? // écart pupillaire de près OG (mm)
   vertex            String? // distance verre-œil (mm)
   pantoTilt         String? // angle pantoscopique (°)
+  // Ordonnance détaillée (bêta « dossier de vente ») : type de vision,
+  // prismes, écarts de loin par œil et acuité visuelle.
+  visionType        String? // LOIN | PRES | PROGRESSIF | MI_DISTANCE
+  odPrism1          String?
+  odPrism1Base      String?
+  odPrism2          String?
+  odPrism2Base      String?
+  ogPrism1          String?
+  ogPrism1Base      String?
+  ogPrism2          String?
+  ogPrism2Base      String?
+  odFarPd           String? // écart pupillaire de loin OD (mm)
+  ogFarPd           String? // écart pupillaire de loin OG (mm)
+  odAcuity          String? // acuité visuelle OD (ex. 10/10)
+  ogAcuity          String?
   /// Fin de validité de l'ordonnance (calculée à la création depuis les
   /// réglages de l'établissement, modifiable). Pilote les relances.
   expiresAt         DateTime?
@@ -751,6 +766,9 @@ model Sale {
   // document imprimé pour que le client ait tout sur une seule page.
   prescriptionId    String?
   prescription      OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
+  // Motif de la visite et date de livraison prévue de l'équipement.
+  visitReason        String?  @db.VarChar(120)
+  expectedDeliveryAt DateTime?
   // Retour/avoir : référence la vente d'origine remboursée.
   originalSaleId    String?
   originalSale      Sale?                @relation("SaleReturns", fields: [originalSaleId], references: [id])

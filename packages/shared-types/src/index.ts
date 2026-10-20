@@ -1297,6 +1297,20 @@ export const prescriptionCreateSchema = z.object({
   ogNearPd: opt,
   vertex: opt,
   pantoTilt: opt,
+  // Ordonnance détaillée : type de vision, prismes, écarts de loin, acuité.
+  visionType: opt,
+  odPrism1: opt,
+  odPrism1Base: opt,
+  odPrism2: opt,
+  odPrism2Base: opt,
+  ogPrism1: opt,
+  ogPrism1Base: opt,
+  ogPrism2: opt,
+  ogPrism2Base: opt,
+  odFarPd: opt,
+  ogFarPd: opt,
+  odAcuity: opt,
+  ogAcuity: opt,
   /** Fin de validité ; vide = calculée depuis les réglages de l'établissement. */
   expiresAt: z.string().optional().or(z.literal('')),
   /** Photo / scan d'ordonnance papier (data URL). */
@@ -1752,6 +1766,10 @@ export const saleCreateSchema = z.object({
   loyaltyPointsUsed: z.number().int().min(0).optional(),
   /** Ordonnance à joindre au document (facultatif). */
   prescriptionId: z.string().uuid().optional(),
+  /** Motif de la visite (contrôle, renouvellement, casse…). */
+  visitReason: z.string().max(120).optional(),
+  /** Date de livraison prévue de l'équipement (AAAA-MM-JJ). */
+  expectedDeliveryAt: z.string().optional(),
 });
 export type SaleCreateInput = z.infer<typeof saleCreateSchema>;
 
@@ -1773,6 +1791,9 @@ export const saleUpdateSchema = z.object({
   vatRate: z.number().min(0).max(100).optional(),
   /** Ordonnance jointe au document (null = détacher). */
   prescriptionId: z.string().uuid().nullable().optional(),
+  visitReason: z.string().max(120).nullable().optional(),
+  /** Date de livraison prévue (AAAA-MM-JJ, null = aucune). */
+  expectedDeliveryAt: z.string().nullable().optional(),
 });
 export type SaleUpdateInput = z.infer<typeof saleUpdateSchema>;
 

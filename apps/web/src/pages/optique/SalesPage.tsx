@@ -22,6 +22,7 @@ import {
   MessageCircle,
   Search,
   ClipboardList,
+  Copy,
 } from 'lucide-react';
 import {
   listSales,
@@ -30,6 +31,7 @@ import {
   convertQuote,
   createSaleReturn,
   getSale,
+  getSaleHistory,
   getCustomer,
   getStock,
   createSale,
@@ -60,6 +62,7 @@ import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../l
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
 import { useBranchSwitchGuard } from '../../features/branches/context';
+import { useBeta, VISIT_REASONS } from '../../lib/beta';
 
 /** En-tête des documents imprimés : identité de l'établissement. */
 function companyInfo(): CompanyInfo {
@@ -104,6 +107,7 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
   const [quoteOpen, setQuoteOpen] = useState(false);
   // Pièce en cours de modification (chargée en détail avant d'ouvrir la modale).
   const [editing, setEditing] = useState<SaleDetail | null>(null);
+  const [copyOf, setCopyOf] = useState<SaleDetail | null>(null);
   const [loadingEdit, setLoadingEdit] = useState<string | null>(null);
   // Fiche détaillée (articles, montants, encaissements) affichée à la demande.
   const [detail, setDetail] = useState<SaleDetail | null>(null);
@@ -729,10 +733,25 @@ export function SalesPage({ kind }: { kind: 'SALE' | 'QUOTE' }) {
         />
       )}
 
+      {copyOf && (
+        <QuoteModal
+          copyOf={copyOf}
+          onClose={() => setCopyOf(null)}
+          onCreated={() => {
+            setCopyOf(null);
+            refreshSalesViews();
+          }}
+        />
+      )}
+
       {detail && (
         <SaleDetailModal
           sale={detail}
           onClose={() => setDetail(null)}
+          onDuplicate={() => {
+            setCopyOf(detail);
+            setDetail(null);
+          }}
           onCollect={
             detail.type === 'SALE' &&
             canPay &&
@@ -784,12 +803,21 @@ function SaleDetailModal({
   sale,
   onClose,
   onCollect,
+  onDuplicate,
 }: {
   sale: SaleDetail;
   onClose: () => void;
   onCollect?: () => void;
+  /** Bêta : ouvre un nouveau devis pré-rempli avec cette pièce. */
+  onDuplicate?: () => void;
 }) {
   const { t } = useTranslation();
+  const beta = useBeta();
+  const { data: history } = useQuery({
+    queryKey: ['sale-history', sale.id],
+    queryFn: () => getSaleHistory(sale.id),
+    enabled: beta,
+  });
   const qc = useQueryClient();
   const due = Number(sale.totalAmount) - Number(sale.paidAmount);
   const payments = sale.payments ?? [];
@@ -828,6 +856,22 @@ function SaleDetailModal({
           </div>
           <Badge tone={statusTone(sale.status)}>{saleStatusLabel(sale.status)}</Badge>
         </div>
+
+        {beta && (sale.visitReason || sale.expectedDeliveryAt) && (
+          <div className="flex flex-wrap gap-x-6 gap-y-1 rounded-xl border px-3 py-2 text-sm">
+            {sale.visitReason && (
+              <span>
+                <span className="text-content-muted">Motif :</span> <b className="text-content">{sale.visitReason}</b>
+              </span>
+            )}
+            {sale.expectedDeliveryAt && (
+              <span>
+                <span className="text-content-muted">Livraison prévue :</span>{' '}
+                <b className="text-content">{formatDate(sale.expectedDeliveryAt)}</b>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Articles */}
         <div className="overflow-x-auto rounded-xl border">
@@ -1002,10 +1046,34 @@ function SaleDetailModal({
           )}
         </div>
 
+        {beta && history && history.length > 0 && (
+          <details className="rounded-xl border px-3 py-2">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-content">
+              Historique de la pièce ({history.length})
+            </summary>
+            <ul className="mt-2 space-y-1.5">
+              {history.map((h) => (
+                <li key={h.id} className="flex flex-wrap justify-between gap-2 text-xs">
+                  <span className="text-content">{historyLabel(h.action)}</span>
+                  <span className="text-content-faint">
+                    {formatDateTime(h.createdAt)}
+                    {h.user ? ` · ${h.user.firstName} ${h.user.lastName}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
         <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
           <Button variant="outline" onClick={onClose}>
             {t('common.close')}
           </Button>
+          {beta && onDuplicate && (
+            <Button variant="outline" onClick={onDuplicate}>
+              <Copy className="h-4 w-4" /> Dupliquer
+            </Button>
+          )}
           <Button variant="outline" onClick={() => void openTechnicalSheet(sale)}>
             <ClipboardList className="h-4 w-4" /> {t('sales.techSheet')}
           </Button>
@@ -1021,6 +1089,22 @@ function SaleDetailModal({
       </div>
     </Modal>
   );
+}
+
+/** Libellé lisible d'une action du journal (historique de la pièce). */
+function historyLabel(action: string): string {
+  const labels: Record<string, string> = {
+    QUOTE_CREATED: 'Devis créé',
+    SALE_CREATED: 'Vente créée',
+    SALE_UPDATED: 'Pièce modifiée',
+    QUOTE_UPDATED: 'Devis modifié',
+    QUOTE_CONVERTED: 'Devis accepté et transformé en vente',
+    SALE_CANCELLED: 'Pièce annulée',
+    PAYMENT_CREATED: 'Encaissement',
+    SALE_PAYMENT_CANCELLED: 'Encaissement annulé',
+    SALE_RETURNED: 'Retour / avoir',
+  };
+  return labels[action] ?? action.toLowerCase().replace(/_/g, ' ');
 }
 
 function AmountRow({ label, value }: { label: string; value: number }) {
@@ -1044,10 +1128,13 @@ function QuoteModal({
   onClose,
   onCreated,
   editing,
+  copyOf,
 }: {
   onClose: () => void;
   onCreated: (saleId: string) => void;
   editing?: SaleDetail;
+  /** Pièce dupliquée : ses lignes et réglages pré-remplissent un NOUVEAU devis. */
+  copyOf?: SaleDetail;
 }) {
   const { t } = useTranslation();
   const branchId = useUIStore((s) => s.activeBranchId);
@@ -1055,14 +1142,18 @@ function QuoteModal({
   const extraTaxes = useAuthStore((s) => s.user?.tenantOpticalSettings?.extraTaxes) ?? [];
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   const isEdit = Boolean(editing);
+  const seed = editing ?? copyOf;
+  const beta = useBeta();
+  const [visitReason, setVisitReason] = useState(seed?.visitReason ?? '');
+  const [expectedDelivery, setExpectedDelivery] = useState(seed?.expectedDeliveryAt?.slice(0, 10) ?? '');
   const [search, setSearch] = useState('');
-  const [customerId, setCustomerId] = useState(editing?.customerId ?? '');
-  const [discount, setDiscount] = useState(Number(editing?.discountAmount ?? 0));
-  const [insurerId, setInsurerId] = useState(editing?.insurerId ?? '');
-  const [insurance, setInsurance] = useState(Number(editing?.insuranceAmount ?? 0));
+  const [customerId, setCustomerId] = useState(seed?.customerId ?? '');
+  const [discount, setDiscount] = useState(Number(seed?.discountAmount ?? 0));
+  const [insurerId, setInsurerId] = useState(seed?.insurerId ?? '');
+  const [insurance, setInsurance] = useState(Number(seed?.insuranceAmount ?? 0));
   const [lines, setLines] = useState<QuoteLine[]>(
-    editing
-      ? editing.items.map((i) => ({
+    seed
+      ? seed.items.map((i) => ({
           key: lineKey(i.productId, i.eye),
           productId: i.productId,
           name: i.product.name,
@@ -1079,16 +1170,16 @@ function QuoteModal({
   // Taux de TVA appliqué (null = taux de l'établissement). En modification, on
   // repart du taux réellement appliqué à la pièce.
   const [vatRate, setVatRate] = useState<number | null>(() => {
-    if (!editing) return null;
-    const vatLine = editing.taxDetails?.find((x) => x.code === 'VAT');
+    if (!seed) return null;
+    const vatLine = seed.taxDetails?.find((x) => x.code === 'VAT');
     if (vatLine) return vatLine.rate;
-    const base = Math.max(0, Number(editing.subtotal) - Number(editing.discountAmount));
+    const base = Math.max(0, Number(seed.subtotal) - Number(seed.discountAmount));
     if (base <= 0) return null;
-    return Math.round((Number(editing.taxAmount) / base) * 10000) / 100;
+    return Math.round((Number(seed.taxAmount) / base) * 10000) / 100;
   });
   // Ordonnance jointe au document (facultative), et saisie à la volée si le
   // client n'en a pas encore d'enregistrée.
-  const [prescriptionId, setPrescriptionId] = useState(editing?.prescriptionId ?? '');
+  const [prescriptionId, setPrescriptionId] = useState(seed?.prescriptionId ?? '');
   const [addingRx, setAddingRx] = useState(false);
   const canCreateRx = usePermission('optique.prescriptions.create');
   const qc = useQueryClient();
@@ -1205,6 +1296,7 @@ function QuoteModal({
             insurerId: insurance > 0 && insurerId ? insurerId : null,
             vatRate: vatRate ?? undefined,
             prescriptionId: prescriptionId || null,
+            ...(beta ? { visitReason: visitReason || null, expectedDeliveryAt: expectedDelivery || null } : {}),
           })
         : createSale({
             branchId: branchId!,
@@ -1219,6 +1311,7 @@ function QuoteModal({
             vatRate: vatRate ?? undefined,
             // Ordonnance jointe au document (facultative).
             prescriptionId: prescriptionId || undefined,
+            ...(beta ? { visitReason: visitReason || undefined, expectedDeliveryAt: expectedDelivery || undefined } : {}),
           }),
     onSuccess: (sale) => {
       setSaveError('');
@@ -1235,7 +1328,7 @@ function QuoteModal({
     <Modal
       open
       onClose={onClose}
-      title={isEdit ? t('sales.editTitle', { number: editing!.number }) : t('sales.newQuote')}
+      title={isEdit ? t('sales.editTitle', { number: editing!.number }) : copyOf ? `Copie de ${copyOf.number}` : t('sales.newQuote')}
       size="lg"
     >
       {!branchId ? (
@@ -1414,6 +1507,36 @@ function QuoteModal({
             <div className="mt-2">
               <VatSelect value={vatRate} defaultRate={vatPct} onChange={setVatRate} />
             </div>
+
+            {/* Motif de visite et livraison prévue (bêta). */}
+            {beta && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-xs text-content-muted">
+                  Motif de visite
+                  <input
+                    className="input mt-1"
+                    list="visit-reasons"
+                    value={visitReason}
+                    placeholder="Renouvellement…"
+                    onChange={(e) => setVisitReason(e.target.value)}
+                  />
+                  <datalist id="visit-reasons">
+                    {VISIT_REASONS.map((r) => (
+                      <option key={r} value={r} />
+                    ))}
+                  </datalist>
+                </label>
+                <label className="text-xs text-content-muted">
+                  Livraison prévue
+                  <input
+                    type="date"
+                    className="input mt-1"
+                    value={expectedDelivery}
+                    onChange={(e) => setExpectedDelivery(e.target.value)}
+                  />
+                </label>
+              </div>
+            )}
 
             {/* Ordonnance jointe (facultative) : reprise sur le document imprimé.
                 Si le client n'en a pas encore, on peut la saisir ici même. */}

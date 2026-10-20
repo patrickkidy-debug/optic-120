@@ -246,6 +246,21 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ sale: { ...sale, insurerName: sale.insurer?.name ?? null } });
   });
 
+  /** Historique de la pièce (création, modifications, encaissements…), du plus récent au plus ancien. */
+  app.get('/:id/history', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const sale = await req.db!.sale.findFirst({ where: { id }, select: { id: true, branchId: true } });
+    if (!sale) throw notFound('Vente introuvable');
+    assertBranchAccess(req, sale.branchId);
+    const logs = await req.db!.auditLog.findMany({
+      where: { tenantId: req.auth!.tenantId, entity: 'Sale', entityId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, action: true, createdAt: true, metadata: true, user: { select: { firstName: true, lastName: true } } },
+    });
+    return reply.send({ history: logs });
+  });
+
   app.post('/', async (req, reply) => {
     const input = saleCreateSchema.parse(req.body);
     // Un devis n'engage rien (ni stock ni encaissement) : savoir vendre suffit
@@ -308,6 +323,15 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
   app.post('/:id/convert-quote', { preHandler: requirePermission('optique.quotes.convert') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const sale = await salesService.convertQuote(req.auth!.tenantId, id, req.auth!.userId);
+    // Tracé pour l'historique de la pièce.
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'QUOTE_CONVERTED',
+      entity: 'Sale',
+      entityId: id,
+      ...requestMeta(req),
+    });
     return reply.send({ sale });
   });
 
@@ -344,6 +368,15 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const result = await salesService.addPayment(req.auth!.tenantId, req.auth!.userId, id, input);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PAYMENT_CREATED',
+      entity: 'Sale',
+      entityId: id,
+      metadata: { amount: input.amount, method: input.method },
+      ...requestMeta(req),
+    });
     return reply.status(201).send(result);
   });
 

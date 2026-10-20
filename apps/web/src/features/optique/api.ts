@@ -275,6 +275,19 @@ export interface Prescription {
   ogNearPd?: string | null;
   vertex?: string | null;
   pantoTilt?: string | null;
+  visionType?: string | null;
+  odPrism1?: string | null;
+  odPrism1Base?: string | null;
+  odPrism2?: string | null;
+  odPrism2Base?: string | null;
+  ogPrism1?: string | null;
+  ogPrism1Base?: string | null;
+  ogPrism2?: string | null;
+  ogPrism2Base?: string | null;
+  odFarPd?: string | null;
+  ogFarPd?: string | null;
+  odAcuity?: string | null;
+  ogAcuity?: string | null;
   /** Fin de validité de l'ordonnance (null = non renseignée). */
   expiresAt?: string | null;
   /** Photo / scan d'ordonnance papier (data URL). */
@@ -504,11 +517,27 @@ export interface SaleDetail {
   /** Ordonnance jointe au document (facultative). */
   prescriptionId?: string | null;
   prescription?: Prescription | null;
+  visitReason?: string | null;
+  expectedDeliveryAt?: string | null;
   items: SaleDetailItem[];
   payments?: SalePayment[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
   branch: { name: string; city?: string | null; address?: string | null; phone?: string | null };
   cashier?: { firstName: string; lastName: string } | null;
+}
+
+export interface SaleHistoryEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata?: Record<string, unknown> | null;
+  user?: { firstName: string; lastName: string } | null;
+}
+
+/** Historique de la pièce (création, modifications, encaissements…). */
+export async function getSaleHistory(id: string): Promise<SaleHistoryEntry[]> {
+  const { data } = await api.get(`/sales/${id}/history`);
+  return data.history as SaleHistoryEntry[];
 }
 
 export async function getSale(id: string): Promise<SaleDetail> {

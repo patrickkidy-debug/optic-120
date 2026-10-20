@@ -10,6 +10,7 @@ import { apiErrorMessage } from '../../lib/api';
 import { fileToResizedDataUrl, uploadImageToSupabase } from '../../lib/image';
 import { Button, Field, Modal } from '../../components/ui';
 import { tr } from '../../lib/tr';
+import { useBeta, VISION_TYPES } from '../../lib/beta';
 
 /**
  * Saisie d'une ordonnance optique, rattachée à un client. Partagée par la
@@ -32,6 +33,7 @@ export function PrescriptionForm({
   title?: string;
 }) {
   const isEdit = Boolean(prescription);
+  const beta = useBeta();
   const [error, setError] = useState('');
   const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
   const [lensOther, setLensOther] = useState(
@@ -62,6 +64,19 @@ export function PrescriptionForm({
           ogNearPd: prescription.ogNearPd ?? undefined,
           vertex: prescription.vertex ?? undefined,
           pantoTilt: prescription.pantoTilt ?? undefined,
+          visionType: prescription.visionType ?? undefined,
+          odPrism1: prescription.odPrism1 ?? undefined,
+          odPrism1Base: prescription.odPrism1Base ?? undefined,
+          odPrism2: prescription.odPrism2 ?? undefined,
+          odPrism2Base: prescription.odPrism2Base ?? undefined,
+          ogPrism1: prescription.ogPrism1 ?? undefined,
+          ogPrism1Base: prescription.ogPrism1Base ?? undefined,
+          ogPrism2: prescription.ogPrism2 ?? undefined,
+          ogPrism2Base: prescription.ogPrism2Base ?? undefined,
+          odFarPd: prescription.odFarPd ?? undefined,
+          ogFarPd: prescription.ogFarPd ?? undefined,
+          odAcuity: prescription.odAcuity ?? undefined,
+          ogAcuity: prescription.ogAcuity ?? undefined,
           notes: prescription.notes ?? undefined,
         }
       : undefined,
@@ -235,6 +250,49 @@ export function PrescriptionForm({
         </Field>
         <Field label={tr('ui.PrescriptionForm.prescripteur')}><input className="input" {...register('prescriberName')} /></Field>
       </div>
+
+      {/* Ordonnance détaillée (bêta) : type de vision, prismes, écarts de loin, acuité. */}
+      {beta && (
+        <div className="space-y-3 rounded-xl border border-line bg-surface-2/40 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-content">Ordonnance détaillée</span>
+            <select className="input w-auto py-1.5 text-sm" {...register('visionType')}>
+              <option value="">Type de vision…</option>
+              {VISION_TYPES.map((v) => (
+                <option key={v.value} value={v.value}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
+              <thead>
+                <tr className="text-[11px] uppercase text-content-faint">
+                  <th className="px-1 pb-1 text-left font-semibold">Œil</th>
+                  <th className="px-1 pb-1 font-semibold">Prisme 1</th>
+                  <th className="px-1 pb-1 font-semibold">Base / axe 1</th>
+                  <th className="px-1 pb-1 font-semibold">Prisme 2</th>
+                  <th className="px-1 pb-1 font-semibold">Base / axe 2</th>
+                  <th className="px-1 pb-1 font-semibold">Écart VL (mm)</th>
+                  <th className="px-1 pb-1 font-semibold">Acuité</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(['od', 'og'] as const).map((eye) => (
+                  <tr key={eye}>
+                    <td className="pr-2 font-semibold text-content">{eye.toUpperCase()}</td>
+                    <td className="px-1"><input className={cell} placeholder="0.50" {...register(`${eye}Prism1`)} /></td>
+                    <td className="px-1"><input className={cell} placeholder="BI / 90°" {...register(`${eye}Prism1Base`)} /></td>
+                    <td className="px-1"><input className={cell} placeholder="0.50" {...register(`${eye}Prism2`)} /></td>
+                    <td className="px-1"><input className={cell} placeholder="BH / 0°" {...register(`${eye}Prism2Base`)} /></td>
+                    <td className="px-1"><input className={cell} placeholder="31" {...register(`${eye}FarPd`)} /></td>
+                    <td className="px-1"><input className={cell} placeholder="10/10" {...register(`${eye}Acuity`)} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Mesures avancées de montage */}
       <details className="rounded-xl border border-line bg-surface-2/40 px-3 py-2">

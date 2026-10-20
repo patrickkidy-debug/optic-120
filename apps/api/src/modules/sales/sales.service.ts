@@ -239,6 +239,8 @@ export async function createSale(
         insuranceAmount: insurance,
         insurerId: input.insurerId ?? null,
         prescriptionId: input.prescriptionId ?? null,
+        visitReason: input.visitReason || null,
+        expectedDeliveryAt: input.expectedDeliveryAt ? new Date(input.expectedDeliveryAt) : null,
         totalAmount: total,
         paidAmount: paidInit,
         currency: tenant ? tenantCurrencyInfo(tenant).currency : 'XOF',
@@ -543,6 +545,9 @@ export async function updateSale(
         customerId: input.customerId === undefined ? undefined : input.customerId,
         insurerId: input.insurerId === undefined ? undefined : input.insurerId,
         prescriptionId: input.prescriptionId === undefined ? undefined : input.prescriptionId,
+        visitReason: input.visitReason === undefined ? undefined : input.visitReason || null,
+        expectedDeliveryAt:
+          input.expectedDeliveryAt === undefined ? undefined : input.expectedDeliveryAt ? new Date(input.expectedDeliveryAt) : null,
         subtotal,
         discountAmount: discount,
         taxAmount,
