@@ -70,6 +70,7 @@ async function fetchJson<T>(url: string, init: RequestInit & { timeoutMs?: numbe
 
 const OVERPASS_HOSTS = [
   'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
 ];
@@ -93,23 +94,24 @@ async function searchOsm(countryCode: string, city: string, limit: number): Prom
     area = '(area.a)';
   }
   const query = `[out:json][timeout:25];${city ? '' : `area["ISO3166-1"="${countryCode}"][admin_level=2]->.a;`}(nwr["shop"="optician"]${area};nwr["healthcare"="optometrist"]${area};nwr["craft"="optician"]${area};);out tags ${limit * 2};`;
-  // Le serveur public principal est souvent saturé : miroirs essayés à la suite.
-  let data: { elements: OsmElement[] } | null = null;
-  let lastError: unknown;
-  for (const host of OVERPASS_HOSTS) {
-    try {
-      data = await fetchJson<{ elements: OsmElement[] }>(host, {
-        method: 'POST',
-        body: `data=${encodeURIComponent(query)}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeoutMs: 30000,
-      });
-      break;
-    } catch (e) {
-      lastError = e;
-    }
+  // Les serveurs publics sont souvent saturés : tous interrogés en même
+  // temps, la première réponse valide l'emporte.
+  let data: { elements: OsmElement[] };
+  try {
+    data = await Promise.any(
+      OVERPASS_HOSTS.map((host) =>
+        fetchJson<{ elements: OsmElement[] }>(host, {
+          method: 'POST',
+          body: `data=${encodeURIComponent(query)}`,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeoutMs: 45000,
+        }),
+      ),
+    );
+  } catch (e) {
+    console.warn('[prospect-finder] Overpass indisponible', e);
+    throw new Error('serveurs momentanément saturés, réessayez dans une minute ou précisez une ville.');
   }
-  if (!data) throw lastError instanceof Error ? lastError : new Error('Overpass indisponible');
   return data.elements
     .filter((el) => el.tags?.name)
     .map((el) => {
