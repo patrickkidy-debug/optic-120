@@ -196,6 +196,13 @@ export interface Customer {
   notes?: string | null;
   loyaltyPoints?: number;
   createdAt?: string;
+  // Fiche enrichie (bêta)
+  civility?: string | null;
+  mobilePhone?: string | null;
+  familyNumber?: string | null;
+  messagingOptOut?: boolean;
+  deceased?: boolean;
+  waitingSince?: string | null;
 }
 
 /* ---------------- Opérations de stock (réception / transfert / inventaire) ---------------- */

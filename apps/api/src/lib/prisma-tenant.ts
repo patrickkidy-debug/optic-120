@@ -17,6 +17,8 @@ const TENANT_MODELS = new Set<string>([
   'InventoryCount',
   'InventoryCountLine',
   'Customer',
+  'CustomerComment',
+  'CustomerDocument',
   'OpticalPrescription',
   'OpticalMeasurement',
   'TrackPackage',

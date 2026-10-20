@@ -565,6 +565,15 @@ model Customer {
   profession    String?
   notes         String?
   loyaltyPoints Int       @default(0)
+  // Fiche client enrichie (bêta) : civilité (dont « Enfant »), portable
+  // distinct du fixe, regroupement familial, refus des messages, décès et
+  // présence au magasin (liste « en cours »).
+  civility        String?   @db.VarChar(12) // M | MME | MLLE | ENFANT
+  mobilePhone     String?
+  familyNumber    String?   @db.VarChar(40)
+  messagingOptOut Boolean   @default(false)
+  deceased        Boolean   @default(false)
+  waitingSince    DateTime?
   createdAt     DateTime  @default(now())
 
   sales                  Sale[]
@@ -575,9 +584,39 @@ model Customer {
   patient                Patient?               @relation("CustomerPatient")
   insuranceBeneficiaries InsuranceBeneficiary[]
   insuranceClaims        InsuranceClaim[]
+  comments               CustomerComment[]
+  documents              CustomerDocument[]
 
   @@index([tenantId])
   @@index([tenantId, branchId])
+}
+
+/// Commentaire horodaté sur une fiche client (historique des commentaires).
+model CustomerComment {
+  id          String   @id @default(uuid())
+  tenantId    String
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  body        String
+  createdById String?
+  authorName  String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, customerId, createdAt])
+}
+
+/// Document joint à une fiche client (scan, photo, attestation…).
+model CustomerDocument {
+  id          String   @id @default(uuid())
+  tenantId    String
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name        String
+  url         String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, customerId, createdAt])
 }
 
 model OpticalPrescription {

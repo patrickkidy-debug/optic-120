@@ -18,6 +18,12 @@ const COLUMNS: Record<keyof CustomerCreateInput | 'fullName' | 'city', string[]>
   firstName: ['prenom', 'firstname', 'first name', 'prénom'],
   lastName: ['nom', 'lastname', 'last name', 'nom de famille', 'surname'],
   fullName: ['nom complet', 'full name', 'client', 'patient', 'name'],
+  // Champs de la fiche enrichie (bêta) : pas encore importés.
+  civility: [],
+  mobilePhone: [],
+  familyNumber: [],
+  messagingOptOut: [],
+  deceased: [],
   phone: ['telephone', 'téléphone', 'tel', 'phone', 'mobile', 'whatsapp', 'portable'],
   email: ['email', 'e-mail', 'mail', 'courriel'],
   dateOfBirth: ['date de naissance', 'naissance', 'birth', 'date of birth', 'dob'],

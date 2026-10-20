@@ -50,6 +50,8 @@ import { Badge, Button, DropdownMenu, EmptyState, type DropdownItem } from '../.
 import { CustomerFormModal } from './clients/CustomerFormModal';
 import { ImportCustomersModal } from './clients/ImportCustomersModal';
 import { PatientProfile, type ProfileTab } from './clients/PatientProfile';
+import { WaitingPanel } from '../../features/optique/CustomerBeta';
+import { useBeta } from '../../lib/beta';
 import { BirthdaysPanel } from './clients/BirthdaysPanel';
 import { tr } from '../../lib/tr';
 
@@ -100,6 +102,7 @@ export function ClientsPage() {
   const [formFor, setFormFor] = useState<Customer | null | 'new'>(null);
   const [importing, setImporting] = useState(false);
   const [profile, setProfile] = useState<{ id: string; tab?: ProfileTab; addRx?: boolean } | null>(null);
+  const beta = useBeta();
   const [exporting, setExporting] = useState<'xlsx' | 'pdf' | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -270,6 +273,7 @@ export function ClientsPage() {
         <KpiCard icon={BellRing} label={tr('crm.kpiFollowUp')} value={stats?.followUp} hint={tr('crm.kpiFollowUpHint')} tone="warning" onClick={() => setSegments(['followUp'])} active={segments.length === 1 && segments[0] === 'followUp'} />
       </div>
 
+      {beta && <WaitingPanel onOpen={(id) => setProfile({ id })} />}
       <BirthdaysPanel branchId={branchId} onOpen={(id) => setProfile({ id })} />
 
       {/* Recherche + filtres */}
@@ -565,6 +569,7 @@ export function ClientsPage() {
           startAddingRx={profile.addRx}
           onClose={() => setProfile(null)}
           onEdit={(c) => setFormFor(c)}
+          onOpenCustomer={(id) => setProfile({ id })}
         />
       )}
     </div>

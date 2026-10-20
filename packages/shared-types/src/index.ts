@@ -1259,6 +1259,12 @@ export const customerCreateSchema = z.object({
   address: z.string().max(200).optional().or(z.literal('')),
   profession: z.string().max(120).optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  // Fiche enrichie (bêta)
+  civility: z.enum(['M', 'MME', 'MLLE', 'ENFANT']).optional().or(z.literal('')),
+  mobilePhone: z.string().max(40).optional().or(z.literal('')),
+  familyNumber: z.string().max(40).optional().or(z.literal('')),
+  messagingOptOut: z.boolean().optional(),
+  deceased: z.boolean().optional(),
 });
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
 

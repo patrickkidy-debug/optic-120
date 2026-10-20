@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import { applyCylinderConvention, customerCreateSchema, prescriptionCreateSchema, type Gender } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
@@ -114,11 +115,122 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
 
   // Anniversaires à venir (aujourd'hui → `days` jours), pour souhaiter
   // l'anniversaire des clients. Calculé en UTC sur le jour et le mois.
+  /* ------------------ Fiche enrichie (bêta) ------------------ */
+
+  // Clients « en cours » : présents au magasin, en attente d'être servis.
+  app.get('/waiting', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const q = req.query as { branchId?: string };
+    const customers = await req.db!.customer.findMany({
+      where: { AND: [customerScope(req, q.branchId), { waitingSince: { not: null } }] },
+      orderBy: { waitingSince: 'asc' },
+      select: { id: true, firstName: true, lastName: true, civility: true, phone: true, waitingSince: true },
+    });
+    return reply.send({ customers });
+  });
+
+  app.post('/:id/waiting', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { waiting } = z.object({ waiting: z.boolean() }).parse(req.body);
+    const existing = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!existing) throw notFound('Client introuvable');
+    assertCustomerVisible(req, existing.branchId);
+    await req.db!.customer.updateMany({ where: { id }, data: { waitingSince: waiting ? new Date() : null } });
+    return reply.send({ ok: true });
+  });
+
+  // Membres de la même famille (même numéro de famille).
+  app.get('/:id/family', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true, familyNumber: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    if (!me.familyNumber) return reply.send({ members: [] });
+    const members = await req.db!.customer.findMany({
+      where: { AND: [customerScope(req), { familyNumber: me.familyNumber, id: { not: id } }] },
+      select: { id: true, firstName: true, lastName: true, civility: true, dateOfBirth: true, phone: true },
+      orderBy: { lastName: 'asc' },
+    });
+    return reply.send({ members });
+  });
+
+  // Historique des commentaires.
+  app.get('/:id/comments', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    const comments = await req.db!.customerComment.findMany({ where: { customerId: id }, orderBy: { createdAt: 'desc' } });
+    return reply.send({ comments });
+  });
+
+  app.post('/:id/comments', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { body } = z.object({ body: z.string().trim().min(1).max(2000) }).parse(req.body);
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    const author = await req.db!.user.findFirst({ where: { id: req.auth!.userId }, select: { firstName: true, lastName: true } });
+    const comment = await req.db!.customerComment.create({
+      data: {
+        tenantId: req.auth!.tenantId,
+        customerId: id,
+        body,
+        createdById: req.auth!.userId,
+        authorName: author ? `${author.firstName} ${author.lastName}` : null,
+      },
+    });
+    return reply.status(201).send({ comment });
+  });
+
+  app.delete('/:id/comments/:commentId', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
+    const { id, commentId } = req.params as { id: string; commentId: string };
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    await req.db!.customerComment.deleteMany({ where: { id: commentId, customerId: id } });
+    return reply.send({ ok: true });
+  });
+
+  // Documents joints (scans, photos).
+  app.get('/:id/documents', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    const documents = await req.db!.customerDocument.findMany({ where: { customerId: id }, orderBy: { createdAt: 'desc' } });
+    return reply.send({ documents });
+  });
+
+  app.post('/:id/documents', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = z
+      .object({ name: z.string().trim().min(1).max(120), url: z.string().min(1).max(3_000_000) })
+      .parse(req.body);
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    const document = await req.db!.customerDocument.create({
+      data: { tenantId: req.auth!.tenantId, customerId: id, name: input.name, url: input.url, createdById: req.auth!.userId },
+    });
+    return reply.status(201).send({ document });
+  });
+
+  app.delete('/:id/documents/:documentId', { preHandler: requirePermission('optique.customers.update') }, async (req, reply) => {
+    const { id, documentId } = req.params as { id: string; documentId: string };
+    const me = await req.db!.customer.findFirst({ where: { id }, select: { branchId: true } });
+    if (!me) throw notFound('Client introuvable');
+    assertCustomerVisible(req, me.branchId);
+    await req.db!.customerDocument.deleteMany({ where: { id: documentId, customerId: id } });
+    return reply.send({ ok: true });
+  });
+
   app.get('/birthdays', { preHandler: requirePermission('optique.customers.view') }, async (req, reply) => {
     const q = req.query as { branchId?: string; days?: string };
     const days = Math.min(60, Math.max(0, Number.parseInt(q.days ?? '30', 10) || 30));
     const rows = await req.db!.customer.findMany({
-      where: { AND: [customerScope(req, q.branchId), { dateOfBirth: { not: null } }] },
+      where: {
+        AND: [customerScope(req, q.branchId), { dateOfBirth: { not: null }, deceased: false, messagingOptOut: false }],
+      },
       select: { id: true, firstName: true, lastName: true, phone: true, email: true, dateOfBirth: true },
     });
     const now = new Date();
@@ -170,6 +282,11 @@ export async function customersRoutes(app: FastifyInstance): Promise<void> {
         address: input.address || null,
         profession: input.profession || null,
         notes: input.notes || null,
+        civility: input.civility || null,
+        mobilePhone: input.mobilePhone || null,
+        familyNumber: input.familyNumber || null,
+        messagingOptOut: input.messagingOptOut ?? false,
+        deceased: input.deceased ?? false,
       },
     });
     return reply.status(201).send({ customer });

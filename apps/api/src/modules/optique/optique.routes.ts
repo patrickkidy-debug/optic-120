@@ -266,7 +266,8 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
     const ids = [...new Set([...rxDue, ...saleDue])];
     if (ids.length === 0) return reply.send({ renewals: [] });
     const customers = await req.db!.customer.findMany({
-      where: { id: { in: ids } },
+      // Jamais de relance à un client décédé ou qui refuse les messages.
+      where: { id: { in: ids }, deceased: false, messagingOptOut: false },
       select: { id: true, firstName: true, lastName: true, phone: true, email: true },
     });
     // Type de verre de la dernière ordonnance (affiché dans la liste de relance).

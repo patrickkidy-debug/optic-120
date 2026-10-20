@@ -19,6 +19,7 @@ import {
   Wallet,
   Wrench,
   X,
+  Users,
 } from 'lucide-react';
 import { ageFromBirthDate } from '@oculo/shared-types';
 import { getCustomer, updateCustomer, type CustomerDetail } from '../../../features/optique/api';
@@ -37,8 +38,21 @@ import { WhatsappSendButton } from '../../../components/WhatsappSendButton';
 import { Badge, Button, DropdownMenu, Spinner } from '../../../components/ui';
 import { LensOrderRow, PrescriptionCard, RepairRow, SaleRow } from '../ClientRecord';
 import { tr } from '../../../lib/tr';
+import { useBeta } from '../../../lib/beta';
+import { CommentsTab, DocumentsTab, FamilyTab, WaitingToggle, civilityLabel } from '../../../features/optique/CustomerBeta';
 
-export type ProfileTab = 'overview' | 'prescriptions' | 'purchases' | 'quotes' | 'consultations' | 'appointments' | 'history' | 'notes';
+export type ProfileTab =
+  | 'overview'
+  | 'prescriptions'
+  | 'purchases'
+  | 'quotes'
+  | 'consultations'
+  | 'appointments'
+  | 'history'
+  | 'notes'
+  | 'comments'
+  | 'documents'
+  | 'family';
 
 interface TimelineEvent {
   at: string;
@@ -97,14 +111,18 @@ export function PatientProfile({
   startAddingRx = false,
   onClose,
   onEdit,
+  onOpenCustomer,
 }: {
   customerId: string;
   initialTab?: ProfileTab;
   startAddingRx?: boolean;
   onClose: () => void;
   onEdit?: (c: CustomerDetail) => void;
+  /** Bêta : ouvre la fiche d'un autre membre de la famille. */
+  onOpenCustomer?: (id: string) => void;
 }) {
   const qc = useQueryClient();
+  const beta = useBeta();
   const navigate = useNavigate();
   const toast = useToast();
   const user = useAuthStore((s) => s.user);
@@ -169,6 +187,9 @@ export function PatientProfile({
     { id: 'appointments', label: tr('crm.tabAppoint'), icon: CalendarDays, count: c?.clinic?.appointments?.length, show: canAppoint },
     { id: 'history', label: tr('crm.tabHistory'), icon: History, show: true },
     { id: 'notes', label: tr('crm.tabNotes'), icon: NotebookPen, show: true },
+    { id: 'comments', label: 'Commentaires', icon: NotebookPen, show: beta },
+    { id: 'documents', label: 'Documents', icon: FileText, show: beta },
+    { id: 'family', label: 'Famille', icon: Users, show: beta },
   ];
 
   return (
@@ -191,10 +212,16 @@ export function PatientProfile({
                       {c.firstName} {c.lastName}
                     </h2>
                     <Badge tone={recentlyActive ? 'success' : 'neutral'}>{recentlyActive ? tr('crm.statusActive') : tr('crm.statusInactive')}</Badge>
+                    {beta && civilityLabel(c.civility) && <Badge tone="neutral">{civilityLabel(c.civility)}</Badge>}
+                    {beta && c.deceased && <Badge tone="danger">Décédé</Badge>}
+                    {beta && c.messagingOptOut && <Badge tone="warning">Refuse les messages</Badge>}
+                    {beta && c.waitingSince && <Badge tone="accent">En cours</Badge>}
+                    {beta && c.familyNumber && <Badge tone="info">Famille {c.familyNumber}</Badge>}
                   </div>
                   <p className="mt-0.5 text-sm text-content-muted">
                     <span className="font-mono text-xs text-content-faint">{c.code}</span>
                     {c.phone && <> · {c.phone}</>}
+                    {beta && c.mobilePhone && <> · {c.mobilePhone}</>}
                     {c.email && <> · {c.email}</>}
                   </p>
                   {(() => {
@@ -218,7 +245,8 @@ export function PatientProfile({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {c.phone && c.phone.replace(/\D/g, '').length >= 6 && (
+                {beta && <WaitingToggle customerId={c.id} waitingSince={c.waitingSince} />}
+                {c.phone && c.phone.replace(/\D/g, '').length >= 6 && !(beta && (c.messagingOptOut || c.deceased)) && (
                   <WhatsappSendButton
                     onSend={(lang) =>
                       sendWhatsappForStage('followup', c.phone, { client: c.firstName, etablissement: user?.tenantName ?? 'OculoSaaS' }, lang)
@@ -473,6 +501,9 @@ export function PatientProfile({
               )}
 
               {tab === 'notes' && <NotesEditor customer={c} canEdit={canUpdate} />}
+              {tab === 'comments' && <CommentsTab customerId={c.id} />}
+              {tab === 'documents' && <DocumentsTab customerId={c.id} />}
+              {tab === 'family' && <FamilyTab customerId={c.id} familyNumber={c.familyNumber} onOpen={onOpenCustomer} />}
             </div>
           </>
         )}

@@ -12,6 +12,8 @@ import { apiErrorMessage } from '../../../lib/api';
 import { useToast } from '../../../components/Toast';
 import { Button, Modal } from '../../../components/ui';
 import { tr } from '../../../lib/tr';
+import { useBeta } from '../../../lib/beta';
+import { CIVILITIES } from '../../../features/optique/CustomerBeta';
 
 /**
  * Création / modification d'un client, en sections courtes plutôt qu'un long
@@ -72,10 +74,16 @@ export function CustomerFormModal({
           address: customer.address ?? '',
           profession: customer.profession ?? '',
           notes: customer.notes ?? '',
+          civility: (customer.civility as CustomerCreateInput['civility']) ?? '',
+          mobilePhone: customer.mobilePhone ?? '',
+          familyNumber: customer.familyNumber ?? '',
+          messagingOptOut: customer.messagingOptOut ?? false,
+          deceased: customer.deceased ?? false,
         }
       : {},
   });
 
+  const beta = useBeta();
   const mut = useMutation({
     mutationFn: (v: CustomerCreateInput) => {
       if (customer) return updateCustomer(customer.id, v);
@@ -175,6 +183,35 @@ export function CustomerFormModal({
             </Label>
           </div>
         </Section>
+
+        {beta && (
+          <Section icon={UserRound} title="Fiche détaillée">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Label text="Civilité">
+                <select className="input" {...register('civility')}>
+                  <option value="">—</option>
+                  {CIVILITIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </Label>
+              <Label text="Portable">
+                <input className="input" type="tel" inputMode="tel" placeholder="+241 07 12 34 56" {...register('mobilePhone')} />
+              </Label>
+              <Label text="N° de famille">
+                <input className="input" placeholder="FAM-0012" {...register('familyNumber')} />
+              </Label>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-content">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" {...register('messagingOptOut')} /> Refuse les SMS / WhatsApp
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" {...register('deceased')} /> Décédé
+              </label>
+            </div>
+          </Section>
+        )}
 
         {!customer && canRx && (
           <Section icon={Glasses} title={tr('crm.secOptical')}>
