@@ -1255,6 +1255,23 @@ model CashTransfer {
   createdById String?
   createdAt   DateTime          @default(now())
 
+  // Détail du mouvement : type (caisse ⇄ banque, virements), compte bancaire,
+  // mode, référence du bordereau, tiers, opérateur et justificatif.
+  kind          String?      @db.VarChar(20) // CASH_IN | CASH_OUT | CASH_TO_BANK | BANK_TO_CASH | BANK_IN | BANK_OUT
+  // Vrai si le mouvement touche les espèces de la caisse (fond de caisse attendu).
+  affectsCash   Boolean      @default(true)
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  method        String?      @db.VarChar(20) // ESPECES | VIREMENT | CHEQUE | MOBILE_MONEY | DEPOT
+  reference     String?      @db.VarChar(80)
+  counterparty  String?      @db.VarChar(120)
+  handledBy     String?      @db.VarChar(120)
+  attachmentUrl String?
+  // Traçabilité : jamais supprimé, annulé avec motif (reste visible).
+  cancelledAt   DateTime?
+  cancelledById String?
+  cancelReason  String?
+
   @@index([tenantId, date])
   @@index([tenantId, branchId])
 }
@@ -1304,6 +1321,29 @@ model Employee {
   @@index([tenantId])
 }
 
+/// Compte bancaire de l'établissement : dépôts, retraits, virements et
+/// dépenses payées par la banque y sont rattachés (solde et relevé).
+model BankAccount {
+  id             String         @id @default(uuid())
+  tenantId       String
+  branchId       String?
+  bankName       String
+  accountName    String
+  accountNumber  String?
+  iban           String?
+  swift          String?
+  openingBalance Decimal        @default(0) @db.Decimal(12, 2)
+  active         Boolean        @default(true)
+  notes          String?
+  createdById    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  transfers      CashTransfer[]
+  expenses       Expense[]
+
+  @@index([tenantId])
+}
+
 model Expense {
   id          String          @id @default(uuid())
   tenantId    String
@@ -1316,6 +1356,19 @@ model Expense {
   notes       String?
   createdById String?
   createdAt   DateTime        @default(now())
+
+  // Moyen de paiement : seule une dépense payée en espèces sort de la caisse.
+  paymentSource String       @default("CASH") @db.VarChar(20) // CASH | BANK | MOBILE_MONEY | CHEQUE
+  affectsCash   Boolean      @default(true)
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  payee         String?      @db.VarChar(120)
+  reference     String?      @db.VarChar(80)
+  attachmentUrl String?
+  // Traçabilité : jamais supprimé, annulé avec motif (reste visible).
+  cancelledAt   DateTime?
+  cancelledById String?
+  cancelReason  String?
 
   @@index([tenantId, date])
   @@index([tenantId])

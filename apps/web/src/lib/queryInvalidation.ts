@@ -35,6 +35,8 @@ const FINANCIAL_KEYS = [
   ['cash-current'],
   ['expenses'],
   ['cash-transfers'],
+  ['bank-accounts'],
+  ['bank-statement'],
   ['insurer-upcoming'],
 ] as const;
 

@@ -5,6 +5,7 @@ import type {
   ExpenseCreateInput,
   ExpenseUpdateInput,
   CashTransferCreateInput,
+  BankAccountCreateInput,
   SupplierCreateInput,
   SupplierUpdateInput,
   InsurerCreateInput,
@@ -38,6 +39,18 @@ export interface Expense {
   amount: string;
   date: string;
   notes: string | null;
+  branchId?: string | null;
+  paymentSource?: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'CHEQUE';
+  payee?: string | null;
+  createdAt?: string;
+  createdByName?: string | null;
+  cancelledAt?: string | null;
+  cancelledByName?: string | null;
+  cancelReason?: string | null;
+  attachmentUrl?: string | null;
+  reference?: string | null;
+  bankAccountId?: string | null;
+  bankAccount?: { bankName: string; accountName: string } | null;
 }
 export interface Supplier {
   id: string;
@@ -124,9 +137,20 @@ export async function updateEmployee(id: string, input: EmployeeUpdateInput) {
 }
 
 // Expenses
-export async function listExpenses(branchId?: string): Promise<Expense[]> {
+export interface FinanceListFilters {
+  from?: string;
+  to?: string;
+  includeCancelled?: boolean;
+}
+
+export async function listExpenses(branchId?: string, filters: FinanceListFilters = {}): Promise<Expense[]> {
   const { data } = await api.get<{ expenses: Expense[] }>('/expenses', {
-    params: { branchId: branchId || undefined },
+    params: {
+      branchId: branchId || undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      includeCancelled: filters.includeCancelled ? 'true' : undefined,
+    },
   });
   return data.expenses;
 }
@@ -135,21 +159,107 @@ export async function listExpenses(branchId?: string): Promise<Expense[]> {
 export interface CashTransfer {
   id: string;
   direction: 'IN' | 'OUT';
+  kind: 'CASH_IN' | 'CASH_OUT' | 'CASH_TO_BANK' | 'BANK_TO_CASH' | 'BANK_IN' | 'BANK_OUT';
+  affectsCash?: boolean;
   label: string;
   amount: string;
   date: string;
   branchId: string | null;
   notes: string | null;
+  method?: string | null;
+  counterparty?: string | null;
+  handledBy?: string | null;
+  createdAt?: string;
+  createdByName?: string | null;
+  cancelledAt?: string | null;
+  cancelledByName?: string | null;
+  cancelReason?: string | null;
+  attachmentUrl?: string | null;
+  reference?: string | null;
+  bankAccountId?: string | null;
+  bankAccount?: { bankName: string; accountName: string } | null;
 }
 
-export async function listCashTransfers(branchId?: string): Promise<{
-  transfers: CashTransfer[];
-  totals: { in: number; out: number; net: number };
-}> {
-  const { data } = await api.get<{
-    transfers: CashTransfer[];
-    totals: { in: number; out: number; net: number };
-  }>('/cash-transfers', { params: branchId ? { branchId } : {} });
+export interface CashTransferTotals {
+  in: number;
+  out: number;
+  net: number;
+  cashIn: number;
+  cashOut: number;
+  bankIn: number;
+  bankOut: number;
+}
+
+export async function listCashTransfers(
+  branchId?: string,
+  filters: FinanceListFilters = {},
+): Promise<{ transfers: CashTransfer[]; totals: CashTransferTotals }> {
+  const { data } = await api.get<{ transfers: CashTransfer[]; totals: CashTransferTotals }>('/cash-transfers', {
+    params: {
+      branchId: branchId || undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      includeCancelled: filters.includeCancelled ? 'true' : undefined,
+    },
+  });
+  return data;
+}
+
+/** Annulation tracée (motif obligatoire) : l'écriture reste visible. */
+export async function cancelCashTransfer(id: string, reason: string): Promise<void> {
+  await api.post(`/cash-transfers/${id}/cancel`, { reason });
+}
+export async function cancelExpense(id: string, reason: string): Promise<void> {
+  await api.post(`/expenses/${id}/cancel`, { reason });
+}
+
+/* ------------------------------ Comptes bancaires ------------------------------ */
+
+export interface BankAccount {
+  id: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string | null;
+  iban: string | null;
+  swift: string | null;
+  openingBalance: string;
+  active: boolean;
+  notes: string | null;
+  branchId: string | null;
+  credits: number;
+  debits: number;
+  balance: number;
+  movements: number;
+}
+
+export interface BankStatementLine {
+  id: string;
+  type: 'TRANSFER' | 'EXPENSE';
+  kind: string | null;
+  label: string;
+  date: string;
+  reference: string | null;
+  counterparty: string | null;
+  signed: number;
+  balance: number;
+}
+
+export async function listBankAccounts(): Promise<BankAccount[]> {
+  const { data } = await api.get<{ accounts: BankAccount[] }>('/bank-accounts');
+  return data.accounts;
+}
+export async function createBankAccount(input: BankAccountCreateInput) {
+  const { data } = await api.post('/bank-accounts', input);
+  return data.account as BankAccount;
+}
+export async function updateBankAccount(id: string, input: Partial<BankAccountCreateInput>) {
+  const { data } = await api.patch(`/bank-accounts/${id}`, input);
+  return data.account as BankAccount;
+}
+export async function getBankStatement(id: string) {
+  const { data } = await api.get<{ openingBalance: number; balance: number; lines: BankStatementLine[] }>(
+    `/bank-accounts/${id}/statement`,
+  );
   return data;
 }
 

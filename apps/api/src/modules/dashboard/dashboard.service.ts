@@ -154,7 +154,7 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     }),
     // Les dépenses du jour réduisent le résultat réellement réalisé aujourd'hui.
     prisma.expense.aggregate({
-      where: { tenantId, ...branchFilter, date: { gte: startOfToday() } },
+      where: { tenantId, ...branchFilter, date: { gte: startOfToday() }, cancelledAt: null },
       _sum: { amount: true },
     }),
   ]);
@@ -520,6 +520,7 @@ export async function getAdminDashboard(
       where: {
         tenantId,
         date: { gte: monthStart },
+        cancelledAt: null,
         ...(opts.allBranches ? {} : { OR: [{ branchId: { in: scopedIds } }, { branchId: null }] }),
       },
       _sum: { amount: true },

@@ -31,6 +31,9 @@ async function sessionStart(db: Db, register: { id: string; branchId: string; op
 /** Filtre « magasin de la caisse (ou sans magasin) » + « saisi ou daté depuis `since` ». */
 function sessionWhere(branchId: string, since: Date) {
   return {
+    // Seules les opérations en espèces, non annulées, pèsent sur la caisse.
+    affectsCash: true,
+    cancelledAt: null,
     AND: [
       { OR: [{ branchId }, { branchId: null }] },
       { OR: [{ createdAt: { gte: since } }, { date: { gte: since } }] },

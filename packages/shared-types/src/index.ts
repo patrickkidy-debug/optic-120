@@ -2022,6 +2022,12 @@ export const expenseCreateSchema = z.object({
   date: z.string().optional().or(z.literal('')),
   branchId: z.string().uuid().optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
+  /** Moyen de paiement : seule une dépense en espèces sort de la caisse. */
+  paymentSource: z.enum(['CASH', 'BANK', 'MOBILE_MONEY', 'CHEQUE']).optional(),
+  bankAccountId: z.string().uuid().optional().or(z.literal('')),
+  payee: z.string().max(120).optional().or(z.literal('')),
+  reference: z.string().max(80).optional().or(z.literal('')),
+  attachmentUrl: z.string().max(3_000_000).optional().or(z.literal('')),
 });
 export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
 export const expenseUpdateSchema = expenseCreateSchema.partial();
@@ -2037,8 +2043,33 @@ export const TRANSFER_DIRECTION_LABELS: Record<TransferDirection, string> = {
   OUT: 'Retrait (sortie)',
 };
 
+/**
+ * Types de versement. Les deux premiers et les deux « ⇄ » touchent la caisse ;
+ * les virements reçus / émis ne concernent que le compte bancaire.
+ */
+export const TRANSFER_KINDS = ['CASH_IN', 'CASH_OUT', 'CASH_TO_BANK', 'BANK_TO_CASH', 'BANK_IN', 'BANK_OUT'] as const;
+export type TransferKind = (typeof TRANSFER_KINDS)[number];
+/** Effet d'un type de versement : sens pour la caisse, impact caisse et banque. */
+export const TRANSFER_KIND_EFFECT: Record<TransferKind, { direction: TransferDirection; affectsCash: boolean; bank: -1 | 0 | 1 }> = {
+  CASH_IN: { direction: 'IN', affectsCash: true, bank: 0 },
+  CASH_OUT: { direction: 'OUT', affectsCash: true, bank: 0 },
+  CASH_TO_BANK: { direction: 'OUT', affectsCash: true, bank: 1 },
+  BANK_TO_CASH: { direction: 'IN', affectsCash: true, bank: -1 },
+  BANK_IN: { direction: 'IN', affectsCash: false, bank: 1 },
+  BANK_OUT: { direction: 'OUT', affectsCash: false, bank: -1 },
+};
+export const TRANSFER_METHODS = ['ESPECES', 'VIREMENT', 'CHEQUE', 'MOBILE_MONEY', 'DEPOT'] as const;
+
 export const cashTransferCreateSchema = z.object({
-  direction: z.enum(TRANSFER_DIRECTIONS),
+  /** Ancien champ (apport / retrait) : déduit du type quand celui-ci est fourni. */
+  direction: z.enum(TRANSFER_DIRECTIONS).optional(),
+  kind: z.enum(TRANSFER_KINDS).optional(),
+  bankAccountId: z.string().uuid().optional().or(z.literal('')),
+  method: z.enum(TRANSFER_METHODS).optional().or(z.literal('')),
+  reference: z.string().max(80).optional().or(z.literal('')),
+  counterparty: z.string().max(120).optional().or(z.literal('')),
+  handledBy: z.string().max(120).optional().or(z.literal('')),
+  attachmentUrl: z.string().max(3_000_000).optional().or(z.literal('')),
   label: z.string().min(1).max(160),
   amount: z.number().positive(),
   date: z.string().optional().or(z.literal('')),
@@ -2046,6 +2077,22 @@ export const cashTransferCreateSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal('')),
 });
 export type CashTransferCreateInput = z.infer<typeof cashTransferCreateSchema>;
+
+/** Annulation tracée d'une dépense ou d'un versement (jamais de suppression). */
+export const financeCancelSchema = z.object({ reason: z.string().trim().min(3, 'Motif requis').max(300) });
+
+export const bankAccountCreateSchema = z.object({
+  bankName: z.string().trim().min(2).max(120),
+  accountName: z.string().trim().min(2).max(120),
+  accountNumber: z.string().max(60).optional().or(z.literal('')),
+  iban: z.string().max(60).optional().or(z.literal('')),
+  swift: z.string().max(20).optional().or(z.literal('')),
+  openingBalance: z.number().optional(),
+  branchId: z.string().uuid().optional().or(z.literal('')),
+  notes: z.string().max(500).optional().or(z.literal('')),
+  active: z.boolean().optional(),
+});
+export type BankAccountCreateInput = z.infer<typeof bankAccountCreateSchema>;
 
 /** Familles de produits qu'un fournisseur peut livrer (étiquettes de la fiche). */
 export const SUPPLIER_CATEGORIES = [

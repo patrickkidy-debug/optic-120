@@ -37,6 +37,9 @@ async function periodStart(db: TenantPrisma, r: RegisterRow): Promise<Date> {
 
 function windowWhere(branchId: string, since: Date, until: Date) {
   return {
+    // Seules les opérations en espèces, non annulées, pèsent sur la caisse.
+    affectsCash: true,
+    cancelledAt: null,
     AND: [
       { OR: [{ branchId }, { branchId: null }] },
       { OR: [{ createdAt: { gte: since, lte: until } }, { date: { gte: since, lte: until } }] },

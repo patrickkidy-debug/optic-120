@@ -5,6 +5,10 @@ import {
   expenseCreateSchema,
   expenseUpdateSchema,
   cashTransferCreateSchema,
+  financeCancelSchema,
+  bankAccountCreateSchema,
+  TRANSFER_KIND_EFFECT,
+  type TransferKind,
   supplierCreateSchema,
   supplierUpdateSchema,
   SaleType,
@@ -13,7 +17,8 @@ import {
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission, branchScope } from '../../middlewares/rbac-guard.js';
 import type { FastifyRequest } from 'fastify';
-import { notFound } from '../../lib/http-error.js';
+import { notFound, badRequest } from '../../lib/http-error.js';
+import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { insuranceRoutes } from './insurance.routes.js';
 
 /**
@@ -83,15 +88,50 @@ async function employeesRoutes(app: FastifyInstance) {
   });
 }
 
+/** Noms des personnes (saisie, annulation) pour l'historique, sans N+1. */
+async function userNames(req: FastifyRequest, ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids.filter((x): x is string => Boolean(x)))];
+  if (unique.length === 0) return new Map();
+  const users = await req.db!.user.findMany({ where: { id: { in: unique } }, select: { id: true, firstName: true, lastName: true } });
+  return new Map(users.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
+}
+
+/** Filtres communs des listes : période et écritures annulées. */
+function periodFilter(q: { from?: string; to?: string; includeCancelled?: string }) {
+  const date: Record<string, Date> = {};
+  if (q.from) date.gte = new Date(q.from);
+  if (q.to) date.lte = new Date(`${q.to}T23:59:59.999Z`);
+  return {
+    ...(Object.keys(date).length ? { date } : {}),
+    ...(q.includeCancelled === 'true' ? {} : { cancelledAt: null }),
+  };
+}
+
+/** Un compte bancaire désigné doit exister dans l'établissement. */
+async function assertBankAccount(req: FastifyRequest, id?: string | null): Promise<string | null> {
+  if (!id) return null;
+  const acc = await req.db!.bankAccount.findFirst({ where: { id }, select: { id: true } });
+  if (!acc) throw badRequest('Compte bancaire introuvable');
+  return acc.id;
+}
+
 async function expensesRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
-    const q = req.query as { branchId?: string };
+    const q = req.query as { branchId?: string; from?: string; to?: string; includeCancelled?: string };
     const expenses = await req.db!.expense.findMany({
-      where: scopeWithShared(req, q.branchId),
+      where: { AND: [scopeWithShared(req, q.branchId), periodFilter(q)] },
       orderBy: { date: 'desc' },
-      take: 300,
+      take: 500,
+      include: { bankAccount: { select: { bankName: true, accountName: true } } },
     });
-    return reply.send({ expenses });
+    const names = await userNames(req, expenses.flatMap((e) => [e.createdById, e.cancelledById]));
+    return reply.send({
+      expenses: expenses.map((e) => ({
+        ...e,
+        createdByName: e.createdById ? names.get(e.createdById) ?? null : null,
+        cancelledByName: e.cancelledById ? names.get(e.cancelledById) ?? null : null,
+      })),
+    });
   });
 
   app.get('/summary', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
@@ -101,10 +141,10 @@ async function expensesRoutes(app: FastifyInstance) {
         where: { type: SaleType.SALE, status: { in: PAID_LIKE }, createdAt: { gte: from } },
         _sum: { paidAmount: true },
       }),
-      req.db!.expense.aggregate({ where: { date: { gte: from } }, _sum: { amount: true } }),
+      req.db!.expense.aggregate({ where: { date: { gte: from }, cancelledAt: null }, _sum: { amount: true } }),
       req.db!.expense.groupBy({
         by: ['category'],
-        where: { date: { gte: from } },
+        where: { date: { gte: from }, cancelledAt: null },
         _sum: { amount: true },
       }),
     ]);
@@ -120,6 +160,9 @@ async function expensesRoutes(app: FastifyInstance) {
 
   app.post('/', { preHandler: requirePermission('finance.expenses.create') }, async (req, reply) => {
     const input = clean(expenseCreateSchema.parse(req.body));
+    const source = input.paymentSource ?? 'CASH';
+    const bankAccountId = source === 'BANK' ? await assertBankAccount(req, input.bankAccountId) : null;
+    if (source === 'BANK' && !bankAccountId) throw badRequest('Choisissez le compte bancaire débité');
     const expense = await req.db!.expense.create({
       data: {
         tenantId: req.auth!.tenantId,
@@ -130,7 +173,22 @@ async function expensesRoutes(app: FastifyInstance) {
         branchId: input.branchId ?? null,
         notes: input.notes ?? null,
         createdById: req.auth!.userId,
+        paymentSource: source,
+        affectsCash: source === 'CASH',
+        bankAccountId,
+        payee: input.payee ?? null,
+        reference: input.reference ?? null,
+        attachmentUrl: input.attachmentUrl ?? null,
       },
+    });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'EXPENSE_CREATED',
+      entity: 'Expense',
+      entityId: expense.id,
+      metadata: { label: expense.label, amount: Number(expense.amount), source },
+      ...requestMeta(req),
     });
     return reply.status(201).send({ expense });
   });
@@ -138,68 +196,282 @@ async function expensesRoutes(app: FastifyInstance) {
   app.patch('/:id', { preHandler: requirePermission('finance.expenses.update') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = clean(expenseUpdateSchema.parse(req.body));
+    const existing = await req.db!.expense.findFirst({ where: { id } });
+    if (!existing) throw notFound('Dépense introuvable');
+    if (existing.cancelledAt) throw badRequest('Dépense annulée : modification impossible');
     const data: Record<string, unknown> = { ...input };
     if ('date' in input) data.date = toDate(input.date as string) ?? new Date();
-    const res = await req.db!.expense.updateMany({ where: { id }, data });
-    if (res.count === 0) throw notFound('Dépense introuvable');
+    if (input.paymentSource) {
+      data.affectsCash = input.paymentSource === 'CASH';
+      data.bankAccountId = input.paymentSource === 'BANK' ? await assertBankAccount(req, input.bankAccountId ?? existing.bankAccountId) : null;
+    } else if ('bankAccountId' in input) {
+      data.bankAccountId = await assertBankAccount(req, input.bankAccountId);
+    }
+    await req.db!.expense.updateMany({ where: { id }, data });
     const expense = await req.db!.expense.findFirst({ where: { id } });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'EXPENSE_UPDATED',
+      entity: 'Expense',
+      entityId: id,
+      metadata: { before: { label: existing.label, amount: Number(existing.amount) }, changes: Object.keys(input) },
+      ...requestMeta(req),
+    });
     return reply.send({ expense });
   });
 
-  app.delete('/:id', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+  // Annulation tracée (motif obligatoire) : l'écriture reste visible, barrée.
+  const cancelExpense = async (req: FastifyRequest, reason: string) => {
     const { id } = req.params as { id: string };
-    const res = await req.db!.expense.deleteMany({ where: { id } });
-    if (res.count === 0) throw notFound('Dépense introuvable');
+    const res = await req.db!.expense.updateMany({
+      where: { id, cancelledAt: null },
+      data: { cancelledAt: new Date(), cancelledById: req.auth!.userId, cancelReason: reason },
+    });
+    if (res.count === 0) throw notFound('Dépense introuvable ou déjà annulée');
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'EXPENSE_CANCELLED',
+      entity: 'Expense',
+      entityId: id,
+      metadata: { reason },
+      ...requestMeta(req),
+    });
+  };
+  app.post('/:id/cancel', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+    await cancelExpense(req, financeCancelSchema.parse(req.body).reason);
+    return reply.send({ ok: true });
+  });
+  // Compatibilité : l'ancienne suppression devient une annulation tracée.
+  app.delete('/:id', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+    await cancelExpense(req, 'Supprimée (sans motif)');
     return reply.send({ ok: true });
   });
 }
 
 /**
- * Versements de caisse : apports et retraits d'argent qui ne sont ni des
- * ventes ni des charges d'exploitation. Réutilise les permissions Finance —
- * qui gère les dépenses gère aussi les versements.
+ * Versements : apports et retraits d'espèces, dépôts et retraits bancaires,
+ * virements reçus et émis. Réutilise les permissions Finance — qui gère les
+ * dépenses gère aussi les versements.
  */
 async function cashTransfersRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
-    const q = req.query as { branchId?: string };
+    const q = req.query as { branchId?: string; from?: string; to?: string; includeCancelled?: string };
     const transfers = await req.db!.cashTransfer.findMany({
-      where: scopeWithShared(req, q.branchId),
+      where: { AND: [scopeWithShared(req, q.branchId), periodFilter(q)] },
       orderBy: { date: 'desc' },
-      take: 300,
+      take: 500,
+      include: { bankAccount: { select: { bankName: true, accountName: true } } },
     });
-    const totals = transfers.reduce(
-      (acc, t) => {
-        if (t.direction === 'IN') acc.in += Number(t.amount);
-        else acc.out += Number(t.amount);
-        return acc;
-      },
-      { in: 0, out: 0 },
-    );
-    return reply.send({ transfers, totals: { ...totals, net: totals.in - totals.out } });
+    const names = await userNames(req, transfers.flatMap((t) => [t.createdById, t.cancelledById]));
+    // Totaux sur les écritures valides : caisse (espèces) et banque séparées.
+    const totals = { in: 0, out: 0, cashIn: 0, cashOut: 0, bankIn: 0, bankOut: 0 };
+    for (const t of transfers) {
+      if (t.cancelledAt) continue;
+      const amount = Number(t.amount);
+      if (t.direction === 'IN') totals.in += amount;
+      else totals.out += amount;
+      if (t.affectsCash) {
+        if (t.direction === 'IN') totals.cashIn += amount;
+        else totals.cashOut += amount;
+      }
+      const kind = (t.kind ?? (t.direction === 'IN' ? 'CASH_IN' : 'CASH_OUT')) as TransferKind;
+      const bank = TRANSFER_KIND_EFFECT[kind]?.bank ?? 0;
+      if (bank > 0) totals.bankIn += amount;
+      if (bank < 0) totals.bankOut += amount;
+    }
+    return reply.send({
+      transfers: transfers.map((t) => ({
+        ...t,
+        kind: t.kind ?? (t.direction === 'IN' ? 'CASH_IN' : 'CASH_OUT'),
+        createdByName: t.createdById ? names.get(t.createdById) ?? null : null,
+        cancelledByName: t.cancelledById ? names.get(t.cancelledById) ?? null : null,
+      })),
+      totals: { ...totals, net: totals.in - totals.out },
+    });
   });
 
   app.post('/', { preHandler: requirePermission('finance.expenses.create') }, async (req, reply) => {
     const input = clean(cashTransferCreateSchema.parse(req.body));
+    const kind: TransferKind = input.kind ?? (input.direction === 'OUT' ? 'CASH_OUT' : 'CASH_IN');
+    const effect = TRANSFER_KIND_EFFECT[kind];
+    const bankAccountId = await assertBankAccount(req, input.bankAccountId);
+    if (effect.bank !== 0 && !bankAccountId) throw badRequest('Choisissez le compte bancaire concerné');
     const transfer = await req.db!.cashTransfer.create({
       data: {
         tenantId: req.auth!.tenantId,
-        direction: input.direction,
+        direction: effect.direction,
+        kind,
+        affectsCash: effect.affectsCash,
+        bankAccountId: effect.bank !== 0 ? bankAccountId : null,
         label: input.label,
         amount: input.amount,
         date: toDate(input.date) ?? new Date(),
         branchId: input.branchId || null,
         notes: input.notes ?? null,
+        method: input.method || null,
+        reference: input.reference ?? null,
+        counterparty: input.counterparty ?? null,
+        handledBy: input.handledBy ?? null,
+        attachmentUrl: input.attachmentUrl ?? null,
         createdById: req.auth!.userId,
       },
+    });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'CASH_TRANSFER_CREATED',
+      entity: 'CashTransfer',
+      entityId: transfer.id,
+      metadata: { kind, label: transfer.label, amount: Number(transfer.amount), reference: transfer.reference },
+      ...requestMeta(req),
     });
     return reply.status(201).send({ transfer });
   });
 
-  app.delete('/:id', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+  const cancelTransfer = async (req: FastifyRequest, reason: string) => {
     const { id } = req.params as { id: string };
-    const res = await req.db!.cashTransfer.deleteMany({ where: { id } });
-    if (res.count === 0) throw notFound('Versement introuvable');
+    const res = await req.db!.cashTransfer.updateMany({
+      where: { id, cancelledAt: null },
+      data: { cancelledAt: new Date(), cancelledById: req.auth!.userId, cancelReason: reason },
+    });
+    if (res.count === 0) throw notFound('Versement introuvable ou déjà annulé');
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'CASH_TRANSFER_CANCELLED',
+      entity: 'CashTransfer',
+      entityId: id,
+      metadata: { reason },
+      ...requestMeta(req),
+    });
+  };
+  app.post('/:id/cancel', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+    await cancelTransfer(req, financeCancelSchema.parse(req.body).reason);
     return reply.send({ ok: true });
+  });
+  app.delete('/:id', { preHandler: requirePermission('finance.expenses.delete') }, async (req, reply) => {
+    await cancelTransfer(req, 'Supprimé (sans motif)');
+    return reply.send({ ok: true });
+  });
+}
+
+/** Mouvements bancaires valides d'un ou plusieurs comptes (signés : + crédit, - débit). */
+async function bankMovements(req: FastifyRequest, accountIds: string[]) {
+  const [transfers, expenses] = await Promise.all([
+    req.db!.cashTransfer.findMany({
+      where: { bankAccountId: { in: accountIds }, cancelledAt: null },
+      select: { id: true, bankAccountId: true, kind: true, label: true, amount: true, date: true, reference: true, counterparty: true, method: true },
+    }),
+    req.db!.expense.findMany({
+      where: { bankAccountId: { in: accountIds }, paymentSource: 'BANK', cancelledAt: null },
+      select: { id: true, bankAccountId: true, label: true, amount: true, date: true, reference: true, payee: true, category: true },
+    }),
+  ]);
+  return [
+    ...transfers.map((t) => ({
+      id: t.id,
+      type: 'TRANSFER' as const,
+      bankAccountId: t.bankAccountId!,
+      kind: t.kind,
+      label: t.label,
+      date: t.date,
+      reference: t.reference,
+      counterparty: t.counterparty,
+      method: t.method,
+      signed: (TRANSFER_KIND_EFFECT[(t.kind ?? 'CASH_IN') as TransferKind]?.bank ?? 0) * Number(t.amount),
+    })),
+    ...expenses.map((e) => ({
+      id: e.id,
+      type: 'EXPENSE' as const,
+      bankAccountId: e.bankAccountId!,
+      kind: 'EXPENSE',
+      label: e.label,
+      date: e.date,
+      reference: e.reference,
+      counterparty: e.payee,
+      method: null,
+      signed: -Number(e.amount),
+    })),
+  ].filter((m) => m.signed !== 0);
+}
+
+/** Comptes bancaires de l'établissement : coordonnées, solde, relevé. */
+async function bankAccountsRoutes(app: FastifyInstance) {
+  app.get('/', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
+    const accounts = await req.db!.bankAccount.findMany({ orderBy: [{ active: 'desc' }, { bankName: 'asc' }] });
+    const moves = accounts.length ? await bankMovements(req, accounts.map((a) => a.id)) : [];
+    return reply.send({
+      accounts: accounts.map((a) => {
+        const mine = moves.filter((m) => m.bankAccountId === a.id);
+        const credits = mine.filter((m) => m.signed > 0).reduce((s, m) => s + m.signed, 0);
+        const debits = mine.filter((m) => m.signed < 0).reduce((s, m) => s - m.signed, 0);
+        return { ...a, credits, debits, balance: Number(a.openingBalance) + credits - debits, movements: mine.length };
+      }),
+    });
+  });
+
+  app.get('/:id/statement', { preHandler: requirePermission('finance.expenses.view') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const account = await req.db!.bankAccount.findFirst({ where: { id } });
+    if (!account) throw notFound('Compte bancaire introuvable');
+    const moves = (await bankMovements(req, [id])).sort((a, b) => a.date.getTime() - b.date.getTime());
+    let balance = Number(account.openingBalance);
+    const lines = moves.map((m) => {
+      balance += m.signed;
+      return { ...m, balance };
+    });
+    return reply.send({ account, openingBalance: Number(account.openingBalance), lines: lines.reverse(), balance });
+  });
+
+  app.post('/', { preHandler: requirePermission('finance.expenses.create') }, async (req, reply) => {
+    const input = clean(bankAccountCreateSchema.parse(req.body));
+    const account = await req.db!.bankAccount.create({
+      data: {
+        tenantId: req.auth!.tenantId,
+        bankName: input.bankName,
+        accountName: input.accountName,
+        accountNumber: input.accountNumber ?? null,
+        iban: input.iban ?? null,
+        swift: input.swift ?? null,
+        openingBalance: input.openingBalance ?? 0,
+        branchId: input.branchId || null,
+        notes: input.notes ?? null,
+        createdById: req.auth!.userId,
+      },
+    });
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'BANK_ACCOUNT_CREATED',
+      entity: 'BankAccount',
+      entityId: account.id,
+      metadata: { bankName: account.bankName, accountName: account.accountName },
+      ...requestMeta(req),
+    });
+    return reply.status(201).send({ account });
+  });
+
+  app.patch('/:id', { preHandler: requirePermission('finance.expenses.update') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = clean(bankAccountCreateSchema.partial().parse(req.body));
+    const res = await req.db!.bankAccount.updateMany({
+      where: { id },
+      data: { ...input, ...(input.branchId !== undefined ? { branchId: input.branchId || null } : {}) },
+    });
+    if (res.count === 0) throw notFound('Compte bancaire introuvable');
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'BANK_ACCOUNT_UPDATED',
+      entity: 'BankAccount',
+      entityId: id,
+      metadata: { changes: Object.keys(input) },
+      ...requestMeta(req),
+    });
+    const account = await req.db!.bankAccount.findFirst({ where: { id } });
+    return reply.send({ account });
   });
 }
 
@@ -333,6 +605,7 @@ export async function managementRoutes(app: FastifyInstance): Promise<void> {
   await app.register(employeesRoutes, { prefix: '/employees' });
   await app.register(expensesRoutes, { prefix: '/expenses' });
   await app.register(cashTransfersRoutes, { prefix: '/cash-transfers' });
+  await app.register(bankAccountsRoutes, { prefix: '/bank-accounts' });
   await app.register(suppliersRoutes, { prefix: '/suppliers' });
   // Assurances : contrats, garanties, bénéficiaires, prises en charge et
   // remboursements — voir insurance.routes.ts.
