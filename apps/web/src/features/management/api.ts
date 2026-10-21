@@ -40,7 +40,7 @@ export interface Expense {
   date: string;
   notes: string | null;
   branchId?: string | null;
-  paymentSource?: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'CHEQUE';
+  paymentSource?: 'CASH' | 'BANK' | 'MOBILE_MONEY' | 'CHEQUE' | 'CARD';
   payee?: string | null;
   createdAt?: string;
   createdByName?: string | null;
@@ -50,7 +50,8 @@ export interface Expense {
   attachmentUrl?: string | null;
   reference?: string | null;
   bankAccountId?: string | null;
-  bankAccount?: { bankName: string; accountName: string } | null;
+  bankAccount?: { bankName: string; accountName: string; type?: string; provider?: string | null } | null;
+  links?: { label?: string; url: string }[] | null;
 }
 export interface Supplier {
   id: string;
@@ -159,7 +160,9 @@ export async function listExpenses(branchId?: string, filters: FinanceListFilter
 export interface CashTransfer {
   id: string;
   direction: 'IN' | 'OUT';
-  kind: 'CASH_IN' | 'CASH_OUT' | 'CASH_TO_BANK' | 'BANK_TO_CASH' | 'BANK_IN' | 'BANK_OUT';
+  kind: 'CASH_IN' | 'CASH_OUT' | 'CASH_TO_BANK' | 'BANK_TO_CASH' | 'BANK_IN' | 'BANK_OUT' | 'ACCOUNT_TRANSFER';
+  toAccountId?: string | null;
+  toAccount?: { bankName: string; accountName: string; type?: string; provider?: string | null } | null;
   affectsCash?: boolean;
   label: string;
   amount: string;
@@ -177,7 +180,8 @@ export interface CashTransfer {
   attachmentUrl?: string | null;
   reference?: string | null;
   bankAccountId?: string | null;
-  bankAccount?: { bankName: string; accountName: string } | null;
+  bankAccount?: { bankName: string; accountName: string; type?: string; provider?: string | null } | null;
+  links?: { label?: string; url: string }[] | null;
 }
 
 export interface CashTransferTotals {
@@ -217,6 +221,9 @@ export async function cancelExpense(id: string, reason: string): Promise<void> {
 
 export interface BankAccount {
   id: string;
+  type: 'BANK' | 'MOBILE_MONEY' | 'SAFE' | 'OTHER';
+  provider: string | null;
+  phoneNumber: string | null;
   bankName: string;
   accountName: string;
   accountNumber: string | null;
@@ -242,6 +249,20 @@ export interface BankStatementLine {
   counterparty: string | null;
   signed: number;
   balance: number;
+}
+
+export interface FinanceHistoryEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+  user?: { firstName: string; lastName: string } | null;
+}
+/** Historique d'une écriture (création, modification, annulation). */
+export async function getFinanceHistory(entity: 'Expense' | 'CashTransfer', id: string) {
+  const { data } = await api.get<{ history: FinanceHistoryEntry[] }>(`/cash-transfers/history/${entity}/${id}`);
+  return data.history;
 }
 
 export async function listBankAccounts(): Promise<BankAccount[]> {

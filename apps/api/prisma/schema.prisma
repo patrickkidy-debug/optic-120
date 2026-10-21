@@ -1261,8 +1261,13 @@ model CashTransfer {
   // Vrai si le mouvement touche les espèces de la caisse (fond de caisse attendu).
   affectsCash   Boolean      @default(true)
   bankAccountId String?
-  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
-  method        String?      @db.VarChar(20) // ESPECES | VIREMENT | CHEQUE | MOBILE_MONEY | DEPOT
+  bankAccount   BankAccount? @relation("TransferFromAccount", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  // Virement de compte à compte (ex. banque → Orange Money) : compte crédité.
+  toAccountId   String?
+  toAccount     BankAccount? @relation("TransferToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  // Pièces justificatives en LIENS (Drive, Dropbox…) : aucun stockage OculoSaaS.
+  links         Json?
+  method        String?      @db.VarChar(20) // ESPECES | VIREMENT | CHEQUE | MOBILE_MONEY | DEPOT | CARTE
   reference     String?      @db.VarChar(80)
   counterparty  String?      @db.VarChar(120)
   handledBy     String?      @db.VarChar(120)
@@ -1327,6 +1332,10 @@ model BankAccount {
   id             String         @id @default(uuid())
   tenantId       String
   branchId       String?
+  // Type de compte : banque, mobile money (Orange Money, Wave…), coffre, autre.
+  type           String         @default("BANK") @db.VarChar(20) // BANK | MOBILE_MONEY | SAFE | OTHER
+  provider       String?        @db.VarChar(30) // ORANGE_MONEY | WAVE | MTN_MOMO | MOOV_MONEY | AIRTEL_MONEY | FREE_MONEY…
+  phoneNumber    String?        @db.VarChar(40)
   bankName       String
   accountName    String
   accountNumber  String?
@@ -1338,8 +1347,9 @@ model BankAccount {
   createdById    String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
-  transfers      CashTransfer[]
-  expenses       Expense[]
+  transfers         CashTransfer[] @relation("TransferFromAccount")
+  incomingTransfers CashTransfer[] @relation("TransferToAccount")
+  expenses          Expense[]
 
   @@index([tenantId])
 }
@@ -1365,6 +1375,8 @@ model Expense {
   payee         String?      @db.VarChar(120)
   reference     String?      @db.VarChar(80)
   attachmentUrl String?
+  // Pièces justificatives en LIENS (Drive, Dropbox…) : aucun stockage OculoSaaS.
+  links         Json?
   // Traçabilité : jamais supprimé, annulé avec motif (reste visible).
   cancelledAt   DateTime?
   cancelledById String?

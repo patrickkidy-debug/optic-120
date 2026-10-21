@@ -2015,6 +2015,13 @@ export const expenseCategoryEnum = z.enum([
   ExpenseCategory.OTHER,
 ]);
 
+/** Lien vers un justificatif hébergé ailleurs (Google Drive, Dropbox, WhatsApp…). */
+export const financeLinkSchema = z.object({
+  label: z.string().max(80).optional().or(z.literal('')),
+  url: z.string().trim().url('Lien invalide').max(1000),
+});
+export type FinanceLink = z.infer<typeof financeLinkSchema>;
+
 export const expenseCreateSchema = z.object({
   category: expenseCategoryEnum,
   label: z.string().min(1).max(160),
@@ -2023,11 +2030,13 @@ export const expenseCreateSchema = z.object({
   branchId: z.string().uuid().optional(),
   notes: z.string().max(1000).optional().or(z.literal('')),
   /** Moyen de paiement : seule une dépense en espèces sort de la caisse. */
-  paymentSource: z.enum(['CASH', 'BANK', 'MOBILE_MONEY', 'CHEQUE']).optional(),
+  paymentSource: z.enum(['CASH', 'BANK', 'MOBILE_MONEY', 'CHEQUE', 'CARD']).optional(),
   bankAccountId: z.string().uuid().optional().or(z.literal('')),
   payee: z.string().max(120).optional().or(z.literal('')),
   reference: z.string().max(80).optional().or(z.literal('')),
   attachmentUrl: z.string().max(3_000_000).optional().or(z.literal('')),
+  /** Justificatifs en liens (Drive, Dropbox…) : rien n'est stocké chez OculoSaaS. */
+  links: z.array(financeLinkSchema).max(10).optional(),
 });
 export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
 export const expenseUpdateSchema = expenseCreateSchema.partial();
@@ -2047,7 +2056,7 @@ export const TRANSFER_DIRECTION_LABELS: Record<TransferDirection, string> = {
  * Types de versement. Les deux premiers et les deux « ⇄ » touchent la caisse ;
  * les virements reçus / émis ne concernent que le compte bancaire.
  */
-export const TRANSFER_KINDS = ['CASH_IN', 'CASH_OUT', 'CASH_TO_BANK', 'BANK_TO_CASH', 'BANK_IN', 'BANK_OUT'] as const;
+export const TRANSFER_KINDS = ['CASH_IN', 'CASH_OUT', 'CASH_TO_BANK', 'BANK_TO_CASH', 'BANK_IN', 'BANK_OUT', 'ACCOUNT_TRANSFER'] as const;
 export type TransferKind = (typeof TRANSFER_KINDS)[number];
 /** Effet d'un type de versement : sens pour la caisse, impact caisse et banque. */
 export const TRANSFER_KIND_EFFECT: Record<TransferKind, { direction: TransferDirection; affectsCash: boolean; bank: -1 | 0 | 1 }> = {
@@ -2057,14 +2066,23 @@ export const TRANSFER_KIND_EFFECT: Record<TransferKind, { direction: TransferDir
   BANK_TO_CASH: { direction: 'IN', affectsCash: true, bank: -1 },
   BANK_IN: { direction: 'IN', affectsCash: false, bank: 1 },
   BANK_OUT: { direction: 'OUT', affectsCash: false, bank: -1 },
+  // Compte → compte : débite le compte source, crédite le compte destinataire.
+  ACCOUNT_TRANSFER: { direction: 'OUT', affectsCash: false, bank: -1 },
 };
-export const TRANSFER_METHODS = ['ESPECES', 'VIREMENT', 'CHEQUE', 'MOBILE_MONEY', 'DEPOT'] as const;
+export const TRANSFER_METHODS = ['ESPECES', 'VIREMENT', 'CHEQUE', 'MOBILE_MONEY', 'DEPOT', 'CARTE'] as const;
+/** Types de comptes et opérateurs proposés. */
+export const PAYMENT_ACCOUNT_TYPES = ['BANK', 'MOBILE_MONEY', 'SAFE', 'OTHER'] as const;
+export const MOBILE_MONEY_PROVIDERS = ['ORANGE_MONEY', 'WAVE', 'MTN_MOMO', 'MOOV_MONEY', 'AIRTEL_MONEY', 'FREE_MONEY', 'T_MONEY', 'OTHER'] as const;
 
 export const cashTransferCreateSchema = z.object({
   /** Ancien champ (apport / retrait) : déduit du type quand celui-ci est fourni. */
   direction: z.enum(TRANSFER_DIRECTIONS).optional(),
   kind: z.enum(TRANSFER_KINDS).optional(),
   bankAccountId: z.string().uuid().optional().or(z.literal('')),
+  /** Compte crédité d'un virement de compte à compte. */
+  toAccountId: z.string().uuid().optional().or(z.literal('')),
+  /** Justificatifs en liens (Drive, Dropbox…) : rien n'est stocké chez OculoSaaS. */
+  links: z.array(financeLinkSchema).max(10).optional(),
   method: z.enum(TRANSFER_METHODS).optional().or(z.literal('')),
   reference: z.string().max(80).optional().or(z.literal('')),
   counterparty: z.string().max(120).optional().or(z.literal('')),
@@ -2082,6 +2100,9 @@ export type CashTransferCreateInput = z.infer<typeof cashTransferCreateSchema>;
 export const financeCancelSchema = z.object({ reason: z.string().trim().min(3, 'Motif requis').max(300) });
 
 export const bankAccountCreateSchema = z.object({
+  type: z.enum(PAYMENT_ACCOUNT_TYPES).optional(),
+  provider: z.enum(MOBILE_MONEY_PROVIDERS).optional().or(z.literal('')),
+  phoneNumber: z.string().max(40).optional().or(z.literal('')),
   bankName: z.string().trim().min(2).max(120),
   accountName: z.string().trim().min(2).max(120),
   accountNumber: z.string().max(60).optional().or(z.literal('')),
