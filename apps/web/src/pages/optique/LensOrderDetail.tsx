@@ -237,12 +237,6 @@ export function LensOrderDetail({
               )}
               {order.odLens && <p className="text-content">{tr('ui.LensOrderDetail.od')} {order.odLens}</p>}
               {order.ogLens && <p className="text-content">{tr('ui.LensOrderDetail.og')} {order.ogLens}</p>}
-              {order.lensConfig?.priceBreakdown && (
-                <p className="mt-1.5 flex items-center gap-1 border-t pt-1.5 text-xs text-content-muted">
-                  <Receipt className="h-3 w-3" /> {tr('ui.LensOrderDetail.verres')} {formatCurrency(order.lensConfig.priceBreakdown.base)} {tr('ui.LensOrderDetail.traitements')}{' '}
-                  {formatCurrency(order.lensConfig.priceBreakdown.treatments)}
-                </p>
-              )}
             </div>
           )}
 

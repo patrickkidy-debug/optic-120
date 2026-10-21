@@ -30,11 +30,11 @@ import {
   lensIndicesForMaterial,
   lensBaseOptions,
   lensBaseLabel,
-  computeLensOrderPrice,
 } from '@oculo/shared-types';
 import {
   createLensOrder,
   createPrescription,
+  getCustomer,
   listPrescriptions,
   listProducts,
   type Product,
@@ -371,7 +371,8 @@ export function LensOrderForm({
   const [rxSaveWarning, setRxSaveWarning] = useState('');
   const canSeeRx = usePermission('optique.prescriptions.view');
   const canCreateRx = usePermission('optique.prescriptions.create');
-  const [showPriceDetail, setShowPriceDetail] = useState(false);
+  // Vente du client d'où vient le prix des verres (la plus récente par défaut).
+  const [saleId, setSaleId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [createdOrder, setCreatedOrder] = useState<LensOrder | null>(null);
 
@@ -403,7 +404,27 @@ export function LensOrderForm({
     setRxFromClient(p.id);
   }
 
-  const price = computeLensOrderPrice(pricing, { lensType: ltype, index: lindex, treatments: treats });
+  // Prix réel : montant des verres (ou lentilles) facturés au client sur sa
+  // vente, et non une estimation tarifaire — un seul montant fait foi.
+  const { data: customerFile } = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => getCustomer(customerId!),
+    enabled: Boolean(customerId),
+  });
+  const saleCategory = category === 'VERRES' ? 'VERRE' : category === 'LENTILLES' ? 'LENTILLE' : null;
+  const linkedSales = (customerFile?.sales ?? [])
+    .filter((s) => s.type !== 'RETURN' && s.status !== 'CANCELLED')
+    .map((s) => ({
+      id: s.id,
+      number: s.number,
+      type: s.type,
+      createdAt: s.createdAt,
+      amount: s.items
+        .filter((i) => i.product.category === saleCategory)
+        .reduce((sum, i) => sum + Number(i.lineTotal), 0),
+    }))
+    .filter((s) => s.amount > 0);
+  const linkedSale = linkedSales.find((s) => s.id === saleId) ?? linkedSales[0] ?? null;
   const treatLabels = LENS_TREATMENTS.filter((t) => treats.includes(t.key)).map((t) => t.label);
   const configDesc =
     `Verres ${typeLabel.toLowerCase()}${lmaterial ? ` ${lmaterial}` : ''} indice ${lindex}` +
@@ -446,7 +467,7 @@ export function LensOrderForm({
   }
 
   const finalDescription = isVerres ? configDesc : description.trim();
-  const finalCost = isVerres ? price.total : Number(cost) || undefined;
+  const finalCost = saleCategory ? linkedSale?.amount : Number(cost) || undefined;
 
   const lensConfig: LensOrderConfig | undefined = isVerres
     ? {
@@ -475,7 +496,6 @@ export function LensOrderForm({
               },
             }
           : undefined,
-        priceBreakdown: price,
       }
     : undefined;
 
@@ -507,7 +527,8 @@ export function LensOrderForm({
         supplierName: supplierName || undefined,
         expectedAt: expectedAt || undefined,
         cost: finalCost,
-        notes: notes || undefined,
+        // Trace la vente d'où vient le prix.
+        notes: [linkedSale && saleCategory ? `Vente ${linkedSale.number}` : '', notes].filter(Boolean).join(' — ') || undefined,
         odLens: isVerres && odSummary ? odSummary : undefined,
         ogLens: isVerres && ogSummary ? ogSummary : undefined,
         frameProductId: frame?.id,
@@ -601,6 +622,7 @@ export function LensOrderForm({
                   value={customerId}
                   onChange={(id, c) => {
                     setCustomerId(id);
+                    setSaleId(null);
                     setCustomerLabel(c ? `${c.firstName} ${c.lastName}` : '');
                     setRxFromClient(null);
                   }}
@@ -712,7 +734,7 @@ export function LensOrderForm({
                   <span className="label flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.traitements')}</span>
                   <div className="grid grid-cols-2 gap-2">
                     {LENS_TREATMENTS.map((t) => (
-                      <TreatmentChip key={t.key} label={t.label} price={pricing[t.key] ?? 0} active={treats.includes(t.key)} onClick={() => toggleTreatment(t.key)} />
+                      <TreatmentChip key={t.key} label={t.label} price={0} active={treats.includes(t.key)} onClick={() => toggleTreatment(t.key)} />
                     ))}
                   </div>
                 </div>
@@ -802,24 +824,40 @@ export function LensOrderForm({
                 </div>
               </dl>
               <div className="mt-3 border-t pt-3">
-                <div className="flex items-center justify-between">
-                  <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-faint">
-                    <Receipt className="h-3.5 w-3.5" /> {tr('ui.LensOrderForm.prixEstime')}
-                  </p>
-                  {isVerres && (
-                    <button type="button" onClick={() => setShowPriceDetail((v) => !v)} className="text-[11px] font-medium text-primary hover:underline">
-                      {tr('ui.LensOrderForm.voirLeDetail')}
-                    </button>
-                  )}
-                </div>
-                <p className="font-display text-2xl font-extrabold text-gradient">
-                  {formatCurrency(isVerres ? price.total : Number(cost) || 0)}
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-faint">
+                  <Receipt className="h-3.5 w-3.5" /> {saleCategory ? 'Prix de la vente' : 'Montant'}
                 </p>
-                {isVerres && showPriceDetail && (
-                  <div className="mt-1.5 space-y-1 text-xs text-content-muted">
-                    <div className="flex justify-between"><span>{tr('ui.LensOrderForm.prixVerres')}</span><span>{formatCurrency(price.base)}</span></div>
-                    <div className="flex justify-between"><span>{tr('ui.LensOrderForm.traitements')}</span><span>+{formatCurrency(price.treatments)}</span></div>
-                  </div>
+                {saleCategory ? (
+                  linkedSale ? (
+                    <>
+                      <p className="font-display text-2xl font-extrabold text-gradient">{formatCurrency(linkedSale.amount)}</p>
+                      {linkedSales.length > 1 ? (
+                        <select
+                          className="input mt-1.5 py-1.5 text-xs"
+                          value={linkedSale.id}
+                          onChange={(e) => setSaleId(e.target.value)}
+                        >
+                          {linkedSales.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.type === 'QUOTE' ? 'Devis' : 'Vente'} {s.number} · {formatDate(s.createdAt)} · {formatCurrency(s.amount)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-content-muted">
+                          {linkedSale.type === 'QUOTE' ? 'Devis' : 'Vente'} {linkedSale.number} du {formatDate(linkedSale.createdAt)}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="mt-1 text-xs text-content-muted">
+                      {customerId
+                        ? 'Aucune vente de verres pour ce client : montant laissé vide.'
+                        : 'Choisissez le client : le prix des verres de sa vente sera repris.'}
+                    </p>
+                  )
+                ) : (
+                  <p className="font-display text-2xl font-extrabold text-gradient">{formatCurrency(Number(cost) || 0)}</p>
                 )}
               </div>
             </div>
