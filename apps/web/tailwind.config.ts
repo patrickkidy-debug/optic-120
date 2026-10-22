@@ -45,7 +45,9 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Manrope', 'Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        // Police des titres pilotée par --font-display (voir styles/index.css) :
+        // permet une police différente pour les comptes bêta.
+        display: ['var(--font-display)'],
       },
       borderRadius: {
         lg: '0.65rem',
