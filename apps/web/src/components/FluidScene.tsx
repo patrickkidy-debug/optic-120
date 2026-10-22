@@ -53,19 +53,38 @@ const LINKS: [number, number][] = [
   [7, 9], [8, 10], [6, 11], [10, 11], [11, 12], [12, 13], [3, 13], [8, 9],
 ];
 
-export function FluidScene({ layout = 'right', className = '' }: { layout?: 'right' | 'spread'; className?: string }) {
+export function FluidScene({
+  layout = 'right',
+  tone = 'dark',
+  className = '',
+}: {
+  layout?: 'right' | 'spread';
+  /** Fond nuit violette (dark) ou clair lavande / rose / pêche (light). */
+  tone?: 'dark' | 'light';
+  className?: string;
+}) {
+  const light = tone === 'light';
   const blobs = layout === 'right' ? BLOBS_RIGHT : BLOBS_SPREAD;
   const ribbon =
     layout === 'right'
       ? 'M 38 108 C 52 78, 48 58, 66 44 S 92 22, 104 -6'
       : 'M -6 82 C 18 62, 34 74, 52 54 S 84 18, 106 10';
   return (
-    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
-      {/* Fond : nuit violette profonde, halos de la marque */}
-      <div className="absolute inset-0 bg-[linear-gradient(160deg,#07031a_0%,#140735_40%,#24094f_72%,#2e0b5e_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(60%_55%_at_82%_8%,rgba(124,58,237,0.55)_0%,transparent_70%),radial-gradient(50%_45%_at_8%_92%,rgba(219,39,119,0.35)_0%,transparent_70%),radial-gradient(40%_40%_at_96%_96%,rgba(249,115,22,0.28)_0%,transparent_70%)]" />
-      {/* Aurore : lumière tournante très douce */}
-      <div className="absolute left-1/2 top-1/2 h-[160%] w-[160%] -translate-x-1/2 -translate-y-1/2 opacity-[0.22] blur-[90px] [background:conic-gradient(from_0deg,#7c3aed,#d946ef,#f97316,#22d3ee,#7c3aed)]" />
+    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${light ? 'fluid-light' : ''} ${className}`}>
+      {/* Fond : nuit violette profonde (ou lavande claire), halos de la marque */}
+      {light ? (
+        <>
+          <div className="absolute inset-0 bg-[linear-gradient(160deg,#faf5ff_0%,#f5f0ff_35%,#fdf2f8_70%,#fff7ed_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(55%_50%_at_85%_10%,rgba(167,139,250,0.35)_0%,transparent_70%),radial-gradient(45%_45%_at_5%_95%,rgba(244,114,182,0.22)_0%,transparent_70%),radial-gradient(40%_40%_at_96%_96%,rgba(251,146,60,0.2)_0%,transparent_70%)]" />
+        </>
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[linear-gradient(160deg,#07031a_0%,#140735_40%,#24094f_72%,#2e0b5e_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_55%_at_82%_8%,rgba(124,58,237,0.55)_0%,transparent_70%),radial-gradient(50%_45%_at_8%_92%,rgba(219,39,119,0.35)_0%,transparent_70%),radial-gradient(40%_40%_at_96%_96%,rgba(249,115,22,0.28)_0%,transparent_70%)]" />
+        </>
+      )}
+      {/* Aurore : lumière très douce */}
+      <div className={`absolute left-1/2 top-1/2 h-[160%] w-[160%] -translate-x-1/2 -translate-y-1/2 blur-[90px] [background:conic-gradient(from_0deg,#7c3aed,#d946ef,#f97316,#22d3ee,#7c3aed)] ${light ? 'opacity-[0.12]' : 'opacity-[0.22]'}`} />
 
       {/* Ruban liquide lumineux */}
       <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
@@ -92,7 +111,7 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
             y1={NODES[a][1]}
             x2={NODES[b][0]}
             y2={NODES[b][1]}
-            stroke="rgba(216,180,254,0.25)"
+            stroke={light ? 'rgba(124,58,237,0.16)' : 'rgba(216,180,254,0.25)'}
             strokeWidth="0.12"
             vectorEffect="non-scaling-stroke"
           />
@@ -101,7 +120,7 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
       {NODES.map(([x, y], i) => (
         <span
           key={i}
-          className="fluid-node absolute h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_3px_rgba(216,180,254,0.8)]"
+          className={`fluid-node absolute h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full ${light ? 'bg-violet-400 shadow-[0_0_10px_2px_rgba(167,139,250,0.6)]' : 'bg-white shadow-[0_0_12px_3px_rgba(216,180,254,0.8)]'}`}
           style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
@@ -128,12 +147,13 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.6) 1px, transparent 1px)',
+          backgroundImage: light
+            ? 'linear-gradient(to right, rgba(124,58,237,.9) 1px, transparent 1px), linear-gradient(to bottom, rgba(124,58,237,.9) 1px, transparent 1px)'
+            : 'linear-gradient(to right, rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.6) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
         }}
       />
-      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,transparent_55%,rgba(5,2,20,0.55)_100%)]" />
+      {!light && <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,transparent_55%,rgba(5,2,20,0.55)_100%)]" />}
     </div>
   );
 }

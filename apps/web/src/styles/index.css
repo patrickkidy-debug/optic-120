@@ -485,6 +485,19 @@
     0 0 0 1px rgba(255, 255, 255, 0.12),
     0 30px 80px rgba(217, 70, 239, 0.35);
 }
+/* Fond clair : bulles plus lumineuses (bord lilas au lieu de violet nuit). */
+.fluid-light .fluid-blob {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95) 0 5%, rgba(255, 255, 255, 0) 17%),
+    radial-gradient(circle at 76% 26%, var(--c3, #a5f3fc) 0%, transparent 45%),
+    radial-gradient(circle at 28% 80%, var(--c2, #fb923c) 0%, transparent 55%),
+    radial-gradient(circle at 55% 55%, var(--c1, #c026d3) 0%, #a78bfa 90%);
+  box-shadow:
+    inset -14px -18px 36px rgba(91, 33, 182, 0.35),
+    inset 12px 14px 30px rgba(255, 255, 255, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 24px 60px rgba(168, 85, 247, 0.3);
+}
 /* Plan lointain : flou et estompé, pour la profondeur. */
 .fluid-blob-far {
   filter: blur(14px) saturate(1.2);
@@ -498,6 +511,10 @@
   }
   .fluid-blob-far {
     opacity: 0.4;
+  }
+  /* Fond clair : le texte foncé passe devant, bulles très estompées. */
+  .fluid-light .fluid-blob {
+    opacity: 0.35;
   }
 }
 /* Impression : n'imprime que la zone marquée .print-area (ex. étiquettes). */
