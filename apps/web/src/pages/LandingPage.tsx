@@ -42,6 +42,7 @@ import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { displayLocale } from '../lib/format';
 import { tr } from '../lib/tr';
+import { FluidScene } from '../components/FluidScene';
 import { reopenConsent } from '../lib/consent';
 
 /* ============================================================
@@ -626,23 +627,26 @@ export function LandingPage() {
         {/* Hero */}
         {/* Hero : contenu visible sans défilement, rendu immédiat (pas de
             fondu au scroll — celui-ci retarderait le LCP de la page). */}
-        <section className="relative px-4 pb-24 pt-16 sm:px-8 lg:pt-24">
+        <section className="relative isolate overflow-hidden px-4 pb-24 pt-16 sm:px-8 lg:pt-24">
+          {/* Décor « fluide technologique » : violet profond, formes liquides de la marque. */}
+          <FluidScene layout="right" className="-z-10" />
           <div className="mx-auto grid max-w-[1280px] items-center gap-12 lg:grid-cols-2">
             <div>
               <div className="flex flex-col gap-6">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 backdrop-blur-md">
+                  <ShieldCheck className="h-4 w-4 text-pink-200" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-white">
                     {t('landing.heroBadge')}
                   </span>
                 </span>
                 {/* text-balance : réparti les mots équitablement entre les
                     lignes du titre, pour éviter une dernière ligne orpheline. */}
-                <h1 className="text-balance font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
-                  {t('landing.heroTitleA')} <span className="text-gradient animate-gradient">{t('landing.heroTitleAccent')}</span>{' '}
+                <h1 className="text-balance font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-white drop-shadow-[0_6px_24px_rgba(30,0,70,0.45)] sm:text-5xl lg:text-6xl">
+                  {t('landing.heroTitleA')}{' '}
+                  <span className="bg-gradient-to-r from-pink-300 via-fuchsia-200 to-orange-300 bg-clip-text text-transparent">{t('landing.heroTitleAccent')}</span>{' '}
                   {t('landing.heroTitleB')}
                 </h1>
-                <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
+                <p className="max-w-[540px] text-lg leading-relaxed text-white/80">
                   {t('landing.heroSubtitle')}
                 </p>
                 {/* Un seul CTA principal : chaque bouton en plus dilue la
@@ -652,7 +656,7 @@ export function LandingPage() {
                 <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
                   <Link
                     to="/signup"
-                    className="btn-primary neon-glow rounded-full px-8 py-4 text-base transition hover:-translate-y-0.5"
+                    className="btn rounded-full bg-white px-8 py-4 text-base font-bold text-violet-700 shadow-[0_14px_40px_rgba(236,72,153,0.45)] transition hover:-translate-y-0.5 hover:bg-violet-50"
                   >
                     {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -673,24 +677,24 @@ export function LandingPage() {
                   </a>
                   <AdvisorLauncher page="landing" variant="inline" />
                 </div>
-                <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
+                <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check1')}
+                    <Check className="h-4 w-4 text-pink-200" /> {t('landing.check1')}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check2')}
+                    <Check className="h-4 w-4 text-pink-200" /> {t('landing.check2')}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-cyan" /> {t('landing.check3')}
+                    <Check className="h-4 w-4 text-pink-200" /> {t('landing.check3')}
                   </span>
                 </div>
-                <div className="mt-8 flex flex-wrap gap-8 border-t border-line pt-8">
+                <div className="mt-8 flex flex-wrap gap-8 border-t border-white/15 pt-8">
                   {STATS.map((k) => (
                     <div key={k}>
-                      <div className="font-display text-2xl font-extrabold text-content">
+                      <div className="font-display text-2xl font-extrabold text-white">
                         <CountUp value={t(`landing.${k}`)} />
                       </div>
-                      <div className="text-sm text-content-muted">{t(`landing.${k}Label`)}</div>
+                      <div className="text-sm text-white/70">{t(`landing.${k}Label`)}</div>
                     </div>
                   ))}
                 </div>

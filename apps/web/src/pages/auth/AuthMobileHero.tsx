@@ -1,11 +1,12 @@
 import { CheckCircle2, Eye, PackageCheck, ScanFace } from 'lucide-react';
 import { tr } from '../../lib/tr';
+import { FluidScene } from '../../components/FluidScene';
 
 /**
  * Bandeau mobile des écrans d'authentification (connexion, inscription…).
  *
- * Fond clair aux couleurs de la marque (dégradé violet → rose → orange très
- * doux, sombre en thème sombre), photo d'un client avec sa monture (personne
+ * Décor « fluide technologique » de la marque (violet profond, formes liquides
+ * violet → rose → orange, réseau lumineux), photo d'un client avec sa monture (personne
  * fictive) et cartes d'interface flottantes qui évoquent l'application :
  * paiement Mobile Money, mesure de centrage, commande prête. Les cartes sont
  * décoratives (aria-hidden) : le contenu utile reste le titre.
@@ -30,20 +31,7 @@ export function AuthMobileHero({
       }
       style={panel ? undefined : { paddingTop: 'calc(1.25rem + env(safe-area-inset-top))' }}
     >
-      {/* Fond : dégradé maillé de la marque */}
-      <div className="absolute inset-0 bg-[linear-gradient(160deg,#f5f3ff_0%,#fdf2f8_45%,#fff7ed_100%)] dark:bg-[linear-gradient(160deg,#0b1120_0%,#1a1033_55%,#2a1220_100%)]" />
-      <div className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-violet-400/40 blur-3xl dark:bg-violet-600/30" />
-      <div className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-pink-300/40 blur-3xl dark:bg-pink-600/25" />
-      <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-orange-300/40 blur-3xl dark:bg-orange-500/20" />
-      {/* Trame fine, comme sur les affiches */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.08]"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(124,58,237,.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(124,58,237,.08) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
+      <FluidScene layout="spread" />
 
       <div className={panel ? 'relative flex flex-1 flex-col' : 'relative'}>
         {/* Marque */}
@@ -51,8 +39,8 @@ export function AuthMobileHero({
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand shadow-[0_8px_20px_rgba(124,58,237,0.35)]">
             <Eye className="h-5 w-5 text-white" strokeWidth={2.6} />
           </span>
-          <span className="font-display text-lg font-extrabold tracking-tight text-content">
-            Oculo<span className="text-gradient">SaaS</span>
+          <span className="font-display text-lg font-extrabold tracking-tight text-white">
+            Oculo<span className="bg-gradient-to-r from-pink-300 via-fuchsia-300 to-orange-300 bg-clip-text text-transparent">SaaS</span>
           </span>
         </div>
 
@@ -61,7 +49,7 @@ export function AuthMobileHero({
           className={`relative mx-auto mt-5 h-[248px] w-full max-w-[340px] md:h-[360px] md:max-w-[480px] ${panel ? 'my-auto lg:h-[400px] xl:h-[440px] xl:max-w-[520px]' : ''}`}
           aria-hidden="true"
         >
-          <div className="absolute left-1/2 top-2 h-[220px] w-[200px] -translate-x-1/2 md:h-[320px] md:w-[290px] xl:h-[380px] xl:w-[340px] rotate-[-3deg] overflow-hidden rounded-[28px] border-4 border-white shadow-[0_24px_50px_rgba(76,29,149,0.28)] dark:border-white/10">
+          <div className="absolute left-1/2 top-2 h-[220px] w-[200px] -translate-x-1/2 md:h-[320px] md:w-[290px] xl:h-[380px] xl:w-[340px] rotate-[-3deg] overflow-hidden rounded-[28px] border border-white/40 shadow-[0_30px_70px_rgba(20,0,60,0.55)] ring-4 ring-white/15">
             <img src={photo} alt="" className="h-full w-full object-cover" loading="eager" decoding="async" />
             <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
           </div>
@@ -89,8 +77,9 @@ export function AuthMobileHero({
         </div>
 
         {/* Accroche */}
-        <h1 className={`mt-5 text-center font-display text-[26px] font-extrabold leading-tight tracking-tight text-content md:text-4xl ${panel ? 'xl:text-[42px]' : ''}`}>
-          {tr('auth.heroTitleA')} <span className="text-gradient">{tr('auth.heroTitleB')}</span>
+        <h1 className={`mt-5 text-center font-display text-[26px] font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_4px_18px_rgba(30,0,70,0.5)] md:text-4xl ${panel ? 'xl:text-[42px]' : ''}`}>
+          {tr('auth.heroTitleA')}{' '}
+          <span className="bg-gradient-to-r from-pink-300 via-fuchsia-200 to-orange-300 bg-clip-text text-transparent">{tr('auth.heroTitleB')}</span>
         </h1>
         {children}
       </div>
