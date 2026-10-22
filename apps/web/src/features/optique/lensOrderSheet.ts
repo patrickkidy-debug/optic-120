@@ -4,9 +4,7 @@ import {
   LENS_TREATMENTS,
   DEFAULT_LENS_PRICING,
   lensBaseOptions,
-  transposeRx,
   type LensOrderEyeRx,
-  type OpticalSettings,
 } from '@oculo/shared-types';
 import type { CustomerDetail, LensOrder, Prescription, SaleDetail } from './api';
 import { useAuthStore } from '../../store/auth';
@@ -81,20 +79,6 @@ function eyeRx(order: LensOrder, rx: Prescription | null, eye: 'od' | 'og'): Len
     : { sphere: n(rx.ogSphere), cylinder: n(rx.ogCylinder), axis: n(rx.ogAxis), addition: n(rx.ogAddition), fromRx: true };
 }
 
-/** Convention de cylindre de l'établissement appliquée à l'affichage (cylindre positif / négatif). */
-function withConvention(e: LensOrderEyeRx & { fromRx?: boolean }, conv: OpticalSettings['cylinderConvention'] | undefined) {
-  if (!conv || conv === 'AS_ENTERED' || e.cylinder == null) return e;
-  const r = transposeRx(
-    e.sphere == null ? null : String(e.sphere),
-    String(e.cylinder),
-    e.axis == null ? null : String(e.axis),
-    conv,
-  );
-  if (!r.changed) return e;
-  const n = (v: string | null | undefined) => (v == null || v === '' ? undefined : Number(v));
-  return { ...e, sphere: n(r.sphere), cylinder: n(r.cylinder), axis: n(r.axis) };
-}
-
 /** Variantes d'en-tête : fiche issue d'une vente ou d'un devis plutôt que d'une commande. */
 export interface SheetOptions {
   /** Ordonnance à reprendre en priorité (celle jointe à la vente / au devis). */
@@ -115,14 +99,15 @@ export function buildLensOrderSheetHtml(
 ): string {
   const accent = /^#[0-9a-fA-F]{6}$/.test(company.accentColor ?? '') ? (company.accentColor as string) : '#0d9488';
   const rx = opts.rx ?? customer?.prescriptions?.[0] ?? null;
-  const conv = useAuthStore.getState().user?.tenantOpticalSettings?.cylinderConvention;
   // Dernière prise de mesures du client (page « Prise de mesures »), prioritaire
   // sur l'ordonnance pour le centrage : elle décrit le client avec sa monture.
   const ms = measure ?? null;
   const mmv = (n: number | null | undefined) => (n == null ? '' : `${String(n).replace('.', ',')}`);
   const cfg = order.lensConfig;
-  const od = withConvention(eyeRx(order, rx, 'od'), conv);
-  const og = withConvention(eyeRx(order, rx, 'og'), conv);
+  // Commande de verres : valeurs telles que saisies (cylindre positif ou
+  // négatif), sans transposition imposée par la convention de l'établissement.
+  const od = eyeRx(order, rx, 'od');
+  const og = eyeRx(order, rx, 'og');
   const fromRx = od.fromRx || og.fromRx;
   const treatments = (cfg?.treatments ?? [])
     .map((k) => trFr(LENS_TREATMENTS.find((t) => t.key === k)?.label ?? k))
