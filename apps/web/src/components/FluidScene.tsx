@@ -36,7 +36,7 @@ const BLOBS_RIGHT: Blob[] = [
 ];
 
 const BLOBS_SPREAD: Blob[] = [
-  { left: '-8%', top: '-10%', size: 240, palette: 0, delay: 0, duration: 17 },
+  { left: '-14%', top: '-16%', size: 220, far: true, palette: 0, delay: 0, duration: 17 },
   { left: '70%', top: '2%', size: 150, palette: 1, delay: -4, duration: 13 },
   { left: '40%', top: '30%', size: 300, far: true, palette: 3, delay: -6, duration: 20 },
   { left: '78%', top: '72%', size: 190, palette: 0, delay: -7, duration: 15 },

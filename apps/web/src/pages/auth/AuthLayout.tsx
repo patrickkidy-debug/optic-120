@@ -24,20 +24,21 @@ export function AuthLayout({
 }) {
   const { t } = useTranslation();
   const variant = illustration ? 'signup' : 'login';
+  // Écrans d'accès toujours en clair (classe .light), comme la landing page.
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="light grid min-h-screen bg-bg text-content lg:grid-cols-2">
       {/* Grand écran (tablette paysage, ordinateur) : même composition que le
           mobile, en panneau pleine hauteur, avec les atouts de la plateforme. */}
       <div className="sticky top-0 hidden h-screen lg:block">
         <AuthMobileHero variant={variant} panel>
           <ul className="mx-auto mt-6 flex max-w-xl flex-wrap justify-center gap-2">
             {FEATURES.map((f) => (
-              <li key={f.key} className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-2 text-sm text-white backdrop-blur-md">
-                <f.icon className="h-4 w-4 text-pink-200" /> {t(f.key)}
+              <li key={f.key} className="flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3.5 py-2 text-sm text-content backdrop-blur-md">
+                <f.icon className="h-4 w-4 text-primary" /> {t(f.key)}
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-center text-xs text-white/60">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
+          <p className="mt-6 text-center text-xs text-content-faint">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
         </AuthMobileHero>
       </div>
 
