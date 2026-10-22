@@ -48,16 +48,13 @@
   ::selection {
     background: var(--primary-soft);
   }
-  /* Police des titres, du logo et des gros chiffres (classe font-display). */
+  /* Police des titres, du logo et des gros chiffres (classe font-display) :
+     Oxanium, futuriste et premium ; le texte courant reste en Inter. */
   :root {
-    --font-display: 'Manrope', 'Outfit', 'Inter', system-ui, sans-serif;
-  }
-  /* Comptes bêta : Oxanium, chargée à la demande (components/BetaFont). */
-  html.beta-font {
-    --font-display: 'Oxanium', 'Manrope', 'Inter', system-ui, sans-serif;
+    --font-display: 'Oxanium', 'Inter', system-ui, sans-serif;
   }
   /* Titres : l'interlettrage resserré donne aux gros titres l'assise
-     typographique du modèle (Manrope), sans toucher au balisage. */
+     typographique de la marque, sans toucher au balisage. */
   h1,
   h2,
   h3 {
