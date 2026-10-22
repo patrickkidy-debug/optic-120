@@ -1390,7 +1390,8 @@
       "add": "Add.",
       "ecartPupillaire": "Écart pupillaire :",
       "prescripteur": "Prescripteur :",
-      "ordonnancePapierAgrandie": "Ordonnance papier agrandie"
+      "ordonnancePapierAgrandie": "Ordonnance papier agrandie",
+      "epLoinMono": "EP de loin : OD {{od}} / OG {{og}} mm"
     },
     "FrameCatalog": {
       "disponible": "Disponible",
@@ -1548,7 +1549,9 @@
       "annuler": "Annuler",
       "enregistrerLesModifications": "Enregistrer les modifications",
       "enregistrerLOrdonnance": "Enregistrer l'ordonnance",
-      "ordonnancePapierAgrandie": "Ordonnance papier agrandie"
+      "ordonnancePapierAgrandie": "Ordonnance papier agrandie",
+      "epLoinOdMm": "EP de loin OD (mm)",
+      "epLoinOgMm": "EP de loin OG (mm)"
     },
     "BrandSplash": {
       "chargementDeVotreEspace": "Chargement de votre espace…"
@@ -4505,7 +4508,8 @@
     "optometrist": "Opticien optométriste",
     "eyeOd": "œil droit (OD)",
     "eyeOg": "œil gauche (OG)",
-    "vatRate": "TVA ({{rate}} %)"
+    "vatRate": "TVA ({{rate}} %)",
+    "farPdMono": "EP de loin : OD {{od}} / OG {{og}} mm"
   },
   "crm": {
     "title": "Clients",
@@ -4883,7 +4887,8 @@
     "printedOn": "Imprimé le",
     "measuredOn": "Centrage mesuré le {{date}}",
     "fromQuote": "Devis",
-    "fromSale": "Vente"
+    "fromSale": "Vente",
+    "frameRef": "Référence"
   },
   "importMap": {
     "title": "Colonnes détectées dans votre fichier — corrigez si besoin",

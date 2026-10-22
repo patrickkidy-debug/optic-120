@@ -1390,7 +1390,8 @@
       "add": "Add.",
       "ecartPupillaire": "Pupillary distance:",
       "prescripteur": "Prescriber:",
-      "ordonnancePapierAgrandie": "Enlarged paper prescription"
+      "ordonnancePapierAgrandie": "Enlarged paper prescription",
+      "epLoinMono": "Far PD: R {{od}} / L {{og}} mm"
     },
     "FrameCatalog": {
       "disponible": "Available",
@@ -1548,7 +1549,9 @@
       "annuler": "Cancel",
       "enregistrerLesModifications": "Save changes",
       "enregistrerLOrdonnance": "Save prescription",
-      "ordonnancePapierAgrandie": "Enlarged paper prescription"
+      "ordonnancePapierAgrandie": "Enlarged paper prescription",
+      "epLoinOdMm": "Far PD right (mm)",
+      "epLoinOgMm": "Far PD left (mm)"
     },
     "BrandSplash": {
       "chargementDeVotreEspace": "Loading your workspace…"
@@ -4505,7 +4508,8 @@
     "optometrist": "Optometrist optician",
     "eyeOd": "right eye (OD)",
     "eyeOg": "left eye (OS)",
-    "vatRate": "VAT ({{rate}} %)"
+    "vatRate": "VAT ({{rate}} %)",
+    "farPdMono": "Far PD: R {{od}} / L {{og}} mm"
   },
   "crm": {
     "title": "Customers",
@@ -4883,7 +4887,8 @@
     "printedOn": "Printed on",
     "measuredOn": "Centring measured on {{date}}",
     "fromQuote": "Quote",
-    "fromSale": "Sale"
+    "fromSale": "Sale",
+    "frameRef": "Reference"
   },
   "importMap": {
     "title": "Columns detected in your file — adjust if needed",

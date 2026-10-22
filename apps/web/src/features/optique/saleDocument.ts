@@ -1,3 +1,4 @@
+import { monoFarPd } from './pd';
 import { CURRENCY_FORMAT, applyCylinderConvention, type SupportedCurrency } from '@oculo/shared-types';
 import type { SaleDetail } from './api';
 import { useAuthStore } from '../../store/auth';
@@ -204,6 +205,7 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
   const rxExtras = rx
     ? [
         rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+        (() => { const m = monoFarPd(rx); return m.od || m.og ? tr('doc.farPdMono', { od: esc(m.od ?? '—'), og: esc(m.og ?? '—') }) : ''; })(),
         rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
         rx.prescriberName ? tr('doc.prescriber', { value: esc(rx.prescriberName) }) : '',
       ]

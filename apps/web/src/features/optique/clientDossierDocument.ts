@@ -1,3 +1,4 @@
+import { monoFarPd } from './pd';
 import type { Customer, Prescription, CustomerSale, CustomerLensOrder, CustomerRepair } from './api';
 import type { CompanyInfo } from './saleDocument';
 import { LENS_ORDER_STATUS_LABELS, ageFromBirthDate, type LensOrderStatus } from '@oculo/shared-types';
@@ -45,6 +46,7 @@ function rxTable(rx: Prescription, accent: string): string {
   const extras = [
     rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
     rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+    (() => { const m = monoFarPd(rx); return m.od || m.og ? tr('doc.farPdMono', { od: esc(m.od ?? '—'), og: esc(m.og ?? '—') }) : ''; })(),
     rx.prescriberName ? tr('doc.prescriber', { value: esc(rx.prescriberName) }) : '',
     rx.expiresAt ? tr('doc.validUntil', { date: frDate(rx.expiresAt) }) : '',
   ]

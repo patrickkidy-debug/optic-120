@@ -226,6 +226,9 @@ export function PrescriptionForm({
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Field label={tr('ui.PrescriptionForm.ecartPupillaireMm')}><input className="input" placeholder="62" {...register('pupillaryDistance')} /></Field>
+        {/* Écarts de loin monoculaires : indispensables au centrage en atelier. */}
+        <Field label={tr('ui.PrescriptionForm.epLoinOdMm')}><input className="input" inputMode="decimal" placeholder="31,5" {...register('odFarPd')} /></Field>
+        <Field label={tr('ui.PrescriptionForm.epLoinOgMm')}><input className="input" inputMode="decimal" placeholder="31" {...register('ogFarPd')} /></Field>
         <Field label={tr('ui.PrescriptionForm.typeDeVerres')}>
           {lensOther ? (
             <input className="input" placeholder={tr('ui.PrescriptionForm.preciserLeType')} autoFocus {...register('lensType')} />
@@ -272,7 +275,6 @@ export function PrescriptionForm({
                   <th className="px-1 pb-1 font-semibold">Base / axe 1</th>
                   <th className="px-1 pb-1 font-semibold">Prisme 2</th>
                   <th className="px-1 pb-1 font-semibold">Base / axe 2</th>
-                  <th className="px-1 pb-1 font-semibold">Écart VL (mm)</th>
                   <th className="px-1 pb-1 font-semibold">Acuité</th>
                 </tr>
               </thead>
@@ -284,7 +286,6 @@ export function PrescriptionForm({
                     <td className="px-1"><input className={cell} placeholder="BI / 90°" {...register(`${eye}Prism1Base`)} /></td>
                     <td className="px-1"><input className={cell} placeholder="0.50" {...register(`${eye}Prism2`)} /></td>
                     <td className="px-1"><input className={cell} placeholder="BH / 0°" {...register(`${eye}Prism2Base`)} /></td>
-                    <td className="px-1"><input className={cell} placeholder="31" {...register(`${eye}FarPd`)} /></td>
                     <td className="px-1"><input className={cell} placeholder="10/10" {...register(`${eye}Acuity`)} /></td>
                   </tr>
                 ))}

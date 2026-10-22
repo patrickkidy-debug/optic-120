@@ -1,3 +1,4 @@
+import { monoFarPd } from './pd';
 import type { Prescription } from './api';
 import type { CompanyInfo } from './saleDocument';
 import { tr } from '../../lib/tr';
@@ -63,6 +64,7 @@ export function buildPrescriptionHtml(
 
   const extras = [
     rx.pupillaryDistance ? tr('doc.pd', { value: esc(rx.pupillaryDistance) }) : '',
+    (() => { const m = monoFarPd(rx); return m.od || m.og ? tr('doc.farPdMono', { od: esc(m.od ?? '—'), og: esc(m.og ?? '—') }) : ''; })(),
     rx.lensType ? tr('doc.lensType', { value: esc(rx.lensType) }) : '',
   ]
     .filter(Boolean)

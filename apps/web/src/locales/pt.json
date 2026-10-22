@@ -1390,7 +1390,8 @@
       "add": "Adição",
       "ecartPupillaire": "Distância pupilar:",
       "prescripteur": "Prescritor:",
-      "ordonnancePapierAgrandie": "Receita em papel ampliada"
+      "ordonnancePapierAgrandie": "Receita em papel ampliada",
+      "epLoinMono": "DP longe: OD {{od}} / OE {{og}} mm"
     },
     "FrameCatalog": {
       "disponible": "Disponível",
@@ -1548,7 +1549,9 @@
       "annuler": "Cancelar",
       "enregistrerLesModifications": "Guardar alterações",
       "enregistrerLOrdonnance": "Guardar receita",
-      "ordonnancePapierAgrandie": "Receita em papel ampliada"
+      "ordonnancePapierAgrandie": "Receita em papel ampliada",
+      "epLoinOdMm": "DP longe OD (mm)",
+      "epLoinOgMm": "DP longe OE (mm)"
     },
     "BrandSplash": {
       "chargementDeVotreEspace": "A carregar o seu espaço…"
@@ -4505,7 +4508,8 @@
     "optometrist": "Optometrista",
     "eyeOd": "olho direito (OD)",
     "eyeOg": "olho esquerdo (OE)",
-    "vatRate": "IVA ({{rate}} %)"
+    "vatRate": "IVA ({{rate}} %)",
+    "farPdMono": "DP longe: OD {{od}} / OE {{og}} mm"
   },
   "crm": {
     "title": "Clientes",
@@ -4883,7 +4887,8 @@
     "printedOn": "Impresso em",
     "measuredOn": "Centragem medida em {{date}}",
     "fromQuote": "Orçamento",
-    "fromSale": "Venda"
+    "fromSale": "Venda",
+    "frameRef": "Referência"
   },
   "importMap": {
     "title": "Colunas detetadas no seu ficheiro — corrija se necessário",

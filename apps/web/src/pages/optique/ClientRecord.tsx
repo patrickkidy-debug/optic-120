@@ -451,6 +451,9 @@ export function PrescriptionCard({
       </table>
       <div className="mt-2 flex flex-wrap gap-x-4 text-xs text-content-faint">
         {rx.pupillaryDistance && <span>{tr('ui.ClientRecord.ecartPupillaire')} {rx.pupillaryDistance} mm</span>}
+        {(rx.odFarPd || rx.ogFarPd) && (
+          <span>{tr('ui.ClientRecord.epLoinMono', { od: rx.odFarPd ?? '—', og: rx.ogFarPd ?? '—' })}</span>
+        )}
         {rx.prescriberName && <span>{tr('ui.ClientRecord.prescripteur')} {rx.prescriberName}</span>}
       </div>
       {rx.notes && <p className="mt-1 text-xs text-content-muted">{rx.notes}</p>}

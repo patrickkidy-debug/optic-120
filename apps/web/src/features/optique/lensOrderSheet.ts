@@ -1,3 +1,4 @@
+import { monoFarPd, totalFarPd } from './pd';
 import {
   LENS_ORDER_STATUS_LABELS,
   LENS_TREATMENTS,
@@ -100,6 +101,8 @@ export interface SheetOptions {
   rx?: Prescription | null;
   /** Ligne de statut sous le numéro (remplace « Commandé le … · statut »). */
   statusLine?: string;
+  /** Référence de la monture vendue (référence saisie, sinon code article). */
+  frameRef?: string | null;
 }
 
 export function buildLensOrderSheetHtml(
@@ -145,7 +148,11 @@ export function buildLensOrderSheetHtml(
 
   // Écart pupillaire monoculaire : jamais déduit du binoculaire / 2 (une erreur
   // de centrage coûte une paire) — la case reste à mesurer et remplir.
-  const pdTotal = ms?.pdTotal != null ? mmv(ms.pdTotal) : rx?.pupillaryDistance ? esc(rx.pupillaryDistance) : '';
+  // Sans prise de mesures, on reprend les écarts de loin de l'ordonnance.
+  const rxMono = monoFarPd(rx);
+  const rxTotal = totalFarPd(rx);
+  const pdTotal = ms?.pdTotal != null ? mmv(ms.pdTotal) : rxTotal ? esc(rxTotal) : '';
+  const frameRef = opts.frameRef ?? (order as LensOrder & { frameRef?: string | null }).frameRef ?? null;
 
   const info = (label: string, value: string) =>
     `<div class="info"><span>${label}</span><b>${value || '—'}</b></div>`;
@@ -230,8 +237,8 @@ export function buildLensOrderSheetHtml(
         </tr>
       </thead>
       <tbody>
-        ${row(L('od'), od, order.odLens, mmv(ms?.odMonoPd), ms?.odHeight != null ? mmv(ms.odHeight) : esc(rx?.odHeight ?? ''))}
-        ${row(L('og'), og, order.ogLens, mmv(ms?.ogMonoPd), ms?.ogHeight != null ? mmv(ms.ogHeight) : esc(rx?.ogHeight ?? ''))}
+        ${row(L('od'), od, order.odLens, ms?.odMonoPd != null ? mmv(ms.odMonoPd) : esc(rxMono.od ?? ''), ms?.odHeight != null ? mmv(ms.odHeight) : esc(rx?.odHeight ?? ''))}
+        ${row(L('og'), og, order.ogLens, ms?.ogMonoPd != null ? mmv(ms.ogMonoPd) : esc(rxMono.og ?? ''), ms?.ogHeight != null ? mmv(ms.ogHeight) : esc(rx?.ogHeight ?? ''))}
       </tbody>
     </table>
     <div class="note">
@@ -259,6 +266,7 @@ export function buildLensOrderSheetHtml(
     <h2>${esc(L('frame'))}</h2>
     <div class="grid">
       ${info(L('frameModel'), esc(order.frameProduct ? `${order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}${order.frameProduct.name}` : ''))}
+      ${info(L('frameRef'), esc(frameRef ?? ''))}
       ${info(
         L('frameSize'),
         ms?.lensWidth != null || ms?.bridge != null
@@ -371,7 +379,7 @@ export function saleToLensOrder(sale: SaleDetail): LensOrder {
     ogLens: lensName('OG'),
     frameProductId: frame?.productId ?? null,
     frameProduct: frame
-      ? { id: frame.productId, name: frame.product.name + (frame.reference ? ` (${frame.reference})` : ''), brand: frame.product.brand ?? null, photoUrl: null }
+      ? { id: frame.productId, name: frame.product.name, brand: frame.product.brand ?? null, photoUrl: null }
       : null,
     status: 'TO_ORDER',
     expectedAt: null,
@@ -415,6 +423,10 @@ export async function openSaleTechnicalSheet(
     buildLensOrderSheetHtml(saleToLensOrder(sale), company, customer, createdBy, measure, {
       rx: sale.prescription ?? null,
       statusLine: `${kind} · ${date(sale.createdAt)}`,
+      frameRef: (() => {
+        const f = sale.items.find((i) => i.product.category === 'MONTURE');
+        return f ? f.reference || f.product.sku || null : null;
+      })(),
     }),
   );
   win.document.close();
