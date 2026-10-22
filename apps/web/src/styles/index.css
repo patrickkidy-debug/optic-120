@@ -468,8 +468,8 @@
 }
 
 /* Décor « fluide technologique » (components/FluidScene) : bulles irisées
-   en verre liquide qui ondulent et dérivent, aurore tournante, ruban qui
-   ondoie, points qui scintillent. */
+   en verre liquide, aurore, ruban et points lumineux. Volontairement FIXE :
+   aucune animation, pour un chargement et un défilement légers. */
 .fluid-blob {
   border-radius: 46% 54% 58% 42% / 44% 40% 60% 56%;
   /* Verre liquide irisé : reflet blanc, deux reflets colorés de la palette
@@ -484,23 +484,11 @@
     inset 12px 14px 30px rgba(255, 255, 255, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.12),
     0 30px 80px rgba(217, 70, 239, 0.35);
-  animation: fluid-morph 14s ease-in-out infinite;
-  will-change: border-radius, transform;
 }
 /* Plan lointain : flou et estompé, pour la profondeur. */
 .fluid-blob-far {
   filter: blur(14px) saturate(1.2);
   opacity: 0.55;
-}
-.fluid-aurora {
-  animation: fluid-spin 60s linear infinite;
-}
-.fluid-ribbon {
-  animation: fluid-wave 9s ease-in-out infinite;
-  transform-origin: center;
-}
-.fluid-node {
-  animation: fluid-twinkle 3.2s ease-in-out infinite;
 }
 /* Téléphone : bulles plus petites et plus discrètes, le texte reste lisible. */
 @media (max-width: 767px) {
@@ -512,53 +500,6 @@
     opacity: 0.4;
   }
 }
-@keyframes fluid-morph {
-  0%,
-  100% {
-    border-radius: 46% 54% 58% 42% / 44% 40% 60% 56%;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  33% {
-    border-radius: 60% 40% 38% 62% / 55% 62% 38% 45%;
-    transform: translate(12px, -18px) rotate(10deg);
-  }
-  66% {
-    border-radius: 38% 62% 52% 48% / 40% 52% 48% 60%;
-    transform: translate(-14px, 12px) rotate(-8deg);
-  }
-}
-@keyframes fluid-spin {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-@keyframes fluid-wave {
-  0%,
-  100% {
-    transform: translateY(0) scaleX(1);
-  }
-  50% {
-    transform: translateY(-2.5%) scaleX(1.03);
-  }
-}
-@keyframes fluid-twinkle {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fluid-blob,
-  .fluid-node,
-  .fluid-aurora,
-  .fluid-ribbon {
-    animation: none;
-  }
-}
-
 /* Impression : n'imprime que la zone marquée .print-area (ex. étiquettes). */
 @media print {
   body {

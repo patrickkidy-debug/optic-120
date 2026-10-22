@@ -2,9 +2,8 @@
  * Décor « fluide technologique » de la marque : nuit violette profonde avec
  * halos et aurore lumineuse, ruban liquide, bulles irisées en verre liquide
  * (violet → rose → orange, reflet cyan) sur deux plans de profondeur, et
- * réseau de points lumineux. Purement décoratif (aria-hidden), sans image.
- * Les animations s'arrêtent si l'utilisateur réduit les mouvements (voir
- * .fluid-* dans styles/index.css).
+ * réseau de points lumineux. Purement décoratif (aria-hidden), sans image et
+ * sans animation : rien ne bouge, pour garder des pages légères.
  */
 
 /** Une bulle : position (%), taille (px), plan (net ou flou au loin) et rythme. */
@@ -66,7 +65,7 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
       <div className="absolute inset-0 bg-[linear-gradient(160deg,#07031a_0%,#140735_40%,#24094f_72%,#2e0b5e_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(60%_55%_at_82%_8%,rgba(124,58,237,0.55)_0%,transparent_70%),radial-gradient(50%_45%_at_8%_92%,rgba(219,39,119,0.35)_0%,transparent_70%),radial-gradient(40%_40%_at_96%_96%,rgba(249,115,22,0.28)_0%,transparent_70%)]" />
       {/* Aurore : lumière tournante très douce */}
-      <div className="fluid-aurora absolute left-1/2 top-1/2 h-[160%] w-[160%] -translate-x-1/2 -translate-y-1/2 opacity-[0.22] blur-[90px] [background:conic-gradient(from_0deg,#7c3aed,#d946ef,#f97316,#22d3ee,#7c3aed)]" />
+      <div className="absolute left-1/2 top-1/2 h-[160%] w-[160%] -translate-x-1/2 -translate-y-1/2 opacity-[0.22] blur-[90px] [background:conic-gradient(from_0deg,#7c3aed,#d946ef,#f97316,#22d3ee,#7c3aed)]" />
 
       {/* Ruban liquide lumineux */}
       <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
@@ -79,9 +78,9 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
             <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={ribbon} fill="none" stroke="url(#fluid-ribbon)" strokeWidth="16" strokeLinecap="round" opacity="0.18" className="fluid-ribbon" style={{ filter: 'blur(6px)' }} vectorEffect="non-scaling-stroke" />
-        <path d={ribbon} fill="none" stroke="url(#fluid-ribbon)" strokeWidth="5" strokeLinecap="round" opacity="0.55" className="fluid-ribbon" vectorEffect="non-scaling-stroke" />
-        <path d={ribbon} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1" strokeLinecap="round" opacity="0.5" className="fluid-ribbon" vectorEffect="non-scaling-stroke" />
+        <path d={ribbon} fill="none" stroke="url(#fluid-ribbon)" strokeWidth="16" strokeLinecap="round" opacity="0.18" style={{ filter: 'blur(6px)' }} vectorEffect="non-scaling-stroke" />
+        <path d={ribbon} fill="none" stroke="url(#fluid-ribbon)" strokeWidth="5" strokeLinecap="round" opacity="0.55" vectorEffect="non-scaling-stroke" />
+        <path d={ribbon} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1" strokeLinecap="round" opacity="0.5" vectorEffect="non-scaling-stroke" />
       </svg>
 
       {/* Réseau de points lumineux */}
@@ -103,7 +102,7 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
         <span
           key={i}
           className="fluid-node absolute h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_3px_rgba(216,180,254,0.8)]"
-          style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${(i % 5) * -0.8}s` }}
+          style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
 
@@ -121,8 +120,6 @@ export function FluidScene({ layout = 'right', className = '' }: { layout?: 'rig
             ['--c1' as string]: PALETTES[b.palette][0],
             ['--c2' as string]: PALETTES[b.palette][1],
             ['--c3' as string]: PALETTES[b.palette][2],
-            animationDelay: `${b.delay}s`,
-            animationDuration: `${b.duration}s`,
           }}
         />
       ))}
