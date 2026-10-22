@@ -6,17 +6,21 @@ import type { LocaleCode } from '../lib/locale-resolve';
 const BRANCH_KEY = 'oculo_branch';
 const LOCALE_KEY = 'oculo_locale';
 const HELP_KEY = 'oculo_help_hidden';
+const RAIL_KEY = 'oculo_sidebar_rail';
 
 interface UIState {
   theme: ThemeMode;
   locale: string;
   sidebarOpen: boolean;
+  /** Menu latéral replié en colonne d'icônes (grand écran). */
+  sidebarCollapsed: boolean;
   activeBranchId: string | null;
   supportWidgetHidden: boolean;
   setTheme: (t: ThemeMode) => void;
   setLocale: (l: string) => void;
   toggleSidebar: () => void;
   setSidebar: (open: boolean) => void;
+  toggleSidebarCollapsed: () => void;
   setActiveBranch: (id: string | null) => void;
   setSupportWidgetHidden: (hidden: boolean) => void;
 }
@@ -27,6 +31,13 @@ export const useUIStore = create<UIState>((set) => ({
   // le sélecteur sans option active alors que l'app affiche du français.
   locale: resolveLocale(window.location.pathname).locale,
   sidebarOpen: false,
+  sidebarCollapsed: (() => {
+    try {
+      return localStorage.getItem(RAIL_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })(),
   activeBranchId: localStorage.getItem(BRANCH_KEY),
   supportWidgetHidden: localStorage.getItem(HELP_KEY) === '1',
   setTheme: (theme) => {
@@ -41,6 +52,16 @@ export const useUIStore = create<UIState>((set) => ({
   },
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebar: (sidebarOpen) => set({ sidebarOpen }),
+  toggleSidebarCollapsed: () =>
+    set((s) => {
+      const sidebarCollapsed = !s.sidebarCollapsed;
+      try {
+        localStorage.setItem(RAIL_KEY, sidebarCollapsed ? '1' : '0');
+      } catch {
+        /* stockage indisponible : le choix vaut pour la session */
+      }
+      return { sidebarCollapsed };
+    }),
   setActiveBranch: (id) => {
     if (id) localStorage.setItem(BRANCH_KEY, id);
     set({ activeBranchId: id });

@@ -7,6 +7,7 @@ import { TrialBanner } from '../TrialBanner';
 import { SupportChatWidget } from '../SupportChatWidget';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
+import { usePremiumUi } from './premium';
 import { useAuthStore } from '../../store/auth';
 import { prefetchRoute } from '../../lib/routePrefetch';
 
@@ -63,10 +64,20 @@ export function AppShell() {
     };
   }, []);
 
+  const premium = usePremiumUi();
+  // Menu rétractable : réservé à l'interface premium (avant-première).
+  const sidebarCollapsed = useUIStore((st) => st.sidebarCollapsed) && premium;
+
   return (
-    <div className="min-h-screen bg-bg">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-bg-subtle lg:block">
-        <Sidebar />
+    <div className="app-shell min-h-screen bg-bg">
+      {/* Menu latéral : déplié (libellés) ou replié en colonne d'icônes. */}
+      <aside
+        className={clsx(
+          'fixed inset-y-0 left-0 z-30 hidden border-r bg-bg-subtle transition-[width] duration-200 lg:block',
+          sidebarCollapsed ? 'w-[84px]' : 'w-64',
+        )}
+      >
+        <Sidebar collapsed={sidebarCollapsed} premium={premium} />
       </aside>
 
       <div className={clsx('fixed inset-0 z-40 lg:hidden', !sidebarOpen && 'pointer-events-none')}>
@@ -87,7 +98,7 @@ export function AppShell() {
         </aside>
       </div>
 
-      <div className="lg:pl-64">
+      <div className={clsx('transition-[padding] duration-200', sidebarCollapsed ? 'lg:pl-[84px]' : 'lg:pl-64')}>
         <Topbar />
         <TrialBanner />
         {/* Bandeau de confirmation d'email retiré : la vérification n'est pas

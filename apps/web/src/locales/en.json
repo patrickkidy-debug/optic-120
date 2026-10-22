@@ -1081,7 +1081,9 @@
     "whatsNew": "What's new",
     "whatsNewUnread": "What's new, {{count}} unread",
     "markAllRead": "Mark all as read",
-    "noNews": "Nothing new for now."
+    "noNews": "Nothing new for now.",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu"
   },
   "sync": {
     "offline": "Offline",

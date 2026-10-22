@@ -1081,7 +1081,9 @@
     "whatsNew": "Novidades",
     "whatsNewUnread": "Novidades, {{count}} não lidas",
     "markAllRead": "Marcar tudo como lido",
-    "noNews": "Sem novidades de momento."
+    "noNews": "Sem novidades de momento.",
+    "collapseMenu": "Recolher o menu",
+    "expandMenu": "Expandir o menu"
   },
   "sync": {
     "offline": "Sem ligação",

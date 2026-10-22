@@ -467,6 +467,45 @@
   filter: brightness(1.08);
 }
 
+/* Interface interne « Clair premium » (avant-première : classe html.premium-ui,
+   voir components/layout/premium.ts) : fond lavande très pâle, menu blanc
+   détaché par une ombre douce, cartes sans bordure aux coins plus ronds, barre
+   du haut translucide, rubriques et textes un peu plus épais. */
+html.premium-ui .nav-link {
+  font-weight: 600;
+}
+html.premium-ui .nav-link-active {
+  font-weight: 700;
+  color: rgb(var(--primary-rgb));
+  background: linear-gradient(120deg, rgba(124, 58, 237, 0.14), rgba(236, 72, 153, 0.08));
+}
+html.premium-ui .nav-link-active::before {
+  width: 4px;
+  height: 1.4rem;
+  background: linear-gradient(180deg, #7c3aed, #ec4899, #f97316);
+}
+html.premium-ui:not(.dark) .app-shell {
+  background-color: #f6f4fb;
+}
+html.premium-ui:not(.dark) .app-shell > aside {
+  background-color: #fff;
+  border-color: transparent;
+  box-shadow: 8px 0 40px rgba(76, 29, 149, 0.07);
+}
+html.premium-ui:not(.dark) .app-shell .card {
+  border-color: transparent;
+  border-radius: 22px;
+  box-shadow: 0 12px 34px rgba(76, 29, 149, 0.07);
+}
+html.premium-ui:not(.dark) .app-shell header {
+  background-color: rgba(246, 244, 251, 0.85);
+  backdrop-filter: blur(12px);
+  border-color: transparent;
+}
+html.premium-ui .app-shell main {
+  font-weight: 500;
+}
+
 /* Décor « fluide technologique » (components/FluidScene) : bulles irisées
    en verre liquide, aurore, ruban et points lumineux. Volontairement FIXE :
    aucune animation, pour un chargement et un défilement légers. */
