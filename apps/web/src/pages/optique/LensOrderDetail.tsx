@@ -237,6 +237,12 @@ export function LensOrderDetail({
               )}
               {order.odLens && <p className="text-content">{tr('ui.LensOrderDetail.od')} {order.odLens}</p>}
               {order.ogLens && <p className="text-content">{tr('ui.LensOrderDetail.og')} {order.ogLens}</p>}
+              {order.prescription && (
+                <p className="mt-1.5 border-t pt-1.5 text-xs text-content-muted">
+                  {tr('lensForm.rxOption', { date: formatDate(order.prescription.date) })}
+                  {order.prescription.prescriberName ? ` · ${order.prescription.prescriberName}` : ''}
+                </p>
+              )}
             </div>
           )}
 

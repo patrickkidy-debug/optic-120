@@ -882,6 +882,9 @@ export interface LensOrder {
   cost: string | number | null;
   notes: string | null;
   lensConfig: LensOrderConfig | null;
+  /** Ordonnance du dossier client liée à la commande. */
+  prescriptionId?: string | null;
+  prescription?: Prescription | null;
   createdAt: string;
   /** OculoTrack : présent quand le suivi fournisseur est activé. */
   trackCode?: string | null;

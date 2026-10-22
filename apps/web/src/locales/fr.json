@@ -4814,7 +4814,12 @@
     "saveRx": "Enregistrer aussi cette ordonnance dans le dossier du client",
     "rxSaved": "Ordonnance enregistrée dans le dossier du client",
     "rxNotSaved": "La commande est créée, mais l'ordonnance n'a pas pu être ajoutée au dossier :",
-    "rxNote": "Saisie lors de la commande de verres {{number}}"
+    "rxNote": "Saisie lors de la commande de verres {{number}}",
+    "linkedRx": "Ordonnance du dossier client",
+    "manualRx": "Saisie manuelle (nouvelle ordonnance)",
+    "rxOption": "Ordonnance du {{date}}",
+    "clientRxLinked": "Ordonnance liée à la commande — reprise sur la fiche technique.",
+    "rxNoteGeneric": "Saisie lors d'une commande de verres"
   },
   "waTpl": {
     "language": "Langue des messages :",

@@ -669,6 +669,7 @@ model OpticalPrescription {
   createdAt         DateTime  @default(now())
 
   sales Sale[]
+  lensOrders LensOrder[]
 
   @@index([tenantId, customerId])
   @@index([tenantId])
@@ -894,6 +895,9 @@ model LensOrder {
   frameRef         String?
   /// Prise de mesures (assistant de centrage) utilisée pour le montage.
   measurementId    String?
+  // Ordonnance du dossier client utilisée pour cette commande (fiche technique).
+  prescriptionId   String?
+  prescription     OpticalPrescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
   /// Jeton opaque du lien de suivi public (jamais de donnée client dans l'URL).
   publicToken      String?            @unique
   packageItems     TrackPackageItem[]
@@ -908,6 +912,7 @@ model LensOrder {
   @@index([tenantId, status])
   @@index([tenantId, customerId])
   @@index([frameProductId])
+  @@index([prescriptionId])
 }
 
 /**

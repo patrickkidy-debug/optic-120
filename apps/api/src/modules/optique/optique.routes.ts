@@ -61,6 +61,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
         customer: { select: { firstName: true, lastName: true, phone: true } },
         // Vignette Kanban : nom + photo de la monture associée, si choisie.
         frameProduct: { select: { id: true, name: true, brand: true, photoUrl: true } },
+          prescription: true,
       },
     });
     return reply.send({ orders });
@@ -85,6 +86,14 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
       const frame = await req.db!.product.findFirst({ where: { id: input.frameProductId } });
       if (!frame) throw notFound('Monture introuvable');
     }
+    // L'ordonnance liée doit appartenir au client de la commande.
+    if (input.prescriptionId) {
+      const rx = await req.db!.opticalPrescription.findFirst({
+        where: { id: input.prescriptionId, ...(input.customerId ? { customerId: input.customerId } : {}) },
+        select: { id: true },
+      });
+      if (!rx) throw notFound('Ordonnance introuvable pour ce client');
+    }
     const order = await retryOnDuplicateNumber(async () =>
       req.db!.lensOrder.create({
         data: {
@@ -101,6 +110,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
           cost: input.cost ?? null,
           notes: input.notes ?? null,
           lensConfig: input.lensConfig ?? undefined,
+          prescriptionId: input.prescriptionId || null,
           createdById: req.auth!.userId,
         },
         // Même forme que GET /lens-orders : le frontend peut ouvrir directement
@@ -108,6 +118,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
         include: {
           customer: { select: { firstName: true, lastName: true, phone: true } },
           frameProduct: { select: { id: true, name: true, brand: true, photoUrl: true } },
+          prescription: true,
         },
       }),
     );

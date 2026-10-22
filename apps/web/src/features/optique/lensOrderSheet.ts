@@ -328,7 +328,8 @@ export async function openLensOrderSheet(
   } catch {
     measure = null; // droits ou réseau : la fiche garde des cases à remplir
   }
-  win.document.write(buildLensOrderSheetHtml(order, company, customer, createdBy, measure));
+  // Ordonnance liée à la commande en priorité ; à défaut, la dernière du client.
+  win.document.write(buildLensOrderSheetHtml(order, company, customer, createdBy, measure, { rx: order.prescription ?? null }));
   win.document.close();
   win.focus();
 }

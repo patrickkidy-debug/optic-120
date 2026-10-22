@@ -4814,7 +4814,12 @@
     "saveRx": "Also save this prescription to the customer file",
     "rxSaved": "Prescription saved to the customer file",
     "rxNotSaved": "The order is created, but the prescription could not be added to the file:",
-    "rxNote": "Entered with lens order {{number}}"
+    "rxNote": "Entered with lens order {{number}}",
+    "linkedRx": "Prescription from the customer file",
+    "manualRx": "Manual entry (new prescription)",
+    "rxOption": "Prescription of {{date}}",
+    "clientRxLinked": "Prescription linked to the order — shown on the technical sheet.",
+    "rxNoteGeneric": "Entered during a lens order"
   },
   "waTpl": {
     "language": "Message language:",

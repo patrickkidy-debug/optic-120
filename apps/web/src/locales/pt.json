@@ -4814,7 +4814,12 @@
     "saveRx": "Guardar também esta receita no processo do cliente",
     "rxSaved": "Receita guardada no processo do cliente",
     "rxNotSaved": "A encomenda foi criada, mas a receita não pôde ser adicionada ao processo:",
-    "rxNote": "Introduzida na encomenda de lentes {{number}}"
+    "rxNote": "Introduzida na encomenda de lentes {{number}}",
+    "linkedRx": "Receita do processo do cliente",
+    "manualRx": "Introdução manual (nova receita)",
+    "rxOption": "Receita de {{date}}",
+    "clientRxLinked": "Receita ligada à encomenda — apresentada na ficha técnica.",
+    "rxNoteGeneric": "Introduzida numa encomenda de lentes"
   },
   "waTpl": {
     "language": "Língua das mensagens:",

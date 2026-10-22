@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Search,
@@ -397,6 +397,14 @@ export function LensOrderForm({
     enabled: Boolean(customerId) && canSeeRx,
   });
   const latestRx: Prescription | undefined = clientRx?.[0];
+  // Client choisi : sa dernière ordonnance est liée et appliquée d'office
+  // (sauf si une prescription a déjà été saisie à la main).
+  useEffect(() => {
+    if (!isVerres || rxFromClient || !latestRx) return;
+    const typed = (['sphere', 'cylinder', 'axis', 'addition'] as const).some((f) => (odRx[f] ?? '').trim() || (ogRx[f] ?? '').trim());
+    if (!typed) applyClientRx(latestRx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestRx?.id, isVerres]);
   function applyClientRx(p: Prescription) {
     setSameForBoth(false);
     setOdRx({ sphere: p.odSphere ?? '', cylinder: p.odCylinder ?? '', axis: p.odAxis ?? '', addition: p.odAddition ?? '' });
@@ -520,7 +528,30 @@ export function LensOrderForm({
   const willSaveRx = isVerres && saveRx && !!customerId && hasAnyRx && !rxFromClient && canCreateRx;
   const mut = useMutation({
     mutationFn: async () => {
+      // Ordonnance saisie à la main : rangée dans le dossier du client, puis
+      // liée à la commande (comme une ordonnance reprise du dossier).
+      let savedRxId: string | null = null;
+      if (willSaveRx && customerId) {
+        try {
+          const saved = await createPrescription(customerId, {
+            odSphere: rxText('sphere', odRx.sphere),
+            odCylinder: rxText('cylinder', odRx.cylinder),
+            odAxis: rxText('axis', odRx.axis),
+            odAddition: rxText('addition', odRx.addition),
+            ogSphere: rxText('sphere', effectiveOg.sphere),
+            ogCylinder: rxText('cylinder', effectiveOg.cylinder),
+            ogAxis: rxText('axis', effectiveOg.axis),
+            ogAddition: rxText('addition', effectiveOg.addition),
+            lensType: typeLabel,
+            notes: tr('lensForm.rxNoteGeneric'),
+          });
+          savedRxId = saved.id;
+        } catch (e) {
+          setRxSaveWarning(apiErrorMessage(e));
+        }
+      }
       const order = await createLensOrder({
+        prescriptionId: (isVerres && (rxFromClient || savedRxId)) || undefined,
         customerId: customerId || '',
         category,
         description: finalDescription,
@@ -534,25 +565,6 @@ export function LensOrderForm({
         frameProductId: frame?.id,
         lensConfig,
       });
-      // Ordonnance saisie à la main : rangée aussi dans le dossier du client.
-      if (willSaveRx && customerId) {
-        try {
-          await createPrescription(customerId, {
-            odSphere: rxText('sphere', odRx.sphere),
-            odCylinder: rxText('cylinder', odRx.cylinder),
-            odAxis: rxText('axis', odRx.axis),
-            odAddition: rxText('addition', odRx.addition),
-            ogSphere: rxText('sphere', effectiveOg.sphere),
-            ogCylinder: rxText('cylinder', effectiveOg.cylinder),
-            ogAxis: rxText('axis', effectiveOg.axis),
-            ogAddition: rxText('addition', effectiveOg.addition),
-            lensType: typeLabel,
-            notes: tr('lensForm.rxNote', { number: order.number }),
-          });
-        } catch (e) {
-          setRxSaveWarning(apiErrorMessage(e));
-        }
-      }
       return order;
     },
     onSuccess: (order) => setCreatedOrder(order),
@@ -648,15 +660,33 @@ export function LensOrderForm({
                     </div>
                   </div>
 
-                  {latestRx && rxFromClient !== latestRx.id && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-sm">
-                      <span className="text-content-muted">{tr('lensForm.clientRxAvailable', { date: formatDate(latestRx.date) })}</span>
-                      <Button type="button" className="h-8 px-3 text-xs" onClick={() => applyClientRx(latestRx)}>
-                        <FileText className="h-3.5 w-3.5" /> {tr('lensForm.useClientRx')}
-                      </Button>
+                  {/* Ordonnance du dossier client liée à la commande. */}
+                  {clientRx && clientRx.length > 0 && (
+                    <div className="rounded-xl border bg-surface px-3 py-2.5 text-sm">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-content-muted">
+                        <FileText className="h-3.5 w-3.5 text-primary" /> {tr('lensForm.linkedRx')}
+                      </label>
+                      <select
+                        className="input mt-1.5 py-2 text-sm"
+                        value={rxFromClient ?? ''}
+                        onChange={(e) => {
+                          const p = clientRx.find((x) => x.id === e.target.value);
+                          if (p) applyClientRx(p);
+                          else setRxFromClient(null);
+                        }}
+                      >
+                        <option value="">{tr('lensForm.manualRx')}</option>
+                        {clientRx.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {tr('lensForm.rxOption', { date: formatDate(p.date) })}
+                            {p.lensType ? ` · ${p.lensType}` : ''}
+                            {p.prescriberName ? ` · ${p.prescriberName}` : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
-                  {rxFromClient && <p className="text-xs font-medium text-success">✓ {tr('lensForm.clientRxApplied')}</p>}
+                  {rxFromClient && <p className="text-xs font-medium text-success">✓ {tr('lensForm.clientRxLinked')}</p>}
 
                   <div className="grid grid-cols-1 gap-2">
                     <EyeRxFields label={tr('ui.LensOrderForm.odIlDroit')} rx={odRx} onChange={(v) => { setOdRx(v); setRxFromClient(null); }} showAdvanced={showAdvancedRx} />

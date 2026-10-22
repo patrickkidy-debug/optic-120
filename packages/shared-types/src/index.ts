@@ -1680,6 +1680,8 @@ export const lensOrderCreateSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal('')),
   /** Configuration structurée verres (catégorie VERRES) — voir lensOrderConfigSchema. */
   lensConfig: lensOrderConfigSchema.optional(),
+  /** Ordonnance du dossier client liée à la commande. */
+  prescriptionId: z.string().uuid().optional().or(z.literal('')),
 });
 export type LensOrderCreateInput = z.infer<typeof lensOrderCreateSchema>;
 export const lensOrderStatusSchema = z.object({ status: z.enum(LENS_ORDER_STATUSES) });
