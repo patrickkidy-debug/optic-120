@@ -65,7 +65,7 @@ export function AppShell() {
   }, []);
 
   const premium = usePremiumUi();
-  // Menu rétractable : réservé à l'interface premium (avant-première).
+  // Menu rétractable (interface premium).
   const sidebarCollapsed = useUIStore((st) => st.sidebarCollapsed) && premium;
 
   return (
