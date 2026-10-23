@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, SaleType } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission, assertBranchAccess, branchScope } from '../../middlewares/rbac-guard.js';
+import { requirePermission, requireAnyPermission, assertBranchAccess, branchScope, isUnrestricted } from '../../middlewares/rbac-guard.js';
 import { forbidden, notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import * as salesService from './sales.service.js';
@@ -11,7 +11,9 @@ import * as reportService from './sales-report.service.js';
 export async function salesRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
-  app.get('/', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+  // Liste des ventes ET des devis : la page Devis s'ouvre avec « Voir les
+  // devis » seulement ; sans « Voir les ventes », on ne renvoie que les devis.
+  app.get('/', { preHandler: requireAnyPermission('optique.sales.view', 'optique.quotes.view') }, async (req, reply) => {
     const q = req.query as {
       branchId?: string;
       status?: string;
@@ -25,6 +27,8 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     // Magasin demandé vérifié ; sans magasin, uniquement ceux autorisés.
     const where: Record<string, unknown> = { ...branchScope(req, q.branchId) };
     if (q.status) where.status = q.status;
+    const quotesOnly = !isUnrestricted(req) && !req.auth!.permissions.has('optique.sales.view');
+    if (quotesOnly) q.type = SaleType.QUOTE;
     if (q.type) where.type = q.type;
     // Recherche sur toute l'historique, sans restriction de période : numéro de
     // pièce, nom du client ou téléphone. C'est le seul moyen de retrouver une
@@ -223,7 +227,7 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ payments });
   });
 
-  app.get('/:id', { preHandler: requirePermission('optique.sales.view') }, async (req, reply) => {
+  app.get('/:id', { preHandler: requireAnyPermission('optique.sales.view', 'optique.quotes.view') }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const sale = await req.db!.sale.findFirst({
       where: { id },
@@ -239,6 +243,10 @@ export async function salesRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     if (!sale) throw notFound('Vente introuvable');
+    // « Voir les devis » seul : une vente reste inaccessible, un devis non.
+    if (sale.type !== SaleType.QUOTE && !isUnrestricted(req) && !req.auth!.permissions.has('optique.sales.view')) {
+      throw forbidden('Permission requise : optique.sales.view');
+    }
     // Une pièce d'un magasin non autorisé n'est pas consultable (même par son id).
     assertBranchAccess(req, sale.branchId);
     // Nom de l'assureur exposé à plat : la part prise en charge s'affiche comme

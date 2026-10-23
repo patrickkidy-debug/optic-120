@@ -3,7 +3,7 @@ import { forbidden, unauthorized } from '../lib/http-error.js';
 import { isOperatorEmail } from '../lib/operators.js';
 
 /** Le fondateur / opérateur plateforme passe toutes les vérifications de permission. */
-function isUnrestricted(req: FastifyRequest): boolean {
+export function isUnrestricted(req: FastifyRequest): boolean {
   return !!req.auth && isOperatorEmail(req.auth.email);
 }
 

@@ -8,6 +8,8 @@ export interface RoleDto {
   isSystem: boolean;
   isCustom: boolean;
   allBranches: boolean;
+  /** Permissions modifiées par rapport au modèle par défaut du rôle système. */
+  permissionsCustomized?: boolean;
   userCount: number;
   permissions: string[];
 }
