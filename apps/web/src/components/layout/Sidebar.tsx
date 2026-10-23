@@ -94,7 +94,7 @@ export function Sidebar({ collapsed = false, premium = false }: { collapsed?: bo
               <div
                 className={clsx(
                   'space-y-0.5 transition-all duration-200 overflow-hidden',
-                  isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
+                  isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
                 )}
               >
                 {items.map((it) =>
