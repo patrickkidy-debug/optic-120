@@ -48,6 +48,8 @@ export default {
         // Police des titres pilotée par --font-display (voir styles/index.css) :
         // permet une police différente pour les comptes bêta.
         display: ['var(--font-display)'],
+        // Police « arcade » de la marque (titres de page, chiffres clés), comme la landing.
+        arcade: ['Bungee', 'Oxanium', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: '0.65rem',

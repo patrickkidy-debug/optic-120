@@ -160,7 +160,19 @@
     "googleSignup": "S'inscrire avec Google",
     "googleContinue": "Continuer avec Google",
     "googleCancelled": "Connexion Google annulée.",
-    "googleFailed": "La connexion Google n'a pas abouti. Réessayez."
+    "googleFailed": "La connexion Google n'a pas abouti. Réessayez.",
+    "arcade": {
+      "level": "Niveau {{current}}/{{total}}",
+      "step1": "Votre établissement",
+      "step2": "Vous",
+      "step3": "Sécurité",
+      "say1": "Bienvenue ! Je suis Oculo. On crée votre magasin d'optique en 3 niveaux ?",
+      "say2": "Super ! Et vous, comment vous appelez-vous ?",
+      "say3": "Dernier niveau : choisissez un mot de passe solide.",
+      "sayLogin": "Content de vous revoir ! Vos clients vous attendent.",
+      "next": "Niveau suivant",
+      "back": "Retour"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",

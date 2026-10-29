@@ -14,11 +14,18 @@ import { AuthLayout } from './AuthLayout';
 import { Button, Field, PasswordInput } from '../../components/ui';
 import { GoogleSignInButton, hasGoogleSignIn } from '../../components/GoogleSignInButton';
 import { WhatsappField } from '../../components/WhatsappField';
-import { OpticalShopIllustration } from '../../components/illustrations/OpticalShopIllustration';
 import { trFr } from '../../lib/sharedLabels';
 import { tr } from '../../lib/tr';
 
 const VALID_PLANS: SignupInput['plan'][] = ['STARTER', 'STANDARD', 'GROWTH'];
+
+// Inscription en 3 « niveaux » : établissement, vous, sécurité. Chaque niveau
+// valide ses propres champs avant de passer au suivant.
+const LEVELS: (keyof SignupInput)[][] = [
+  ['tenantName', 'branchName'],
+  ['adminFirstName', 'adminLastName', 'adminEmail', 'whatsapp'],
+  ['adminPassword'],
+];
 
 export function SignupPage() {
   const { t } = useTranslation();
@@ -46,10 +53,12 @@ export function SignupPage() {
   const [googleWhatsapp, setGoogleWhatsapp] = useState('');
   const [googleCode, setGoogleCode] = useState('');
   const [serverError, setServerError] = useState('');
+  const [level, setLevel] = useState(0);
   const {
     register,
     handleSubmit,
     setValue,
+    trigger,
     formState: { errors, isSubmitting, isSubmitted },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -73,6 +82,15 @@ export function SignupPage() {
     } catch (e) {
       setServerError(apiErrorMessage(e, tr('ui.SignupPage.creationImpossible')));
     }
+  }
+
+  async function onFormSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (level < LEVELS.length - 1) {
+      if (await trigger(LEVELS[level])) setLevel(level + 1);
+      return;
+    }
+    void handleSubmit(onSubmit)();
   }
 
   // Inscription Google : compte inexistant → on demande juste le nom de l'établissement.
@@ -136,62 +154,76 @@ export function SignupPage() {
     );
   }
 
+  const step = (n: number) => (level === n ? 'space-y-4' : 'hidden');
   return (
     <AuthLayout
       title={t('auth.signUpTitle')}
       subtitle={t('auth.signUpSubtitle')}
-      illustration={<OpticalShopIllustration />}
+      say={t(`auth.arcade.say${level + 1}`)}
+      level={{ current: level + 1, total: LEVELS.length, label: t(`auth.arcade.step${level + 1}`) }}
     >
-      <GoogleSignInButton text="signup_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
-      {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
-      {hasGoogleSignIn && (
-        <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
-          <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
-        </div>
+      {level === 0 && (
+        <>
+          <GoogleSignInButton text="signup_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
+          {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
+          {hasGoogleSignIn && (
+            <div className="my-5 flex items-center gap-3 text-xs text-content-faint">
+              <div className="h-px flex-1 bg-line" /> {tr('activationUi.or')} <div className="h-px flex-1 bg-line" />
+            </div>
+          )}
+        </>
       )}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Field label={t('auth.tenantName')}>
-          <input className="input" placeholder={t('auth.placeholderOrg')} {...register('tenantName')} />
-          {errors.tenantName && <p className="mt-1 text-xs text-danger">{trFr(errors.tenantName.message)}</p>}
-        </Field>
-        <Field label={t('auth.branchName')}>
-          <input className="input" {...register('branchName')} />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('auth.firstName')}>
-            <input className="input" autoComplete="given-name" {...register('adminFirstName')} />
-            {errors.adminFirstName && (
-              <p className="mt-1 text-xs text-danger">{trFr(errors.adminFirstName.message)}</p>
-            )}
+      <form onSubmit={(e) => void onFormSubmit(e)} className="space-y-4">
+        <div className={step(0)}>
+          <Field label={t('auth.tenantName')}>
+            <input className="input" placeholder={t('auth.placeholderOrg')} {...register('tenantName')} />
+            {errors.tenantName && <p className="mt-1 text-xs text-danger">{trFr(errors.tenantName.message)}</p>}
           </Field>
-          <Field label={t('auth.lastName')}>
-            <input className="input" autoComplete="family-name" {...register('adminLastName')} />
-            {errors.adminLastName && (
-              <p className="mt-1 text-xs text-danger">{trFr(errors.adminLastName.message)}</p>
+          <Field label={t('auth.branchName')}>
+            <input className="input" {...register('branchName')} />
+          </Field>
+        </div>
+
+        <div className={step(1)}>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('auth.firstName')}>
+              <input className="input" autoComplete="given-name" {...register('adminFirstName')} />
+              {errors.adminFirstName && (
+                <p className="mt-1 text-xs text-danger">{trFr(errors.adminFirstName.message)}</p>
+              )}
+            </Field>
+            <Field label={t('auth.lastName')}>
+              <input className="input" autoComplete="family-name" {...register('adminLastName')} />
+              {errors.adminLastName && (
+                <p className="mt-1 text-xs text-danger">{trFr(errors.adminLastName.message)}</p>
+              )}
+            </Field>
+          </div>
+          <Field label={t('auth.email')}>
+            <input className="input" type="email" autoComplete="username" autoCapitalize="none" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
+            {errors.adminEmail && <p className="mt-1 text-xs text-danger">{trFr(errors.adminEmail.message)}</p>}
+          </Field>
+          <Field label={t('auth.whatsapp')}>
+            <WhatsappField
+              value=""
+              onChange={(v) => setValue('whatsapp', v, { shouldValidate: isSubmitted })}
+            />
+            {errors.whatsapp ? (
+              <p className="mt-1 text-xs text-danger">{trFr(errors.whatsapp.message)}</p>
+            ) : (
+              <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
             )}
           </Field>
         </div>
-        <Field label={t('auth.email')}>
-          <input className="input" type="email" autoComplete="username" autoCapitalize="none" placeholder={t('auth.placeholderEmail')} {...register('adminEmail')} />
-          {errors.adminEmail && <p className="mt-1 text-xs text-danger">{trFr(errors.adminEmail.message)}</p>}
-        </Field>
-        <Field label={t('auth.whatsapp')}>
-          <WhatsappField
-            value=""
-            onChange={(v) => setValue('whatsapp', v, { shouldValidate: isSubmitted })}
-          />
-          {errors.whatsapp ? (
-            <p className="mt-1 text-xs text-danger">{trFr(errors.whatsapp.message)}</p>
-          ) : (
-            <p className="mt-1 text-xs text-content-faint">{t('auth.whatsappHint')}</p>
-          )}
-        </Field>
-        <Field label={t('auth.password')}>
-          <PasswordInput autoComplete="new-password" placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
-          {errors.adminPassword && (
-            <p className="mt-1 text-xs text-danger">{trFr(errors.adminPassword.message)}</p>
-          )}
-        </Field>
+
+        <div className={step(2)}>
+          <Field label={t('auth.password')}>
+            <PasswordInput autoComplete="new-password" placeholder={t('auth.placeholderPassword')} {...register('adminPassword')} />
+            {errors.adminPassword && (
+              <p className="mt-1 text-xs text-danger">{trFr(errors.adminPassword.message)}</p>
+            )}
+          </Field>
+        </div>
 
         {serverError && (
           <div className="rounded-xl bg-[color:var(--danger)]/12 px-3 py-2 text-sm text-danger">
@@ -199,9 +231,16 @@ export function SignupPage() {
           </div>
         )}
 
-        <Button type="submit" loading={isSubmitting} className="w-full">
-          {t('auth.signup')}
-        </Button>
+        <div className="flex gap-3">
+          {level > 0 && (
+            <button type="button" onClick={() => setLevel(level - 1)} className="btn-outline min-h-[52px] rounded-2xl px-5">
+              {t('auth.arcade.back')}
+            </button>
+          )}
+          <Button type="submit" loading={isSubmitting} className="flex-1">
+            {level < LEVELS.length - 1 ? t('auth.arcade.next') : t('auth.signup')}
+          </Button>
+        </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-content-muted">

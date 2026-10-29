@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 
 /**
- * Oculo, la mascotte de la landing : une opticienne aux couleurs de la marque.
+ * Oculo, la mascotte de la marque (landing, accès, logiciel) : une opticienne aux couleurs de la marque.
  * Blouse blanche, grosses lunettes, échelle d'acuité à la main ; les yeux suivent
  * le pointeur et clignent, les sourcils se lèvent, l'autre main salue.
  */

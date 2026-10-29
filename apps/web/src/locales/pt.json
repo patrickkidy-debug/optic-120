@@ -160,7 +160,19 @@
     "googleSignup": "Registar com o Google",
     "googleContinue": "Continuar com o Google",
     "googleCancelled": "Início de sessão Google cancelado.",
-    "googleFailed": "O início de sessão Google não foi concluído. Tente novamente."
+    "googleFailed": "O início de sessão Google não foi concluído. Tente novamente.",
+    "arcade": {
+      "level": "Nível {{current}}/{{total}}",
+      "step1": "O seu estabelecimento",
+      "step2": "Você",
+      "step3": "Segurança",
+      "say1": "Bem-vindo! Sou a Oculo. Criamos a sua ótica em 3 níveis?",
+      "say2": "Ótimo! E qual é o seu nome?",
+      "say3": "Último nível: escolha uma palavra-passe forte.",
+      "sayLogin": "Que bom revê-lo! Os seus clientes esperam por si.",
+      "next": "Próximo nível",
+      "back": "Voltar"
+    }
   },
   "dashboard": {
     "title": "Painel",

@@ -37,7 +37,7 @@ export function ActivationShell({
   headerAction?: ReactNode;
 }) {
   return (
-    <div className="light min-h-screen bg-surface-2 text-content">
+    <div className="dark min-h-screen bg-bg text-content">
       <div className={`mx-auto w-full px-4 py-6 sm:py-10 ${wide ? 'max-w-3xl lg:max-w-6xl lg:px-8' : 'max-w-2xl'}`}>
         {/* Conseiller IA : accessible à chaque étape du tunnel. */}
         <div className="flex flex-wrap items-start justify-between gap-3">

@@ -459,12 +459,45 @@
 }
 
 /* Écrans de connexion : bouton principal au dégradé de la marque. */
+/* Écrans d'accès « Arcade Pro » : grille fine, carte sticker, champs épais et
+   bouton de jeu qui s'enfonce au clic. */
+.auth-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
+}
+.auth-card {
+  box-shadow: 8px 8px 0 #7c3aed, 0 30px 80px rgba(5, 2, 18, 0.5);
+}
+.auth-shell .input {
+  min-height: 48px;
+  border-width: 2px;
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.auth-shell .input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2);
+}
 .auth-shell .btn-primary {
-  background: linear-gradient(120deg, #7c3aed 0%, #c026d3 55%, #f97316 100%);
-  box-shadow: 0 12px 30px rgba(192, 38, 211, 0.35);
+  min-height: 52px;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  background: linear-gradient(120deg, #7c3aed 0%, #ec4899 55%, #f97316 100%);
+  box-shadow: 0 5px 0 #4c1d95;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
 }
 .auth-shell .btn-primary:hover {
   filter: brightness(1.08);
+}
+.auth-shell .btn-primary:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #4c1d95;
 }
 
 /* Interface interne « Clair premium » (avant-première : classe html.premium-ui,
@@ -504,6 +537,31 @@ html.premium-ui:not(.dark) .app-shell header {
 }
 html.premium-ui .app-shell main {
   font-weight: 500;
+}
+/* Version nuit violette (thème sombre, comme la page d'accueil) : halos de la
+   marque en fond, menu un ton au-dessus, cartes arrondies au liseré clair. */
+html.premium-ui.dark .app-shell {
+  background-color: #120a2b;
+  background-image:
+    radial-gradient(900px 520px at 0% -10%, rgba(124, 58, 237, 0.22), transparent 60%),
+    radial-gradient(700px 480px at 100% 0%, rgba(236, 72, 153, 0.12), transparent 60%),
+    radial-gradient(800px 520px at 60% 110%, rgba(249, 115, 22, 0.08), transparent 60%);
+  background-attachment: fixed;
+}
+html.premium-ui.dark .app-shell > aside {
+  background-color: rgba(23, 14, 54, 0.92);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 8px 0 40px rgba(5, 2, 18, 0.45);
+}
+html.premium-ui.dark .app-shell .card {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 14px 36px rgba(5, 2, 18, 0.35);
+}
+html.premium-ui.dark .app-shell header {
+  background-color: rgba(18, 10, 43, 0.8);
+  backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 /* Décor « fluide technologique » (components/FluidScene) : bulles irisées

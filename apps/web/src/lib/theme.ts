@@ -1,6 +1,8 @@
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
-const STORAGE_KEY = 'oculo_theme';
+// v2 : passage à la nuit violette de la marque — chacun repart sur le thème
+// sombre une fois, puis peut rechoisir le clair dans son profil.
+const STORAGE_KEY = 'oculo_theme_v2';
 
 export function getStoredTheme(): ThemeMode {
   const v = localStorage.getItem(STORAGE_KEY);

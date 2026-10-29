@@ -160,7 +160,19 @@
     "googleSignup": "Sign up with Google",
     "googleContinue": "Continue with Google",
     "googleCancelled": "Google sign-in cancelled.",
-    "googleFailed": "Google sign-in did not complete. Please try again."
+    "googleFailed": "Google sign-in did not complete. Please try again.",
+    "arcade": {
+      "level": "Level {{current}}/{{total}}",
+      "step1": "Your business",
+      "step2": "About you",
+      "step3": "Security",
+      "say1": "Welcome! I'm Oculo. Shall we set up your optical store in 3 levels?",
+      "say2": "Great! And what's your name?",
+      "say3": "Final level: choose a strong password.",
+      "sayLogin": "Good to see you again! Your customers are waiting.",
+      "next": "Next level",
+      "back": "Back"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

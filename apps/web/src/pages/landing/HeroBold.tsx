@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Check, FileText, Glasses, ScanFace, ShieldCheck, ShoppingCart, type LucideIcon } from 'lucide-react';
-import { Mascot } from './Mascot';
+import { Mascot } from '../../components/brand/Mascot';
 import { CenteringCard, RxCard } from './OpticTiles';
 
 /** Fond de la bande sombre : nuit violette de la marque. */
