@@ -129,20 +129,47 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm
       font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
+  /* Boutons « Arcade Pro » : dégradé de la marque posé sur un socle plus
+     sombre qui s'enfonce au clic, comme un bouton de jeu. */
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-hover shadow-card;
+    @apply btn font-bold text-white;
+    background: var(--gradient-brand);
+    box-shadow: 0 4px 0 #4c1d95;
   }
   .btn-accent {
-    @apply btn bg-accent text-white hover:bg-accent-hover shadow-card;
+    @apply btn font-bold text-white;
+    background: linear-gradient(120deg, #f97316 0%, #ec4899 100%);
+    box-shadow: 0 4px 0 #9a3412;
+  }
+  .btn-primary:hover:not(:disabled),
+  .btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .btn-primary:active:not(:disabled),
+  .btn-accent:active:not(:disabled),
+  .btn-danger:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #4c1d95;
   }
   .btn-ghost {
     @apply btn bg-transparent text-content-muted hover:bg-surface-2 hover:text-content;
   }
   .btn-outline {
-    @apply btn border bg-transparent text-content hover:bg-surface-2;
+    @apply btn border-2 bg-transparent text-content hover:border-primary/50 hover:bg-surface-2;
   }
   .btn-danger {
-    @apply btn bg-danger text-white hover:opacity-90;
+    @apply btn bg-danger font-bold text-white hover:opacity-90;
+    box-shadow: 0 4px 0 #991b1b;
+  }
+  /* Carte « sticker » (chiffres clés, encarts mis en avant) : liseré net et
+     ombre décalée à la couleur du module (--sticker), comme la landing. */
+  .card-sticker {
+    border-width: 2px;
+    box-shadow: 6px 6px 0 var(--sticker, #7c3aed);
+  }
+  .card-sticker:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0 var(--sticker, #7c3aed);
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
@@ -512,6 +539,16 @@ html.premium-ui .nav-link-active {
   color: rgb(var(--primary-rgb));
   background: linear-gradient(120deg, rgba(124, 58, 237, 0.14), rgba(236, 72, 153, 0.08));
 }
+html.premium-ui.dark .nav-link-active {
+  color: #fff;
+  background: linear-gradient(120deg, rgba(124, 58, 237, 0.45), rgba(236, 72, 153, 0.22));
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 181, 253, 0.28),
+    0 3px 0 rgba(76, 29, 149, 0.7);
+}
+html.premium-ui.dark .nav-link-active svg {
+  color: #fff;
+}
 html.premium-ui .nav-link-active::before {
   width: 4px;
   height: 1.4rem;
@@ -525,7 +562,7 @@ html.premium-ui:not(.dark) .app-shell > aside {
   border-color: transparent;
   box-shadow: 8px 0 40px rgba(76, 29, 149, 0.07);
 }
-html.premium-ui:not(.dark) .app-shell .card {
+html.premium-ui:not(.dark) .app-shell .card:not(.card-sticker) {
   border-color: transparent;
   border-radius: 22px;
   box-shadow: 0 12px 34px rgba(76, 29, 149, 0.07);
@@ -554,7 +591,7 @@ html.premium-ui.dark .app-shell > aside {
   box-shadow: 8px 0 40px rgba(5, 2, 18, 0.45);
 }
 html.premium-ui.dark .app-shell .card {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
   border-radius: 22px;
   box-shadow: 0 14px 36px rgba(5, 2, 18, 0.35);
 }
@@ -635,4 +672,14 @@ html.premium-ui.dark .app-shell header {
   .print-hide {
     display: none !important;
   }
+}
+
+/* Les règles « premium » des cartes passent après .card-sticker : on rétablit
+   le liseré et l'ombre décalée du sticker. */
+html.premium-ui .app-shell .card.card-sticker {
+  border-width: 2px;
+  box-shadow: 6px 6px 0 var(--sticker, #7c3aed);
+}
+html.premium-ui .app-shell .card.card-sticker:hover {
+  box-shadow: 8px 8px 0 var(--sticker, #7c3aed);
 }

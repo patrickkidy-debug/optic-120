@@ -6,11 +6,13 @@ import {
   type ReactNode,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type CSSProperties,
 } from 'react';
 import { Loader2, X, Eye, EyeOff, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { formatCurrency } from '../lib/format';
 import { tr } from '../lib/tr';
+import { Mascot } from './brand/Mascot';
 
 export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={clsx('h-4 w-4 animate-spin', className)} />;
@@ -18,8 +20,8 @@ export function Spinner({ className }: { className?: string }) {
 
 export function PageLoader() {
   return (
-    <div className="grid place-items-center py-20 text-content-muted">
-      <Spinner className="h-6 w-6" />
+    <div className="grid place-items-center py-20 text-primary">
+      <Spinner className="h-7 w-7" />
     </div>
   );
 }
@@ -67,6 +69,18 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
   return <span className={clsx('badge', badgeTones[tone])}>{children}</span>;
 }
 
+/**
+ * Teintes « sticker » par ton : ombre décalée vive + pastille pastel, comme les
+ * vignettes de la landing. Partagées avec les cartes du tableau de bord.
+ */
+export const STICKER_TONES = {
+  primary: { shadow: '#7c3aed', chip: '#ddd6fe' },
+  accent: { shadow: '#f97316', chip: '#fed7aa' },
+  success: { shadow: '#10b981', chip: '#a7f3d0' },
+  danger: { shadow: '#ef4444', chip: '#fecaca' },
+  pink: { shadow: '#ec4899', chip: '#fbcfe8' },
+} as const;
+
 export function StatCard({
   icon: Icon,
   label,
@@ -78,23 +92,18 @@ export function StatCard({
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  tone?: 'primary' | 'accent' | 'success' | 'danger';
+  tone?: keyof typeof STICKER_TONES;
 }) {
-  const toneClasses: Record<string, string> = {
-    primary: 'bg-primary-soft text-primary',
-    accent: 'bg-accent-soft text-accent',
-    success: 'bg-[color:var(--success)]/15 text-success',
-    danger: 'bg-[color:var(--danger)]/15 text-danger',
-  };
+  const t = STICKER_TONES[tone];
   return (
-    <div className="card p-5 transition hover:shadow-card-lg">
-      <div className="flex items-start justify-between">
-        <div>
+    <div className="card card-sticker p-5" style={{ '--sticker': t.shadow } as CSSProperties}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-content-muted">{label}</p>
-          <p className="mt-2 font-display text-2xl font-bold text-content">{value}</p>
+          <p className="mt-2 font-arcade text-[22px] leading-tight text-content">{value}</p>
           {hint && <p className="mt-1 text-xs text-content-faint">{hint}</p>}
         </div>
-        <div className={clsx('grid h-11 w-11 place-items-center rounded-xl', toneClasses[tone])}>
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[#120a2b]" style={{ background: t.chip }}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -114,8 +123,9 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="font-display text-2xl font-bold text-content">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-content-muted">{subtitle}</p>}
+        <h1 className="font-arcade text-[24px] leading-tight text-content sm:text-[28px]">{title}</h1>
+        <span aria-hidden className="mt-2 block h-1.5 w-14 rounded-full bg-brand" />
+        {subtitle && <p className="mt-2 text-sm text-content-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -134,11 +144,14 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="grid place-items-center rounded-2xl border border-dashed py-16 text-center">
-      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-surface-2 text-content-faint">
-        <Icon className="h-6 w-6" />
+    <div className="grid place-items-center rounded-2xl border-2 border-dashed px-4 py-12 text-center">
+      <div className="relative">
+        <Mascot className="w-[104px]" />
+        <span className="absolute -right-2 bottom-3 grid h-9 w-9 place-items-center rounded-xl bg-[#ddd6fe] text-[#120a2b] shadow-[3px_3px_0_#7c3aed]">
+          <Icon className="h-[18px] w-[18px]" />
+        </span>
       </div>
-      <p className="mt-4 font-medium text-content">{title}</p>
+      <p className="mt-3 font-arcade text-lg text-content">{title}</p>
       {hint && <p className="mt-1 max-w-sm text-sm text-content-muted">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -304,9 +317,9 @@ export function ProgressBar({
           {sublabel && <span className="text-content-muted">{sublabel}</span>}
         </div>
       )}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-3">
+      <div className="h-3 w-full overflow-hidden rounded-full bg-surface-3">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
+          className="h-full rounded-full bg-brand transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>

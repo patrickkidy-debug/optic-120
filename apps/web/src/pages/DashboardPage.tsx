@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { type ReactNode } from 'react';
+import { type ReactNode, type CSSProperties } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,7 +43,8 @@ import clsx from 'clsx';
 import { useAuthStore, usePermission } from '../store/auth';
 import { useUIStore } from '../store/ui';
 import { getDashboard, getAdminDashboard, listLensOrders } from '../features/optique/api';
-import { StatCard, EmptyState, Badge, CurrencyDisplay, Button } from '../components/ui';
+import { StatCard, EmptyState, Badge, CurrencyDisplay, Button, STICKER_TONES } from '../components/ui';
+import { Mascot } from '../components/brand/Mascot';
 import { apiErrorMessage } from '../lib/api';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { WatchDemoCard } from '../features/demo/WatchDemoCard';
@@ -230,11 +231,12 @@ function Sparkline({ data }: { data: number[] }) {
   );
 }
 
-const KPI_TONES: Record<string, string> = {
-  primary: 'from-primary/20 to-primary/5 text-primary',
-  success: 'from-[color:var(--success)]/20 to-[color:var(--success)]/[0.04] text-success',
-  accent: 'from-accent/20 to-accent/5 text-accent',
-  danger: 'from-[color:var(--danger)]/20 to-[color:var(--danger)]/[0.04] text-danger',
+// Tons des cartes chiffrées : teintes « sticker » partagées (ombre + pastille).
+const KPI_TONES = {
+  primary: STICKER_TONES.primary,
+  success: STICKER_TONES.success,
+  accent: STICKER_TONES.accent,
+  danger: STICKER_TONES.danger,
 };
 
 function KpiCard({
@@ -255,23 +257,18 @@ function KpiCard({
   spark?: number[];
 }) {
   return (
-    <div className="card group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-lg">
+    <div className="card card-sticker group relative overflow-hidden p-5" style={{ '--sticker': KPI_TONES[tone].shadow } as CSSProperties}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm text-content-muted">{label}</p>
-          <p className="mt-1 font-display text-2xl font-bold text-content">{value}</p>
+          <p className="mt-1.5 font-arcade text-[20px] leading-tight text-content">{value}</p>
           {delta !== undefined && (
             <div className="mt-2">
               <DeltaChip pct={delta ?? null} label={deltaLabel} />
             </div>
           )}
         </div>
-        <span
-          className={clsx(
-            'grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br',
-            KPI_TONES[tone],
-          )}
-        >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[#120a2b]" style={{ background: KPI_TONES[tone].chip }}>
           <Icon className="h-5 w-5" />
         </span>
       </div>
@@ -293,17 +290,12 @@ function MiniStat({
 }) {
   return (
     <div className="card flex items-center gap-3 p-4">
-      <span
-        className={clsx(
-          'grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br',
-          KPI_TONES[tone],
-        )}
-      >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[#120a2b]" style={{ background: KPI_TONES[tone].chip }}>
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">
         <p className="truncate text-xs text-content-muted">{label}</p>
-        <p className="font-display text-lg font-bold text-content">{value}</p>
+        <p className="font-arcade text-base text-content">{value}</p>
       </div>
     </div>
   );
@@ -343,7 +335,7 @@ function TopProductsCard({
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-surface-3">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                  className="h-full rounded-full bg-brand transition-all duration-500"
                   style={{ width: `${(p.revenue / max) * 100}%` }}
                 />
               </div>
@@ -361,7 +353,7 @@ function DashboardSkeleton({ welcome, title }: { welcome: string; title: string 
     <div>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-content">{welcome} 👋</h1>
+          <h1 className="font-arcade text-[26px] leading-tight text-content sm:text-[32px]">{welcome}</h1>
           <p className="mt-1 text-sm text-content-muted">{title}</p>
         </div>
         <div className="flex w-full max-w-lg items-center gap-3 rounded-2xl border border-surface-3 bg-surface-2/50 p-3.5 animate-pulse">
@@ -474,8 +466,8 @@ export function DashboardPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-content">
-            {t('dashboard.welcome')}, {user?.firstName} 👋
+          <h1 className="font-arcade text-[26px] leading-tight text-content sm:text-[32px]">
+            {t('dashboard.welcome')}, <span className="text-gradient">{user?.firstName}</span>
           </h1>
           <p className="mt-1 text-sm text-content-muted">{t('dashboard.title')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -488,16 +480,15 @@ export function DashboardPage() {
             <WatchDemoCard mini />
           </div>
         </div>
-        <div className="flex max-w-lg items-center gap-3 rounded-2xl border border-primary/10 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent p-3.5 shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500">
-          <span className={clsx("grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface-2 shadow-sm", motivation.color)}>
-            <MotivationIcon className="h-5 w-5 animate-pulse" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-primary/80">{tr('ui.DashboardPage.inspirationDuMoment')}</p>
-            <p className="mt-0.5 text-xs md:text-sm font-medium text-content italic leading-relaxed">
-              "{motivation.text}"
+        <div className="flex max-w-lg items-end gap-2">
+          <div className="min-w-0 flex-1 rounded-2xl rounded-br-sm bg-white px-4 py-3 text-[#120a2b] shadow-[5px_5px_0_#7c3aed]">
+            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6d28d9]">
+              <MotivationIcon className={clsx('h-3.5 w-3.5', motivation.color)} />
+              {tr('ui.DashboardPage.inspirationDuMoment')}
             </p>
+            <p className="mt-1 text-xs font-semibold leading-relaxed md:text-sm">{motivation.text}</p>
           </div>
+          <Mascot className="w-[78px] shrink-0 md:w-[92px]" />
         </div>
       </div>
 
@@ -508,7 +499,7 @@ export function DashboardPage() {
       <StoreSetupCard />
 
       {/* KPI principaux */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard icon={Banknote} label={`${t('dashboard.todayRevenueFull')} net`} value={<CurrencyDisplay amount={data.todayRevenue} />} tone="primary" />
         <KpiCard
           icon={TrendingUp}
