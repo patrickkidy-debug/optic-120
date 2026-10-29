@@ -1,26 +1,36 @@
 import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ShieldCheck, Smartphone, Store } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Glasses, PackageCheck, ShieldCheck, ShoppingCart, Smartphone, Store } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { LanguagePicker } from '../../components/LanguagePicker';
 import { Mascot } from '../../components/brand/Mascot';
 import { tr } from '../../lib/tr';
+import { EyeChartScene, MirrorScene, OpticalDisplayBackdrop, SpeechBubble } from './AuthScenes';
 
-// Atouts de la plateforme, en cartes « sticker » aux teintes de la marque.
-const FEATURES = [
-  { icon: Smartphone, key: 'auth.panelFeat1', bg: '#ddd6fe', shadow: '#7c3aed', rot: -2 },
-  { icon: Store, key: 'auth.panelFeat2', bg: '#fbcfe8', shadow: '#ec4899', rot: 1.5 },
-  { icon: ShieldCheck, key: 'auth.panelFeat3', bg: '#fed7aa', shadow: '#f97316', rot: -1 },
-];
+// Atouts de la plateforme, en cartes « sticker » aux teintes de la marque :
+// une série pour la connexion, une autre pour la création de compte.
+const FEATURES = {
+  login: [
+    { icon: Smartphone, key: 'auth.panelFeat1', bg: '#ddd6fe', shadow: '#7c3aed', rot: -2 },
+    { icon: Store, key: 'auth.panelFeat2', bg: '#fbcfe8', shadow: '#ec4899', rot: 1.5 },
+    { icon: ShieldCheck, key: 'auth.panelFeat3', bg: '#fed7aa', shadow: '#f97316', rot: -1 },
+  ],
+  signup: [
+    { icon: ShoppingCart, key: 'auth.arcade.signupFeat1', bg: '#fbcfe8', shadow: '#ec4899', rot: 1.5 },
+    { icon: Glasses, key: 'auth.arcade.signupFeat2', bg: '#c7d2fe', shadow: '#7c3aed', rot: -2 },
+    { icon: PackageCheck, key: 'auth.arcade.signupFeat3', bg: '#fed7aa', shadow: '#f97316', rot: 1 },
+  ],
+};
 
 /** Progression de l'inscription, présentée comme des niveaux de jeu. */
 export type AuthLevel = { current: number; total: number; label: string };
 
 /**
- * Écrans d'accès « Arcade Pro » : nuit violette unie (sans décor de bulles),
- * Oculo la mascotte qui guide l'utilisateur, carte de formulaire « sticker ».
+ * Écrans d'accès « Arcade Pro » : nuit violette, présentoir de lunettes en
+ * fond, Oculo l'ourson opticien qui guide l'utilisateur (examen de vue à la
+ * connexion, essayage devant le miroir à l'inscription), carte « sticker ».
  * Toujours en sombre (classe .dark), comme la landing.
  */
 export function AuthLayout({
@@ -29,6 +39,7 @@ export function AuthLayout({
   children,
   say,
   level,
+  scene,
 }: {
   title: string;
   subtitle: string;
@@ -36,13 +47,17 @@ export function AuthLayout({
   /** Ce que dit Oculo dans sa bulle (par défaut : le sous-titre). */
   say?: string;
   level?: AuthLevel;
+  /** Scène animée : examen de vue (connexion) ou essayage (création). */
+  scene?: 'login' | 'signup';
 }) {
   const { t } = useTranslation();
   const bubble = say ?? subtitle;
+  const kind = scene ?? 'login';
   return (
     <div className="dark auth-shell relative min-h-screen overflow-x-clip bg-bg text-content">
-      {/* Grille fine, seul décor : sobre et « technologique » */}
+      {/* Grille fine + présentoir de lunettes en fondu */}
       <div aria-hidden className="auth-grid pointer-events-none absolute inset-0" />
+      <OpticalDisplayBackdrop />
 
       <header className="relative z-10 mx-auto flex max-w-[1180px] items-center justify-between px-5 py-5 sm:px-8">
         <Link to="/" aria-label="OculoSaaS">
@@ -53,32 +68,34 @@ export function AuthLayout({
 
       <main className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-8 px-5 pb-12 sm:px-8 lg:min-h-[calc(100vh-88px)] lg:grid-cols-[1fr_480px] lg:gap-16 lg:pb-16">
         <section>
-          {/* Oculo + sa bulle */}
-          <div className="flex items-end gap-3 lg:gap-5">
-            <Mascot className="w-[88px] shrink-0 lg:w-[200px]" />
-            <div className="min-w-0 flex-1 pb-6 lg:pb-16">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.p
-                  key={bubble}
-                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-                  className="rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm font-semibold leading-snug text-[#120a2b] shadow-[5px_5px_0_#7c3aed] lg:max-w-[360px] lg:px-5 lg:py-4 lg:text-lg"
-                >
-                  {bubble}
-                </motion.p>
-              </AnimatePresence>
+          {scene === 'login' ? (
+            <EyeChartScene />
+          ) : scene === 'signup' ? (
+            <MirrorScene say={bubble} />
+          ) : (
+            <div className="flex items-end gap-3 lg:gap-5">
+              <Mascot className="w-[96px] shrink-0 lg:w-[200px]" />
+              <div className="min-w-0 flex-1 pb-6 lg:pb-16">
+                <SpeechBubble text={bubble} className="rounded-bl-sm lg:max-w-[360px]" />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Grand écran : accroche + atouts en stickers */}
           <div className="hidden lg:block">
-            <h1 className="mt-8 font-arcade text-[40px] leading-[1] xl:text-[46px]">
-              {tr('auth.heroTitleA')} <span className="text-gradient">{tr('auth.heroTitleB')}</span>
+            <h1 className="mt-10 font-arcade text-[40px] leading-[1] xl:text-[46px]">
+              {kind === 'signup' ? (
+                <>
+                  {t('auth.arcade.signupHeroA')} <span className="text-gradient">{t('auth.arcade.signupHeroB')}</span>
+                </>
+              ) : (
+                <>
+                  {tr('auth.heroTitleA')} <span className="text-gradient">{tr('auth.heroTitleB')}</span>
+                </>
+              )}
             </h1>
             <ul className="mt-8 flex flex-wrap gap-4">
-              {FEATURES.map((f) => (
+              {FEATURES[kind].map((f) => (
                 <li
                   key={f.key}
                   className="flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm font-bold text-[#120a2b]"

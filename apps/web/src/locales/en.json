@@ -166,12 +166,25 @@
       "step1": "Your business",
       "step2": "About you",
       "step3": "Security",
-      "say1": "Welcome! I'm Oculo. Shall we set up your optical store in 3 levels?",
+      "say1": "This one suits me! Shall we set up your optical store in 3 levels?",
       "say2": "Great! And what's your name?",
       "say3": "Final level: choose a strong password.",
-      "sayLogin": "Good to see you again! Your customers are waiting.",
       "next": "Next level",
-      "back": "Back"
+      "back": "Back",
+      "chart": "Acuity",
+      "read1": "Hello! Read the first line…",
+      "read2": "Very good! And this one?",
+      "read3": "Even smaller…",
+      "read4": "10/10! Your customers are waiting.",
+      "frame1": "Round violet",
+      "frame2": "Pink cat-eye",
+      "frame3": "Black rectangle",
+      "frame4": "Orange aviator",
+      "signupHeroA": "Open your optical store",
+      "signupHeroB": "in 3 levels.",
+      "signupFeat1": "Checkout and Mobile Money",
+      "signupFeat2": "Prescriptions and centering",
+      "signupFeat3": "OculoTrack: every parcel tracked"
     }
   },
   "dashboard": {

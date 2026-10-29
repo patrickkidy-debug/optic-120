@@ -166,12 +166,25 @@
       "step1": "Votre établissement",
       "step2": "Vous",
       "step3": "Sécurité",
-      "say1": "Bienvenue ! Je suis Oculo. On crée votre magasin d'optique en 3 niveaux ?",
+      "say1": "Celle-ci me va bien ! On crée votre magasin d'optique en 3 niveaux ?",
       "say2": "Super ! Et vous, comment vous appelez-vous ?",
       "say3": "Dernier niveau : choisissez un mot de passe solide.",
-      "sayLogin": "Content de vous revoir ! Vos clients vous attendent.",
       "next": "Niveau suivant",
-      "back": "Retour"
+      "back": "Retour",
+      "chart": "Acuité",
+      "read1": "Bonjour ! Lisez la première ligne…",
+      "read2": "Très bien ! Et celle-ci ?",
+      "read3": "Encore plus petit…",
+      "read4": "10/10 ! Vos clients vous attendent.",
+      "frame1": "Ronde violette",
+      "frame2": "Papillon rose",
+      "frame3": "Rectangle noir",
+      "frame4": "Aviateur orange",
+      "signupHeroA": "Ouvrez votre optique",
+      "signupHeroB": "en 3 niveaux.",
+      "signupFeat1": "Caisse et Mobile Money",
+      "signupFeat2": "Ordonnances et centrage",
+      "signupFeat3": "OculoTrack : chaque colis suivi"
     }
   },
   "dashboard": {

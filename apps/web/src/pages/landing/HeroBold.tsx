@@ -167,7 +167,7 @@ export function HeroBold() {
           </div>
 
           {/* Oculo salue au-dessus des cartes, avec la notification « en direct » */}
-          <Mascot className="absolute -right-2 -top-4 z-10 w-[112px] sm:-right-8 sm:-top-6 sm:w-[156px]" />
+          <Mascot className="absolute -right-2 -top-8 z-10 w-[112px] sm:-right-8 sm:-top-14 sm:w-[156px]" />
           <div className="absolute right-[100px] top-2 h-[60px] w-[240px] sm:right-[136px] sm:top-4" aria-hidden>
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div

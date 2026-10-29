@@ -249,7 +249,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title={t('auth.signInTitle')} subtitle={t('auth.signInSubtitle')} say={t('auth.arcade.sayLogin')}>
+    <AuthLayout title={t('auth.signInTitle')} subtitle={t('auth.signInSubtitle')} scene="login">
       <GoogleSignInButton text="signin_with" onCredential={(idToken) => void google.handleCredential(idToken)} />
       {google.error && <p className="mt-3 text-center text-sm text-danger">{google.error}</p>}
       {hasGoogleSignIn && (

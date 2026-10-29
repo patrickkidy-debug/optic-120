@@ -514,6 +514,13 @@
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
   mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
 }
+/* Présentoir de lunettes en fond : fondu vers le haut pour laisser respirer
+   le contenu. */
+.auth-display {
+  opacity: 0.42;
+  -webkit-mask-image: linear-gradient(to top, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 35%, transparent 100%);
+}
 .auth-card {
   box-shadow: 8px 8px 0 #7c3aed, 0 30px 80px rgba(5, 2, 18, 0.5);
 }

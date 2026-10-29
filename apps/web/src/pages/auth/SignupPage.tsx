@@ -160,6 +160,7 @@ export function SignupPage() {
       title={t('auth.signUpTitle')}
       subtitle={t('auth.signUpSubtitle')}
       say={t(`auth.arcade.say${level + 1}`)}
+      scene="signup"
       level={{ current: level + 1, total: LEVELS.length, label: t(`auth.arcade.step${level + 1}`) }}
     >
       {level === 0 && (
