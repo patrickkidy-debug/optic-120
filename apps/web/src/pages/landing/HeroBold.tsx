@@ -73,14 +73,14 @@ export function HeroBold() {
       <div className="pointer-events-none absolute -right-32 top-24 -z-10 h-[460px] w-[460px] rounded-full bg-[#ec4899]/25 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-[-180px] left-1/3 -z-10 h-[420px] w-[420px] rounded-full bg-[#f97316]/20 blur-[120px]" />
 
-      <div className="mx-auto grid max-w-[1280px] items-center gap-14 lg:grid-cols-[1.12fr_0.88fr] lg:gap-8">
+      <div className="mx-auto grid max-w-[1280px] items-center gap-14 xl:grid-cols-[1.12fr_0.88fr] xl:gap-8">
         {/* Texte */}
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 backdrop-blur">
             <ShieldCheck className="h-4 w-4 text-[#f0abfc]" />
             <span className="text-xs font-semibold uppercase tracking-widest text-white/85">{t('landing.heroBadge')}</span>
           </span>
-          <h1 className="mt-6 text-[38px] leading-[0.95] sm:text-[60px] lg:text-[56px] xl:text-[72px]" style={DISPLAY}>
+          <h1 className="mt-6 text-[38px] leading-[0.95] sm:text-[60px] lg:text-[68px] xl:text-[72px]" style={DISPLAY}>
             {t('landing.heroTitleA')}
             <br />
             <span className="text-gradient">{t('landing.heroTitleAccent')}</span>

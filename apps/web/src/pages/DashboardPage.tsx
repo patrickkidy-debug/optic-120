@@ -351,7 +351,7 @@ function TopProductsCard({
 function DashboardSkeleton({ welcome, title }: { welcome: string; title: string }) {
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="font-arcade text-[26px] leading-tight text-content sm:text-[32px]">{welcome}</h1>
           <p className="mt-1 text-sm text-content-muted">{title}</p>
@@ -464,7 +464,7 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="font-arcade text-[26px] leading-tight text-content sm:text-[32px]">
             {t('dashboard.welcome')}, <span className="text-gradient">{user?.firstName}</span>
@@ -499,7 +499,7 @@ export function DashboardPage() {
       <StoreSetupCard />
 
       {/* KPI principaux */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard icon={Banknote} label={`${t('dashboard.todayRevenueFull')} net`} value={<CurrencyDisplay amount={data.todayRevenue} />} tone="primary" />
         <KpiCard
           icon={TrendingUp}

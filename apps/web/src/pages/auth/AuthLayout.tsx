@@ -66,23 +66,23 @@ export function AuthLayout({
         <LanguagePicker />
       </header>
 
-      <main className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-8 px-5 pb-12 sm:px-8 lg:min-h-[calc(100vh-88px)] lg:grid-cols-[1fr_480px] lg:gap-16 lg:pb-16">
-        <section>
+      <main className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-8 px-5 pb-12 sm:px-8 xl:min-h-[calc(100vh-88px)] xl:grid-cols-[1fr_480px] xl:gap-16 xl:pb-16">
+        <section className="mx-auto w-full max-w-[540px] xl:mx-0 xl:max-w-none">
           {scene === 'login' ? (
             <EyeChartScene />
           ) : scene === 'signup' ? (
             <MirrorScene say={bubble} />
           ) : (
-            <div className="flex items-end gap-3 lg:gap-5">
-              <Mascot className="w-[96px] shrink-0 lg:w-[200px]" />
-              <div className="min-w-0 flex-1 pb-6 lg:pb-16">
-                <SpeechBubble text={bubble} className="rounded-bl-sm lg:max-w-[360px]" />
+            <div className="flex items-end gap-3 xl:gap-5">
+              <Mascot className="w-[96px] shrink-0 sm:w-[140px] xl:w-[200px]" />
+              <div className="min-w-0 flex-1 pb-6 xl:pb-16">
+                <SpeechBubble text={bubble} className="rounded-bl-sm xl:max-w-[360px]" />
               </div>
             </div>
           )}
 
           {/* Grand écran : accroche + atouts en stickers */}
-          <div className="hidden lg:block">
+          <div className="hidden xl:block">
             <h1 className="mt-10 font-arcade text-[40px] leading-[1] xl:text-[46px]">
               {kind === 'signup' ? (
                 <>
@@ -112,7 +112,7 @@ export function AuthLayout({
         </section>
 
         {/* Carte du formulaire */}
-        <section className="auth-card w-full rounded-[28px] border-2 border-white/10 bg-surface p-6 sm:p-9">
+        <section className="auth-card mx-auto w-full max-w-[560px] rounded-[28px] border-2 border-white/10 bg-surface p-6 sm:p-9">
           {level && <LevelBar level={level} />}
           <h2 className="font-arcade text-[26px] leading-tight sm:text-[30px]">{title}</h2>
           <p className="mt-2 text-sm text-content-muted">{subtitle}</p>
