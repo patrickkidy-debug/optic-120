@@ -44,7 +44,7 @@ export function LockScreen() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-soft text-primary">
           <Lock className="h-6 w-6" />
         </div>
-        <h1 className="mt-4 font-display text-xl font-bold text-content">{t('auth.locked')}</h1>
+        <h1 className="mt-4 font-arcade text-xl text-content">{t('auth.locked')}</h1>
         <p className="mt-1 text-sm text-content-muted">{t('auth.unlockSubtitle')}</p>
         {user && (
           <p className="mt-3 text-sm font-medium text-content">

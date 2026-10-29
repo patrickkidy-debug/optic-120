@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { Rocket } from 'lucide-react';
+import { Mascot } from '../components/brand/Mascot';
 import { tr } from '../lib/tr';
 
 const TITLES: Record<string, string> = {
@@ -19,10 +20,13 @@ export function ComingSoon() {
 
   return (
     <div className="grid place-items-center py-24 text-center">
-      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-accent-soft text-accent">
-        <Rocket className="h-7 w-7" />
+      <div className="relative">
+        <Mascot className="w-[130px]" />
+        <span className="absolute -right-2 bottom-3 grid h-10 w-10 place-items-center rounded-xl bg-[#fed7aa] text-[#120a2b] shadow-[3px_3px_0_#f97316]">
+          <Rocket className="h-5 w-5" />
+        </span>
       </div>
-      <h1 className="mt-5 font-display text-2xl font-bold text-content">{title}</h1>
+      <h1 className="mt-4 font-arcade text-2xl text-content">{title}</h1>
       <p className="mt-2 max-w-md text-content-muted">
         {tr('ui.ComingSoon.ceModuleFaitPartieDe')} <span className="font-semibold text-content">{tr('ui.ComingSoon.phase2')}</span> {tr('ui.ComingSoon.deLaFeuilleDeRoute')}
       </p>

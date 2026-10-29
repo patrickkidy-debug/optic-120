@@ -94,7 +94,7 @@ export function ConsoleLayout({
       <header className="sticky top-16 z-30 border-b bg-surface/95 backdrop-blur">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg font-bold text-content">
+            <h1 className="truncate font-arcade text-lg text-content">
               {current.pageTitle ?? current.label}
             </h1>
             {current.subtitle && (

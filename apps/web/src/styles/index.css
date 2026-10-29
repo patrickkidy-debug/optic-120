@@ -197,6 +197,24 @@
   .table-cell {
     @apply px-4 py-3 text-sm;
   }
+  /* Tableaux « Arcade Pro » : en-têtes en petites capitales espacées, ligne
+     survolée teintée de violet pour suivre sa lecture. */
+  thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+  }
+  tbody tr {
+    transition: background-color 0.15s ease;
+  }
+  tbody tr:hover {
+    background-color: rgb(var(--primary-rgb) / 0.06);
+  }
+  /* Fenêtre (Modal) : carte sticker, sans le décalage au survol. */
+  .card-modal {
+    border-width: 2px;
+    box-shadow: 8px 8px 0 #7c3aed, 0 30px 80px rgba(5, 2, 18, 0.5);
+  }
   /* En-tête de tableau : légèrement teinté pour détacher les colonnes du
      contenu, comme dans le modèle. */
   thead tr {
@@ -682,4 +700,17 @@ html.premium-ui .app-shell .card.card-sticker {
 }
 html.premium-ui .app-shell .card.card-sticker:hover {
   box-shadow: 8px 8px 0 var(--sticker, #7c3aed);
+}
+html.premium-ui .app-shell .card.card-modal {
+  border-width: 2px;
+  box-shadow: 8px 8px 0 #7c3aed, 0 30px 80px rgba(5, 2, 18, 0.5);
+}
+
+/* Titre principal de chaque page du logiciel en police « arcade » de la
+   marque, y compris les pages qui composent leur propre en-tête. */
+.app-shell main h1 {
+  font-family: 'Bungee', 'Oxanium', system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.15;
 }

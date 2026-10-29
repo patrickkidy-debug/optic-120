@@ -48,7 +48,7 @@ export function ActivationShell({
         {step && <StepBar current={step} />}
 
         {title && (
-          <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight text-content sm:text-3xl">
+          <h1 className="font-arcade text-2xl leading-tight text-content sm:text-3xl">
             {title}
           </h1>
         )}

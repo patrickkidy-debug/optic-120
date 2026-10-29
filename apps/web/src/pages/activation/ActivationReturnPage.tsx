@@ -123,7 +123,7 @@ export function ActivationReturnPage() {
         <p className="text-4xl" aria-hidden="true">
           🎉
         </p>
-        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-content">
+        <h1 className="mt-2 font-arcade text-3xl text-content">
           {tr('ui.ActivationReturnPage.bienvenueSurOculosaas')}
         </h1>
         <p className="mt-2 text-content-muted">{tr('ui.ActivationReturnPage.votreAbonnementEstMaintenantActif')}</p>

@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Compass } from 'lucide-react';
+import { Mascot } from '../components/brand/Mascot';
 import { tr } from '../lib/tr';
 
 export function NotFound() {
   return (
     <div className="grid place-items-center py-24 text-center">
-      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-primary-soft text-primary">
-        <Compass className="h-7 w-7" />
-      </div>
-      <h1 className="mt-5 font-display text-3xl font-bold text-content">404</h1>
+      <Mascot className="w-[140px]" />
+      <h1 className="mt-4 font-arcade text-5xl text-gradient">404</h1>
       <p className="mt-2 text-content-muted">{tr('ui.NotFound.cettePageNExistePas')}</p>
       <Link to="/dashboard" className="btn-primary mt-5">
         {tr('ui.NotFound.retourAuTableauDeBord')}

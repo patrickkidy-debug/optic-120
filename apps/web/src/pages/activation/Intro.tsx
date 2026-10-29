@@ -163,7 +163,7 @@ export function Intro({ onStart, trialMinutes = 0 }: { onStart: () => void; tria
         <div>
           <Pill>{tr('ui.Intro.logicielDeGestionPourOpticiens')}</Pill>
 
-          <h1 className="mx-auto max-w-lg font-display text-[2rem] font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:mx-0 lg:text-[3.25rem]">
+          <h1 className="mx-auto max-w-lg font-arcade text-[2rem] leading-[1.1] text-content sm:text-5xl lg:mx-0 lg:text-[3.25rem]">
             {tr('ui.Intro.activezOculosaas')}{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               {tr('ui.Intro.pourVotreMagasin')}

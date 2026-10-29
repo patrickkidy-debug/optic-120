@@ -32,7 +32,7 @@ export function SuspensionGate() {
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[color:var(--danger)]/30 bg-[color:var(--danger)]/10 p-4">
           <AlertOctagon className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
-            <h1 className="font-display text-lg font-bold text-content">{tr('ui.SuspensionGate.activezVotreAbonnement')}</h1>
+            <h1 className="font-arcade text-lg text-content">{tr('ui.SuspensionGate.activezVotreAbonnement')}</h1>
             <p className="text-sm text-content-muted">
               {canManage
                 ? tr('ui.SuspensionGate.lAccesAVotreEspace')

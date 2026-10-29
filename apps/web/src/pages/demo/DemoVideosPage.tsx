@@ -133,7 +133,7 @@ export function DemoVideosPage() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
           <Sparkles className="h-3.5 w-3.5" /> {tr('ui.DemoVideosPage.demonstration')}
         </span>
-        <h1 className="mt-3 font-display text-2xl font-extrabold text-content sm:text-3xl">
+        <h1 className="mt-3 font-arcade text-2xl text-content sm:text-3xl">
           {tr('ui.DemoVideosPage.decouvrezOculosaasEn')} {DEMO_VIDEO_COUNT} {tr('ui.DemoVideosPage.videos')}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-content-muted">

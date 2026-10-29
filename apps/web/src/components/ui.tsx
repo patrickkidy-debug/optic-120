@@ -181,7 +181,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 backdrop-blur-sm sm:p-4">
       <div
         className={clsx(
-          'card my-auto w-full min-w-0 animate-fade-in p-0 shadow-card-lg',
+          'card card-modal my-auto w-full min-w-0 animate-fade-in p-0',
           sizes[size],
         )}
         role="dialog"

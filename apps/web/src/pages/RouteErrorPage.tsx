@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { RefreshCw, Home } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { Mascot } from '../components/brand/Mascot';
 import { tr } from '../lib/tr';
 
 /**
@@ -51,10 +52,11 @@ export function RouteErrorPage() {
   return (
     <div className="grid min-h-screen place-items-center bg-surface px-4">
       <div className="w-full max-w-md text-center">
-        <div className="mb-6 flex justify-center">
+        <div className="mb-4 flex flex-col items-center gap-4">
+          <Mascot className="w-[120px]" />
           <Logo />
         </div>
-        <h1 className="font-display text-2xl font-bold text-content">
+        <h1 className="font-arcade text-2xl text-content">
           {reloading ? tr('ui.RouteErrorPage.miseAJourEnCours') : chunkError ? tr('ui.RouteErrorPage.uneNouvelleVersionEstDisponible') : tr('ui.RouteErrorPage.uneErreurEstSurvenue')}
         </h1>
         <p className="mt-2 text-content-muted">

@@ -73,7 +73,7 @@ function AuthCard({ children, title, subtitle }: { children: React.ReactNode; ti
         <div className="card space-y-4 p-6">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">OculoTrack · {tr('pt.portal')}</p>
-            <h1 className="font-display text-xl font-bold text-content">{title}</h1>
+            <h1 className="font-arcade text-xl text-content">{title}</h1>
             {subtitle && <p className="mt-1 text-sm text-content-muted">{subtitle}</p>}
           </div>
           {children}
@@ -292,7 +292,7 @@ export function PortalOrders() {
   const { data, isLoading } = useQuery({ queryKey: ['pt', 'orders', filter, q], queryFn: () => portal.orders(filter || undefined, q || undefined) });
   return (
     <>
-      <h1 className="font-display text-xl font-bold text-content">{tr('pt.orders')}</h1>
+      <h1 className="font-arcade text-xl text-content">{tr('pt.orders')}</h1>
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {['', ...FILTERS].map((f) => (
           <button key={f} type="button" onClick={() => setParams(f ? { filter: f } : {})} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${filter === f ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}>
@@ -329,7 +329,7 @@ export function PortalPackages() {
   const { data, isLoading } = useQuery({ queryKey: ['pt', 'packages', filter], queryFn: () => portal.packages(filter) });
   return (
     <>
-      <h1 className="font-display text-xl font-bold text-content">{tr('pt.packages')}</h1>
+      <h1 className="font-arcade text-xl text-content">{tr('pt.packages')}</h1>
       {isLoading ? <Loader2 className="mx-auto h-6 w-6 animate-spin text-content-faint" /> : !data?.length ? (
         <p className="card p-6 text-center text-sm text-content-muted">{tr('pt.noPackages')}</p>
       ) : (
@@ -823,7 +823,7 @@ export function PortalReturn() {
   const proof = useProof();
   return (
     <>
-      <h1 className="font-display text-xl font-bold text-content">{tr('pt.shipToStore')}</h1>
+      <h1 className="font-arcade text-xl text-content">{tr('pt.shipToStore')}</h1>
       {!data?.length ? (
         <p className="card p-6 text-center text-sm text-content-muted">{tr('pt.noneReady')}</p>
       ) : (
