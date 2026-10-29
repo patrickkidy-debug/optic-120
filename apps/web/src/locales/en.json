@@ -822,7 +822,29 @@
       }
     },
     "androidSmall": "Mobile app",
-    "androidBig": "Download for Android"
+    "androidBig": "Download for Android",
+    "bold": {
+      "tile": {
+        "frames": "Frames",
+        "framesHint": "Photo catalogue",
+        "pos": "Point of sale",
+        "posHint": "Lenses + frame",
+        "rx": "Prescription",
+        "rxHint": "OD / OS",
+        "centering": "Centering",
+        "centeringHint": "Camera measure"
+      },
+      "rx": {
+        "od": "OD",
+        "og": "OS",
+        "sph": "Sph",
+        "cyl": "Cyl",
+        "axis": "Axis",
+        "add": "Add",
+        "pd": "PD",
+        "height": "H"
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

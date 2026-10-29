@@ -822,7 +822,29 @@
       }
     },
     "androidSmall": "Aplicação móvel",
-    "androidBig": "Transferir para Android"
+    "androidBig": "Transferir para Android",
+    "bold": {
+      "tile": {
+        "frames": "Armações",
+        "framesHint": "Catálogo com fotos",
+        "pos": "Caixa",
+        "posHint": "Lentes + armação",
+        "rx": "Receita",
+        "rxHint": "OD / OE",
+        "centering": "Centragem",
+        "centeringHint": "Medição por câmara"
+      },
+      "rx": {
+        "od": "OD",
+        "og": "OE",
+        "sph": "Esf",
+        "cyl": "Cil",
+        "axis": "Eixo",
+        "add": "Ad",
+        "pd": "DP",
+        "height": "A"
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

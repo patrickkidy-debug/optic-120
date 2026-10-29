@@ -822,7 +822,29 @@
       }
     },
     "androidSmall": "Application mobile",
-    "androidBig": "Télécharger pour Android"
+    "androidBig": "Télécharger pour Android",
+    "bold": {
+      "tile": {
+        "frames": "Montures",
+        "framesHint": "Catalogue en photos",
+        "pos": "Caisse",
+        "posHint": "Verres + monture",
+        "rx": "Ordonnance",
+        "rxHint": "OD / OG",
+        "centering": "Centrage",
+        "centeringHint": "Mesure caméra"
+      },
+      "rx": {
+        "od": "OD",
+        "og": "OG",
+        "sph": "Sph",
+        "cyl": "Cyl",
+        "axis": "Axe",
+        "add": "Add",
+        "pd": "EP",
+        "height": "H"
+      }
+    }
   },
   "planFeatures": {
     "STARTER": [

@@ -36,6 +36,7 @@ import {
 } from 'framer-motion';
 import { StorySection, useScrollRoot } from './landing/Story';
 import { AllFeatures } from './landing/AllFeatures';
+import { HeroBold, DARK_BAND, NIGHT } from './landing/HeroBold';
 import { AdvisorLauncher } from '../features/advisor/AdvisorLauncher';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
@@ -54,51 +55,53 @@ import { reopenConsent } from '../lib/consent';
  * ============================================================ */
 
 /**
- * Palette claire de marque, épinglée sur la page (indépendante du thème global).
- * Les teintes d'accent sont volontairement plus foncées que dans l'app sombre :
- * sur fond blanc, l'orange 500 et le cyan 400 tombent sous le ratio de contraste
- * 4.5:1 exigé pour du texte (WCAG AA).
+ * Palette sombre de marque, épinglée sur la page (indépendante du thème global) :
+ * toute la landing reprend la nuit violette du hero. Les accents sont pris dans
+ * leurs teintes claires pour garder un contraste texte >= 4.5:1 (WCAG AA).
  */
 const LANDING_THEME = {
-  '--bg': '#ffffff',
-  '--bg-rgb': '255 255 255',
-  '--bg-subtle': '#f7f8fc',
-  '--bg-subtle-rgb': '247 248 252',
-  '--surface': '#ffffff',
-  '--surface-rgb': '255 255 255',
-  '--surface-2': '#f4f6fb',
-  '--surface-2-rgb': '244 246 251',
-  '--surface-3': '#eaeefb',
-  '--surface-3-rgb': '234 238 251',
-  '--border': 'rgba(15, 23, 42, 0.08)',
-  '--border-strong': 'rgba(15, 23, 42, 0.14)',
-  '--primary': '#7c3aed',
-  '--primary-rgb': '124 58 237',
-  '--primary-hover': '#6d28d9',
-  '--primary-hover-rgb': '109 40 217',
-  '--primary-soft': 'rgba(124, 58, 237, 0.09)',
-  '--accent': '#ea580c',
-  '--accent-rgb': '234 88 12',
-  '--accent-hover': '#c2410c',
-  '--accent-hover-rgb': '194 65 12',
-  '--accent-soft': 'rgba(234, 88, 12, 0.10)',
-  '--accent-cyan': '#0e7490',
-  '--accent-cyan-rgb': '14 116 144',
-  '--text': '#0f172a',
-  '--text-rgb': '15 23 42',
-  '--text-muted': '#4a5568',
-  '--text-muted-rgb': '74 85 104',
-  '--text-faint': '#94a3b8',
-  '--text-faint-rgb': '148 163 184',
-  '--success': '#15803d',
-  '--success-rgb': '21 128 61',
-  '--warning': '#b45309',
-  '--warning-rgb': '180 83 9',
-  '--danger': '#dc2626',
-  '--danger-rgb': '220 38 38',
+  '--bg': NIGHT,
+  '--bg-rgb': '18 10 43',
+  '--bg-subtle': '#170e36',
+  '--bg-subtle-rgb': '23 14 54',
+  '--surface': '#1c1340',
+  '--surface-rgb': '28 19 64',
+  '--surface-2': '#261a52',
+  '--surface-2-rgb': '38 26 82',
+  '--surface-3': '#312263',
+  '--surface-3-rgb': '49 34 99',
+  '--border': 'rgba(255, 255, 255, 0.10)',
+  '--border-strong': 'rgba(255, 255, 255, 0.18)',
+  '--primary': '#a78bfa',
+  '--primary-rgb': '167 139 250',
+  '--primary-hover': '#c4b5fd',
+  '--primary-hover-rgb': '196 181 253',
+  '--primary-soft': 'rgba(167, 139, 250, 0.14)',
+  '--accent': '#fb923c',
+  '--accent-rgb': '251 146 60',
+  '--accent-hover': '#fdba74',
+  '--accent-hover-rgb': '253 186 116',
+  '--accent-soft': 'rgba(251, 146, 60, 0.14)',
+  '--accent-cyan': '#22d3ee',
+  '--accent-cyan-rgb': '34 211 238',
+  '--text': '#ffffff',
+  '--text-rgb': '255 255 255',
+  '--text-muted': '#cfc8e6',
+  '--text-muted-rgb': '207 200 230',
+  '--text-faint': '#8f86ad',
+  '--text-faint-rgb': '143 134 173',
+  '--success': '#4ade80',
+  '--success-rgb': '74 222 128',
+  '--warning': '#fbbf24',
+  '--warning-rgb': '251 191 36',
+  '--danger': '#f87171',
+  '--danger-rgb': '248 113 113',
   '--gradient-brand': 'linear-gradient(120deg, #7c3aed 0%, #ec4899 50%, #f97316 100%)',
-  '--ring': 'rgba(124, 58, 237, 0.28)',
-  colorScheme: 'light',
+  '--ring': 'rgba(167, 139, 250, 0.35)',
+  '--shadow-card': '0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6)',
+  '--shadow-card-md': '0 12px 32px -14px rgba(0, 0, 0, 0.7)',
+  '--shadow-card-lg': '0 30px 70px -28px rgba(0, 0, 0, 0.85)',
+  colorScheme: 'dark',
 } as CSSProperties;
 
 const NAV = [
@@ -129,17 +132,6 @@ const TOUR = [
 const FAQ = ['1', '2', '3', '4', '5', '6'] as const;
 const TOUR_DELAY = 6500;
 
-const PAYMENTS = [
-  { label: 'Wave', short: 'Wave', bg: '#1DC3F5', fg: '#00263A' },
-  { label: 'Orange Money', short: 'OM', bg: '#FF6600', fg: '#ffffff' },
-  { label: 'MTN MoMo', short: 'MTN', bg: '#FFCC00', fg: '#111111' },
-  { label: 'M-Pesa', short: 'M-P', bg: '#E30613', fg: '#ffffff' },
-  { label: 'Airtel Money', short: 'AM', bg: '#ED1C24', fg: '#ffffff' },
-  { label: 'Multicaixa', short: 'MCX', bg: '#0B3D91', fg: '#ffffff' },
-  { label: 'Vinti4', short: 'V4', bg: '#0F7B3E', fg: '#ffffff' },
-  { label: 'Moov Money', get short() { return tr('ui.LandingPage.moov'); }, bg: '#0A56A5', fg: '#ffffff' },
-  { label: 'Free Money', get short() { return tr('ui.LandingPage.free'); }, bg: '#E4032E', fg: '#ffffff' },
-];
 
 const SECURITY = [
   { icon: Lock, key: 'sec1', tone: 'primary' as const },
@@ -553,7 +545,7 @@ export function LandingPage() {
           4 liens + selecteur + 2 boutons debordaient (779px de contenu pour
           704 disponibles), le logo touchait le premier lien et le bouton
           principal etait coupe. */}
-      <header className="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur-md">
+      <header style={{ ...DARK_BAND, background: `${NIGHT}f2` }} className="sticky top-0 z-50 border-b border-white/10 text-white backdrop-blur-md">
         <nav className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-4 py-4 sm:px-8">
           <Logo />
 
@@ -576,7 +568,7 @@ export function LandingPage() {
             </Link>
             <Link
               to="/signup"
-              className="btn-primary neon-glow whitespace-nowrap rounded-full px-6"
+              className="whitespace-nowrap rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
             >
               {t('landing.useSoftware')}
             </Link>
@@ -614,7 +606,7 @@ export function LandingPage() {
                 <Link to="/login" onClick={() => setMenuOpen(false)} className="btn-outline">
                   {t('landing.signIn')}
                 </Link>
-                <Link to="/signup" onClick={() => setMenuOpen(false)} className="btn-primary">
+                <Link to="/signup" onClick={() => setMenuOpen(false)} className="btn-primary bg-brand">
                   {t('landing.useSoftware')}
                 </Link>
               </div>
@@ -624,86 +616,8 @@ export function LandingPage() {
       </header>
 
       <main className="relative z-10" onPointerMove={onSpotlight}>
-        {/* Hero */}
-        {/* Hero : contenu visible sans défilement, rendu immédiat (pas de
-            fondu au scroll — celui-ci retarderait le LCP de la page). */}
-        <section className="relative isolate overflow-hidden px-4 pb-24 pt-16 sm:px-8 lg:pt-24">
-          {/* Décor « fluide technologique » : violet profond, formes liquides de la marque. */}
-          <FluidScene layout="right" tone="light" className="-z-10" />
-          <div className="mx-auto grid max-w-[1280px] items-center gap-12 lg:grid-cols-2">
-            <div>
-              <div className="flex flex-col gap-6">
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-4 py-1.5 backdrop-blur-md">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-                    {t('landing.heroBadge')}
-                  </span>
-                </span>
-                {/* text-balance : réparti les mots équitablement entre les
-                    lignes du titre, pour éviter une dernière ligne orpheline. */}
-                <h1 className="text-balance font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-content sm:text-5xl lg:text-6xl">
-                  {t('landing.heroTitleA')}{' '}
-                  <span className="text-gradient animate-gradient">{t('landing.heroTitleAccent')}</span>{' '}
-                  {t('landing.heroTitleB')}
-                </h1>
-                <p className="max-w-[540px] text-lg leading-relaxed text-content-muted">
-                  {t('landing.heroSubtitle')}
-                </p>
-                {/* Un seul CTA principal : chaque bouton en plus dilue la
-                    conversion. L'app auto-guide désormais le prospect de A à Z
-                    après l'inscription — plus besoin de proposer une démo ou
-                    les tarifs en concurrence dès le premier écran. */}
-                <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
-                  <Link
-                    to="/signup"
-                    className="btn-primary neon-glow rounded-full px-8 py-4 text-base transition hover:-translate-y-0.5"
-                  >
-                    {t('landing.useSoftware')} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  {/* Badge de téléchargement façon store : bien visible à côté du CTA. */}
-                  <a
-                    href="/downloads/OculoSaaS.apk"
-                    download
-                    aria-label={t('landing.downloadAndroid')}
-                    className="group inline-flex w-fit items-center gap-3 rounded-2xl bg-slate-900 py-2.5 pl-3.5 pr-5 text-white shadow-[0_12px_28px_rgba(15,23,42,0.28)] ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-8 w-8 shrink-0 text-[#3ddc84]" fill="currentColor" aria-hidden="true">
-                      <path d="M17.6 9.48l1.84-3.18a.5.5 0 0 0-.86-.5l-1.87 3.23A11.3 11.3 0 0 0 12 8.08c-1.7 0-3.3.36-4.71.95L5.42 5.8a.5.5 0 0 0-.86.5L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
-                    </svg>
-                    <span className="text-left leading-tight">
-                      <span className="block text-[11px] font-medium opacity-75">{t('landing.androidSmall')}</span>
-                      <span className="block text-base font-bold tracking-tight">{t('landing.androidBig')}</span>
-                    </span>
-                  </a>
-                  <AdvisorLauncher page="landing" variant="inline" />
-                </div>
-                <div className="mt-8 flex flex-wrap gap-3 text-xs text-content-muted">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-primary" /> {t('landing.check1')}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-primary" /> {t('landing.check2')}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-primary" /> {t('landing.check3')}
-                  </span>
-                </div>
-                <div className="mt-8 flex flex-wrap gap-8 border-t border-line pt-8">
-                  {STATS.map((k) => (
-                    <div key={k}>
-                      <div className="font-display text-2xl font-extrabold text-content">
-                        <CountUp value={t(`landing.${k}`)} />
-                      </div>
-                      <div className="text-sm text-content-muted">{t(`landing.${k}Label`)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <HeroVisual />
-          </div>
-        </section>
+        {/* Hero — style « affiche » : bande sombre, titre géant, téléphone à cartes empilées. */}
+        <HeroBold />
 
         {/* Problèmes actuels — mise en contexte avant la solution */}
         <section className="px-4 py-24 sm:px-8">
@@ -779,23 +693,6 @@ export function LandingPage() {
                   <p className="mx-auto mt-4 max-w-2xl text-content-muted">
                     {t('landing.paySubtitle')}
                   </p>
-                </div>
-                <div className="mq-wrap w-full">
-                  <div className="mq-track py-2">
-                  {[...PAYMENTS, ...PAYMENTS].map((p, i) => (
-                    <div key={`${p.label}-${i}`} className="flex w-28 shrink-0 flex-col items-center gap-2" aria-hidden={i >= PAYMENTS.length || undefined}>
-                      <div
-                        className="grid h-16 w-16 place-items-center rounded-2xl text-base font-extrabold shadow-card"
-                        style={{ background: p.bg, color: p.fg }}
-                      >
-                        {p.short}
-                      </div>
-                      <span className="text-xs font-medium uppercase tracking-tight text-content-muted">
-                        {p.label}
-                      </span>
-                    </div>
-                  ))}
-                  </div>
                 </div>
               </div>
             </Reveal>
@@ -977,7 +874,7 @@ export function LandingPage() {
                         to={`/signup?plan=${plan.code}${cycle !== 'MONTHLY' ? `&cycle=${cycle}` : ''}`}
                         className={clsx(
                           'w-full rounded-xl py-4 text-center',
-                          highlighted ? 'btn-primary neon-glow' : 'btn-outline',
+                          highlighted ? 'btn-primary bg-brand neon-glow' : 'btn-outline',
                         )}
                       >
                         {highlighted ? t('landing.startNow') : `${t('landing.choose')} ${plan.name}`}
@@ -1060,7 +957,7 @@ export function LandingPage() {
             <div className="flex justify-center">
               <Link
                 to="/signup"
-                className="btn-primary neon-glow rounded-full px-12 py-5 text-lg transition hover:-translate-y-0.5"
+                className="btn-primary bg-brand neon-glow rounded-full px-12 py-5 text-lg transition hover:-translate-y-0.5"
               >
                 {t('landing.useSoftware')} <ArrowRight className="h-5 w-5" />
               </Link>

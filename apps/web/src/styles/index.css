@@ -372,16 +372,16 @@
     transform: none;
   }
 
-  /* Landing premium — verre dépoli, halos & grille (thème CLAIR).
+  /* Landing premium — verre dépoli, halos & grille (nuit violette).
      Ces classes ne sont utilisées que par la page d'accueil publique
-     (LandingPage.tsx) : l'application, elle, reste en thème sombre. */
+     (LandingPage.tsx). */
   .glass-card {
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(15, 23, 42, 0.07);
+    background: rgba(38, 26, 82, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     backdrop-filter: blur(16px);
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.04),
-      0 14px 34px -14px rgba(15, 23, 42, 0.12);
+      0 1px 2px rgba(0, 0, 0, 0.3),
+      0 14px 34px -14px rgba(0, 0, 0, 0.6);
     transition:
       transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
       background 0.4s ease,
@@ -389,8 +389,8 @@
       box-shadow 0.4s ease;
   }
   .glass-hover:hover {
-    background: rgba(255, 255, 255, 0.96);
-    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(49, 34, 99, 0.8);
+    border-color: rgba(167, 139, 250, 0.45);
     box-shadow: 0 22px 46px -18px rgba(124, 58, 237, 0.35);
     transform: translateY(-4px);
   }
@@ -406,8 +406,8 @@
   /* Grille fine, estompée vers le bas pour ne pas concurrencer le contenu. */
   .grid-overlay {
     background-image:
-      linear-gradient(to right, rgba(15, 23, 42, 0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 32px 32px;
     -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 100%);
     mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 35%, transparent 100%);
