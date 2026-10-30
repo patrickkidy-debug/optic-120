@@ -184,7 +184,15 @@
       "signupHeroB": "in 3 levels.",
       "signupFeat1": "Checkout and Mobile Money",
       "signupFeat2": "Prescriptions and centering",
-      "signupFeat3": "OculoTrack: every parcel tracked"
+      "signupFeat3": "OculoTrack: every parcel tracked",
+      "loginTagline": "Find your checkout, customers and orders in one click.",
+      "signupTagline": "Set up your business in a few minutes.",
+      "loginFeat1": "Mobile payments",
+      "loginFeat2": "Multiple stores",
+      "loginFeat3": "Protected data",
+      "signupFeat1Desc": "Take cash, card or Mobile Money, quotes and invoices included.",
+      "signupFeat2Desc": "OD / OS prescriptions and camera centering measurements.",
+      "signupFeat3Desc": "Customers track their glasses live, from lab to store."
     }
   },
   "dashboard": {

@@ -184,7 +184,15 @@
       "signupHeroB": "en 3 niveaux.",
       "signupFeat1": "Caisse et Mobile Money",
       "signupFeat2": "Ordonnances et centrage",
-      "signupFeat3": "OculoTrack : chaque colis suivi"
+      "signupFeat3": "OculoTrack : chaque colis suivi",
+      "loginTagline": "Retrouvez votre caisse, vos clients et vos commandes en un clic.",
+      "signupTagline": "Configurez votre établissement en quelques minutes.",
+      "loginFeat1": "Paiements mobiles",
+      "loginFeat2": "Plusieurs magasins",
+      "loginFeat3": "Données protégées",
+      "signupFeat1Desc": "Encaissez en espèces, par carte ou Mobile Money, devis et factures inclus.",
+      "signupFeat2Desc": "Ordonnances OD / OG et mesures de centrage à la caméra.",
+      "signupFeat3Desc": "Vos clients suivent leurs lunettes en direct, du labo au magasin."
     }
   },
   "dashboard": {

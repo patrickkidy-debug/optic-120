@@ -514,21 +514,23 @@
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
   mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
 }
-/* Présentoir de lunettes en fond : fondu vers le haut pour laisser respirer
-   le contenu. */
-.auth-display {
-  opacity: 0.42;
-  -webkit-mask-image: linear-gradient(to top, #000 35%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 35%, transparent 100%);
+/* Panneau sombre des écrans d'accès : bas arrondi sur téléphone/tablette,
+   bord droit en diagonale sur ordinateur (le panneau clair apparaît dessous). */
+.auth-panel {
+  border-radius: 0 0 32px 32px;
 }
-.auth-card {
-  box-shadow: 8px 8px 0 #7c3aed, 0 30px 80px rgba(5, 2, 18, 0.5);
+@media (min-width: 1280px) {
+  .auth-panel {
+    min-height: 100vh;
+    border-radius: 0;
+    clip-path: polygon(0 0, 100% 0, 94% 100%, 0 100%);
+  }
 }
 .auth-shell .input {
-  min-height: 48px;
+  min-height: 50px;
   border-width: 2px;
   border-radius: 14px;
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgb(var(--surface-rgb));
 }
 .auth-shell .input:focus {
   border-color: #a78bfa;

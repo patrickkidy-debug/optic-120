@@ -184,7 +184,15 @@
       "signupHeroB": "em 3 níveis.",
       "signupFeat1": "Caixa e Mobile Money",
       "signupFeat2": "Receitas e centragem",
-      "signupFeat3": "OculoTrack: cada encomenda seguida"
+      "signupFeat3": "OculoTrack: cada encomenda seguida",
+      "loginTagline": "Encontre a sua caixa, clientes e encomendas num clique.",
+      "signupTagline": "Configure o seu estabelecimento em poucos minutos.",
+      "loginFeat1": "Pagamentos móveis",
+      "loginFeat2": "Várias lojas",
+      "loginFeat3": "Dados protegidos",
+      "signupFeat1Desc": "Receba em dinheiro, cartão ou Mobile Money, com orçamentos e faturas.",
+      "signupFeat2Desc": "Receitas OD / OE e medições de centragem por câmara.",
+      "signupFeat3Desc": "Os clientes seguem os óculos em direto, do laboratório à loja."
     }
   },
   "dashboard": {

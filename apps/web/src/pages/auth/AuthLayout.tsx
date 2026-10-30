@@ -2,36 +2,49 @@ import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Glasses, PackageCheck, ShieldCheck, ShoppingCart, Smartphone, Store } from 'lucide-react';
+import { Check, Glasses, PackageCheck, ShieldCheck, ShoppingCart, Smartphone, Store } from 'lucide-react';
+import clsx from 'clsx';
 import { Logo } from '../../components/Logo';
 import { LanguagePicker } from '../../components/LanguagePicker';
 import { Mascot } from '../../components/brand/Mascot';
 import { tr } from '../../lib/tr';
-import { EyeChartScene, MirrorScene, OpticalDisplayBackdrop, SpeechBubble } from './AuthScenes';
+import { EyeChartScene, MirrorScene, PhotoBackdrop, SpeechBubble } from './AuthScenes';
 
-// Atouts de la plateforme, en cartes « sticker » aux teintes de la marque :
+// Atouts de la plateforme, en cartes larges aux teintes de la marque :
 // une série pour la connexion, une autre pour la création de compte.
 const FEATURES = {
   login: [
-    { icon: Smartphone, key: 'auth.panelFeat1', bg: '#ddd6fe', shadow: '#7c3aed', rot: -2 },
-    { icon: Store, key: 'auth.panelFeat2', bg: '#fbcfe8', shadow: '#ec4899', rot: 1.5 },
-    { icon: ShieldCheck, key: 'auth.panelFeat3', bg: '#fed7aa', shadow: '#f97316', rot: -1 },
+    { icon: Smartphone, title: 'auth.arcade.loginFeat1', desc: 'auth.panelFeat1', bg: '#ede9fe', tile: '#ddd6fe', shadow: '#7c3aed' },
+    { icon: Store, title: 'auth.arcade.loginFeat2', desc: 'auth.panelFeat2', bg: '#fce7f3', tile: '#fbcfe8', shadow: '#ec4899' },
+    { icon: ShieldCheck, title: 'auth.arcade.loginFeat3', desc: 'auth.panelFeat3', bg: '#ffedd5', tile: '#fed7aa', shadow: '#f97316' },
   ],
   signup: [
-    { icon: ShoppingCart, key: 'auth.arcade.signupFeat1', bg: '#fbcfe8', shadow: '#ec4899', rot: 1.5 },
-    { icon: Glasses, key: 'auth.arcade.signupFeat2', bg: '#c7d2fe', shadow: '#7c3aed', rot: -2 },
-    { icon: PackageCheck, key: 'auth.arcade.signupFeat3', bg: '#fed7aa', shadow: '#f97316', rot: 1 },
+    { icon: ShoppingCart, title: 'auth.arcade.signupFeat1', desc: 'auth.arcade.signupFeat1Desc', bg: '#fce7f3', tile: '#fbcfe8', shadow: '#ec4899' },
+    { icon: Glasses, title: 'auth.arcade.signupFeat2', desc: 'auth.arcade.signupFeat2Desc', bg: '#e0e7ff', tile: '#c7d2fe', shadow: '#7c3aed' },
+    { icon: PackageCheck, title: 'auth.arcade.signupFeat3', desc: 'auth.arcade.signupFeat3Desc', bg: '#ffedd5', tile: '#fed7aa', shadow: '#f97316' },
   ],
 };
 
 /** Progression de l'inscription, présentée comme des niveaux de jeu. */
 export type AuthLevel = { current: number; total: number; label: string };
 
+/** Grande monture dessinée en filigrane. */
+function GlassesOutline({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="-50 0 450 180" className={className} fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round">
+      <rect x="10" y="30" width="160" height="130" rx="58" />
+      <rect x="230" y="30" width="160" height="130" rx="58" />
+      <path d="M170 72 q30 -26 60 0" />
+      <path d="M10 70 L-40 40" />
+    </svg>
+  );
+}
+
 /**
- * Écrans d'accès « Arcade Pro » : nuit violette, présentoir de lunettes en
- * fond, Oculo l'ourson opticien qui guide l'utilisateur (examen de vue à la
- * connexion, essayage devant le miroir à l'inscription), carte « sticker ».
- * Toujours en sombre (classe .dark), comme la landing.
+ * Écrans d'accès « Arcade Pro » : panneau sombre (nuit violette) à bord
+ * diagonal avec l'accroche, les atouts et Oculo l'ourson opticien en scène
+ * (examen de vue à la connexion, essayage au miroir à l'inscription) ;
+ * panneau clair pour le formulaire, avec les étapes numérotées.
  */
 export function AuthLayout({
   title,
@@ -53,99 +66,142 @@ export function AuthLayout({
   const { t } = useTranslation();
   const bubble = say ?? subtitle;
   const kind = scene ?? 'login';
+
+  const heading =
+    kind === 'signup' ? (
+      <>
+        {t('auth.arcade.signupHeroA')} <span className="text-gradient">{t('auth.arcade.signupHeroB')}</span>
+      </>
+    ) : (
+      <>
+        {tr('auth.heroTitleA')} <span className="text-gradient">{tr('auth.heroTitleB')}</span>
+      </>
+    );
+
+  const sceneNode = (compact: boolean) =>
+    scene === 'login' ? (
+      <EyeChartScene compact={compact} />
+    ) : scene === 'signup' ? (
+      <MirrorScene say={bubble} compact={compact} />
+    ) : (
+      <div className="flex items-end gap-3">
+        <Mascot className="w-[110px] shrink-0 sm:w-[150px]" />
+        <div className="min-w-0 flex-1 pb-6">
+          <SpeechBubble text={bubble} className="rounded-bl-sm" />
+        </div>
+      </div>
+    );
+
   return (
-    <div className="dark auth-shell relative min-h-screen overflow-x-clip bg-bg text-content">
-      {/* Grille fine + présentoir de lunettes en fondu */}
-      <div aria-hidden className="auth-grid pointer-events-none absolute inset-0" />
-      <OpticalDisplayBackdrop />
+    <div className="auth-shell min-h-screen bg-[#faf8ff] xl:grid xl:grid-cols-[1.3fr_1fr]">
+      {/* Panneau sombre : accroche, atouts, scène du nounours */}
+      <aside className="auth-panel dark relative isolate overflow-hidden bg-[#120a2b] text-white">
+        <PhotoBackdrop />
 
-      <header className="relative z-10 mx-auto flex max-w-[1180px] items-center justify-between px-5 py-5 sm:px-8">
-        <Link to="/" aria-label="OculoSaaS">
-          <Logo />
-        </Link>
-        <LanguagePicker />
-      </header>
-
-      <main className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-8 px-5 pb-12 sm:px-8 xl:min-h-[calc(100vh-88px)] xl:grid-cols-[1fr_480px] xl:gap-16 xl:pb-16">
-        <section className="mx-auto w-full max-w-[540px] xl:mx-0 xl:max-w-none">
-          {scene === 'login' ? (
-            <EyeChartScene />
-          ) : scene === 'signup' ? (
-            <MirrorScene say={bubble} />
-          ) : (
-            <div className="flex items-end gap-3 xl:gap-5">
-              <Mascot className="w-[96px] shrink-0 sm:w-[140px] xl:w-[200px]" />
-              <div className="min-w-0 flex-1 pb-6 xl:pb-16">
-                <SpeechBubble text={bubble} className="rounded-bl-sm xl:max-w-[360px]" />
-              </div>
+        <div className="relative flex h-full flex-col px-5 pb-10 pt-5 sm:px-10 xl:pb-12 xl:pl-14 xl:pr-20 xl:pt-10">
+          <div className="flex items-center justify-between">
+            <Link to="/" aria-label="OculoSaaS">
+              <Logo />
+            </Link>
+            <div className="xl:hidden">
+              <LanguagePicker />
             </div>
-          )}
+          </div>
 
-          {/* Grand écran : accroche + atouts en stickers */}
-          <div className="hidden xl:block">
-            <h1 className="mt-10 font-arcade text-[40px] leading-[1] xl:text-[46px]">
-              {kind === 'signup' ? (
-                <>
-                  {t('auth.arcade.signupHeroA')} <span className="text-gradient">{t('auth.arcade.signupHeroB')}</span>
-                </>
-              ) : (
-                <>
-                  {tr('auth.heroTitleA')} <span className="text-gradient">{tr('auth.heroTitleB')}</span>
-                </>
-              )}
-            </h1>
-            <ul className="mt-8 flex flex-wrap gap-4">
+          <h1 className="mt-8 max-w-[640px] font-arcade text-[28px] leading-[1.02] sm:text-[38px] xl:mt-14 xl:text-[48px]">{heading}</h1>
+          <p className="mt-3 max-w-[520px] text-sm text-white/75 sm:text-base xl:mt-5 xl:text-lg">
+            {t(kind === 'signup' ? 'auth.arcade.signupTagline' : 'auth.arcade.loginTagline')}
+          </p>
+
+          {/* Téléphone / tablette : la scène seule, centrée */}
+          <div className="mx-auto mt-6 w-full max-w-[540px] xl:hidden">{sceneNode(false)}</div>
+
+          {/* Ordinateur : atouts à gauche, scène à droite */}
+          <div className="mt-10 hidden flex-1 items-end gap-4 xl:flex">
+            <ul className="flex w-[300px] shrink-0 flex-col gap-4">
               {FEATURES[kind].map((f) => (
                 <li
-                  key={f.key}
-                  className="flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm font-bold text-[#120a2b]"
-                  style={{ background: f.bg, boxShadow: `5px 5px 0 ${f.shadow}`, transform: `rotate(${f.rot}deg)` }}
+                  key={f.title}
+                  className="flex items-center gap-4 rounded-[22px] px-4 py-3.5 text-[#120a2b]"
+                  style={{ background: f.bg, boxShadow: `5px 5px 0 ${f.shadow}` }}
                 >
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#120a2b]">
-                    <f.icon className="h-4 w-4 text-white" />
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl" style={{ background: f.tile }}>
+                    <f.icon className="h-6 w-6" />
                   </span>
-                  {t(f.key)}
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-extrabold">{t(f.title)}</span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-[#120a2b]/70">{t(f.desc)}</span>
+                  </span>
                 </li>
               ))}
             </ul>
+            <div className="min-w-0 flex-1">{sceneNode(true)}</div>
           </div>
-        </section>
+        </div>
+      </aside>
 
-        {/* Carte du formulaire */}
-        <section className="auth-card mx-auto w-full max-w-[560px] rounded-[28px] border-2 border-white/10 bg-surface p-6 sm:p-9">
-          {level && <LevelBar level={level} />}
-          <h2 className="font-arcade text-[26px] leading-tight sm:text-[30px]">{title}</h2>
-          <p className="mt-2 text-sm text-content-muted">{subtitle}</p>
-          <div className="mt-6">{children}</div>
-        </section>
+      {/* Panneau clair : formulaire */}
+      <main className="light relative isolate flex flex-col overflow-hidden bg-[#faf8ff] text-content">
+        <GlassesOutline className="pointer-events-none absolute -bottom-10 -right-24 -z-10 w-[420px] rotate-[-10deg] text-[#7c3aed]/[0.07]" />
+        <div className="hidden justify-end px-10 pt-8 xl:flex">
+          <LanguagePicker />
+        </div>
+        <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
+          <div className="w-full max-w-[460px] animate-fade-in">
+            {level && <Stepper level={level} />}
+            {level && (
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-content-faint">
+                {t('auth.arcade.level', { current: level.current, total: level.total })}
+              </p>
+            )}
+            <h2 className="font-arcade text-[28px] leading-[1.05] text-[#120a2b] sm:text-[36px]">{title}</h2>
+            <p className="mt-3 text-sm text-content-muted sm:text-base">{subtitle}</p>
+            <div className="mt-7">{children}</div>
+          </div>
+        </div>
+        <p className="pb-6 text-center text-[11px] text-content-faint">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
       </main>
-      <p className="relative z-10 pb-6 text-center text-[11px] text-content-faint">{tr('ui.AuthLayout.n2026OculosaasAfrique')}</p>
     </div>
   );
 }
 
-function LevelBar({ level }: { level: AuthLevel }) {
+/** Étapes numérotées de l'inscription (cercles reliés par une ligne). */
+function Stepper({ level }: { level: AuthLevel }) {
   const { t } = useTranslation();
   return (
-    <div className="mb-5">
-      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
-        <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[#c4b5fd]">
-          {t('auth.arcade.level', { current: level.current, total: level.total })}
-        </span>
-        <span className="text-content-muted">{level.label}</span>
-      </div>
-      <div className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${level.total}, 1fr)` }}>
-        {Array.from({ length: level.total }, (_, i) => (
-          <div key={i} className="h-2.5 overflow-hidden rounded-full bg-white/10">
-            <motion.div
-              className="h-full rounded-full bg-brand"
-              initial={false}
-              animate={{ width: i < level.current ? '100%' : '0%' }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
+    <ol className="relative isolate mb-8 grid" style={{ gridTemplateColumns: `repeat(${level.total}, 1fr)` }}>
+      {Array.from({ length: level.total }, (_, i) => {
+        const n = i + 1;
+        const done = n < level.current;
+        const active = n === level.current;
+        return (
+          <li key={n} className="relative flex flex-col items-center text-center">
+            {i > 0 && (
+              <span className="absolute right-1/2 top-[18px] -z-10 h-1 w-full -translate-y-1/2 overflow-hidden rounded-full bg-[#e9e5f5]">
+                <motion.span
+                  className="block h-full bg-brand"
+                  initial={false}
+                  animate={{ width: n <= level.current ? '100%' : '0%' }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </span>
+            )}
+            <span
+              className={clsx(
+                'grid h-9 w-9 place-items-center rounded-full text-sm font-extrabold transition-all duration-300',
+                active && 'bg-brand text-white shadow-[0_3px_0_#4c1d95]',
+                done && 'bg-[#7c3aed] text-white',
+                !active && !done && 'bg-[#ece8f7] text-[#8a80a8]',
+              )}
+            >
+              {done ? <Check className="h-4 w-4" /> : n}
+            </span>
+            <span className={clsx('mt-2 text-[11px] sm:text-xs', active ? 'font-bold text-[#120a2b]' : 'text-content-faint')}>
+              {t(`auth.arcade.step${n}`)}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

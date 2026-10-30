@@ -25,6 +25,14 @@ export function SpeechBubble({ text, className }: { text: string; className?: st
   );
 }
 
+/**
+ * Version compacte d'une scène (panneau étroit, à côté des cartes d'atouts) :
+ * retire les tailles « sm: » pour garder le gabarit téléphone.
+ */
+function sized(compact: boolean | undefined, cls: string): string {
+  return compact ? cls.split(' ').filter((c) => !c.startsWith('sm:')).join(' ') : cls;
+}
+
 /** Boucle d'étapes (désactivée si l'utilisateur réduit les animations). */
 function useStep(count: number, ms: number) {
   const reduce = useReducedMotion();
@@ -54,20 +62,25 @@ const READ_STEPS = [
 ];
 
 /** Connexion : le nounours fait lire le tableau d'acuité, ligne après ligne. */
-export function EyeChartScene() {
+export function EyeChartScene({ compact }: { compact?: boolean }) {
   const { t } = useTranslation();
   const step = READ_STEPS[useStep(READ_STEPS.length, 2200)];
   return (
-    <div className="relative h-[230px] w-full max-w-[540px] sm:h-[290px]">
+    <div className={sized(compact, 'relative h-[230px] w-full max-w-[540px] sm:h-[290px]')}>
       {/* Tableau d'acuité au mur */}
-      <div className="absolute left-0 top-6 w-[140px] rounded-[20px] border-2 border-white/10 bg-white px-3 pb-3 pt-2.5 text-[#120a2b] shadow-[6px_6px_0_#7c3aed] sm:top-8 sm:w-[190px] sm:px-4">
+      <div
+        className={sized(
+          compact,
+          'absolute left-0 top-6 w-[140px] rounded-[20px] border-2 border-white/10 bg-white px-3 pb-3 pt-2.5 text-[#120a2b] shadow-[6px_6px_0_#7c3aed] sm:top-8 sm:w-[190px] sm:px-4',
+        )}
+      >
         <p className="mb-1 text-center text-[9px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">{t('auth.arcade.chart')}</p>
         {CHART.map((r, i) => (
           <div
             key={r.l}
             className={clsx(
               'relative flex items-center justify-center rounded-lg font-arcade leading-[1.25] transition-all duration-300',
-              r.size,
+              sized(compact, r.size),
               i === step.row ? 'bg-[#ede9fe] text-[#120a2b]' : 'text-[#120a2b]/35',
             )}
           >
@@ -79,8 +92,8 @@ export function EyeChartScene() {
         ))}
       </div>
       {/* Le nounours et sa baguette */}
-      <Mascot pose="point" pointAngle={step.angle} className="absolute bottom-0 right-0 w-[250px] sm:w-[350px]" />
-      <SpeechBubble text={t(step.say)} className="absolute right-0 top-0 max-w-[200px] rounded-br-sm sm:max-w-[240px]" />
+      <Mascot pose="point" pointAngle={step.angle} className={sized(compact, 'absolute bottom-0 right-0 w-[250px] sm:w-[350px]')} />
+      <SpeechBubble text={t(step.say)} className={sized(compact, 'absolute right-0 top-0 max-w-[200px] rounded-br-sm sm:max-w-[240px]')} />
     </div>
   );
 }
@@ -93,17 +106,17 @@ const FRAMES: (MascotFrame & { name: string })[] = [
 ];
 
 /** Création de compte : le nounours essaie des montures devant un miroir. */
-export function MirrorScene({ say }: { say: string }) {
+export function MirrorScene({ say, compact }: { say: string; compact?: boolean }) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
   const i = useStep(FRAMES.length, 2400);
   const frame = FRAMES[i];
   return (
-    <div className="relative h-[270px] w-full max-w-[540px] sm:h-[330px]">
+    <div className={sized(compact, 'relative h-[270px] w-full max-w-[540px] sm:h-[330px]')}>
       {/* Miroir sur pied */}
-      <div className="absolute bottom-6 left-0 flex w-[130px] flex-col items-center sm:w-[170px]">
+      <div className={sized(compact, 'absolute bottom-6 left-0 flex w-[130px] flex-col items-center sm:w-[170px]')}>
         <div className="relative w-full rounded-[999px] bg-brand p-[6px] shadow-[6px_6px_0_#4c1d95]">
-          <div className="relative h-[170px] overflow-hidden rounded-[999px] bg-gradient-to-b from-[#f5f3ff] to-[#e0e7ff] sm:h-[220px]">
+          <div className={sized(compact, 'relative h-[170px] overflow-hidden rounded-[999px] bg-gradient-to-b from-[#f5f3ff] to-[#e0e7ff] sm:h-[220px]')}>
             <div className="absolute inset-y-0 left-[18%] w-6 -skew-x-12 bg-white/60 blur-[1px]" />
             {/* Reflet : même monture, vu de face et inversé */}
             <div className="absolute left-1/2 top-[14%] w-[150%] -translate-x-1/2 -scale-x-100">
@@ -140,67 +153,34 @@ export function MirrorScene({ say }: { say: string }) {
           {t(frame.name)}
         </span>
       </div>
-      <Mascot pose="try" frame={frame} className="absolute bottom-0 right-6 w-[150px] sm:w-[200px]" />
-      <SpeechBubble text={say} className="absolute right-0 top-0 max-w-[210px] rounded-br-sm sm:max-w-[260px]" />
+      <Mascot pose="try" frame={frame} className={sized(compact, 'absolute bottom-0 right-6 w-[150px] sm:w-[200px]')} />
+      <SpeechBubble text={say} className={sized(compact, 'absolute right-0 top-0 max-w-[210px] rounded-br-sm sm:max-w-[260px]')} />
     </div>
   );
 }
 
+// Photo libre de droits (licence Unsplash, usage commercial gratuit) :
+// CHUTTERSNAP — unsplash.com/photos/G8ioIHUDfNc
+const PHOTO = '/images/auth/montures-vrac.webp';
+
 /**
- * Décor de fond des écrans d'accès : un présentoir de lunettes illustré
- * (étagères lumineuses, montures pastel), en fondu vers le haut.
+ * Fond des écrans d'accès : vraie photo de montures, teintée nuit violette
+ * (dégradé plus dense côté texte) avec des reflets aux couleurs de la marque.
  */
-export function OpticalDisplayBackdrop() {
-  const colors = ['#ddd6fe', '#fbcfe8', '#fed7aa', '#c7d2fe', '#a7f3d0', '#ffffff'];
-  const shelves = [70, 170, 270];
+export function PhotoBackdrop() {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 1200 340"
-      preserveAspectRatio="xMidYMax slice"
-      className="auth-display pointer-events-none absolute inset-x-0 bottom-0 h-[46vh] w-full"
-    >
-      <defs>
-        <linearGradient id="shelf-glow" x1="0" x2="1">
-          <stop offset="0%" stopColor="#7c3aed" />
-          <stop offset="50%" stopColor="#ec4899" />
-          <stop offset="100%" stopColor="#f97316" />
-        </linearGradient>
-        <radialGradient id="spot" cx="0.5" cy="0" r="0.8">
-          <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      {/* Spots du magasin */}
-      {[200, 600, 1000].map((x) => (
-        <ellipse key={x} cx={x} cy="0" rx="260" ry="340" fill="url(#spot)" />
-      ))}
-      {shelves.map((y, si) => (
-        <g key={y}>
-          {Array.from({ length: 11 }, (_, k) => {
-            const x = 60 + k * 108 + (si % 2) * 30;
-            const c = colors[(k + si * 2) % colors.length];
-            const shape = (k + si) % 3;
-            const lens =
-              shape === 0
-                ? (cx: number) => <circle cx={cx} cy={y - 22} r="15" />
-                : shape === 1
-                  ? (cx: number) => <rect x={cx - 17} y={y - 35} width="34" height="24" rx="7" />
-                  : (cx: number) => <path d={`M${cx - 17} ${y - 34} h34 q-2 22 -17 24 q-15 -2 -17 -24z`} />;
-            return (
-              <g key={k} fill="none" stroke={c} strokeWidth="4" opacity="0.9">
-                {lens(x - 20)}
-                {lens(x + 20)}
-                <path d={`M${x - 4} ${y - 26} q4 -5 8 0`} />
-                <path d={`M${x - 8} ${y - 6} v6 M${x + 8} ${y - 6} v6`} stroke="#4c1d95" />
-              </g>
-            );
-          })}
-          {/* Étagère lumineuse */}
-          <rect x="0" y={y} width="1200" height="8" rx="4" fill="#241850" />
-          <rect x="0" y={y} width="1200" height="2.5" fill="url(#shelf-glow)" opacity="0.9" />
-        </g>
-      ))}
-    </svg>
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <img
+        src={PHOTO}
+        alt=""
+        className="h-full w-full scale-110 object-cover object-center opacity-90 saturate-[1.2]"
+      />
+      {/* Teinte de la marque : la photo prend les couleurs nuit violette */}
+      <div className="absolute inset-0 bg-[#3b0764] mix-blend-color" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#120a2b]/95 via-[#120a2b]/70 to-[#120a2b]/20" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#120a2b]/90 via-transparent to-[#120a2b]/50" />
+      <div className="absolute -right-24 top-1/4 h-[420px] w-[420px] rounded-full bg-[#ec4899]/25 blur-[120px]" />
+      <div className="absolute -bottom-24 left-1/3 h-[360px] w-[360px] rounded-full bg-[#f97316]/15 blur-[120px]" />
+    </div>
   );
 }
