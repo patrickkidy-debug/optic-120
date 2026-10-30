@@ -173,11 +173,11 @@ export function PhotoBackdrop() {
       <img
         src={PHOTO}
         alt=""
-        className="h-full w-full scale-110 object-cover object-center opacity-90 saturate-[1.2]"
+        className="h-full w-full scale-110 object-cover object-center opacity-30 blur-[2px]"
       />
       {/* Teinte de la marque : la photo prend les couleurs nuit violette */}
       <div className="absolute inset-0 bg-[#3b0764] mix-blend-color" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#120a2b]/95 via-[#120a2b]/70 to-[#120a2b]/20" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#120a2b]/95 via-[#120a2b]/80 to-[#120a2b]/55" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#120a2b]/90 via-transparent to-[#120a2b]/50" />
       <div className="absolute -right-24 top-1/4 h-[420px] w-[420px] rounded-full bg-[#ec4899]/25 blur-[120px]" />
       <div className="absolute -bottom-24 left-1/3 h-[360px] w-[360px] rounded-full bg-[#f97316]/15 blur-[120px]" />

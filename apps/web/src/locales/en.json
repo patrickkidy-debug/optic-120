@@ -192,7 +192,13 @@
       "loginFeat3": "Protected data",
       "signupFeat1Desc": "Take cash, card or Mobile Money, quotes and invoices included.",
       "signupFeat2Desc": "OD / OS prescriptions and camera centering measurements.",
-      "signupFeat3Desc": "Customers track their glasses live, from lab to store."
+      "signupFeat3Desc": "Customers track their glasses live, from lab to store.",
+      "chipL1": "20/20",
+      "chipL2": "OD −1.25",
+      "chipL3": "PD 63 mm",
+      "chipS1": "New frame",
+      "chipS2": "Try-on",
+      "chipS3": "4 styles"
     }
   },
   "dashboard": {

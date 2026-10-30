@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -24,6 +24,48 @@ const FEATURES = {
     { icon: PackageCheck, title: 'auth.arcade.signupFeat3', desc: 'auth.arcade.signupFeat3Desc', bg: '#ffedd5', tile: '#fed7aa', shadow: '#f97316' },
   ],
 };
+
+// Pastilles « optiques » qui flottent autour de la scène.
+const CHIPS = {
+  login: ['auth.arcade.chipL1', 'auth.arcade.chipL2', 'auth.arcade.chipL3'],
+  signup: ['auth.arcade.chipS1', 'auth.arcade.chipS2', 'auth.arcade.chipS3'],
+};
+const CHIP_STYLE = [
+  { pos: '-left-2 top-[8%]', bg: '#ddd6fe', shadow: '#7c3aed', delay: 0 },
+  { pos: '-right-2 top-[38%]', bg: '#fbcfe8', shadow: '#ec4899', delay: 0.8 },
+  { pos: 'left-[30%] -bottom-3', bg: '#fed7aa', shadow: '#f97316', delay: 1.6 },
+];
+
+/**
+ * Agrandit la scène d'un seul bloc (×1,6 tablette, ×1,45 ordinateur) : les
+ * proportions restent celles du téléphone, la baguette vise donc toujours
+ * la bonne ligne. Halo, sol lumineux et pastilles flottantes en décor.
+ */
+function ScaledScene({ height, chips, children }: { height: number; chips: string[]; children: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="relative mx-auto w-full max-w-[350px] [--k:1.6] md:h-[calc(var(--h)*var(--k))] md:w-[calc(350px*var(--k))] md:max-w-none xl:[--k:1.35]"
+      style={{ '--h': `${height}px` } as CSSProperties}
+    >
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[90%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.35),transparent_65%)] blur-2xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-2 left-1/2 -z-10 h-6 w-[85%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(ellipse,rgba(236,72,153,0.45),transparent_70%)] blur-md" />
+      <div className="md:absolute md:left-0 md:top-0 md:w-[350px] md:origin-top-left md:[transform:scale(var(--k))]">{children}</div>
+      {chips.map((c, i) => (
+        <motion.span
+          key={c}
+          aria-hidden
+          className={clsx('absolute hidden whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-extrabold text-[#120a2b] md:block', CHIP_STYLE[i].pos)}
+          style={{ background: CHIP_STYLE[i].bg, boxShadow: `3px 3px 0 ${CHIP_STYLE[i].shadow}` }}
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 3.2, delay: CHIP_STYLE[i].delay, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          {t(c)}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
 
 /** Progression de l'inscription, présentée comme des niveaux de jeu. */
 export type AuthLevel = { current: number; total: number; label: string };
@@ -108,35 +150,34 @@ export function AuthLayout({
             </div>
           </div>
 
-          <h1 className="mt-8 max-w-[640px] font-arcade text-[28px] leading-[1.02] sm:text-[38px] xl:mt-14 xl:text-[48px]">{heading}</h1>
+          <h1 className="mt-8 max-w-[640px] font-arcade text-[28px] leading-[1.02] sm:text-[38px] xl:mt-10 xl:text-[46px]">{heading}</h1>
           <p className="mt-3 max-w-[520px] text-sm text-white/75 sm:text-base xl:mt-5 xl:text-lg">
             {t(kind === 'signup' ? 'auth.arcade.signupTagline' : 'auth.arcade.loginTagline')}
           </p>
 
-          {/* Téléphone / tablette : la scène seule, centrée */}
-          <div className="mx-auto mt-6 w-full max-w-[540px] xl:hidden">{sceneNode(false)}</div>
-
-          {/* Ordinateur : atouts à gauche, scène à droite */}
-          <div className="mt-10 hidden flex-1 items-end gap-4 xl:flex">
-            <ul className="flex w-[300px] shrink-0 flex-col gap-4">
-              {FEATURES[kind].map((f) => (
-                <li
-                  key={f.title}
-                  className="flex items-center gap-4 rounded-[22px] px-4 py-3.5 text-[#120a2b]"
-                  style={{ background: f.bg, boxShadow: `5px 5px 0 ${f.shadow}` }}
-                >
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl" style={{ background: f.tile }}>
-                    <f.icon className="h-6 w-6" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[15px] font-extrabold">{t(f.title)}</span>
-                    <span className="mt-0.5 block text-[13px] leading-snug text-[#120a2b]/70">{t(f.desc)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="min-w-0 flex-1">{sceneNode(true)}</div>
+          {/* Scène du nounours, agrandie d'un bloc sur tablette et ordinateur */}
+          <div className="flex flex-1 items-center justify-center py-6 md:py-10 xl:py-5">
+            <ScaledScene height={scene === 'signup' ? 270 : 230} chips={CHIPS[kind]}>
+              {sceneNode(true)}
+            </ScaledScene>
           </div>
+
+          {/* Atouts en cartes (tablette et ordinateur) */}
+          <ul className="hidden grid-cols-3 gap-3 md:grid">
+            {FEATURES[kind].map((f) => (
+              <li
+                key={f.title}
+                className="flex flex-col rounded-[20px] p-4 text-[#120a2b]"
+                style={{ background: f.bg, boxShadow: `5px 5px 0 ${f.shadow}` }}
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: f.tile }}>
+                  <f.icon className="h-5 w-5" />
+                </span>
+                <span className="mt-3 block text-sm font-extrabold">{t(f.title)}</span>
+                <span className="mt-1 block text-[12px] leading-snug text-[#120a2b]/70">{t(f.desc)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </aside>
 

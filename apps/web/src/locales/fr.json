@@ -192,7 +192,13 @@
       "loginFeat3": "Données protégées",
       "signupFeat1Desc": "Encaissez en espèces, par carte ou Mobile Money, devis et factures inclus.",
       "signupFeat2Desc": "Ordonnances OD / OG et mesures de centrage à la caméra.",
-      "signupFeat3Desc": "Vos clients suivent leurs lunettes en direct, du labo au magasin."
+      "signupFeat3Desc": "Vos clients suivent leurs lunettes en direct, du labo au magasin.",
+      "chipL1": "10/10",
+      "chipL2": "OD −1,25",
+      "chipL3": "EP 63 mm",
+      "chipS1": "Nouvelle monture",
+      "chipS2": "Essayage",
+      "chipS3": "4 styles"
     }
   },
   "dashboard": {

@@ -192,7 +192,13 @@
       "loginFeat3": "Dados protegidos",
       "signupFeat1Desc": "Receba em dinheiro, cartão ou Mobile Money, com orçamentos e faturas.",
       "signupFeat2Desc": "Receitas OD / OE e medições de centragem por câmara.",
-      "signupFeat3Desc": "Os clientes seguem os óculos em direto, do laboratório à loja."
+      "signupFeat3Desc": "Os clientes seguem os óculos em direto, do laboratório à loja.",
+      "chipL1": "10/10",
+      "chipL2": "OD −1,25",
+      "chipL3": "DP 63 mm",
+      "chipS1": "Nova armação",
+      "chipS2": "Prova",
+      "chipS3": "4 estilos"
     }
   },
   "dashboard": {
