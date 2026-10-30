@@ -4859,7 +4859,14 @@
     "noExpense": "No expense in this session.",
     "noTransfer": "No transfer in this session.",
     "cancelledList": "Cancelled sales ({{n}})",
-    "signature": "Cashier signature: ______________________        Manager signature: ______________________"
+    "signature": "Cashier signature: ______________________        Manager signature: ______________________",
+    "zReport": "Z report",
+    "openedLabel": "Opened",
+    "closedLabel": "Closed",
+    "durationLabel": "Duration",
+    "signCashier": "Cashier signature",
+    "signManager": "Manager signature",
+    "generatedOn": "Printed on {{date}}"
   },
   "bday": {
     "title": "Birthdays",

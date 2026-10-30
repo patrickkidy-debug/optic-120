@@ -299,7 +299,7 @@ function SessionReportModal({ id, onClose }: { id: string; onClose: () => void }
             </div>
             <div className="flex items-center gap-2">
               <VarianceBadge value={r.variance} open={r.status === 'OPEN'} />
-              <Button variant="outline" onClick={() => printReport(r, user?.tenantName ?? 'OculoSaaS')}>
+              <Button variant="outline" onClick={() => printReport(r, { name: user?.tenantName ?? 'OculoSaaS', logoUrl: user?.tenantLogoUrl, location: user?.tenantLocation, phone: user?.tenantContactPhone })}>
                 <Printer className="h-4 w-4" /> {tr('cashHistory.print')}
               </Button>
             </div>
@@ -488,45 +488,175 @@ function Row({ left, sub, right, tone }: { left: ReactNode; sub?: string; right:
   );
 }
 
-/** Rapport Z imprimable (même technique que les factures : fenêtre + impression). */
-function printReport(r: CashSessionReport, tenantName: string) {
-  const esc = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const line = (l: string, v: string, b = false) => `<tr><td${b ? ' style="font-weight:700"' : ''}>${esc(l)}</td><td style="text-align:right${b ? ';font-weight:700' : ''}">${esc(v)}</td></tr>`;
-  const variance = r.variance == null ? '—' : `${r.variance > 0 ? '+' : r.variance < 0 ? '−' : ''}${formatCurrency(Math.abs(r.variance))}`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr('cashHistory.reportTitle'))}</title>
-  <style>@page{size:A4;margin:14mm}body{font-family:Arial,sans-serif;color:#0f172a;font-size:12px}
-  h1{font-size:18px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin:18px 0 6px}
-  .muted{color:#64748b}table{width:100%;border-collapse:collapse}td,th{padding:5px 6px;border-bottom:1px solid #e2e8f0;text-align:left}
-  th{font-size:10px;text-transform:uppercase;color:#64748b}.grid{display:flex;gap:24px}.grid>div{flex:1}</style></head><body>
-  <h1>${esc(tenantName)} — ${esc(tr('cashHistory.reportTitle'))}</h1>
-  <p class="muted">${esc(formatDate(r.openedAt))}${r.branchName ? ' · ' + esc(r.branchName) : ''}<br>
-  ${esc(tr('cashHistory.openedAtBy', { time: time(r.openedAt), name: r.openedBy ?? '—' }))}${r.closedAt ? ' · ' + esc(tr('cashHistory.closedAtBy', { time: formatDateTime(r.closedAt), name: r.closedBy ?? '—' })) : ''}</p>
-  <div class="grid"><div><h2>${esc(tr('cashHistory.byMethod'))}</h2><table>
-  ${r.byMethod.map((m) => line(`${paymentMethodLabel(m.method)} (${m.count})`, formatCurrency(m.amount))).join('')}
-  ${line(tr('cashHistory.collected'), formatCurrency(r.salesTotal), true)}
-  ${line(tr('cashHistory.colExpenses'), '− ' + formatCurrency(r.expensesTotal))}
-  ${line(tr('cashHistory.transfersNet'), formatCurrency(r.transfersIn - r.transfersOut))}
-  ${line(tr('cashHistory.colNet'), formatCurrency(r.netTotal), true)}</table></div>
-  <div><h2>${esc(tr('cashHistory.reconciliation'))}</h2><table>
-  ${line(tr('cash.openingFloat'), formatCurrency(r.openingAmount))}
-  ${line(tr('cash.cashSales'), '+ ' + formatCurrency(r.cashSales))}
-  ${r.transfersIn ? line(tr('cashHistory.transfersIn'), '+ ' + formatCurrency(r.transfersIn)) : ''}
-  ${r.transfersOut ? line(tr('cashHistory.transfersOut'), '− ' + formatCurrency(r.transfersOut)) : ''}
-  ${r.expensesTotal ? line(tr('cash.expensesDeducted'), '− ' + formatCurrency(r.expensesTotal)) : ''}
-  ${line(tr('cash.expectedInRegister'), formatCurrency(r.expectedAmount), true)}
-  ${line(tr('cash.countedAmount'), r.countedAmount != null ? formatCurrency(r.countedAmount) : '—')}
-  ${line(tr('cash.variance'), variance, true)}</table></div></div>
-  <h2>${esc(tr('cashHistory.paymentsList', { n: r.payments.length }))}</h2><table><thead><tr>
-  <th>${esc(tr('cashHistory.colTime'))}</th><th>${esc(tr('cashHistory.colSale'))}</th><th>${esc(tr('cashHistory.colCustomer'))}</th><th>${esc(tr('cashHistory.colMethod'))}</th><th style="text-align:right">${esc(tr('cashHistory.colAmount'))}</th></tr></thead><tbody>
-  ${r.payments.map((p) => `<tr><td>${esc(time(p.at))}</td><td>${esc(p.saleNumber)}${p.cancelled ? ' (' + esc(tr('cashHistory.cancelledTag')) + ')' : ''}</td><td>${esc(p.customerName ?? '—')}</td><td>${esc(paymentMethodLabel(p.method))}</td><td style="text-align:right">${esc(formatCurrency(p.amount))}</td></tr>`).join('')}
-  </tbody></table>
-  ${r.expenses.length ? `<h2>${esc(tr('cashHistory.expensesList', { n: r.expenses.length }))}</h2><table>${r.expenses.map((e) => line(`${e.label} — ${expenseCategoryLabel(e.category)}`, '− ' + formatCurrency(e.amount))).join('')}</table>` : ''}
-  ${r.transfers.length ? `<h2>${esc(tr('cashHistory.transfersList', { n: r.transfers.length }))}</h2><table>${r.transfers.map((t) => line(t.label, (t.direction === 'IN' ? '+ ' : '− ') + formatCurrency(t.amount))).join('')}</table>` : ''}
-  <p class="muted" style="margin-top:28px">${esc(tr('cashHistory.signature'))}</p>
+type ReportTenant = { name: string; logoUrl?: string | null; location?: string | null; phone?: string | null };
+
+/**
+ * Rapport Z imprimable (même technique que les factures : fenêtre + impression).
+ * Document A4 : en-tête du magasin, bandeau d'infos, chiffres clés, répartition,
+ * rapprochement des espèces, détail des opérations et cadres de signature.
+ */
+function printReport(r: CashSessionReport, tenant: ReportTenant) {
+  const esc = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const money = (v: number) => esc(formatCurrency(v));
+  const line = (l: string, v: string, cls = '') => `<tr class="${cls}"><td>${esc(l)}</td><td class="num">${esc(v)}</td></tr>`;
+  const open = r.status === 'OPEN';
+  const v = r.variance;
+  const balanced = v != null && Math.abs(v) < 1;
+  const tone = open || v == null ? 'neutral' : balanced ? 'ok' : v < 0 ? 'bad' : 'warn';
+  const varianceLabel = open ? tr('cashHistory.inProgress') : v == null ? '—' : balanced ? tr('cashHistory.balanced') : v < 0 ? tr('cashHistory.shortage') : tr('cashHistory.surplus');
+  const varianceValue = v == null ? '—' : `${v > 0 ? '+ ' : v < 0 ? '− ' : ''}${formatCurrency(Math.abs(v))}`;
+  const transfersNet = r.transfersIn - r.transfersOut;
+  const initials = tenant.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const section = (title: string, body: string, extra = '') => `<section class="block ${extra}"><h2>${esc(title)}</h2>${body}</section>`;
+  const kpi = (label: string, value: string, sub: string, cls = '') => `<div class="kpi ${cls}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></div>`;
+
+  const methods = r.byMethod.length
+    ? r.byMethod
+        .map((m) => {
+          const pct = r.salesTotal ? Math.round((m.amount / r.salesTotal) * 100) : 0;
+          return `<div class="bar"><div class="bar-head"><span>${esc(paymentMethodLabel(m.method))} <em>· ${m.count}</em></span><span><b>${money(m.amount)}</b> <em>${pct} %</em></span></div><i><u style="width:${pct}%"></u></i></div>`;
+        })
+        .join('')
+    : `<p class="empty">${esc(tr('cash.noPayments'))}</p>`;
+
+  const payments = r.payments.length
+    ? `<table class="list"><thead><tr><th>${esc(tr('cashHistory.colTime'))}</th><th>${esc(tr('cashHistory.colSale'))}</th><th>${esc(tr('cashHistory.colCustomer'))}</th><th>${esc(tr('cashHistory.colMethod'))}</th><th class="num">${esc(tr('cashHistory.colAmount'))}</th></tr></thead><tbody>
+      ${r.payments.map((p) => `<tr class="${p.cancelled ? 'cancelled' : ''}"><td>${esc(time(p.at))}</td><td class="mono">${esc(p.saleNumber)}${p.cancelled ? ` <span class="tag">${esc(tr('cashHistory.cancelledTag'))}</span>` : ''}</td><td>${esc(p.customerName ?? '—')}</td><td>${esc(paymentMethodLabel(p.method))}</td><td class="num">${money(p.amount)}</td></tr>`).join('')}
+      </tbody><tfoot><tr><td colspan="4">${esc(tr('cashHistory.collected'))}</td><td class="num">${money(r.salesTotal)}</td></tr></tfoot></table>`
+    : `<p class="empty">${esc(tr('cash.noPayments'))}</p>`;
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr('cashHistory.reportTitle'))} · ${esc(formatDate(r.openedAt))}</title>
+  <style>
+  @page{size:A4;margin:12mm}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html{color-scheme:light}
+  body{margin:0;background:#fff;font-family:'Segoe UI',Inter,Arial,sans-serif;color:#1e1b2e;font-size:11.5px;line-height:1.45}
+  .page{max-width:186mm;margin:0 auto}
+  .band{height:6px;border-radius:6px;background:linear-gradient(90deg,#7c3aed,#ec4899 55%,#f97316)}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:16px 0 14px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:52px;height:52px;border-radius:14px;object-fit:contain;background:#f5f3ff}
+  .mono-logo{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;background:linear-gradient(135deg,#7c3aed,#ec4899)}
+  .brand h1{margin:0;font-size:17px;font-weight:800}
+  .brand p{margin:2px 0 0;color:#6b6585}
+  .doc{text-align:right}
+  .doc .kind{display:inline-block;padding:3px 10px;border-radius:999px;background:#120a2b;color:#fff;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .doc h2{margin:6px 0 0;font-size:15px;font-weight:800}
+  .doc p{margin:2px 0 0;color:#6b6585}
+  .info{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #e7e3f3;border-radius:12px;overflow:hidden;margin-bottom:14px}
+  .info div{padding:9px 12px;border-right:1px solid #e7e3f3}
+  .info div:last-child{border-right:0}
+  .info span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:#8a84a3}
+  .info b{display:block;margin-top:2px;font-size:11.5px}
+  .info small{display:block;color:#8a84a3;font-size:10px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .kpi{border:1px solid #e7e3f3;border-radius:12px;padding:10px 12px;background:#fbfaff}
+  .kpi span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:#8a84a3}
+  .kpi b{display:block;margin-top:3px;font-size:16px;font-weight:800}
+  .kpi small{display:block;margin-top:1px;color:#8a84a3;font-size:10px}
+  .kpi.danger b{color:#dc2626}
+  .kpi.main{background:#120a2b;border-color:#120a2b;color:#fff}
+  .kpi.main span,.kpi.main small{color:#c4b5fd}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .block{border:1px solid #e7e3f3;border-radius:12px;padding:12px 14px;margin-bottom:12px;break-inside:avoid}
+  .block h2{margin:0 0 9px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c3aed}
+  .block.danger{border-color:#fecaca;background:#fff7f7}
+  .block.danger h2{color:#dc2626}
+  .bar{margin-bottom:9px}
+  .bar-head{display:flex;justify-content:space-between}
+  .bar em{font-style:normal;color:#8a84a3;font-size:10px}
+  .bar i{display:block;height:6px;margin-top:4px;border-radius:6px;background:#f1eefa;overflow:hidden}
+  .bar u{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#7c3aed,#ec4899)}
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:5px 4px;text-align:left}
+  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .recon td{border-bottom:1px dashed #e7e3f3}
+  .recon tr.total td{border-bottom:1px solid #1e1b2e;font-weight:800}
+  .variance{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:9px 12px;border-radius:10px;font-weight:800}
+  .variance small{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;opacity:.8}
+  .variance b{font-size:15px}
+  .v-ok{background:#dcfce7;color:#166534}.v-bad{background:#fee2e2;color:#991b1b}.v-warn{background:#fef3c7;color:#92400e}.v-neutral{background:#f1eefa;color:#4c1d95}
+  .list th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:#8a84a3;border-bottom:1.5px solid #1e1b2e}
+  .list tbody tr:nth-child(even) td{background:#faf9fe}
+  .list tbody td{border-bottom:1px solid #f1eefa}
+  .list tfoot td{padding-top:8px;font-weight:800;border-top:1.5px solid #1e1b2e}
+  .list tr.cancelled td{color:#a19bb8;text-decoration:line-through}
+  .list tr.cancelled .tag{text-decoration:none}
+  .mono{font-family:Consolas,'Courier New',monospace;font-size:10.5px}
+  .tag{display:inline-block;padding:0 6px;border-radius:999px;background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;font-family:inherit}
+  .rows td{border-bottom:1px solid #f1eefa}.rows tr:last-child td{border-bottom:0}
+  .rows small{display:block;color:#8a84a3;font-size:10px}
+  .neg{color:#dc2626}.pos{color:#15803d}
+  .empty{margin:0;color:#8a84a3}
+  .signs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;break-inside:avoid}
+  .signs div{border:1px dashed #c9c2e0;border-radius:12px;height:88px;padding:9px 12px}
+  .signs span{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8a84a3}
+  .signs p{margin:2px 0 0;font-weight:600}
+  footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid #e7e3f3;color:#8a84a3;font-size:9.5px}
+  </style></head><body><div class="page">
+  <div class="band"></div>
+  <header>
+    <div class="brand">
+      ${tenant.logoUrl ? `<img class="logo" src="${esc(tenant.logoUrl)}" alt="">` : `<div class="mono-logo">${esc(initials || 'O')}</div>`}
+      <div><h1>${esc(tenant.name)}</h1><p>${esc([r.branchName, tenant.location].filter(Boolean).join(' · '))}${tenant.phone ? `<br>${esc(tenant.phone)}` : ''}</p></div>
+    </div>
+    <div class="doc"><span class="kind">${esc(tr('cashHistory.zReport'))}</span><h2>${esc(tr('cashHistory.reportTitle'))}</h2><p>${esc(formatDate(r.openedAt))}</p></div>
+  </header>
+
+  <div class="info">
+    <div><span>${esc(tr('cashHistory.openedLabel'))}</span><b>${esc(time(r.openedAt))}</b><small>${esc(r.openedBy ?? '—')}</small></div>
+    <div><span>${esc(tr('cashHistory.closedLabel'))}</span><b>${r.closedAt ? esc(formatDateTime(r.closedAt)) : esc(tr('cashHistory.inProgress'))}</b><small>${esc(r.closedBy ?? '—')}</small></div>
+    <div><span>${esc(tr('cashHistory.durationLabel'))}</span><b>${esc(duration(r.durationMinutes))}</b></div>
+    <div><span>${esc(tr('cash.variance'))}</span><b>${esc(varianceLabel)}</b></div>
+  </div>
+
+  <div class="kpis">
+    ${kpi(tr('cashHistory.collected'), formatCurrency(r.salesTotal), tr('cashHistory.salesAndPayments', { s: r.salesCount, p: r.paymentsCount }))}
+    ${kpi(tr('cashHistory.colExpenses'), r.expensesTotal ? `− ${formatCurrency(r.expensesTotal)}` : formatCurrency(0), tr('cashHistory.items', { n: r.expensesCount }), r.expensesTotal ? 'danger' : '')}
+    ${kpi(tr('cashHistory.transfersNet'), `${transfersNet >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(transfersNet))}`, `+${formatCurrency(r.transfersIn)} / −${formatCurrency(r.transfersOut)}`)}
+    ${kpi(tr('cashHistory.colNet'), formatCurrency(r.netTotal), tr('cashHistory.netHint'), 'main')}
+  </div>
+
+  <div class="cols">
+    ${section(tr('cashHistory.byMethod'), methods)}
+    ${section(
+      tr('cashHistory.reconciliation'),
+      `<table class="recon">
+      ${line(tr('cash.openingFloat'), formatCurrency(r.openingAmount))}
+      ${line(tr('cash.cashSales'), '+ ' + formatCurrency(r.cashSales))}
+      ${r.transfersIn ? line(tr('cashHistory.transfersIn'), '+ ' + formatCurrency(r.transfersIn)) : ''}
+      ${r.transfersOut ? line(tr('cashHistory.transfersOut'), '− ' + formatCurrency(r.transfersOut)) : ''}
+      ${r.expensesTotal ? line(tr('cash.expensesDeducted'), '− ' + formatCurrency(r.expensesTotal)) : ''}
+      ${line(tr('cash.expectedInRegister'), formatCurrency(r.expectedAmount), 'total')}
+      ${line(tr('cash.countedAmount'), r.countedAmount != null ? formatCurrency(r.countedAmount) : '—')}
+      </table>
+      <div class="variance v-${tone}"><div><small>${esc(tr('cash.variance'))}</small>${esc(varianceLabel)}</div><b>${esc(varianceValue)}</b></div>`,
+    )}
+  </div>
+
+  ${section(tr('cashHistory.paymentsList', { n: r.payments.length }), payments)}
+
+  ${
+    r.expenses.length || r.transfers.length
+      ? `<div class="cols">
+    ${section(tr('cashHistory.expensesList', { n: r.expenses.length }), r.expenses.length ? `<table class="rows">${r.expenses.map((e) => `<tr><td>${esc(e.label)}<small>${esc(expenseCategoryLabel(e.category))} · ${esc(time(e.createdAt))}</small></td><td class="num neg">− ${money(e.amount)}</td></tr>`).join('')}</table>` : `<p class="empty">${esc(tr('cashHistory.noExpense'))}</p>`)}
+    ${section(tr('cashHistory.transfersList', { n: r.transfers.length }), r.transfers.length ? `<table class="rows">${r.transfers.map((t) => `<tr><td>${esc(t.label)}<small>${esc(t.direction === 'IN' ? tr('cashHistory.transfersIn') : tr('cashHistory.transfersOut'))} · ${esc(time(t.createdAt))}</small></td><td class="num ${t.direction === 'IN' ? 'pos' : 'neg'}">${t.direction === 'IN' ? '+' : '−'} ${money(t.amount)}</td></tr>`).join('')}</table>` : `<p class="empty">${esc(tr('cashHistory.noTransfer'))}</p>`)}
+  </div>`
+      : ''
+  }
+
+  ${r.cancelled.length ? section(tr('cashHistory.cancelledList', { n: r.cancelled.length }), `<table class="rows">${r.cancelled.map((c) => `<tr><td><span class="mono">${esc(c.number)}</span><small>${esc([c.customerName, time(c.at)].filter(Boolean).join(' · '))}</small></td><td class="num">${money(c.total)}</td></tr>`).join('')}</table>`, 'danger') : ''}
+
+  <div class="signs">
+    <div><span>${esc(tr('cashHistory.signCashier'))}</span><p>${esc(r.closedBy ?? r.openedBy ?? '')}</p></div>
+    <div><span>${esc(tr('cashHistory.signManager'))}</span></div>
+  </div>
+  <footer><span>${esc(tr('cashHistory.generatedOn', { date: formatDateTime(new Date()) }))}</span><span>OculoSaaS</span></footer>
+  </div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},150)}</script>
   </body></html>`;
   const win = window.open('', '_blank', 'width=900,height=1100');
   if (!win) return alert(tr('ui.ClientsPage.veuillezAutoriserLesFenetresPop'));
   win.document.write(html);
   win.document.close();
-  setTimeout(() => win.print(), 400);
 }

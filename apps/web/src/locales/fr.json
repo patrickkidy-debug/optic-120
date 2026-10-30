@@ -4859,7 +4859,14 @@
     "noExpense": "Aucune dépense sur cette session.",
     "noTransfer": "Aucun versement sur cette session.",
     "cancelledList": "Ventes annulées ({{n}})",
-    "signature": "Signature du caissier : ______________________        Signature du responsable : ______________________"
+    "signature": "Signature du caissier : ______________________        Signature du responsable : ______________________",
+    "zReport": "Rapport Z",
+    "openedLabel": "Ouverture",
+    "closedLabel": "Fermeture",
+    "durationLabel": "Durée",
+    "signCashier": "Signature du caissier",
+    "signManager": "Signature du responsable",
+    "generatedOn": "Édité le {{date}}"
   },
   "bday": {
     "title": "Anniversaires",

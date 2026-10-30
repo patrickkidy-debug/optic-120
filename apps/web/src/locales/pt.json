@@ -4859,7 +4859,14 @@
     "noExpense": "Nenhuma despesa nesta sessão.",
     "noTransfer": "Nenhum movimento nesta sessão.",
     "cancelledList": "Vendas anuladas ({{n}})",
-    "signature": "Assinatura do operador: ______________________        Assinatura do responsável: ______________________"
+    "signature": "Assinatura do operador: ______________________        Assinatura do responsável: ______________________",
+    "zReport": "Relatório Z",
+    "openedLabel": "Abertura",
+    "closedLabel": "Fecho",
+    "durationLabel": "Duração",
+    "signCashier": "Assinatura do operador",
+    "signManager": "Assinatura do responsável",
+    "generatedOn": "Emitido em {{date}}"
   },
   "bday": {
     "title": "Aniversários",
