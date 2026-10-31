@@ -14,6 +14,7 @@ import {
   Loader2,
   FileText,
   Lock,
+  Glasses,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { PaymentMethod } from '@oculo/shared-types';
@@ -174,6 +175,7 @@ export function PosPage() {
   const { data: coverage } = useCustomerCoverage(pos.customerId, insurerId, canSeeInsurers);
   // Les garanties raisonnent par famille de produit : la catégorie vient de la
   // liste de stock déjà chargée, le panier n'a pas à la porter.
+  const photoOf = (productId: string) => (stock ?? []).find((p) => p.productId === productId)?.photoUrl ?? null;
   const categoryOf = (productId: string) =>
     (stock ?? []).find((p) => p.productId === productId)?.category ?? 'AUTRE';
   const coverageLines = pos.lines.map((l) => ({
@@ -270,6 +272,15 @@ export function PosPage() {
                   }
                   className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
                 >
+                  {/* Photo du produit (ajoutée depuis la fiche produit) ; les
+                      montures sans photo gardent un emplacement repérable. */}
+                  {p.photoUrl ? (
+                    <img src={p.photoUrl} alt="" loading="lazy" className="mb-2 aspect-[4/3] w-full rounded-lg bg-white object-contain" />
+                  ) : p.category === 'MONTURE' ? (
+                    <div className="mb-2 grid aspect-[4/3] w-full place-items-center rounded-lg bg-surface-2 text-content-faint">
+                      <Glasses className="h-8 w-8" />
+                    </div>
+                  ) : null}
                   <div className="flex items-start justify-between">
                     <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
                     {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
@@ -313,20 +324,26 @@ export function PosPage() {
 
       {/* Panier */}
       <div id="pos-cart" className="scroll-mt-20 pb-20 lg:col-span-2 lg:pb-0">
-        <div className="card sticky top-20 flex max-h-[calc(100vh-4.5rem)] min-h-[70vh] flex-col">
+        <div className="card sticky top-20 flex max-h-[calc(100dvh-6rem)] min-h-[70vh] flex-col overflow-hidden">
           <div className="flex items-center gap-2 border-b px-4 py-3">
             <ShoppingCart className="h-5 w-5 text-primary" />
             <h2 className="font-display font-bold text-content">{t('pos.cart')}</h2>
             <span className="ml-auto text-sm text-content-muted">{t('pos.itemsCount', { count: pos.lines.length })}</span>
           </div>
 
-          <div className="min-h-[18rem] flex-1 overflow-y-auto px-4 py-2">
+          {/* Articles et options défilent ensemble ; totaux et boutons restent
+              toujours visibles en bas du panier. */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-[12rem] px-4 py-2">
             {pos.lines.length === 0 ? (
               <p className="py-10 text-center text-sm text-content-muted">{t('pos.emptyCart')}</p>
             ) : (
               <div className="space-y-2">
                 {pos.lines.map((l) => (
                   <div key={l.key} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
+                    {photoOf(l.productId) && (
+                      <img src={photoOf(l.productId)!} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-white object-contain" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
                       {categoryOf(l.productId) === 'VERRE' && (
@@ -465,11 +482,14 @@ export function PosPage() {
                 )}
               </div>
             </div>
+          </div>
+          </div>
 
+          <div className="shrink-0 space-y-3 border-t px-4 py-3">
             <div className="space-y-1 text-sm">
               <Row label={t('pos.subtotal')} value={formatCurrency(baseTotals.subtotal)} />
-              {lensFee > 0 && <Row label="Garantie verres 1 an (+15 %)" value={formatCurrency(lensFee)} />}
-              {frameFee > 0 && <Row label="Protection monture 6 mois (+10 %)" value={formatCurrency(frameFee)} />}
+              {lensFee > 0 && <Row label="Garantie verres 1 an" value={formatCurrency(lensFee)} />}
+              {frameFee > 0 && <Row label="Protection monture" value={formatCurrency(frameFee)} />}
               {loyaltyPoints > 0 && (
                 <Row
                   label={t('pos.loyaltyLine', { points: loyaltyPoints })}

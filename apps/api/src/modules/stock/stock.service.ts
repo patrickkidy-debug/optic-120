@@ -439,6 +439,8 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
       name: p.name,
       brand: p.brand,
       category: p.category,
+      // Photo principale : affichée sur les cartes de la caisse.
+      photoUrl: p.photoUrl,
       sellPrice: Number(p.sellPrice),
       stockItemId: item?.id ?? null,
       quantity: item?.quantity ?? 0,
