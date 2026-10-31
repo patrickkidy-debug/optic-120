@@ -1386,9 +1386,33 @@ export interface TaxLine {
  * Taxes d'une vente : TVA puis taxes supplémentaires, toutes calculées sur la
  * même base hors taxe (après remise), arrondies à l'unité.
  */
-export function computeTaxes(base: number, vatPercent: number, extraTaxes: readonly ExtraTax[] = []): { lines: TaxLine[]; total: number } {
+/**
+ * Familles exonérées de TVA : les verres correcteurs, exonérés dans de
+ * nombreux pays. Montures, lentilles, accessoires et services restent taxés.
+ */
+export const VAT_EXEMPT_CATEGORIES: readonly string[] = ['VERRE'];
+
+/**
+ * Base de la TVA : montant des lignes taxables, après leur part de la remise
+ * (répartie au prorata). Une ligne sans famille connue est taxée.
+ */
+export function vatBaseOf(lines: readonly { category?: string | null; lineTotal: number }[], discount: number): number {
+  const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
+  if (subtotal <= 0) return 0;
+  const taxable = lines.reduce((s, l) => s + (VAT_EXEMPT_CATEGORIES.includes(l.category ?? '') ? 0 : l.lineTotal), 0);
+  return Math.round((Math.max(0, subtotal - discount) * taxable) / subtotal);
+}
+
+export function computeTaxes(
+  base: number,
+  vatPercent: number,
+  extraTaxes: readonly ExtraTax[] = [],
+  /** Base de la TVA seule (articles exonérés retirés) ; défaut : `base`. */
+  vatBase: number = base,
+): { lines: TaxLine[]; total: number } {
   const b = Math.max(0, base);
-  const lines: TaxLine[] = [{ code: 'VAT', label: 'TVA', rate: vatPercent, amount: Math.round((b * vatPercent) / 100) }];
+  const vb = Math.max(0, Math.min(b, vatBase));
+  const lines: TaxLine[] = [{ code: 'VAT', label: 'TVA', rate: vatPercent, amount: Math.round((vb * vatPercent) / 100) }];
   for (const t of extraTaxes) {
     if (t.rate > 0) lines.push({ code: 'EXTRA', label: t.label, rate: t.rate, amount: Math.round((b * t.rate) / 100) });
   }

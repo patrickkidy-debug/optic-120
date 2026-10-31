@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { VAT_RATE, computeTaxes, type ExtraTax } from '@oculo/shared-types';
+import { VAT_RATE, computeTaxes, vatBaseOf, type ExtraTax } from '@oculo/shared-types';
 import { useAuthStore } from './auth';
 
 export type Eye = 'OD' | 'OG';
@@ -120,15 +120,20 @@ export const usePosStore = create<PosState>((set) => ({
  * Calcule les totaux du panier (miroir du calcul serveur).
  * `vatRatePct` = taux de TVA en pourcentage (défaut 18 %, 0 = exonéré) ;
  * `extraTaxes` = taxes ajoutées à la TVA (ex. CSS 1 % au Gabon), détaillées.
+ * Les verres (`category` VERRE) sont exonérés de TVA, comme côté serveur.
  */
 export function computeTotals(
-  state: { lines: { unitPrice: number; quantity: number }[]; discountAmount: number; insuranceAmount: number },
+  state: { lines: { unitPrice: number; quantity: number; category?: string }[]; discountAmount: number; insuranceAmount: number },
   vatRatePct: number = VAT_RATE * 100,
   extraTaxes: readonly ExtraTax[] = [],
 ) {
   const subtotal = state.lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const taxBase = Math.max(0, subtotal - state.discountAmount);
-  const taxes = computeTaxes(taxBase, vatRatePct, extraTaxes);
+  const vatBase = vatBaseOf(
+    state.lines.map((l) => ({ category: l.category, lineTotal: l.unitPrice * l.quantity })),
+    state.discountAmount,
+  );
+  const taxes = computeTaxes(taxBase, vatRatePct, extraTaxes, vatBase);
   const taxAmount = taxes.total;
   const total = taxBase + taxAmount;
   const dueFromCustomer = Math.max(0, total - state.insuranceAmount);

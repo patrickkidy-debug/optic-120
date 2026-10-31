@@ -137,15 +137,18 @@ export function PosPage() {
   const optical = user?.tenantOpticalSettings ?? DEFAULT_OPTICAL_SETTINGS;
   // La remise fidélité s'ajoute à la remise saisie — même calcul que le serveur.
   const loyaltyDiscount = Math.round(loyaltyPoints * optical.loyaltyPointValue);
+  // Chaque ligne porte sa famille (repli sur le stock chargé) : les verres
+  // sont exonérés de TVA, comme côté serveur.
+  const lineCategory = (l: { productId: string; category?: string }) =>
+    l.category ?? (stock ?? []).find((p) => p.productId === l.productId)?.category;
+  const cartLines = pos.lines.map((l) => ({ ...l, category: lineCategory(l) }));
   const baseTotals = computeTotals(
-    { ...pos, discountAmount: pos.discountAmount + loyaltyDiscount },
+    { ...pos, lines: cartLines, discountAmount: pos.discountAmount + loyaltyDiscount },
     effectiveVat,
     optical.extraTaxes,
   );
   // Suppléments de garantie : même calcul que le serveur (sur le HT après
   // remise), ajoutés comme des lignes pour que la TVA s'y applique aussi.
-  const lineCategory = (l: { productId: string; category?: string }) =>
-    l.category ?? (stock ?? []).find((p) => p.productId === l.productId)?.category;
   const hasLens = pos.lines.some((l) => lineCategory(l) === 'VERRE');
   const hasFrame = pos.lines.some((l) => lineCategory(l) === 'MONTURE');
   const planRates = warrantyPlanOn ? warrantyPlanRate(warrantyPlan, hasLens, hasFrame) : { lens: 0, frame: 0 };
@@ -155,7 +158,7 @@ export function PosPage() {
   const totals = computeTotals(
     {
       ...pos,
-      lines: [...pos.lines, { unitPrice: lensFee, quantity: 1 }, { unitPrice: frameFee, quantity: 1 }],
+      lines: [...cartLines, { unitPrice: lensFee, quantity: 1 }, { unitPrice: frameFee, quantity: 1 }],
       discountAmount: pos.discountAmount + loyaltyDiscount,
     },
     effectiveVat,

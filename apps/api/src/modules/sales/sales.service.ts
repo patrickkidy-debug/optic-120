@@ -4,7 +4,7 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
-  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo, computeTaxes, WARRANTY_PLAN, warrantyPlanRate } from '@oculo/shared-types';
+  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo, computeTaxes, vatBaseOf, WARRANTY_PLAN, warrantyPlanRate } from '@oculo/shared-types';
 import type { TaxLine, ExtraTax } from '@oculo/shared-types';
 import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
@@ -237,7 +237,8 @@ export async function createSale(
     const taxBase = Math.max(0, subtotal - discount);
     // TVA + taxes supplémentaires de l'établissement (ex. CSS 1 % au Gabon),
     // détaillées sur les documents.
-    const taxes = computeTaxes(taxBase, vatFraction * 100, settings.extraTaxes);
+    // Verres exonérés de TVA : seule la part taxable des lignes y est soumise.
+    const taxes = computeTaxes(taxBase, vatFraction * 100, settings.extraTaxes, vatBaseOf(lines, discount));
     const taxAmount = taxes.total;
     const total = taxBase + taxAmount;
     const isSale = input.type === SaleType.SALE;
@@ -468,7 +469,7 @@ export async function updateSale(
           : (tenant?.vatRate ?? VAT_RATE * 100);
     }
     const taxBase = Math.max(0, subtotal - discount);
-    const taxes = computeTaxes(taxBase, vatPercent, extraTaxes);
+    const taxes = computeTaxes(taxBase, vatPercent, extraTaxes, vatBaseOf(lines, discount));
     const taxAmount = taxes.total;
     const total = taxBase + taxAmount;
 

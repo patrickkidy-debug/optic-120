@@ -1246,7 +1246,7 @@ function QuoteModal({
     ? editing.taxDetails.filter((x) => x.code === 'EXTRA').map((x) => ({ label: x.label, rate: x.rate }))
     : extraTaxes;
   const { subtotal, taxAmount, taxLines, total } = computeTotals(
-    { lines, discountAmount: discount, insuranceAmount: 0 },
+    { lines: lines.map((l) => ({ ...l, category: categoryOfLine(l) })), discountAmount: discount, insuranceAmount: 0 },
     effectiveVat,
     effectiveExtra,
   );
