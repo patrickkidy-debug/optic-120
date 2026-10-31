@@ -800,6 +800,10 @@ model Sale {
   // et date d'échéance figée à la vente, pour trancher un litige en SAV.
   warrantyMonths    Int?
   warrantyEndsAt    DateTime?
+  // Formule de garantie (avant-première) : échéances verres (6 mois offerts
+  // ou 1 an) et protection monture (6 mois), figées à la vente.
+  lensWarrantyEndsAt  DateTime?
+  frameWarrantyEndsAt DateTime?
   // Remise accordée en points de fidélité (montant déjà inclus dans discountAmount).
   loyaltyPointsUsed Int                  @default(0)
   // Ordonnance jointe au devis / à la vente (facultatif) : reprise sur le

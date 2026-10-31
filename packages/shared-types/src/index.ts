@@ -1753,6 +1753,40 @@ export const saleItemSchema = z.object({
   eye: z.enum(['OD', 'OG']).nullable().optional(),
 });
 
+/**
+ * Formule de garantie (avant-première) :
+ * - verres : 6 mois offerts ; 1 an contre +15 % sur la facture. Casse ou
+ *   perte pendant la garantie : le client paie 30 % du prix des verres ;
+ * - monture : protection 6 mois contre +10 % sur la facture. Dommage pendant
+ *   la protection : le client paie 50 % du prix de la nouvelle monture.
+ */
+export const WARRANTY_PLAN = {
+  lensFreeMonths: 6,
+  lensExtendedMonths: 12,
+  lensExtendedRate: 0.15,
+  lensClaimRate: 0.3,
+  frameMonths: 6,
+  frameRate: 0.1,
+  frameClaimRate: 0.5,
+  /** Lignes de facture ajoutées pour les suppléments (produits SERVICE masqués). */
+  lensSku: 'GAR-VERRES-12M',
+  frameSku: 'GAR-MONTURE-6M',
+} as const;
+
+export const warrantyPlanSchema = z.object({
+  lensMonths: z.union([z.literal(6), z.literal(12)]),
+  frame: z.boolean(),
+});
+export type WarrantyPlan = z.infer<typeof warrantyPlanSchema>;
+
+/** Supplément d'une formule, calculé sur le montant HT après remise. */
+export function warrantyPlanRate(plan: WarrantyPlan | undefined | null, hasLens: boolean, hasFrame: boolean): { lens: number; frame: number } {
+  return {
+    lens: plan && hasLens && plan.lensMonths === WARRANTY_PLAN.lensExtendedMonths ? WARRANTY_PLAN.lensExtendedRate : 0,
+    frame: plan && hasFrame && plan.frame ? WARRANTY_PLAN.frameRate : 0,
+  };
+}
+
 export const saleCreateSchema = z.object({
   branchId: z.string().uuid(),
   customerId: z.string().uuid().optional(),
@@ -1770,6 +1804,8 @@ export const saleCreateSchema = z.object({
   vatRate: z.number().min(0).max(100).optional(),
   /** Garantie accordée, en mois (0 ou omis = aucune). */
   warrantyMonths: z.number().int().min(0).max(120).optional(),
+  /** Formule de garantie verres/monture (avant-première, voir WARRANTY_PLAN). */
+  warrantyPlan: warrantyPlanSchema.optional(),
   /** Points de fidélité du client convertis en remise sur cette vente. */
   loyaltyPointsUsed: z.number().int().min(0).optional(),
   /** Ordonnance à joindre au document (facultatif). */

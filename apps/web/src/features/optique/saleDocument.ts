@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/auth';
 import { tr } from '../../lib/tr';
 import { displayLocale } from '../../lib/format';
 import { saleStatusLabel } from '../../lib/labels';
+import { warrantyPlanDocumentLines } from './WarrantyPlan';
 
 export interface CompanyInfo {
   name: string;
@@ -320,6 +321,13 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
     ${paymentBlock}
 
     ${prescriptionBlock}
+
+    ${(() => {
+      const lines = warrantyPlanDocumentLines(sale);
+      return lines.length
+        ? `<div style="margin-top:20px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;color:#334155;"><div style="font-weight:700;color:${accent};margin-bottom:4px;">Garantie</div>${lines.map((l) => `<div>• ${esc(l)}</div>`).join('')}</div>`
+        : '';
+    })()}
 
     ${
       company.footerNote

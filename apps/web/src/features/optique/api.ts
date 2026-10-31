@@ -526,6 +526,9 @@ export interface SaleDetail {
   prescription?: Prescription | null;
   visitReason?: string | null;
   expectedDeliveryAt?: string | null;
+  /** Formule de garantie : échéances verres et protection monture. */
+  lensWarrantyEndsAt?: string | null;
+  frameWarrantyEndsAt?: string | null;
   items: SaleDetailItem[];
   payments?: SalePayment[];
   customer?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;

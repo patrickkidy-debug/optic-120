@@ -62,7 +62,8 @@ import { paymentMethodLabel, paymentStatusLabel, saleStatusLabel } from '../../l
 import { PageHeader, Badge, PageLoader, EmptyState, Modal, Button } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
 import { useBranchSwitchGuard } from '../../features/branches/context';
-import { useBeta, VISIT_REASONS } from '../../lib/beta';
+import { useBeta, useWarrantyPlan, VISIT_REASONS } from '../../lib/beta';
+import { WarrantyPlanCard } from '../../features/optique/WarrantyPlan';
 
 /** En-tête des documents imprimés : identité de l'établissement. */
 function companyInfo(): CompanyInfo {
@@ -813,6 +814,7 @@ function SaleDetailModal({
 }) {
   const { t } = useTranslation();
   const beta = useBeta();
+  const warrantyPlanOn = useWarrantyPlan();
   const { data: history } = useQuery({
     queryKey: ['sale-history', sale.id],
     queryFn: () => getSaleHistory(sale.id),
@@ -952,6 +954,8 @@ function SaleDetailModal({
             </span>
           </div>
         </div>
+
+        {warrantyPlanOn && <WarrantyPlanCard sale={sale} />}
 
         {/* Encaissements par moyen de paiement */}
         <div>

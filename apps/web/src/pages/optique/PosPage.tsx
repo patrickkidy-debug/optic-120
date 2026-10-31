@@ -54,6 +54,11 @@ import { formatCurrency } from '../../lib/format';
 import { paymentMethodLabel } from '../../lib/labels';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
+import { useWarrantyPlan } from '../../lib/beta';
+import { WarrantyPlanPicker } from '../../features/optique/WarrantyPlan';
+import { warrantyPlanRate, type WarrantyPlan } from '@oculo/shared-types';
+
+const DEFAULT_WARRANTY_PLAN: WarrantyPlan = { lensMonths: 6, frame: false };
 
 /**
  * Moyens proposés en caisse : espèces et carte partout, puis les services
@@ -89,6 +94,9 @@ export function PosPage() {
   // Points de fidélité convertis en remise + garantie accordée sur cette vente.
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [warrantyMonths, setWarrantyMonths] = useState<number | null>(null);
+  // Formule de garantie verres/monture (avant-première, compte du fondateur).
+  const warrantyPlanOn = useWarrantyPlan();
+  const [warrantyPlan, setWarrantyPlan] = useState<WarrantyPlan>(DEFAULT_WARRANTY_PLAN);
   const [paySale, setPaySale] = useState<{ id: string; due: number; number: string; coveredByInsurance: boolean } | null>(null);
 
   const { data: insurers } = useQuery({
@@ -129,8 +137,27 @@ export function PosPage() {
   const optical = user?.tenantOpticalSettings ?? DEFAULT_OPTICAL_SETTINGS;
   // La remise fidélité s'ajoute à la remise saisie — même calcul que le serveur.
   const loyaltyDiscount = Math.round(loyaltyPoints * optical.loyaltyPointValue);
-  const totals = computeTotals(
+  const baseTotals = computeTotals(
     { ...pos, discountAmount: pos.discountAmount + loyaltyDiscount },
+    effectiveVat,
+    optical.extraTaxes,
+  );
+  // Suppléments de garantie : même calcul que le serveur (sur le HT après
+  // remise), ajoutés comme des lignes pour que la TVA s'y applique aussi.
+  const lineCategory = (l: { productId: string; category?: string }) =>
+    l.category ?? (stock ?? []).find((p) => p.productId === l.productId)?.category;
+  const hasLens = pos.lines.some((l) => lineCategory(l) === 'VERRE');
+  const hasFrame = pos.lines.some((l) => lineCategory(l) === 'MONTURE');
+  const planRates = warrantyPlanOn ? warrantyPlanRate(warrantyPlan, hasLens, hasFrame) : { lens: 0, frame: 0 };
+  const feeBase = Math.max(0, baseTotals.subtotal - pos.discountAmount - loyaltyDiscount);
+  const lensFee = Math.round(feeBase * planRates.lens);
+  const frameFee = Math.round(feeBase * planRates.frame);
+  const totals = computeTotals(
+    {
+      ...pos,
+      lines: [...pos.lines, { unitPrice: lensFee, quantity: 1 }, { unitPrice: frameFee, quantity: 1 }],
+      discountAmount: pos.discountAmount + loyaltyDiscount,
+    },
     effectiveVat,
     optical.extraTaxes,
   );
@@ -185,6 +212,7 @@ export function PosPage() {
         // Points de fidélité escomptés et garantie accordée (ventes seulement).
         loyaltyPointsUsed: loyaltyPoints > 0 ? loyaltyPoints : undefined,
         warrantyMonths: type === 'SALE' && warrantyMonths !== null ? warrantyMonths : undefined,
+        warrantyPlan: type === 'SALE' && warrantyPlanOn ? warrantyPlan : undefined,
       }),
     onSuccess: (sale, type) => {
       if (type === 'QUOTE') {
@@ -405,7 +433,7 @@ export function PosPage() {
             {/* Fidélité : convertit les points du client en remise. */}
             <LoyaltyRedeem
               customerId={pos.customerId}
-              subtotal={totals.subtotal}
+              subtotal={baseTotals.subtotal}
               pointValue={optical.loyaltyPointValue}
               value={loyaltyPoints}
               onChange={setLoyaltyPoints}
@@ -417,15 +445,28 @@ export function PosPage() {
                 <VatSelect value={vatRate} defaultRate={defaultVat} onChange={setVatRate} />
               </div>
               <div className="col-span-2">
-                <WarrantySelect
-                  value={warrantyMonths ?? optical.defaultWarrantyMonths}
-                  onChange={setWarrantyMonths}
-                />
+                {warrantyPlanOn ? (
+                  <WarrantyPlanPicker
+                    value={warrantyPlan}
+                    onChange={setWarrantyPlan}
+                    hasLens={hasLens}
+                    hasFrame={hasFrame}
+                    lensFee={lensFee}
+                    frameFee={frameFee}
+                  />
+                ) : (
+                  <WarrantySelect
+                    value={warrantyMonths ?? optical.defaultWarrantyMonths}
+                    onChange={setWarrantyMonths}
+                  />
+                )}
               </div>
             </div>
 
             <div className="space-y-1 text-sm">
-              <Row label={t('pos.subtotal')} value={formatCurrency(totals.subtotal)} />
+              <Row label={t('pos.subtotal')} value={formatCurrency(baseTotals.subtotal)} />
+              {lensFee > 0 && <Row label="Garantie verres 1 an (+15 %)" value={formatCurrency(lensFee)} />}
+              {frameFee > 0 && <Row label="Protection monture 6 mois (+10 %)" value={formatCurrency(frameFee)} />}
               {loyaltyPoints > 0 && (
                 <Row
                   label={t('pos.loyaltyLine', { points: loyaltyPoints })}
@@ -497,6 +538,7 @@ export function PosPage() {
             setVatRate(null);
             setLoyaltyPoints(0);
             setWarrantyMonths(null);
+            setWarrantyPlan(DEFAULT_WARRANTY_PLAN);
             setPaySale(null);
             invalidateSalesViews(qc);
             qc.invalidateQueries({ queryKey: ['products'] });

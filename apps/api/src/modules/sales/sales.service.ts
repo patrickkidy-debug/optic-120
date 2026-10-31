@@ -4,7 +4,7 @@ import {
   StockMovementType,
   PaymentStatus,
   VAT_RATE,
-  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo, computeTaxes } from '@oculo/shared-types';
+  MADE_TO_ORDER_CATEGORIES, tenantCurrencyInfo, computeTaxes, WARRANTY_PLAN, warrantyPlanRate } from '@oculo/shared-types';
 import type { TaxLine, ExtraTax } from '@oculo/shared-types';
 import type { SaleCreateInput, SaleUpdateInput, PaymentMethod } from '@oculo/shared-types';
 import type { Prisma } from '@prisma/client';
@@ -21,6 +21,7 @@ import {
 } from '../management/insurance.service.js';
 import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 import { adjustStockBy, decrementStockIfAvailable } from '../../lib/stock-atomic.js';
+import { canUseWarrantyPlan, isWarrantyPlanSku, warrantyPlanProduct } from '../../lib/warranty-plan.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -209,6 +210,29 @@ export async function createSale(
     }
 
     const discount = (input.discountAmount ?? 0) + loyaltyDiscount;
+
+    // Formule de garantie (avant-première) : suppléments verres 1 an (+15 %)
+    // et protection monture (+10 %), ajoutés en lignes de facture et calculés
+    // sur le montant HT après remise (donc le même % du total TTC).
+    let lensWarrantyEndsAt: Date | null = null;
+    let frameWarrantyEndsAt: Date | null = null;
+    if (input.type === SaleType.SALE && input.warrantyPlan && (await canUseWarrantyPlan(tx, userId))) {
+      const plan = input.warrantyPlan;
+      const hasLens = lines.some((l) => l.category === 'VERRE');
+      const hasFrame = lines.some((l) => l.category === 'MONTURE');
+      const base = Math.max(0, subtotal - discount);
+      const rates = warrantyPlanRate(plan, hasLens, hasFrame);
+      for (const kind of ['lens', 'frame'] as const) {
+        if (!rates[kind]) continue;
+        const p = await warrantyPlanProduct(tx, tenantId, kind);
+        const fee = Math.round(base * rates[kind]);
+        lines.push({ productId: p.id, quantity: 1, unitPrice: fee, lineTotal: fee, name: p.name, category: p.category, reference: null, eye: null, trackStock: false });
+        subtotal += fee;
+      }
+      if (hasLens) lensWarrantyEndsAt = addMonths(new Date(), plan.lensMonths);
+      if (hasFrame && plan.frame) frameWarrantyEndsAt = addMonths(new Date(), WARRANTY_PLAN.frameMonths);
+    }
+
     const insurance = input.insuranceAmount ?? 0;
     const taxBase = Math.max(0, subtotal - discount);
     // TVA + taxes supplémentaires de l'établissement (ex. CSS 1 % au Gabon),
@@ -245,6 +269,8 @@ export async function createSale(
         paidAmount: paidInit,
         currency: tenant ? tenantCurrencyInfo(tenant).currency : 'XOF',
         loyaltyPointsUsed: pointsUsed,
+        lensWarrantyEndsAt,
+        frameWarrantyEndsAt,
         // Garantie : durée retenue (ou celle par défaut du cabinet) et échéance
         // figée à la vente, pour trancher un litige SAV plus tard.
         ...(isSale
@@ -389,7 +415,8 @@ export async function updateSale(
     const lines: ComputedLine[] = input.items
       ? input.items.map((i) => {
           const p = byId.get(i.productId);
-          if (!p || !p.isActive) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
+          // Les lignes de supplément garantie restent modifiables (fiches masquées).
+          if (!p || (!p.isActive && !isWarrantyPlanSku(p.sku))) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
           const unitPrice =
             i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
           return {

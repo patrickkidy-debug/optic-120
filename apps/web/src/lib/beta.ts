@@ -7,6 +7,13 @@ import { useAuthStore } from '../store/auth';
  */
 const BETA_EMAILS = new Set(['patrickkidy@gmail.com', 'puille.nicolas@gmail.com']);
 
+/** Formule de garantie verres/monture : réservée à ce compte (même liste côté API). */
+const WARRANTY_PLAN_EMAILS = new Set(['patrickkidy@gmail.com']);
+
+export function useWarrantyPlan(): boolean {
+  return useAuthStore((s) => WARRANTY_PLAN_EMAILS.has((s.user?.email ?? '').toLowerCase()));
+}
+
 /** Vrai si l'utilisateur connecté voit le « dossier de vente » détaillé (prismes, duplication…). */
 export function useBeta(): boolean {
   return useAuthStore((s) => BETA_EMAILS.has((s.user?.email ?? '').toLowerCase()));
