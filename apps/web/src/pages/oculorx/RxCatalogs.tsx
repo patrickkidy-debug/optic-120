@@ -18,6 +18,7 @@ import { Button, Field, Modal, PageLoader } from '../../components/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { Money, Panel, td, th, useRx } from './ui';
+import { FabricationBadge, RxGuide } from './RxGuide';
 import { InviteModal } from '../optique/oculotrack/modals';
 import { usePermission } from '../../store/auth';
 import { waNumber } from '../../features/oculorx/whatsapp';
@@ -98,6 +99,7 @@ export function RxCatalogs() {
         )}
       </Panel>
 
+      <RxGuide />
       <CatalogTable suppliers={suppliers ?? []} margins={margins} manage={manage} />
 
       {editing && <SupplierModal supplier={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
@@ -138,7 +140,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
     >
       {view === 'shop' && (
         <p className="mb-3 text-xs text-content-muted">
-          Donnez à chaque verre son nom commercial en boutique et son prix de vente : OculoRX calcule alors le bénéfice réel (prix boutique − prix d'achat fournisseur).
+          Donnez à chaque verre son nom commercial en boutique et son prix de vente à la paire : OculoRX calcule alors le bénéfice réel (prix boutique − prix d'achat fournisseur).
           Sans prix boutique, le prix conseillé par le coefficient est utilisé.
         </p>
       )}
@@ -168,14 +170,15 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
               <tr className="border-b">
                 <th className={th}>Référence</th>
                 <th className={th}>{view === 'shop' ? 'Nom boutique / fournisseur' : 'Désignation'}</th>
+                <th className={th}>Type</th>
                 <th className={th}>Géométrie</th>
                 <th className={`${th} text-right`}>Indice</th>
                 <th className={th}>Matière</th>
                 <th className={th}>Traitement</th>
                 <th className={th}>Plage de fabrication</th>
-                {margins && <th className={`${th} text-right`}>Achat / verre</th>}
-                <th className={`${th} text-right`}>{view === 'shop' ? 'Prix boutique' : 'Vente conseillée'}</th>
-                {margins && <th className={`${th} text-right`}>{view === 'shop' ? 'Bénéfice réel / verre' : 'Marge / verre'}</th>}
+                {margins && <th className={`${th} text-right`}>Achat / paire</th>}
+                <th className={`${th} text-right`}>{view === 'shop' ? 'Prix boutique / paire' : 'Vente conseillée / paire'}</th>
+                {margins && <th className={`${th} text-right`}>{view === 'shop' ? 'Bénéfice réel / paire' : 'Marge / paire'}</th>}
                 {manage && <th className={th}>{view === 'shop' ? '' : 'Actif'}</th>}
               </tr>
             </thead>
@@ -196,6 +199,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
                       </>
                     )}
                   </td>
+                  <td className={td}><FabricationBadge value={l.fabrication} />{!l.fabrication && <span className="text-xs text-content-faint">—</span>}</td>
                   <td className={`${td} text-content-muted`}>{geoLabel(l.geometry)}</td>
                   <td className={`${td} text-right font-mono`}>{idx(l.lensIndex)}</td>
                   <td className={`${td} text-content-muted`}>{l.material || '—'}</td>
@@ -206,19 +210,19 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
                   </td>
                   {margins && (
                     <td className={`${td} text-right`}>
-                      <Money value={l.purchasePrice} />
+                      <Money value={l.purchasePrice != null ? l.purchasePrice * 2 : null} />
                       {!!l.priceHistory?.length && (
-                        <span className="block text-[10px] text-content-faint" title={l.priceHistory.map((h) => `${h.price.toLocaleString('fr-FR')} FCFA jusqu'au ${formatDate(h.until)}`).join('\n')}>
-                          ancien {l.priceHistory[l.priceHistory.length - 1].price.toLocaleString('fr-FR')} · maj {formatDate(l.priceUpdatedAt)}
+                        <span className="block text-[10px] text-content-faint" title={l.priceHistory.map((h) => `${(h.price * 2).toLocaleString('fr-FR')} FCFA la paire jusqu'au ${formatDate(h.until)}`).join('\n')}>
+                          ancien {(l.priceHistory[l.priceHistory.length - 1].price * 2).toLocaleString('fr-FR')} · maj {formatDate(l.priceUpdatedAt)}
                         </span>
                       )}
                     </td>
                   )}
                   <td className={`${td} text-right`}>
-                    <Money value={l.suggestedPrice} />
+                    <Money value={l.suggestedPrice * 2} />
                     {view === 'shop' && !l.shopPrice && <span className="block text-[10px] text-content-faint">coefficient</span>}
                   </td>
-                  {margins && <td className={`${td} text-right font-semibold`}><Money value={l.margin} /></td>}
+                  {margins && <td className={`${td} text-right font-semibold`}><Money value={l.margin != null ? l.margin * 2 : null} /></td>}
                   {manage && (
                     <td className={td}>
                       {view === 'shop' ? (
@@ -244,14 +248,16 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
 function ShopLensModal({ lens, margins, onClose }: { lens: RxLens; margins: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [shopName, setShopName] = useState(lens.shopName ?? '');
-  const [shopPrice, setShopPrice] = useState(lens.shopPrice ?? 0);
+  // Saisie à la paire (comme l'affiche boutique) ; OculoRX garde le prix d'un verre.
+  const [pairPrice, setPairPrice] = useState(lens.shopPrice ? lens.shopPrice * 2 : 0);
   const save = useMutation({
-    mutationFn: () => rx.updateLens(lens.id, { shopName: shopName.trim() || null, shopPrice: shopPrice > 0 ? shopPrice : null }),
+    mutationFn: () => rx.updateLens(lens.id, { shopName: shopName.trim() || null, shopPrice: pairPrice > 0 ? Math.round(pairPrice / 2) : null }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rx'] }); onClose(); },
     onError: (e) => alert(apiErrorMessage(e)),
   });
-  const price = shopPrice > 0 ? shopPrice : lens.coefficientPrice;
-  const profit = lens.purchasePrice != null ? price - lens.purchasePrice : null;
+  const pair = pairPrice > 0 ? pairPrice : lens.coefficientPrice * 2;
+  const buyPair = lens.purchasePrice != null ? lens.purchasePrice * 2 : null;
+  const profit = buyPair != null ? pair - buyPair : null;
   return (
     <Modal open onClose={onClose} title="Catalogue boutique" size="md">
       <div className="space-y-3">
@@ -261,19 +267,20 @@ function ShopLensModal({ lens, margins, onClose }: { lens: RxLens; margins: bool
           <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
         </div>
         <Field label="Nom commercial en boutique"><input className="input" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex. Verre Confort Écran 1.56" maxLength={200} /></Field>
-        <Field label="Prix de vente d'un verre (FCFA)">
-          <NumberInput min={0} value={shopPrice} onChange={setShopPrice} className="input text-right font-mono" placeholder={String(lens.coefficientPrice)} />
+        <Field label="Prix de vente de la paire (FCFA)">
+          <NumberInput min={0} value={pairPrice} onChange={setPairPrice} className="input text-right font-mono" placeholder={String(lens.coefficientPrice * 2)} />
         </Field>
-        <p className="text-xs text-content-muted">Laisser vide pour utiliser le prix conseillé par le coefficient ({lens.coefficientPrice.toLocaleString('fr-FR')} FCFA).</p>
+        <p className="text-xs text-content-muted">Laisser vide pour utiliser le prix conseillé par le coefficient ({(lens.coefficientPrice * 2).toLocaleString('fr-FR')} FCFA la paire).</p>
         {margins && profit != null && (
           <p className={clsx('rounded-lg px-3 py-2 text-sm font-bold', profit < 0 ? 'bg-[color:var(--danger)]/10 text-danger' : 'bg-[color:var(--success)]/10 text-success')}>
-            Bénéfice réel par verre : {profit < 0 ? '− ' : ''}{Math.abs(profit).toLocaleString('fr-FR')} FCFA ({lens.purchasePrice!.toLocaleString('fr-FR')} FCFA d'achat)
+            Bénéfice réel par paire : {profit < 0 ? '− ' : ''}{Math.abs(profit).toLocaleString('fr-FR')} FCFA (achat {buyPair!.toLocaleString('fr-FR')} FCFA la paire)
           </p>
         )}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button loading={save.isPending} onClick={() => save.mutate()}>Enregistrer</Button>
+          <Button loading={save.isPending} disabled={profit != null && profit < 0 && pairPrice > 0} onClick={() => save.mutate()}>Enregistrer</Button>
         </div>
+        {profit != null && profit < 0 && pairPrice > 0 && <p className="text-right text-xs font-semibold text-danger">Vente à perte : le prix boutique doit couvrir le prix d'achat.</p>}
       </div>
     </Modal>
   );
@@ -378,7 +385,7 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition hover:border-primary">
             <FileUp className="h-7 w-7 text-primary" />
             <span className="text-sm font-semibold text-content">{fileName || 'Choisir un fichier CSV ou Excel'}</span>
-            <span className="text-xs text-content-faint">Colonnes : référence, désignation, géométrie, indice, matière, traitement, diamètre, sph/cyl/add min-max, prix_achat_ht, et facultativement nom_commercial et prix_vente_boutique (catalogue boutique). Séparateur « ; » ou « , », décimales avec virgule acceptées.</span>
+            <span className="text-xs text-content-faint">Colonnes : référence, désignation, géométrie, indice, matière, traitement, diamètre, sph/cyl/add min-max, fabrication (Stock ou RX), prix_achat_paire_ht, et facultativement nom_commercial et prix_vente_paire (catalogue boutique). Prix à la paire, comme sur les grilles fournisseurs. Séparateur « ; » ou « , », décimales avec virgule acceptées.</span>
             <input type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={(e) => void onFile(e.target.files?.[0])} />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -393,18 +400,18 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
                   <thead className="sticky top-0 bg-surface">
                     <tr className="border-b">
                       <th className={th}>Réf.</th><th className={th}>Désignation</th><th className={th}>Géom.</th><th className={`${th} text-right`}>Indice</th>
-                      <th className={th}>Traitement</th><th className={th}>Plage</th><th className={`${th} text-right`}>Prix HT</th><th className={th}>Nom boutique</th><th className={`${th} text-right`}>Prix boutique</th>
+                      <th className={th}>Type</th><th className={th}>Traitement</th><th className={th}>Plage</th><th className={`${th} text-right`}>Achat / paire</th><th className={th}>Nom boutique</th><th className={`${th} text-right`}>Vente / paire</th>
                     </tr>
                   </thead>
                   <tbody>
                     {parsed.valid.slice(0, 200).map((r) => (
                       <tr key={r.reference} className="border-b last:border-0">
                         <td className={`${td} font-mono`}>{r.reference}</td><td className={td}>{r.designation}</td><td className={td}>{geoLabel(r.geometry)}</td>
-                        <td className={`${td} text-right font-mono`}>{idx(r.lensIndex)}</td><td className={td}>{r.treatment || '—'}</td>
+                        <td className={`${td} text-right font-mono`}>{idx(r.lensIndex)}</td><td className={td}><FabricationBadge value={r.fabrication} /></td><td className={td}>{r.treatment || '—'}</td>
                         <td className={`${td} font-mono`}>{rxDiopter(r.sphMin)} / {rxDiopter(r.sphMax)} · cyl {idx(r.cylMax)}</td>
-                        <td className={`${td} text-right`}><Money value={r.purchasePrice} /></td>
+                        <td className={`${td} text-right`}><Money value={r.purchasePrice * 2} /></td>
                         <td className={td}>{r.shopName || '—'}</td>
-                        <td className={`${td} text-right`}>{r.shopPrice ? <Money value={r.shopPrice} /> : '—'}</td>
+                        <td className={`${td} text-right`}>{r.shopPrice ? <Money value={r.shopPrice * 2} /> : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

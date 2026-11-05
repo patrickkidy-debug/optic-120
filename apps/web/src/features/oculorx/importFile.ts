@@ -41,13 +41,13 @@ function parseCsv(text: string): Record<string, unknown>[] {
   return body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ''])));
 }
 
-/** Fichier modèle à remplir (séparateur « ; », décimales avec virgule). */
+/** Fichier modèle à remplir (séparateur « ; », décimales avec virgule, prix à la paire). */
 export function downloadTemplate() {
   const lines = [
     RX_IMPORT_COLUMNS.join(';'),
-    'U150-AR;Unifocal 1.50 antireflet;Unifocal;1,50;Organique;Antireflet;70;-6,00;+6,00;2,00;;;7000;Verre Clarté 1.5;20000',
-    'P160-BLU;Progressif 1.60 lumière bleue;Progressif;1,60;Organique;Filtre lumière bleue;70;-8,00;+6,00;4,00;0,75;3,50;42000;Progressif Écran Premium;118000',
-    'B150-DUR;Bifocal 28 mm 1.50 durci;Bifocal;1,50;Organique;Durci;70;-6,00;+6,00;2,00;1,00;3,00;12000;;',
+    'U156-AR;Unifocal 1.56 antireflet;Stock;Unifocal;1,56;Organique;Antireflet;70;-4,00;+4,00;2,00;;;5000;Verre Clarté 1.56;15000',
+    'P160-BLU;Progressif 1.60 lumière bleue;RX;Progressif;1,60;Organique;Filtre lumière bleue;70;-8,00;+6,00;4,00;0,75;3,50;44000;Progressif Écran Premium;115000',
+    'B150-DUR;Bifocal 28 mm 1.50 durci;RX;Bifocal;1,50;Organique;Durci;70;-6,00;+6,00;2,00;1,00;3,00;12000;;',
   ];
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');

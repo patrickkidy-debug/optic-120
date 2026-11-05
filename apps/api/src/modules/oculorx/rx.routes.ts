@@ -7,6 +7,7 @@ import {
   rxImportSchema,
   rxLensUpdateSchema,
   rxShopUnitPrice,
+  rxIsLoss,
   rxOrderCreateSchema,
   rxSettingsSchema,
   rxStatementPaySchema,
@@ -217,6 +218,13 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/lenses/:id', { preHandler: MANAGE }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = rxLensUpdateSchema.parse(req.body);
+    if (input.shopPrice) {
+      const lens = await req.db!.rxLens.findFirst({ where: { id }, select: { purchasePrice: true } });
+      if (!lens) throw notFound('Verre introuvable');
+      if (rxIsLoss(input.shopPrice, lens.purchasePrice)) {
+        throw badRequest(`Vente à perte refusée : la paire s'achète ${(lens.purchasePrice * 2).toLocaleString('fr-FR')} FCFA, le prix boutique doit être au moins égal.`);
+      }
+    }
     const res = await req.db!.rxLens.updateMany({
       where: { id },
       data: {
@@ -279,6 +287,14 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
       ...(input.urgent ? [{ label: 'Urgence', amount: settings.urgentFee }] : []),
     ];
     const purchasePrice = lens.purchasePrice * 2 + supplements.reduce((s, x) => s + x.amount, 0);
+    // Pas de vente à perte : le prix patient doit couvrir l'achat (verres + suppléments).
+    if (rxIsLoss(input.salePrice, purchasePrice)) {
+      throw badRequest(
+        canSeeMargins(req)
+          ? `Vente à perte refusée : le prix de vente (${input.salePrice.toLocaleString('fr-FR')} FCFA) est inférieur au prix d'achat (${purchasePrice.toLocaleString('fr-FR')} FCFA).`
+          : 'Vente à perte refusée : ce prix de vente est trop bas pour ce verre. Revenez au prix conseillé.',
+      );
+    }
     const now = new Date();
     const by = await userName(req);
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
@@ -296,7 +312,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
             userName: by,
             supplierId: lens.supplierId,
             lensId: lens.id,
-            lensSnapshot: { reference: lens.reference, designation: lens.designation, shopName: lens.shopName, geometry: lens.geometry, lensIndex: lens.lensIndex, material: lens.material, treatment: lens.treatment, unitPrice: lens.purchasePrice },
+            lensSnapshot: { reference: lens.reference, designation: lens.designation, shopName: lens.shopName, fabrication: lens.fabrication, geometry: lens.geometry, lensIndex: lens.lensIndex, material: lens.material, treatment: lens.treatment, unitPrice: lens.purchasePrice },
             customerId: input.customerId ?? null,
             patientName,
             fileNumber,

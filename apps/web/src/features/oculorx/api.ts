@@ -30,6 +30,8 @@ export interface RxLens {
   reference: string;
   designation: string;
   geometry: string;
+  /** STOCK ou RX (fabriqué sur mesure). */
+  fabrication: string | null;
   lensIndex: number | null;
   material: string | null;
   treatment: string | null;
@@ -77,7 +79,7 @@ export interface RxOrder {
   status: RxStatus;
   statusHistory: { status: RxStatus; at: string; by?: string; note?: string }[];
   supplier: { id: string; name: string; code: string | null; phone?: string | null; whatsapp?: string | null };
-  lens: { reference: string; designation: string; shopName?: string | null; geometry: string; lensIndex: number | null; material: string | null; treatment: string | null };
+  lens: { reference: string; designation: string; shopName?: string | null; fabrication?: string | null; geometry: string; lensIndex: number | null; material: string | null; treatment: string | null };
   customerId: string | null;
   patientName: string;
   fileNumber: string | null;

@@ -3006,6 +3006,8 @@ model RxLens {
   designation    String
   /// UNIFOCAL | PROGRESSIF | BIFOCAL | DEGRESSIF
   geometry       String
+  /// STOCK (verre de stock, livré vite) | RX (fabriqué sur mesure, surfacé)
+  fabrication    String?
   lensIndex      Float?
   material       String?
   treatment      String?

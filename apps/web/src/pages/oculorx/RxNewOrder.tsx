@@ -7,6 +7,7 @@ import {
   RX_FRAME_TYPES,
   RX_GEOMETRIES,
   RX_GEOMETRY_LABELS,
+  rxAdvice,
   rxChecks,
   rxDiopter,
   rxNeedsAddition,
@@ -23,6 +24,7 @@ import { useAuthStore } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { Money, Panel, td, th, useRx } from './ui';
 import { LensLinks } from './LensLinks';
+import { FabricationBadge, RxGuide } from './RxGuide';
 import { openWhatsapp, orderWhatsappText, waNumber } from '../../features/oculorx/whatsapp';
 
 type EyeText = { sph: string; cyl: string; axis: string };
@@ -94,6 +96,15 @@ export function RxNewOrder() {
     [lens, od, og, addition, hasPatient],
   );
   const allOk = Boolean(lens) && checks.every((c) => c.ok);
+  // Conseil (non bloquant) : indice et stock / RX selon l'ordonnance saisie.
+  const advice = lens ? rxAdvice(lens.geometry, eye(od), eye(og)) : null;
+  const adviceWarn = advice && lens
+    ? lens.lensIndex != null && lens.lensIndex + 0.001 < advice.index
+      ? `Ce verre est en indice ${lens.lensIndex.toFixed(2).replace('.', ',')} : un ${advice.index.toFixed(2).replace('.', ',')} serait plus fin pour cette correction.`
+      : advice.needsRx && lens.fabrication === 'STOCK'
+        ? 'Ce verre est un verre de stock : cette correction demande plutôt un verre RX.'
+        : null
+    : null;
   const fees = (mounted ? settings?.mountedFee ?? 0 : 0) + (urgent ? settings?.urgentFee ?? 0 : 0);
   const purchase = lens && lens.purchasePrice != null ? lens.purchasePrice * 2 + fees : null;
   const margin = purchase != null ? salePrice - purchase : null;
@@ -209,7 +220,7 @@ export function RxNewOrder() {
                   <tr className="border-b">
                     <th className={th}>Verre</th>
                     <th className={th}>Plage</th>
-                    <th className={`${th} text-right`}>{margins ? 'Achat / verre' : 'Vente conseillée'}</th>
+                    <th className={`${th} text-right`}>{margins ? 'Achat / paire' : 'Vente / paire'}</th>
                     <th className={th} />
                   </tr>
                 </thead>
@@ -228,7 +239,10 @@ export function RxNewOrder() {
                         {rxDiopter(l.sphMin)} / {rxDiopter(l.sphMax)} · cyl {l.cylMax != null ? l.cylMax.toFixed(2).replace('.', ',') : '—'}
                         {rxNeedsAddition(l.geometry) && <span className="block">add {rxDiopter(l.addMin)} / {rxDiopter(l.addMax)}</span>}
                       </td>
-                      <td className={`${td} text-right`}><Money value={margins ? l.purchasePrice : l.suggestedPrice} /></td>
+                      <td className={`${td} text-right`}>
+                        <Money value={margins ? (l.purchasePrice ?? 0) * 2 : l.suggestedPrice * 2} />
+                        <span className="mt-0.5 block"><FabricationBadge value={l.fabrication} /></span>
+                      </td>
                       <td className={`${td} text-right`}>
                         <Button variant={lens?.id === l.id ? 'primary' : 'outline'} onClick={() => setLens(l)}>{lens?.id === l.id ? 'Choisi' : 'Choisir'}</Button>
                       </td>
@@ -295,6 +309,7 @@ export function RxNewOrder() {
           </div>
           <label className="mt-3 block"><span className="label">Commentaire au fournisseur</span><textarea className="input min-h-[70px]" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} /></label>
         </Panel>
+        <RxGuide />
       </div>
 
       {/* Récapitulatif */}
@@ -309,6 +324,17 @@ export function RxNewOrder() {
                 <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
                 {lens.shopName && <p className="text-[11px] text-content-faint">Fournisseur : {lens.designation}</p>}
               </div>
+              {advice && (
+                <div className={clsx('rounded-xl border p-3 text-xs', adviceWarn ? 'border-[color:var(--warning)]/50 bg-[color:var(--warning)]/10' : 'bg-surface-2/60')}>
+                  <p className="font-bold text-content">Conseil · puissance la plus forte {advice.power.toFixed(2).replace('.', ',')} D</p>
+                  <p className="mt-0.5 text-content-muted">Indice : <b className="text-content">{advice.index.toFixed(2).replace('.', ',')}</b> — {advice.advice.split('— ')[1] ?? advice.advice}</p>
+                  <p className="text-content-muted">
+                    Fabrication : <b className="text-content">{advice.needsRx ? 'RX (sur mesure)' : 'Stock possible'}</b>
+                    {advice.reasons.length > 0 && <> ({advice.reasons.join(', ')})</>}
+                  </p>
+                  {adviceWarn && <p className="mt-1 font-semibold text-warning">{adviceWarn}</p>}
+                </div>
+              )}
               <ul className="space-y-1">
                 {checks.map((c) => (
                   <li key={c.key} className={clsx('flex items-start gap-2 text-xs', c.ok ? 'text-success' : 'text-danger')}>
@@ -320,7 +346,7 @@ export function RxNewOrder() {
               <div className="space-y-1.5 border-t pt-3">
                 {margins && purchase != null && (
                   <>
-                    <div className="flex justify-between"><span className="text-content-muted">2 verres × {lens.purchasePrice!.toLocaleString('fr-FR')}</span><Money value={lens.purchasePrice! * 2} /></div>
+                    <div className="flex justify-between"><span className="text-content-muted">Paire de verres</span><Money value={lens.purchasePrice! * 2} /></div>
                     {fees > 0 && <div className="flex justify-between"><span className="text-content-muted">Suppléments</span><Money value={fees} /></div>}
                     <div className="flex justify-between font-semibold"><span>Prix d'achat</span><Money value={purchase} /></div>
                   </>
@@ -339,7 +365,10 @@ export function RxNewOrder() {
                   </div>
                 )}
               </div>
-              <Button className="w-full" disabled={!allOk || salePrice <= 0} loading={send.isPending} onClick={() => send.mutate()}>
+              {margin != null && margin < 0 && (
+                <p className="rounded-lg bg-[color:var(--danger)]/10 px-2 py-1.5 text-center text-xs font-semibold text-danger">Vente à perte : augmentez le prix de vente pour envoyer.</p>
+              )}
+              <Button className="w-full" disabled={!allOk || salePrice <= 0 || (margin != null && margin < 0)} loading={send.isPending} onClick={() => send.mutate()}>
                 <Send className="h-4 w-4" /> Envoyer la commande au fournisseur
               </Button>
               {!allOk && <p className="text-center text-[11px] text-content-faint">Corrigez les contrôles en rouge pour envoyer.</p>}

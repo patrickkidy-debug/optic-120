@@ -16,6 +16,55 @@ export const RX_GEOMETRY_LABELS: Record<RxGeometry, string> = {
 };
 
 export const RX_INDICES = [1.5, 1.56, 1.59, 1.6, 1.67, 1.74] as const;
+
+/** Verre de stock (prêt, livré vite) ou fabriqué sur mesure (RX, surfacé). */
+export const RX_FABRICATIONS = ['STOCK', 'RX'] as const;
+export type RxFabrication = (typeof RX_FABRICATIONS)[number];
+export const RX_FABRICATION_LABELS: Record<RxFabrication, string> = { STOCK: 'Stock', RX: 'RX (sur mesure)' };
+
+/**
+ * Grille de conseil : indice selon la puissance la plus forte de l'ordonnance
+ * (méridien le plus fort : max(|sphère|, |sphère + cylindre|), pour l'œil le
+ * plus fort). Valeurs d'usage en magasin, à ajuster avec le fournisseur.
+ */
+export const RX_INDEX_GUIDE = [
+  { max: 2, index: 1.56, label: 'Jusqu\'à 2,00 D', advice: '1.56 — standard, verre fin et léger à cette puissance' },
+  { max: 4, index: 1.6, label: 'De 2,25 à 4,00 D', advice: '1.60 conseillé — plus fin (1.56 reste possible)' },
+  { max: 6, index: 1.67, label: 'De 4,25 à 6,00 D', advice: '1.67 recommandé — amincissement' },
+  { max: Infinity, index: 1.67, label: 'Au-delà de 6,00 D', advice: '1.67 obligatoire (indice maximum proposé)' },
+] as const;
+
+/**
+ * Grille stock / RX : un verre de stock suffit pour un unifocal dans la plage
+ * courante du fournisseur ; au-delà (ou progressif, prisme, fort astigmatisme),
+ * il faut un verre fabriqué sur mesure (RX). Valeurs d'usage, à confirmer
+ * avec le fournisseur.
+ */
+export const RX_STOCK_LIMITS = { sph: 4, cyl: 2 } as const;
+
+export function rxStrongestPower(od: { sph?: number | null; cyl?: number | null }, og: { sph?: number | null; cyl?: number | null }): number | null {
+  const one = (e: { sph?: number | null; cyl?: number | null }) => {
+    if (e.sph == null) return null;
+    return Math.max(Math.abs(e.sph), Math.abs(e.sph + (e.cyl ?? 0)));
+  };
+  const vals = [one(od), one(og)].filter((x): x is number => x != null);
+  return vals.length ? Math.max(...vals) : null;
+}
+
+/** Conseil pour une ordonnance : indice et fabrication (stock ou RX), avec les raisons. */
+export function rxAdvice(geometry: string, od: { sph?: number | null; cyl?: number | null }, og: { sph?: number | null; cyl?: number | null }) {
+  const power = rxStrongestPower(od, og);
+  if (power == null) return null;
+  const tier = RX_INDEX_GUIDE.find((g) => power <= g.max)!;
+  const reasons: string[] = [];
+  if (geometry !== 'UNIFOCAL') reasons.push('verre progressif / à addition');
+  const sphs = [od.sph, og.sph].filter((x): x is number => x != null).map(Math.abs);
+  const cyls = [od.cyl, og.cyl].filter((x): x is number => x != null).map(Math.abs);
+  if (sphs.some((s) => s > RX_STOCK_LIMITS.sph)) reasons.push(`sphère au-delà de ±${RX_STOCK_LIMITS.sph},00`);
+  if (cyls.some((c) => c > RX_STOCK_LIMITS.cyl)) reasons.push(`cylindre au-delà de ${RX_STOCK_LIMITS.cyl},00`);
+  if (tier.index > 1.56) reasons.push(`indice ${String(tier.index).replace('.', ',')} conseillé`);
+  return { power, index: tier.index, advice: tier.advice, needsRx: reasons.length > 0, reasons };
+}
 export const RX_MATERIALS = ['Organique', 'Polycarbonate', 'Minéral'] as const;
 
 /** Cycle de vie d'une commande : Envoyée → En fabrication → Expédiée → Livrée. */
@@ -155,6 +204,7 @@ export interface RxLensRow {
   addMin: number | null;
   addMax: number | null;
   purchasePrice: number;
+  fabrication?: RxFabrication | null;
   /** Catalogue boutique (facultatif) : nom commercial et prix de vente d'un verre. */
   shopName?: string | null;
   shopPrice?: number | null;
@@ -162,8 +212,8 @@ export interface RxLensRow {
 
 /** En-têtes du fichier modèle, dans l'ordre (les deux derniers sont facultatifs). */
 export const RX_IMPORT_COLUMNS = [
-  'reference', 'designation', 'geometrie', 'indice', 'matiere', 'traitement', 'diametre',
-  'sph_min', 'sph_max', 'cyl_max', 'add_min', 'add_max', 'prix_achat_ht', 'nom_commercial', 'prix_vente_boutique',
+  'reference', 'designation', 'fabrication', 'geometrie', 'indice', 'matiere', 'traitement', 'diametre',
+  'sph_min', 'sph_max', 'cyl_max', 'add_min', 'add_max', 'prix_achat_paire_ht', 'nom_commercial', 'prix_vente_paire',
 ] as const;
 
 /** En-tête normalisé : minuscules, sans accents ni espaces superflus. */
@@ -210,17 +260,27 @@ export function rxParseRows(records: Record<string, unknown>[]): { valid: RxLens
     const line = i + 2; // ligne 1 = en-têtes
     const reference = String(r.reference ?? r.ref ?? '').trim();
     const designation = String(r.designation ?? r.libelle ?? '').trim();
-    const price = rxParseNumber(r.prix_achat_ht ?? r.prix_achat ?? r.prix);
+    // Prix à la PAIRE (comme sur les grilles fournisseurs) ou au verre : OculoRX
+    // garde le prix d'un verre, une commande en comptant toujours deux.
+    const pairPrice = rxParseNumber(r.prix_achat_paire_ht ?? r.prix_achat_paire ?? r.prix_paire);
+    const price = pairPrice != null ? pairPrice / 2 : rxParseNumber(r.prix_achat_ht ?? r.prix_achat ?? r.prix);
     if (Object.values(r).every((v) => v == null || v === '')) return; // ligne vide
     const missing = [!reference && 'référence', !designation && 'désignation', (price == null || price < 0) && 'prix'].filter(Boolean);
     if (missing.length) {
       invalid.push({ line, reference: reference || undefined, reason: `${missing.join(', ')} manquant(e)` });
       return;
     }
+    const shopPair = rxParseNumber(r.prix_vente_paire ?? r.prix_vente_boutique_paire);
+    const shopUnit = shopPair != null ? shopPair / 2 : rxParseNumber(r.prix_vente_boutique ?? r.prix_vente ?? r.prix_boutique);
+    if (shopUnit != null && shopUnit > 0 && shopUnit < price!) {
+      invalid.push({ line, reference, reason: "vente à perte : prix boutique inférieur au prix d'achat" });
+      return;
+    }
     valid.push({
       reference,
       designation,
       geometry: parseGeometry(r.geometrie ?? r.geometry) ?? 'UNIFOCAL',
+      fabrication: /^rx|sur.?mesure|surfac/i.test(String(r.fabrication ?? r.type ?? '')) ? 'RX' : /^stock/i.test(String(r.fabrication ?? r.type ?? '')) ? 'STOCK' : null,
       lensIndex: rxParseNumber(r.indice ?? r.index),
       material: String(r.matiere ?? '').trim() || null,
       treatment: String(r.traitement ?? '').trim() || null,
@@ -233,7 +293,8 @@ export function rxParseRows(records: Record<string, unknown>[]): { valid: RxLens
       purchasePrice: Math.round(price!),
       ...(() => {
         const shopName = String(r.nom_commercial ?? r.nom_boutique ?? '').trim();
-        const shopPrice = rxParseNumber(r.prix_vente_boutique ?? r.prix_vente ?? r.prix_boutique);
+        const shopPair = rxParseNumber(r.prix_vente_paire ?? r.prix_vente_boutique_paire);
+        const shopPrice = shopPair != null ? shopPair / 2 : rxParseNumber(r.prix_vente_boutique ?? r.prix_vente ?? r.prix_boutique);
         return { ...(shopName ? { shopName } : {}), ...(shopPrice != null && shopPrice > 0 ? { shopPrice: Math.round(shopPrice) } : {}) };
       })(),
     });
@@ -266,6 +327,7 @@ export const rxLensRowSchema = z.object({
   reference: z.string().trim().min(1).max(60),
   designation: z.string().trim().min(1).max(200),
   geometry: z.enum(RX_GEOMETRIES),
+  fabrication: z.enum(RX_FABRICATIONS).nullable().optional(),
   lensIndex: optNum,
   material: optStr(60),
   treatment: optStr(120),
@@ -313,6 +375,11 @@ export const rxLensUpdateSchema = z.object({
   shopName: optStr(200),
   shopPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
 });
+
+/** Aucune vente à perte : le prix de vente doit couvrir au moins le prix d'achat. */
+export function rxIsLoss(salePrice: number, purchasePrice: number): boolean {
+  return salePrice < purchasePrice;
+}
 
 /** Prix de vente d'un verre : celui de la boutique, sinon le prix conseillé. */
 export function rxShopUnitPrice(lens: { shopPrice?: number | null }, suggested: number): number {
