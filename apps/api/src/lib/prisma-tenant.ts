@@ -6,7 +6,7 @@ import { prisma } from './prisma.js';
  * RefreshToken) sont isolés transitivement via leur parent et ne figurent pas ici.
  * `Tenant` et `Permission` sont volontairement globaux.
  */
-const TENANT_MODELS = new Set<string>([
+export const TENANT_MODELS = new Set<string>([
   'Branch',
   'User',
   'Role',
@@ -128,3 +128,21 @@ export function forTenant(tenantId: string) {
 }
 
 export type TenantPrisma = ReturnType<typeof forTenant>;
+
+/**
+ * Modèles portant un tenantId VOLONTAIREMENT hors du filtrage automatique
+ * (lus via le client global avec un tenantId explicite, ou de niveau
+ * plateforme). Tout nouveau modèle à tenantId doit figurer dans l'une des deux
+ * listes : le test prisma-tenant.test.ts échoue sinon.
+ */
+export const TENANT_MODELS_EXCLUDED = new Set<string>([
+  'StoreSetupProgress',
+  'DocumentCounter',
+  'SubscriptionRefund',
+  'ActivationSession',
+  'DemoVideoProgress',
+  'PartnerAttribution',
+  'PartnerLead',
+  'PartnerCommission',
+  'SyncOperation',
+]);

@@ -18,6 +18,7 @@ import {
 import * as authService from './auth.service.js';
 import { REFRESH_COOKIE, setRefreshCookie, clearRefreshCookie } from './cookies.js';
 import { requireAuth } from '../../middlewares/auth-guard.js';
+import { sensitiveKey } from '../../lib/rate-limit-key.js';
 import { requestMeta } from '../../lib/audit.js';
 import { unauthorized } from '../../lib/http-error.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
@@ -26,6 +27,9 @@ import { appOrigin } from '../../config/env.js';
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Limiteur renforcé sur les routes sensibles (anti brute-force).
   const strictLimit = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
+  // Opérations sensibles d'un compte connecté : 5 essais / 15 min par compte
+  // (oracle de mot de passe, changement de mot de passe, activation 2FA).
+  const sensitiveLimit = { config: { rateLimit: { max: 5, timeWindow: '15 minutes', keyGenerator: sensitiveKey } } };
   // Limite modérée sur le rafraîchissement de session (anti abus de jeton).
   const refreshLimit = { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } };
 
@@ -194,19 +198,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ user });
   });
 
-  app.post('/verify-password', { preHandler: requireAuth }, async (req, reply) => {
+  app.post('/verify-password', { ...sensitiveLimit, preHandler: requireAuth }, async (req, reply) => {
     const { password } = verifyPasswordSchema.parse(req.body);
-    const ok = await authService.verifyUserPassword(req.auth!.userId, password);
+    const ok = await authService.verifyUserPassword(req.auth!.userId, password, requestMeta(req));
     return reply.send({ ok });
   });
 
   // Changement de mot de passe (utilisateur connecté). Révoque les autres
   // sessions et renouvelle celle-ci (nouveau cookie de rafraîchissement).
-  app.post('/change-password', { ...strictLimit, preHandler: requireAuth }, async (req, reply) => {
-    const { newPassword } = changePasswordSchema.parse(req.body);
+  app.post('/change-password', { ...sensitiveLimit, preHandler: requireAuth }, async (req, reply) => {
+    const { currentPassword, newPassword, code } = changePasswordSchema.parse(req.body);
     const { accessToken, refreshToken, user } = await authService.changePassword(
       req.auth!.userId,
+      currentPassword,
       newPassword,
+      code || undefined,
       requestMeta(req),
     );
     setRefreshCookie(reply, refreshToken);
@@ -218,17 +224,17 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(await authService.getTwoFactorStatus(req.auth!.userId));
   });
 
-  app.post('/2fa/setup', { preHandler: requireAuth }, async (req, reply) => {
+  app.post('/2fa/setup', { ...sensitiveLimit, preHandler: requireAuth }, async (req, reply) => {
     return reply.send(await authService.startTwoFactorSetup(req.auth!.userId));
   });
 
-  app.post('/2fa/enable', { preHandler: requireAuth }, async (req, reply) => {
-    const { code } = twoFactorEnableSchema.parse(req.body);
-    await authService.enableTwoFactor(req.auth!.userId, code, requestMeta(req));
+  app.post('/2fa/enable', { ...sensitiveLimit, preHandler: requireAuth }, async (req, reply) => {
+    const { code, password } = twoFactorEnableSchema.parse(req.body);
+    await authService.enableTwoFactor(req.auth!.userId, code, password, requestMeta(req));
     return reply.send({ ok: true });
   });
 
-  app.post('/2fa/disable', { preHandler: requireAuth }, async (req, reply) => {
+  app.post('/2fa/disable', { ...sensitiveLimit, preHandler: requireAuth }, async (req, reply) => {
     const { password, code } = twoFactorDisableSchema.parse(req.body);
     await authService.disableTwoFactor(req.auth!.userId, password, code, requestMeta(req));
     return reply.send({ ok: true });

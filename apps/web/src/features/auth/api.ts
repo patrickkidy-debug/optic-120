@@ -78,8 +78,8 @@ export async function setupTwoFactor(): Promise<{ qrDataUrl: string; secret: str
   const { data } = await api.post<{ qrDataUrl: string; secret: string }>('/auth/2fa/setup');
   return data;
 }
-export async function enableTwoFactor(code: string): Promise<void> {
-  await api.post('/auth/2fa/enable', { code });
+export async function enableTwoFactor(code: string, password: string): Promise<void> {
+  await api.post('/auth/2fa/enable', { code, password });
 }
 export async function disableTwoFactor(password: string, code: string): Promise<void> {
   await api.post('/auth/2fa/disable', { password, code });
@@ -165,8 +165,8 @@ export async function verifyPassword(password: string): Promise<boolean> {
 }
 
 /** Change le mot de passe du compte connecté (nouveau seulement) et renouvelle la session. */
-export async function changePassword(newPassword: string): Promise<void> {
-  const { data } = await api.post<AuthResponse>('/auth/change-password', { newPassword });
+export async function changePassword(currentPassword: string, newPassword: string, code?: string): Promise<void> {
+  const { data } = await api.post<AuthResponse>('/auth/change-password', { currentPassword, newPassword, code: code || undefined });
   useAuthStore.getState().setAuth(data.accessToken, data.user);
 }
 

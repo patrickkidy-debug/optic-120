@@ -1,7 +1,17 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { env } from '../../config/env.js';
+import { requireAuth } from '../../middlewares/auth-guard.js';
+import { isOperatorEmail } from '../../lib/operators.js';
 import * as whatsapp from './whatsapp.service.js';
+
+/** Outils d'exploitation réservés au fondateur / opérateur connecté. */
+async function requireOperator(req: FastifyRequest, reply: import('fastify').FastifyReply) {
+  await requireAuth(req, reply);
+  if (!req.auth || !isOperatorEmail(req.auth.email)) {
+    return reply.code(403).send({ error: 'forbidden' });
+  }
+}
 
 /** Récupère le corps brut capté par le parser (pour la signature Meta). */
 function rawBodyOf(req: FastifyRequest): Buffer | undefined {
@@ -13,6 +23,8 @@ function rawBodyOf(req: FastifyRequest): Buffer | undefined {
  * Secret Meta). Renvoie true si non configuré (App Secret vide → dev/local).
  */
 function verifySignature(req: FastifyRequest): boolean {
+  // Sans App Secret, aucune signature n'est vérifiable. TODO sécurité : refuser en
+  // production une fois WHATSAPP_APP_SECRET configuré sur Render (audit d'oct. 2026).
   if (!env.WHATSAPP_APP_SECRET) return true;
   const raw = rawBodyOf(req);
   const header = req.headers['x-hub-signature-256'];
@@ -45,23 +57,16 @@ export async function whatsappWebhookRoutes(app: FastifyInstance): Promise<void>
     },
   );
 
-  // Diagnostic (protégé par le verify token) : état de config + activité, sans
-  // exposer aucun secret. Ex : /webhooks/whatsapp/debug?key=oculosaas-verify-token
-  app.get('/whatsapp/debug', async (req, reply) => {
-    const q = req.query as Record<string, string | undefined>;
-    if (q.key !== env.WHATSAPP_VERIFY_TOKEN) {
-      return reply.code(403).send({ error: 'forbidden' });
-    }
+  // Diagnostic (opérateur connecté uniquement) : état de config + activité, sans
+  // exposer aucun secret.
+  app.get('/whatsapp/debug', { preHandler: requireOperator }, async (_req, reply) => {
     return reply.send(await whatsapp.getDebugInfo());
   });
 
-  // Abonne le WABA à l'application (réception des webhooks messages). Protégé
-  // par le verify token. Ex : POST /webhooks/whatsapp/subscribe?key=...&waba=...
-  app.post('/whatsapp/subscribe', async (req, reply) => {
+  // Abonne le WABA à l'application (réception des webhooks messages).
+  // Opérateur connecté uniquement. Ex : POST /webhooks/whatsapp/subscribe?waba=...
+  app.post('/whatsapp/subscribe', { preHandler: requireOperator }, async (req, reply) => {
     const q = req.query as Record<string, string | undefined>;
-    if (q.key !== env.WHATSAPP_VERIFY_TOKEN) {
-      return reply.code(403).send({ error: 'forbidden' });
-    }
     if (!q.waba) {
       return reply.code(400).send({ error: 'paramètre waba manquant' });
     }

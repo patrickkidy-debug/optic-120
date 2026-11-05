@@ -143,7 +143,21 @@ export function RxOrders() {
                     </td>
                     <td className={td}>{o.patientName}{o.fileNumber && <span className="block text-[11px] text-content-faint">{o.fileNumber}</span>}</td>
                     <td className={`${td} text-content-muted`}>{o.supplier.name}</td>
-                    <td className={`${td} text-xs`}>{o.lens.shopName || o.lens.designation}<span className="block font-mono text-[11px] text-content-faint">{o.lens.reference}{o.lens.shopName ? ` · ${o.lens.designation}` : ''}</span></td>
+                    <td className={`${td} text-xs`}>
+                      {o.lens.shopName ? (
+                        <>
+                          <span className="block font-medium text-content">{o.lens.shopName}</span>
+                          <span className="block text-[10px] text-content-faint">
+                            Fournisseur : {o.lens.designation} ({o.lens.reference})
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="block font-medium text-content">{o.lens.designation}</span>
+                          <span className="block font-mono text-[11px] text-content-faint">{o.lens.reference}</span>
+                        </>
+                      )}
+                    </td>
                     <td className={`${td} whitespace-nowrap font-mono text-[11px] text-content-muted`}>
                       {rxDiopter(o.od.sph)} {o.od.cyl ? `(${rxDiopter(o.od.cyl)})` : ''}
                       <span className="block">{rxDiopter(o.og.sph)} {o.og.cyl ? `(${rxDiopter(o.og.cyl)})` : ''}</span>
@@ -201,9 +215,13 @@ function OrderModal({ order: o, margins, onClose }: { order: RxOrder; margins: b
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-surface-2 p-3">
-            <p className="font-semibold text-content">{o.lens.designation}</p>
-            <p className="font-mono text-[11px] text-content-faint">{o.lens.reference}</p>
-            <p className="mt-2">{o.patientName}{o.fileNumber ? ` · dossier ${o.fileNumber}` : ''}</p>
+            <p className="font-semibold text-content">{o.lens.shopName || o.lens.designation}</p>
+            {o.lens.shopName ? (
+              <p className="text-[10px] text-content-faint">Fournisseur : {o.lens.designation} ({o.lens.reference})</p>
+            ) : (
+              <p className="font-mono text-[11px] text-content-faint">{o.lens.reference}</p>
+            )}
+            <p className="mt-2 text-content">{o.patientName}{o.fileNumber ? ` · dossier ${o.fileNumber}` : ''}</p>
           </div>
           <div className="rounded-xl bg-surface-2 p-3 font-mono text-xs">
             <p>OD {rxDiopter(o.od.sph)} · cyl {rxDiopter(o.od.cyl)} · {o.od.axis != null ? `${o.od.axis}°` : '—'}</p>

@@ -1153,6 +1153,9 @@ function InvoiceCustomizationCard() {
 }
 
 function ChangePasswordCard() {
+  const [current, setCurrent] = useState('');
+  const [otp, setOtp] = useState('');
+  const { data: has2fa } = useQuery({ queryKey: ['2fa-status'], queryFn: getTwoFactorStatus });
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1170,8 +1173,10 @@ function ChangePasswordCard() {
     }
     setBusy(true);
     try {
-      await changePassword(next);
+      await changePassword(current, next, otp.trim());
       setMsg({ ok: tr('ui.ProfilePage.motDePasseModifieVos') });
+      setCurrent('');
+      setOtp('');
       setNext('');
       setConfirm('');
     } catch (e) {
@@ -1188,9 +1193,12 @@ function ChangePasswordCard() {
         <h3 className="font-display font-bold text-content">{tr('ui.ProfilePage.motDePasse')}</h3>
       </div>
       <p className="mb-3 max-w-sm text-sm text-content-muted">
-        {tr('ui.ProfilePage.saisissezSimplementVotreNouveauMot')}
+        {tr('sec.changePwdHint')}
       </p>
       <div className="max-w-sm space-y-3">
+        <Field label={tr('sec.currentPwd')}>
+          <PasswordInput autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </Field>
         <Field label={tr('ui.ProfilePage.nouveauMotDePasse')}>
           <PasswordInput
             autoComplete="new-password"
@@ -1206,9 +1214,18 @@ function ChangePasswordCard() {
             onChange={(e) => setConfirm(e.target.value)}
           />
         </Field>
+        {has2fa && (
+          <Field label={tr('ui.ProfilePage.code2fa')}>
+            <input
+              className="input text-center text-xl tracking-[0.3em]"
+              inputMode="numeric" maxLength={6} placeholder="······" autoComplete="one-time-code"
+              value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+            />
+          </Field>
+        )}
         {msg.err && <p className="text-sm text-danger">{msg.err}</p>}
         {msg.ok && <p className="text-sm text-success">{msg.ok}</p>}
-        <Button onClick={submit} loading={busy} disabled={!next || !confirm}>
+        <Button onClick={submit} loading={busy} disabled={!current || !next || !confirm || (Boolean(has2fa) && otp.length !== 6)}>
           {tr('ui.ProfilePage.changerLeMotDePasse')}
         </Button>
       </div>
@@ -1237,7 +1254,7 @@ function TwoFactorCard() {
   }
   async function confirmEnable() {
     setErr(''); setBusy(true);
-    try { await enableTwoFactor(code.trim()); refresh(); reset(); }
+    try { await enableTwoFactor(code.trim(), pwd); refresh(); reset(); }
     catch (e) { setErr(apiErrorMessage(e)); } finally { setBusy(false); }
   }
   async function confirmDisable() {
@@ -1289,9 +1306,12 @@ function TwoFactorCard() {
                 value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />
             </Field>
+            <Field label={tr('sec.currentPwd')}>
+              <input className="input" type="password" autoComplete="current-password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+            </Field>
             {err && <p className="mt-1 text-sm text-danger">{err}</p>}
             <div className="mt-3 flex gap-2">
-              <Button onClick={confirmEnable} loading={busy} disabled={code.length !== 6}>{tr('ui.ProfilePage.activer')}</Button>
+              <Button onClick={confirmEnable} loading={busy} disabled={code.length !== 6 || !pwd}>{tr('ui.ProfilePage.activer')}</Button>
               <Button variant="ghost" onClick={reset}>{tr('ui.ProfilePage.annuler')}</Button>
             </div>
           </div>

@@ -1,0 +1,13 @@
+reference;designation;fabrication;geometrie;indice;matiere;traitement;diametre;sph_min;sph_max;cyl_max;add_min;add_max;prix_achat_paire_ht;nom_commercial;prix_vente_paire
+OD01-STD;STOCK 1.56 — Unifocaux photo AR2 blue-cut UV420;Stock;Unifocal;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420;70;-4,00;4,00;2,00;;;5000;LUNEO Unifocal Standard;15000
+OD01-STD-PLUS;STOCK 1.56 — Unifocaux photo AR2 blue-cut UV420;Stock;Unifocal;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420;70;-4,00;4,00;2,00;;;5000;LUNEO Unifocal Standard+;30000
+OD01-DIG;STOCK 1.56 — Unifocaux photo AR2 blue-cut UV420;Stock;Unifocal;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420;70;-4,00;4,00;2,00;;;5000;LUNEO Unifocal Digital;45000
+OD04;RX 1.56 — Progressif Free-Form AR2;RX;Progressif;1,56;Organique;Antireflet AR2, Super hydrophobe;70;-8,00;6,00;4,00;0,75;3,50;16000;LUNEO Progressif Standard;85000
+OD06;RX 1.56 — Progressifs Free-Form photo AR2 blue-cut UV420;RX;Progressif;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;70;-8,00;6,00;4,00;0,75;3,50;24000;LUNEO Progressif Digital;115000
+OD13;RX 1.60 — Progressif Free-Form MR-8 AR2;RX;Progressif;1,60;Organique MR-8;Antireflet AR2, Super hydrophobe;70;-10,00;6,00;4,00;0,75;3,50;44000;LUNEO Progressif Standard 1.60;85000
+OD15;RX 1.60 — Progressif Free-Form MR-8 photo AR2 blue-cut UV420;RX;Progressif;1,60;Organique MR-8;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;70;-10,00;6,00;4,00;0,75;3,50;52000;LUNEO Progressif Digital 1.60;115000
+OD16;RX 1.67 — Unifocaux photo AR2;RX;Unifocal;1,67;Organique;Photochromique, Antireflet AR2, Super hydrophobe;70;-12,00;8,00;4,00;;;45000;LUNEO Unifocal Standard+ aminci 1.67;49000
+OD17;RX 1.67 — Unifocaux photo AR2 blue-cut UV420;RX;Unifocal;1,67;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;70;-12,00;8,00;4,00;;;50000;LUNEO Unifocal Digital aminci 1.67;64000
+OD18;RX 1.67 — Progressif SPH photo AR2 (n°19 sur la grille, 1re ligne);RX;Progressif;1,67;Organique;Photochromique, Antireflet AR2, Super hydrophobe;70;-12,00;8,00;4,00;0,75;3,50;75000;LUNEO Progressif Standard aminci 1.67;104000
+OD19;RX 1.67 — Progressif Free-Form photo AR2 blue-cut UV420;RX;Progressif;1,67;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;70;-12,00;8,00;4,00;0,75;3,50;80000;LUNEO Progressif Digital aminci 1.67;134000
+

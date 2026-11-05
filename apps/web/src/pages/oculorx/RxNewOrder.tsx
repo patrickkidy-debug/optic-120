@@ -189,6 +189,18 @@ export function RxNewOrder() {
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <CheckCircle2 className="h-12 w-12 text-success" />
           <p className="font-arcade text-xl text-content">Commande {done.order.number} envoyée</p>
+          <div className="rounded-xl border bg-surface-2 px-5 py-3 text-center">
+            <p className="font-bold text-content text-base">{done.order.lens.shopName || done.order.lens.designation}</p>
+            {done.order.lens.shopName && (
+              <p className="mt-0.5 text-[10px] text-content-faint">
+                Fournisseur : {done.order.lens.designation} ({done.order.lens.reference})
+              </p>
+            )}
+            <p className="mt-1.5 text-xs text-content-muted">
+              Patient : <b className="text-content">{done.order.patientName}</b>
+              {done.order.fileNumber ? ' · Dossier ' + done.order.fileNumber : ''}
+            </p>
+          </div>
           <p className="max-w-md text-sm text-content-muted">
             {done.emailed
               ? `Le bon de commande a été envoyé par email à ${done.order.supplier.name}.`
@@ -261,12 +273,27 @@ export function RxNewOrder() {
                   {shown.map((l) => (
                     <tr key={l.id} className={clsx('border-b last:border-0', lens?.id === l.id && 'bg-primary-soft/50')}>
                       <td className={td}>
-                        <span className="font-medium text-content">{l.shopName || l.designation}</span>
-                        <span className="block text-[11px] text-content-faint">
-                          {l.shopName && <>{l.designation} · </>}
-                          <span className="font-mono">{l.reference}</span> · {RX_GEOMETRY_LABELS[l.geometry as keyof typeof RX_GEOMETRY_LABELS] ?? l.geometry}
-                          {l.lensIndex ? ` · ${String(l.lensIndex).replace('.', ',')}` : ''} {l.treatment ? `· ${l.treatment}` : ''}
-                        </span>
+                        {l.shopName ? (
+                          <>
+                            <span className="block font-semibold text-content text-sm">{l.shopName}</span>
+                            <span className="block text-[11px] text-content-muted">
+                              {RX_GEOMETRY_LABELS[l.geometry as keyof typeof RX_GEOMETRY_LABELS] ?? l.geometry}
+                              {l.lensIndex ? ` · Indice ${String(l.lensIndex).replace('.', ',')}` : ''}
+                              {l.treatment ? ` · ${l.treatment}` : ''}
+                            </span>
+                            <span className="mt-0.5 block text-[10px] text-content-faint">
+                              Fournisseur : {l.designation} ({l.reference})
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="block font-medium text-content">{l.designation}</span>
+                            <span className="block text-[11px] text-content-faint">
+                              <span className="font-mono">{l.reference}</span> · {RX_GEOMETRY_LABELS[l.geometry as keyof typeof RX_GEOMETRY_LABELS] ?? l.geometry}
+                              {l.lensIndex ? ` · Indice ${String(l.lensIndex).replace('.', ',')}` : ''} {l.treatment ? `· ${l.treatment}` : ''}
+                            </span>
+                          </>
+                        )}
                       </td>
                       <td className={`${td} whitespace-nowrap font-mono text-[11px] text-content-muted`}>
                         {rxDiopter(l.sphMin)} / {rxDiopter(l.sphMax)} · cyl {l.cylMax != null ? l.cylMax.toFixed(2).replace('.', ',') : '—'}
@@ -372,9 +399,24 @@ export function RxNewOrder() {
           ) : (
             <div className="space-y-3 text-sm">
               <div className="rounded-xl bg-surface-2 p-3">
-                <p className="font-semibold text-content">{lens.shopName || lens.designation}</p>
-                <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
-                {lens.shopName && <p className="text-[11px] text-content-faint">Fournisseur : {lens.designation}</p>}
+                {lens.shopName ? (
+                  <>
+                    <p className="text-base font-bold text-content">{lens.shopName}</p>
+                    <p className="mt-0.5 text-xs text-content-muted">
+                      {RX_GEOMETRY_LABELS[lens.geometry as keyof typeof RX_GEOMETRY_LABELS] ?? lens.geometry}
+                      {lens.lensIndex ? ` · Indice ${String(lens.lensIndex).replace('.', ',')}` : ''}
+                      {lens.treatment ? ` · ${lens.treatment}` : ''}
+                    </p>
+                    <p className="mt-1.5 border-t border-line/60 pt-1 text-[10px] text-content-faint">
+                      Fournisseur : {lens.designation} ({lens.reference}) · {lens.supplier.name}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-content">{lens.designation}</p>
+                    <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
+                  </>
+                )}
               </div>
               {advice && (
                 <div className={clsx('rounded-xl border p-3 text-xs', adviceWarn ? 'border-[color:var(--warning)]/50 bg-[color:var(--warning)]/10' : 'bg-surface-2/60')}>

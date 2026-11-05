@@ -159,21 +159,104 @@ export function orderSheetHtml(o: {
   urgent: boolean;
   comment: string | null;
 }, store: { name: string; phone?: string | null; email?: string | null }) {
-  const lens = o.lensSnapshot as { reference?: string; designation?: string; geometry?: string; lensIndex?: number | null; treatment?: string | null };
+  const lens = o.lensSnapshot as { reference?: string; designation?: string; shopName?: string | null; geometry?: string; lensIndex?: number | null; treatment?: string | null; fabrication?: string | null };
   const eye = (e: unknown) => e as { sph?: number | null; cyl?: number | null; axis?: number | null };
-  const row = (label: string, e: { sph?: number | null; cyl?: number | null; axis?: number | null }) =>
-    `<tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:700">${label}</td><td style="padding:6px 10px;border:1px solid #ddd">${rxDiopter(e.sph)}</td><td style="padding:6px 10px;border:1px solid #ddd">${rxDiopter(e.cyl)}</td><td style="padding:6px 10px;border:1px solid #ddd">${e.axis != null ? `${e.axis}°` : '—'}</td></tr>`;
-  const options = [o.mounted && 'Taillé-monté', o.urgent && 'URGENT'].filter(Boolean).join(' · ') || '—';
-  return `<div style="font-family:Arial,sans-serif;color:#111;max-width:640px">
-<h2 style="margin:0">Bon de commande ${esc(o.number)}</h2>
-<p style="color:#555;margin:4px 0 16px">${esc(store.name)}${store.phone ? ` · ${esc(store.phone)}` : ''} — ${esc(o.createdAt.toLocaleDateString('fr-FR'))}</p>
-<p><b>Verre :</b> ${esc(lens.reference)} — ${esc(lens.designation)} (${esc(RX_GEOMETRY_LABELS[lens.geometry as RxGeometry] ?? lens.geometry)}${lens.lensIndex ? `, indice ${esc(lens.lensIndex)}` : ''})</p>
-<p><b>Patient :</b> ${esc(o.patientName)}${o.fileNumber ? ` · dossier ${esc(o.fileNumber)}` : ''}</p>
-<table style="border-collapse:collapse;margin:8px 0"><tr><th></th><th style="padding:6px 10px;border:1px solid #ddd">Sphère</th><th style="padding:6px 10px;border:1px solid #ddd">Cylindre</th><th style="padding:6px 10px;border:1px solid #ddd">Axe</th></tr>${row('OD', eye(o.od))}${row('OG', eye(o.og))}</table>
-<p><b>Addition :</b> ${rxDiopter(o.addition)} · <b>EP :</b> ${o.pd ?? '—'} mm · <b>Hauteur :</b> ${o.height ?? '—'} mm</p>
-<p><b>Monture :</b> ${esc(o.frameType ? RX_FRAME_LABELS[o.frameType as RxFrameType] : '—')} · <b>Options :</b> ${esc(options)}</p>
-${o.comment ? `<p><b>Commentaire :</b> ${esc(o.comment)}</p>` : ''}
-<p style="color:#888;font-size:12px;margin-top:24px">Commande envoyée depuis OculoSaaS · OculoRX</p></div>`;
+  const row = (label: string, bg: string, e: { sph?: number | null; cyl?: number | null; axis?: number | null }) =>
+    `<tr>
+      <td style="padding:8px 12px;border:1px solid #cbd5e1;background:${bg};color:#fff;font-weight:800;text-align:center">${label}</td>
+      <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-family:Consolas,monospace;font-weight:700">${rxDiopter(e.sph)}</td>
+      <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-family:Consolas,monospace;font-weight:700">${rxDiopter(e.cyl)}</td>
+      <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-family:Consolas,monospace;font-weight:700">${e.axis != null ? `${e.axis}°` : '—'}</td>
+      <td style="padding:8px 12px;border:1px solid #cbd5e1;text-align:right;font-family:Consolas,monospace;font-weight:700">${rxDiopter(o.addition)}</td>
+    </tr>`;
+  const options = [o.mounted && 'Taillé-monté', o.urgent && 'URGENT'].filter(Boolean).join(' · ') || 'Standard (non monté)';
+  const mainLensName = lens.shopName ? lens.shopName : lens.designation;
+
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a;max-width:640px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff">
+  <div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#0f172a 0%,#0284c7 100%);margin-bottom:16px"></div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+    <tr>
+      <td>
+        <h2 style="margin:0;font-size:18px;text-transform:uppercase;letter-spacing:-0.02em;color:#0f172a">Bon de commande de verres</h2>
+        <p style="margin:3px 0 0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.04em">OculoRX · Surfaçage & Taillage Ophtalmique</p>
+      </td>
+      <td style="text-align:right">
+        <div style="display:inline-block;padding:6px 12px;border:1.5px solid #0f172a;border-radius:6px;background:#f8fafc">
+          <div style="font-family:Consolas,monospace;font-size:15px;font-weight:800;color:#0f172a">${esc(o.number)}</div>
+          <div style="font-size:10px;color:#64748b">${esc(o.createdAt.toLocaleDateString('fr-FR'))}</div>
+          ${o.urgent ? '<div style="margin-top:2px;font-size:9px;font-weight:700;color:#ef4444;text-transform:uppercase">🚨 Urgent</div>' : ''}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;background:#f8fafc;margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Émetteur (Opticien)</div>
+    <div style="font-size:13px;font-weight:700;color:#0f172a">${esc(store.name)}</div>
+    ${store.phone ? `<div style="font-size:11px;color:#475569">Tél : ${esc(store.phone)}</div>` : ''}
+  </div>
+
+  <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;background:#f8fafc;margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Patient</div>
+    <div style="font-size:13px;font-weight:700;color:#0f172a">${esc(o.patientName)}${o.fileNumber ? ` · <span style="font-family:Consolas,monospace;font-size:11px;font-weight:400;color:#475569">Dossier ${esc(o.fileNumber)}</span>` : ''}</div>
+  </div>
+
+  <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#475569;margin-bottom:6px">Prescription Optique</div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+    <tr style="background:#0f172a;color:#fff">
+      <th style="padding:6px 10px;font-size:10px;text-align:center">Œil</th>
+      <th style="padding:6px 10px;font-size:10px;text-align:right">Sphère</th>
+      <th style="padding:6px 10px;font-size:10px;text-align:right">Cylindre</th>
+      <th style="padding:6px 10px;font-size:10px;text-align:right">Axe</th>
+      <th style="padding:6px 10px;font-size:10px;text-align:right">Addition</th>
+    </tr>
+    ${row('OD', '#0284c7', eye(o.od))}
+    ${row('OG', '#0d9488', eye(o.og))}
+  </table>
+
+  <div style="border:1.5px solid #cbd5e1;border-radius:8px;padding:12px;background:#fff;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:800;color:#0f172a">${esc(mainLensName)}</div>
+    <div style="font-size:11px;color:#475569;margin-top:4px">
+      ${esc(RX_GEOMETRY_LABELS[lens.geometry as RxGeometry] ?? lens.geometry)}
+      ${lens.lensIndex ? ` · Indice ${esc(String(lens.lensIndex).replace('.', ','))}` : ''}
+      ${lens.treatment ? ` · ${esc(lens.treatment)}` : ''}
+    </div>
+    ${lens.shopName ? `
+      <div style="font-size:10px;color:#64748b;margin-top:6px;padding-top:4px;border-top:1px dashed #e2e8f0">
+        <b>Désignation fournisseur :</b> ${esc(lens.designation)} &nbsp;·&nbsp; <b>Réf usine :</b> ${esc(lens.reference)}
+      </div>
+    ` : `
+      <div style="font-size:10px;color:#64748b;margin-top:6px;padding-top:4px;border-top:1px dashed #e2e8f0">
+        <b>Réf usine :</b> ${esc(lens.reference)}
+      </div>
+    `}
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+    <tr>
+      <td style="padding:8px 10px;border:1px solid #e2e8f0;background:#f8fafc;width:25%">
+        <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">EP</div>
+        <div style="font-size:12px;font-weight:700;font-family:Consolas,monospace">${o.pd != null ? `${o.pd} mm` : '—'}</div>
+      </td>
+      <td style="padding:8px 10px;border:1px solid #e2e8f0;background:#f8fafc;width:25%">
+        <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Hauteur</div>
+        <div style="font-size:12px;font-weight:700;font-family:Consolas,monospace">${o.height != null ? `${o.height} mm` : '—'}</div>
+      </td>
+      <td style="padding:8px 10px;border:1px solid #e2e8f0;background:#f8fafc;width:25%">
+        <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Monture</div>
+        <div style="font-size:11px;font-weight:700">${esc(o.frameType ? RX_FRAME_LABELS[o.frameType as RxFrameType] : '—')}</div>
+      </td>
+      <td style="padding:8px 10px;border:1px solid #e2e8f0;background:#f8fafc;width:25%">
+        <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Façonnage</div>
+        <div style="font-size:11px;font-weight:700">${esc(options)}</div>
+      </td>
+    </tr>
+  </table>
+
+  ${o.comment ? `<div style="border-left:3px solid #f59e0b;background:#fffbeb;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#92400e"><b>Instructions atelier :</b> ${esc(o.comment)}</div>` : ''}
+
+  <p style="color:#94a3b8;font-size:10px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:8px">Commande transmise via OculoSaaS · Module OculoRX</p>
+</div>`;
 }
 
 /** Envoie le bon de commande au fournisseur (sans bloquer la commande si l'envoi échoue). */

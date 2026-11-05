@@ -163,7 +163,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
         ...(q.geometry ? { geometry: q.geometry } : {}),
         ...(q.index ? { lensIndex: q.index } : {}),
         ...(q.treatment ? { treatment: { contains: q.treatment, mode: 'insensitive' as const } } : {}),
-        ...(text ? { OR: [{ reference: { contains: text, mode: 'insensitive' as const } }, { designation: { contains: text, mode: 'insensitive' as const } }] } : {}),
+        ...(text ? { OR: [{ reference: { contains: text, mode: 'insensitive' as const } }, { designation: { contains: text, mode: 'insensitive' as const } }, { shopName: { contains: text, mode: 'insensitive' as const } }] } : {}),
       },
       include: { supplier: { select: SUPPLIER_SELECT } },
       orderBy: [{ supplierId: 'asc' }, { geometry: 'asc' }, { lensIndex: 'asc' }, { reference: 'asc' }],

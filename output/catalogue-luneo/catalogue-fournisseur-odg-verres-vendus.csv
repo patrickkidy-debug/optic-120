@@ -1,0 +1,10 @@
+﻿reference;designation;fabrication;geometrie;indice;matiere;traitement;diametre;sph_min;sph_max;cyl_max;add_min;add_max;prix_achat_paire_ht
+OD01;STOCK 1.56 — Unifocaux photo AR2 blue-cut UV420;Stock;Unifocal;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420;;;;;;;5000
+OD04;RX 1.56 — Progressif Free-Form AR2;RX;Progressif;1,56;Organique;Antireflet AR2, Super hydrophobe;;;;;;;16000
+OD06;RX 1.56 — Progressifs Free-Form photo AR2 blue-cut UV420;RX;Progressif;1,56;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;;;;;;;24000
+OD13;RX 1.60 — Progressif Free-Form MR-8 AR2;RX;Progressif;1,60;Organique MR-8;Antireflet AR2, Super hydrophobe;;;;;;;44000
+OD15;RX 1.60 — Progressif Free-Form MR-8 photo AR2 blue-cut UV420;RX;Progressif;1,60;Organique MR-8;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;;;;;;;52000
+OD16;RX 1.67 — Unifocaux photo AR2;RX;Unifocal;1,67;Organique;Photochromique, Antireflet AR2, Super hydrophobe;;;;;;;45000
+OD17;RX 1.67 — Unifocaux photo AR2 blue-cut UV420;RX;Unifocal;1,67;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;;;;;;;50000
+OD18;RX 1.67 — Progressif SPH photo AR2 (n°19 sur la grille, 1re ligne);RX;Progressif;1,67;Organique;Photochromique, Antireflet AR2, Super hydrophobe;;;;;;;75000
+OD19;RX 1.67 — Progressif Free-Form photo AR2 blue-cut UV420;RX;Progressif;1,67;Organique;Photochromique, Antireflet AR2, Filtre lumière bleue UV420, Super hydrophobe;;;;;;;80000

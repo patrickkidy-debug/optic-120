@@ -983,7 +983,11 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
  * sessions sont révoquées côté serveur après le changement.
  */
 export const changePasswordSchema = z.object({
+  /** Réauthentification : un jeton d'accès volé ne suffit pas à changer le mot de passe. */
+  currentPassword: z.string().min(1, 'Mot de passe actuel requis'),
   newPassword: passwordSchema,
+  /** Code 2FA, exigé si la double authentification est active. */
+  code: z.string().trim().regex(/^[0-9]{6}$/, 'Code à 6 chiffres').optional().or(z.literal('')),
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
@@ -995,7 +999,7 @@ export type VerifyPasswordInput = z.infer<typeof verifyPasswordSchema>;
 /* --- 2FA (TOTP) --- */
 const totpCode = z.string().trim().regex(/^[0-9]{6}$/, 'Code à 6 chiffres');
 
-export const twoFactorEnableSchema = z.object({ code: totpCode });
+export const twoFactorEnableSchema = z.object({ code: totpCode, password: z.string().min(1, 'Mot de passe requis') });
 export type TwoFactorEnableInput = z.infer<typeof twoFactorEnableSchema>;
 
 export const twoFactorDisableSchema = z.object({

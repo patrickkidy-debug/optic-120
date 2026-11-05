@@ -142,7 +142,13 @@ const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default('claude-haiku-4-5-20251001'),
   // Point d'accès de l'API (surchargé seulement pour les tests locaux du conseiller IA).
   ANTHROPIC_BASE_URL: z.string().default('https://api.anthropic.com'),
+
+  // Nombre de proxys de confiance devant l'API (Render : 1 ; Cloudflare + Render : 2).
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 });
+
+/** Valeur d'exemple publique : jamais acceptée comme secret en production. */
+export const DEFAULT_WHATSAPP_VERIFY_TOKEN = 'oculosaas-verify-token';
 
 const parsed = envSchema.safeParse(process.env);
 
@@ -157,6 +163,23 @@ if (!parsed.success) {
 export const env = parsed.data;
 export const isProd = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';
+
+// Production : cookie de session toujours « Secure », quelle que soit la config.
+if (isProd && !env.COOKIE_SECURE) {
+  // eslint-disable-next-line no-console
+  console.warn('⚠️ COOKIE_SECURE=false ignoré en production : cookies forcés en Secure.');
+  env.COOKIE_SECURE = true;
+}
+// Secrets courts : tolérés pour ne pas bloquer un déploiement existant, mais signalés.
+for (const k of ['JWT_ACCESS_SECRET', 'ENCRYPTION_KEY'] as const) {
+  const v = (env as Record<string, unknown>)[k];
+  if (isProd && typeof v === 'string' && v.length < 32) {
+    // eslint-disable-next-line no-console
+    console.warn(`⚠️ ${k} fait moins de 32 caractères : remplacez-le par 32 octets aléatoires.`);
+  }
+}
+/** Webhook WhatsApp exploitable : secret Meta présent et jeton de vérification personnalisé. */
+export const whatsappWebhookSecured = Boolean(env.WHATSAPP_APP_SECRET) && env.WHATSAPP_VERIFY_TOKEN !== DEFAULT_WHATSAPP_VERIFY_TOKEN;
 
 /**
  * Origines autorisées par CORS. CORS_ORIGIN peut contenir plusieurs URLs

@@ -4,7 +4,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
-import { corsOrigins } from './config/env.js';
+import { corsOrigins, env } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { prisma } from './lib/prisma.js';
 
@@ -44,6 +44,7 @@ import { oculotrackRoutes } from './modules/oculotrack/track.routes.js';
 import { oculorxRoutes } from './modules/oculorx/rx.routes.js';
 import { portalRoutes } from './modules/oculotrack/portal.routes.js';
 import { trackPublicRoutes } from './modules/oculotrack/public.routes.js';
+import { rateLimitKey } from './lib/rate-limit-key.js';
 
 /** Horodatage de démarrage : distingue un redéploiement d'un simple réveil. */
 const startedAt = new Date();
@@ -61,7 +62,10 @@ Object.freeze(Object.prototype);
 export async function buildApp() {
   const app = Fastify({
     logger: false,
-    trustProxy: true,
+    // Nombre EXACT de proxys devant l'API (Render : 1). `true` ferait confiance
+    // à tout X-Forwarded-For fourni par le client : IP falsifiable (quotas,
+    // audit, traces de connexion). Réglable via TRUST_PROXY_HOPS.
+    trustProxy: (_addr: string, hop: number) => hop < env.TRUST_PROXY_HOPS,
     // Les images (logo, photo de profil, QR d'encaissement) transitent en base64
     // dans le corps JSON : la limite par défaut de 1 Mo ferait échouer ces uploads.
     bodyLimit: 6 * 1024 * 1024, // 6 Mo
@@ -87,34 +91,19 @@ export async function buildApp() {
   await app.register(cors, { origin: corsOrigins, credentials: true });
   await app.register(cookie);
   /**
-   * Quota compté par UTILISATEUR, pas par adresse IP. Toute une boutique
-   * partage la même IP publique : à 300/min par IP, dix employés se
-   * bloquaient mutuellement en usage tout à fait normal (mesuré : 61 requêtes
-   * refusées sur 360 pour 10 postes). L'identité vient du `sub` du jeton — il
-   * ne sert qu'à compter, jamais à autoriser (l'authentification réelle reste
-   * faite par requireAuth), donc le lire sans vérifier la signature est sans
-   * risque : un jeton falsifié ne donnerait qu'un compteur séparé, et sera de
-   * toute façon rejeté ensuite.
+   * Quota compté par UTILISATEUR pour les appels authentifiés (toute une
+   * boutique partage la même IP publique : à 300/min par IP, dix employés se
+   * bloquaient mutuellement). L'identité n'est retenue qu'après VÉRIFICATION
+   * de la signature du jeton : un faux jeton à `sub` aléatoire ne doit pas
+   * offrir un nouveau quota à chaque requête.
    *
-   * Les appels sans jeton (connexion, inscription, webhooks) restent comptés
-   * par IP : c'est justement là que la protection anti-force-brute compte.
+   * Les routes publiques /auth/* (connexion, 2FA, mot de passe oublié) et les
+   * appels sans jeton valide sont toujours comptés par IP.
    */
   await app.register(rateLimit, {
     max: Number(process.env.RATE_LIMIT_MAX ?? 300),
     timeWindow: '1 minute',
-    keyGenerator: (req) => {
-      const header = req.headers.authorization;
-      if (header?.startsWith('Bearer ')) {
-        try {
-          const payload = header.slice(7).split('.')[1];
-          const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string };
-          if (claims.sub) return `user:${claims.sub}`;
-        } catch {
-          /* jeton illisible : on retombe sur l'IP */
-        }
-      }
-      return `ip:${req.ip}`;
-    },
+    keyGenerator: rateLimitKey,
   });
   // Import Excel/CSV de produits : fichier tableur, distinct de bodyLimit (JSON).
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });

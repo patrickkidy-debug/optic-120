@@ -739,9 +739,14 @@ export async function startTwoFactorSetup(
 }
 
 /** Confirme l'activation après vérification d'un premier code. */
-export async function enableTwoFactor(userId: string, code: string, meta: RequestMeta): Promise<void> {
+export async function enableTwoFactor(userId: string, code: string, password: string, meta: RequestMeta): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.twoFactorSecret) throw badRequest("Configuration 2FA non initiée");
+  // Activer la 2FA avec un simple jeton volé verrouillerait la victime hors de son compte.
+  if (!(await verifyPassword(user.passwordHash, password))) {
+    await recordAudit({ tenantId: user.tenantId, userId, action: '2FA_ENABLE_FAILED', ...meta });
+    throw badRequest('Mot de passe incorrect');
+  }
   if (!verifyTotp(code, decryptSecret(user.twoFactorSecret))) throw badRequest('Code invalide');
   await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
   await recordAudit({ tenantId: user.tenantId, userId, action: '2FA_ENABLED', ...meta });
@@ -921,10 +926,12 @@ export async function resetPassword(
 }
 
 /** Vérifie le mot de passe de l'utilisateur courant (déverrouillage d'inactivité). */
-export async function verifyUserPassword(userId: string, password: string): Promise<boolean> {
+export async function verifyUserPassword(userId: string, password: string, meta?: RequestMeta): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return false;
-  return verifyPassword(user.passwordHash, password);
+  const ok = await verifyPassword(user.passwordHash, password);
+  if (!ok) await recordAudit({ tenantId: user.tenantId, userId, action: 'PASSWORD_VERIFY_FAILED', ...(meta ?? {}) });
+  return ok;
 }
 
 /**
@@ -934,13 +941,25 @@ export async function verifyUserPassword(userId: string, password: string): Prom
  */
 export async function changePassword(
   userId: string,
+  currentPassword: string,
   newPassword: string,
+  code: string | undefined,
   meta: RequestMeta,
 ): Promise<SessionResult> {
   const user = await loadUser({ id: userId });
   if (!user) throw unauthorized();
-  // La session active fait foi : pas d'ancien mot de passe requis (utile après
-  // un mot de passe temporaire). Toutes les autres sessions sont révoquées.
+  // Réauthentification obligatoire : mot de passe actuel (un mot de passe
+  // temporaire fait l'affaire) + code 2FA si elle est active.
+  if (!(await verifyPassword(user.passwordHash, currentPassword))) {
+    await recordAudit({ tenantId: user.tenantId, userId, action: 'PASSWORD_CHANGE_FAILED', ...meta });
+    throw badRequest('Mot de passe actuel incorrect');
+  }
+  if (user.twoFactorEnabled) {
+    if (!code || !user.twoFactorSecret || !verifyTotp(code, decryptSecret(user.twoFactorSecret))) {
+      await recordAudit({ tenantId: user.tenantId, userId, action: 'PASSWORD_CHANGE_FAILED', metadata: { reason: '2fa' }, ...meta });
+      throw badRequest('Code de double authentification requis ou invalide');
+    }
+  }
   const newHash = await hashPassword(newPassword);
   await prisma.$transaction([
     prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } }),

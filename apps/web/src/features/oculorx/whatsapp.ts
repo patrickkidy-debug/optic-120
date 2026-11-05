@@ -18,7 +18,7 @@ export function orderWhatsappText(o: RxOrder, storeName: string): string {
   const lines = [
     `Bonjour, commande de verres *${o.number}* — ${storeName}`,
     '',
-    `Verre : ${o.lens.reference} — ${o.lens.designation} (${RX_GEOMETRY_LABELS[o.lens.geometry as RxGeometry] ?? o.lens.geometry})`,
+    `Verre : ${o.lens.shopName || o.lens.designation} (${RX_GEOMETRY_LABELS[o.lens.geometry as RxGeometry] ?? o.lens.geometry}${o.lens.shopName ? ` · Réf: ${o.lens.reference}` : ` · ${o.lens.reference}`})`,
     `Patient : ${o.patientName}${o.fileNumber ? ` · dossier ${o.fileNumber}` : ''}`,
     `OD : ${eye(o.od)}`,
     `OG : ${eye(o.og)}`,
