@@ -61,7 +61,8 @@
     "cashFlow": "Dépenses / Versements",
     "measurements": "Assistant de centrage",
     "oculotrack": "OculoTrack",
-    "advisor": "Conseiller IA"
+    "advisor": "Conseiller IA",
+    "oculorx": "OculoRX"
   },
   "common": {
     "save": "Enregistrer",

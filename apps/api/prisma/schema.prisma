@@ -76,6 +76,10 @@ model Tenant {
   trackPackages          TrackPackage[]
   trackPackageItems      TrackPackageItem[]
   trackEvents            TrackEvent[]
+  rxLenses               RxLens[]
+  rxOrders               RxOrder[]
+  rxStatements           RxStatement[]
+  rxSettings             RxSettings?
   trackAttachments       TrackAttachment[]
   trackAnomalies         TrackAnomaly[]
   notifications          TenantNotification[]
@@ -581,6 +585,7 @@ model Customer {
   opticalMeasurements    OpticalMeasurement[]
   lensOrders             LensOrder[]
   repairs                Repair[]
+  rxOrders               RxOrder[]
   patient                Patient?               @relation("CustomerPatient")
   insuranceBeneficiaries InsuranceBeneficiary[]
   insuranceClaims        InsuranceClaim[]
@@ -1422,10 +1427,22 @@ model Supplier {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
+  /// OculoRX : code court (relevés REL-CODE-AAAAMM), email de commande,
+  /// coefficient de vente et TVA propres au fournisseur (sinon ceux du magasin).
+  code           String?
+  orderEmail     String?
+  rxCoefficient  Float?
+  rxVatRate      Float?
+  /// Fournisseur fictif créé par « Charger la démo » d'OculoRX.
+  rxDemo         Boolean      @default(false)
+
   stockMovements StockMovement[]
   lensOrders     LensOrder[]
   trackPackages  TrackPackage[]
   portalAccesses PortalAccess[]
+  rxLenses       RxLens[]
+  rxOrders       RxOrder[]
+  rxStatements   RxStatement[]
 
   @@index([tenantId])
 }
@@ -2972,4 +2989,138 @@ model PortalSession {
   createdAt DateTime      @default(now())
 
   @@index([accountId])
+}
+
+/* ============================================================================
+ * OculoRX — commande de verres auprès des fournisseurs
+ * ========================================================================== */
+
+/// Verre du catalogue d'un fournisseur (importé en CSV / Excel).
+model RxLens {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplierId     String
+  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  reference      String
+  designation    String
+  /// UNIFOCAL | PROGRESSIF | BIFOCAL | DEGRESSIF
+  geometry       String
+  lensIndex      Float?
+  material       String?
+  treatment      String?
+  diameter       Int?
+  sphMin         Float?
+  sphMax         Float?
+  cylMax         Float?
+  addMin         Float?
+  addMax         Float?
+  /// Prix d'achat HT d'UN verre, en FCFA.
+  purchasePrice  Int
+  /// Anciens prix : [{ price, until }] — le plus récent en dernier.
+  priceHistory   Json     @default("[]")
+  priceUpdatedAt DateTime @default(now())
+  isActive       Boolean  @default(true)
+  isDemo         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  orders         RxOrder[]
+
+  @@unique([tenantId, supplierId, reference])
+  @@index([tenantId, supplierId])
+}
+
+/// Commande de verres envoyée à un fournisseur. Prix figés à l'envoi.
+model RxOrder {
+  id            String    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// « RX-2611-001 »
+  number        String
+  branchId      String?
+  userId        String?
+  userName      String?
+  supplierId    String
+  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lensId        String?
+  lens          RxLens?   @relation(fields: [lensId], references: [id], onDelete: SetNull)
+  /// Verre tel qu'il était à l'envoi (référence, désignation, géométrie…).
+  lensSnapshot  Json
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  patientName   String
+  fileNumber    String?
+  /// { sph, cyl, axis }
+  od            Json
+  og            Json
+  addition      Float?
+  pd            Float?
+  height        Float?
+  /// CERCLEE | NYLOR | PERCEE
+  frameType     String?
+  mounted       Boolean   @default(false)
+  urgent        Boolean   @default(false)
+  comment       String?
+  /// Achat total figé : 2 verres + suppléments (HT, FCFA).
+  purchasePrice Int
+  /// [{ label, amount }]
+  supplements   Json      @default("[]")
+  /// Prix de vente patient (paire) figé.
+  salePrice     Int
+  /// SENT | IN_PRODUCTION | SHIPPED | DELIVERED | CANCELLED | RETURNED
+  status        String    @default("SENT")
+  /// [{ status, at, by, note }]
+  statusHistory Json      @default("[]")
+  /// Facture patient liée à la livraison.
+  saleId        String?
+  /// « Commande de verres » créée avec la commande (Kanban + suivi OculoTrack).
+  lensOrderId   String?
+  emailSentAt   DateTime?
+  isDemo        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, supplierId])
+  @@index([lensOrderId])
+}
+
+/// Relevé mensuel dû à un fournisseur (montants figés à la génération).
+model RxStatement {
+  id            String    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplierId    String
+  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  /// « 2026-11 »
+  month         String
+  /// « REL-VAT-202611 »
+  number        String
+  totalHt       Int
+  vatRate       Float
+  vatAmount     Int
+  totalTtc      Int
+  orderCount    Int
+  dueDate       DateTime
+  generatedAt   DateTime  @default(now())
+  paidAt        DateTime?
+  paymentMethod String?
+  isDemo        Boolean   @default(false)
+
+  @@unique([tenantId, supplierId, month])
+  @@index([tenantId, month])
+}
+
+/// Réglages OculoRX du magasin (coefficients, TVA, suppléments).
+model RxSettings {
+  tenantId             String   @id
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  coefficient          Float    @default(2.8)
+  /// { PROGRESSIF: 3.0, … } — remplace le coefficient global pour une géométrie.
+  geometryCoefficients Json     @default("{}")
+  vatRate              Float    @default(18)
+  mountedFee           Int      @default(2500)
+  urgentFee            Int      @default(3000)
+  updatedAt            DateTime @updatedAt
 }

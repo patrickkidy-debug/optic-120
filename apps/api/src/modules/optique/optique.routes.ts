@@ -13,6 +13,7 @@ import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { getOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import { prisma } from '../../lib/prisma.js';
+import { syncRxFromLensOrders } from '../oculorx/rx.sync.js';
 
 function nullifyEmpty<T extends Record<string, unknown>>(obj: T): T {
   const out = { ...obj } as Record<string, unknown>;
@@ -145,6 +146,7 @@ export async function optiqueRoutes(app: FastifyInstance): Promise<void> {
     const data: { status: typeof status; deliveredAt?: Date } = { status };
     if (status === 'DELIVERED' && !current.deliveredAt) data.deliveredAt = new Date();
     await req.db!.lensOrder.updateMany({ where: { id }, data });
+    await syncRxFromLensOrders(req.db!, [id], status, 'Commandes de verres');
     if (current.status !== status) {
       await recordAudit({
         tenantId: req.auth!.tenantId,

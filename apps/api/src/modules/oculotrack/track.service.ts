@@ -6,6 +6,7 @@ import {
   type TrackStage,
 } from '@oculo/shared-types';
 import type { TenantPrisma } from '../../lib/prisma-tenant.js';
+import { syncRxFromLensOrders } from '../oculorx/rx.sync.js';
 import { prisma } from '../../lib/prisma.js';
 import { nextCounterNumber } from '../../lib/document-number.js';
 import { badRequest, conflict, notFound } from '../../lib/http-error.js';
@@ -172,6 +173,7 @@ export async function setStage(
       occurredAt: opts.proof?.occurredAt,
     });
   }
+  await syncRxFromLensOrders(db, orders.map((o) => o.id), TRACK_STAGE_TO_LENS_STATUS[stage], actor.name);
   return orders.length;
 }
 

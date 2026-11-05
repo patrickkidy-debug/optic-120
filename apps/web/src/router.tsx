@@ -61,6 +61,7 @@ const PortalReturn = portalPage('PortalReturn');
 const TrackPublicPage = lazy(() => named(import('./pages/portal/TrackPublic'), 'TrackPublicPage'));
 const ScanLanding = lazy(() => named(import('./pages/portal/TrackPublic'), 'ScanLanding'));
 const OculoTrackPage = lazy(() => named(import('./pages/optique/oculotrack/OculoTrackPage'), 'OculoTrackPage'));
+const OculoRxPage = lazy(() => named(import('./pages/oculorx/OculoRxPage'), 'OculoRxPage'));
 const MeasurementsPage = lazy(() => named(import('./pages/optique/MeasurementsPage'), 'MeasurementsPage'));
 const RepairsPage = lazy(() => named(import('./pages/optique/RepairsPage'), 'RepairsPage'));
 const RenewalsPage = lazy(() => named(import('./pages/optique/RenewalsPage'), 'RenewalsPage'));
@@ -223,6 +224,7 @@ export const router = createBrowserRouter([
               { path: '/optique/commandes-verres', element: perm('optique.sales.view', <LensOrdersPage />) },
               { path: '/optique/mesures', element: perm('optique.prescriptions.view', <MeasurementsPage />) },
               { path: '/optique/oculotrack', element: perm('oculotrack.view', <OculoTrackPage />) },
+              { path: '/oculorx/:tab?', element: perm('oculorx.view', <OculoRxPage />) },
               { path: '/optique/reparations', element: perm('optique.sales.view', <RepairsPage />) },
               { path: '/optique/renouvellements', element: perm('optique.customers.view', <RenewalsPage />) },
               { path: '/optique/etiquettes', element: perm('optique.products.view', <LabelsPage />) },

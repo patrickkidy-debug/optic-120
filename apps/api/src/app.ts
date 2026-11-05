@@ -41,6 +41,7 @@ import { demoRoutes } from './modules/demo/demo.routes.js';
 import { crmRoutes } from './modules/crm/crm.routes.js';
 import { partnerRoutes } from './modules/partners/partner.routes.js';
 import { oculotrackRoutes } from './modules/oculotrack/track.routes.js';
+import { oculorxRoutes } from './modules/oculorx/rx.routes.js';
 import { portalRoutes } from './modules/oculotrack/portal.routes.js';
 import { trackPublicRoutes } from './modules/oculotrack/public.routes.js';
 
@@ -183,6 +184,7 @@ export async function buildApp() {
   await app.register(partnerRoutes, { prefix: '/partners' });
   // OculoTrack : magasin, portail fournisseurs / transporteurs, suivi public.
   await app.register(oculotrackRoutes, { prefix: '/oculotrack' });
+  await app.register(oculorxRoutes, { prefix: '/oculorx' });
   await app.register(portalRoutes, { prefix: '/portal' });
   await app.register(trackPublicRoutes, { prefix: '/public/track' });
 

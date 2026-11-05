@@ -61,7 +61,8 @@
     "cashFlow": "Despesas / Transferências",
     "measurements": "Assistente de centragem",
     "oculotrack": "OculoTrack",
-    "advisor": "Consultor IA"
+    "advisor": "Consultor IA",
+    "oculorx": "OculoRX"
   },
   "common": {
     "save": "Guardar",

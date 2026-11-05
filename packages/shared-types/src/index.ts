@@ -534,6 +534,12 @@ export const PERMISSIONS: PermissionDef[] = [
   { module: 'oculotrack', action: 'manage', label: 'Gérer les commandes et colis OculoTrack' },
   { module: 'oculotrack', action: 'portal', label: 'Gérer les accès au portail fournisseur / transporteur' },
 
+  // OculoRX : commande de verres auprès des fournisseurs.
+  { module: 'oculorx', action: 'view', label: 'Voir OculoRX (tableau de bord, commandes, catalogues)' },
+  { module: 'oculorx', action: 'order', label: 'Passer des commandes de verres OculoRX' },
+  { module: 'oculorx', action: 'manage', label: 'Gérer fournisseurs, catalogues et relevés OculoRX' },
+  { module: 'oculorx', action: 'margins', label: "Voir les prix d'achat et les marges OculoRX" },
+
   { module: 'insurance', action: 'view', label: 'Voir les assurances' },
   { module: 'insurance', action: 'create', label: 'Créer des assurances' },
   { module: 'insurance', action: 'update', label: 'Modifier des assurances' },
@@ -579,6 +585,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   gestionnaire: [
     'dashboard.view',
     'oculotrack.view', 'oculotrack.manage', 'oculotrack.portal',
+    'oculorx.view', 'oculorx.order', 'oculorx.manage', 'oculorx.margins',
     'optique.products.view', 'optique.products.create', 'optique.products.update',
     'optique.stock.view', 'optique.stock.adjust', 'optique.stock.transfer',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
@@ -603,6 +610,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   opticien: [
     'dashboard.view',
     'oculotrack.view', 'oculotrack.manage',
+    'oculorx.view', 'oculorx.order',
     'optique.products.view',
     'optique.stock.view', 'optique.stock.adjust',
     'optique.inventory.view', 'optique.inventory.create', 'optique.inventory.count', 'optique.inventory.validate', 'optique.inventory.regularize', 'optique.inventory.history',
@@ -4211,3 +4219,4 @@ export function tenantCurrencyInfo(tenant: {
 }
 
 export * from './oculotrack.js';
+export * from './oculorx.js';
