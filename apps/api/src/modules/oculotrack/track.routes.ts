@@ -8,6 +8,7 @@ import {
   trackHandoverSchema,
   trackOrderUpdateSchema,
   trackPackageCreateSchema,
+  trackPackageContactsSchema,
   trackReceiveSchema,
   trackStartSchema,
   trackStoreStageSchema,
@@ -86,6 +87,8 @@ const PACKAGE_LIST = {
   status: true,
   fromCity: true,
   toCity: true,
+  senderPhone: true,
+  recipientPhone: true,
   carrierName: true,
   externalTracking: true,
   expectedAt: true,
@@ -363,6 +366,18 @@ export async function oculotrackRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /** Un colis en préparation peut être annulé : ses commandes reviennent à « Monture préparée ». */
+  // Téléphones de l'expéditeur et du destinataire, imprimés sur l'étiquette.
+  app.patch('/packages/:id/contacts', { preHandler: MANAGE }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const input = trackPackageContactsSchema.parse(req.body);
+    const res = await req.db!.trackPackage.updateMany({
+      where: { id },
+      data: { senderPhone: input.senderPhone || null, recipientPhone: input.recipientPhone || null },
+    });
+    if (res.count === 0) throw notFound('Colis introuvable');
+    return reply.send({ ok: true });
+  });
+
   app.post('/packages/:id/cancel', { preHandler: MANAGE }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const db = req.db!;

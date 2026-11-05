@@ -14,7 +14,6 @@ import {
   Loader2,
   FileText,
   Lock,
-  Glasses,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { PaymentMethod } from '@oculo/shared-types';
@@ -58,6 +57,7 @@ import { NumberInput } from '../../components/NumberInput';
 import { useWarrantyPlan } from '../../lib/beta';
 import { WarrantyPlanPicker } from '../../features/optique/WarrantyPlan';
 import { warrantyPlanRate, type WarrantyPlan } from '@oculo/shared-types';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 const DEFAULT_WARRANTY_PLAN: WarrantyPlan = { lensMonths: 6, frame: false };
 
@@ -175,7 +175,6 @@ export function PosPage() {
   const { data: coverage } = useCustomerCoverage(pos.customerId, insurerId, canSeeInsurers);
   // Les garanties raisonnent par famille de produit : la catégorie vient de la
   // liste de stock déjà chargée, le panier n'a pas à la porter.
-  const photoOf = (productId: string) => (stock ?? []).find((p) => p.productId === productId)?.photoUrl ?? null;
   const categoryOf = (productId: string) =>
     (stock ?? []).find((p) => p.productId === productId)?.category ?? 'AUTRE';
   const coverageLines = pos.lines.map((l) => ({
@@ -272,15 +271,8 @@ export function PosPage() {
                   }
                   className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
                 >
-                  {/* Photo du produit (ajoutée depuis la fiche produit) ; les
-                      montures sans photo gardent un emplacement repérable. */}
-                  {p.photoUrl ? (
-                    <img src={p.photoUrl} alt="" loading="lazy" className="mb-2 aspect-[4/3] w-full rounded-lg bg-white object-contain" />
-                  ) : p.category === 'MONTURE' ? (
-                    <div className="mb-2 grid aspect-[4/3] w-full place-items-center rounded-lg bg-surface-2 text-content-faint">
-                      <Glasses className="h-8 w-8" />
-                    </div>
-                  ) : null}
+                  {/* Symbole de la famille du produit (monture, verre, entretien…). */}
+                  <ProductSymbol category={p.category} className="mb-2 aspect-[16/9] w-full rounded-lg" />
                   <div className="flex items-start justify-between">
                     <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
                     {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
@@ -341,9 +333,7 @@ export function PosPage() {
               <div className="space-y-2">
                 {pos.lines.map((l) => (
                   <div key={l.key} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
-                    {photoOf(l.productId) && (
-                      <img src={photoOf(l.productId)!} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-white object-contain" />
-                    )}
+                    <ProductSymbol category={l.category ?? categoryOf(l.productId)} className="h-11 w-11 shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
                       {categoryOf(l.productId) === 'VERRE' && (

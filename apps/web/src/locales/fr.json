@@ -1389,7 +1389,7 @@
       "indiceDeRefraction": "Indice de réfraction",
       "choisissezDAbordLeMateriau": "Choisissez d'abord le matériau pour affiner les indices proposés.",
       "gammePremiumMiseEnAvant": "Gamme premium (mise en avant au catalogue)",
-      "facultatifSansPhotoLeCatalogue": "Facultatif : sans photo, le catalogue utilise l'illustration correspondant au type de verre choisi.",
+      "facultatifSansPhotoLeCatalogue": "Le catalogue représente ce verre par l'illustration de son type, aux couleurs d'OculoSaaS.",
       "precedent": "Précédent",
       "suivant": "Suivant",
       "ajouterLeVerre": "Ajouter le verre",
@@ -5572,7 +5572,10 @@
       "from": "Expéditeur",
       "to": "Destinataire",
       "content": "Contenu",
-      "date": "Date"
+      "date": "Date",
+      "senderPhone": "Téléphone de l’expéditeur",
+      "recipientPhone": "Téléphone du destinataire",
+      "tel": "Tél."
     },
     "add": "Ajouter",
     "noFiles": "Aucune photo ni document.",
@@ -5642,7 +5645,9 @@
     "portalAccess": "Accès portail",
     "noPortalForLab": "{{name}} n’a pas encore accès au portail OculoTrack : invitez-le pour qu’il puisse scanner et confirmer la réception.",
     "scanFromPhoto": "Prendre une photo du QR code",
-    "qrNotFound": "QR code non lu : reprenez la photo plus près, bien nette."
+    "qrNotFound": "QR code non lu : reprenez la photo plus près, bien nette.",
+    "editPhones": "Modifier les téléphones",
+    "save": "Enregistrer"
   },
   "pt": {
     "portal": "Portail partenaires",
@@ -5720,7 +5725,15 @@
     "noneReady": "Aucune commande prête pour le retour.",
     "expectedStore": "Arrivée prévue au magasin",
     "confirmShip": "EXPÉDIER ({{n}})",
-    "returnSent": "Colis retour expédié ✓ — le magasin est prévenu."
+    "returnSent": "Colis retour expédié ✓ — le magasin est prévenu.",
+    "roleLab": "Laboratoire",
+    "roleCarrier": "Transporteur",
+    "hello": "Bonjour",
+    "feat": {
+      "scan": "Scan QR des colis",
+      "offline": "Fonctionne hors ligne",
+      "proof": "Photo et signature"
+    }
   },
   "pub": {
     "privacy": "Suivi sécurisé OculoTrack — aucune donnée médicale n’est affichée.",

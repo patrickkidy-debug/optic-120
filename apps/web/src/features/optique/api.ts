@@ -131,8 +131,6 @@ export interface StockRow {
   name: string;
   brand?: string | null;
   category: string;
-  /** Photo principale du produit (data URL), si elle a été ajoutée. */
-  photoUrl?: string | null;
   sellPrice: number;
   stockItemId: string | null;
   quantity: number;

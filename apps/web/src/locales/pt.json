@@ -1389,7 +1389,7 @@
       "indiceDeRefraction": "Índice de refração",
       "choisissezDAbordLeMateriau": "Escolha primeiro o material para afinar os índices propostos.",
       "gammePremiumMiseEnAvant": "Gama premium (destacada no catálogo)",
-      "facultatifSansPhotoLeCatalogue": "Opcional: sem foto, o catálogo usa a ilustração do tipo de lente escolhido.",
+      "facultatifSansPhotoLeCatalogue": "O catálogo representa esta lente com a ilustração do seu tipo, nas cores da OculoSaaS.",
       "precedent": "Anterior",
       "suivant": "Seguinte",
       "ajouterLeVerre": "Adicionar lente",
@@ -5572,7 +5572,10 @@
       "from": "Remetente",
       "to": "Destinatário",
       "content": "Conteúdo",
-      "date": "Data"
+      "date": "Data",
+      "senderPhone": "Telefone do remetente",
+      "recipientPhone": "Telefone do destinatário",
+      "tel": "Tel."
     },
     "add": "Adicionar",
     "noFiles": "Sem fotos nem documentos.",
@@ -5642,7 +5645,9 @@
     "portalAccess": "Acesso ao portal",
     "noPortalForLab": "{{name}} ainda não tem acesso ao portal OculoTrack: convide-o para poder ler e confirmar a receção.",
     "scanFromPhoto": "Tirar uma foto do QR code",
-    "qrNotFound": "QR code não lido: tire a foto mais perto e nítida."
+    "qrNotFound": "QR code não lido: tire a foto mais perto e nítida.",
+    "editPhones": "Editar telefones",
+    "save": "Guardar"
   },
   "pt": {
     "portal": "Portal de parceiros",
@@ -5720,7 +5725,15 @@
     "noneReady": "Nenhuma encomenda pronta para regresso.",
     "expectedStore": "Chegada prevista à loja",
     "confirmShip": "ENVIAR ({{n}})",
-    "returnSent": "Volume de regresso enviado ✓ — a loja foi avisada."
+    "returnSent": "Volume de regresso enviado ✓ — a loja foi avisada.",
+    "roleLab": "Laboratório",
+    "roleCarrier": "Transportador",
+    "hello": "Olá",
+    "feat": {
+      "scan": "Leitura QR dos volumes",
+      "offline": "Funciona offline",
+      "proof": "Foto e assinatura"
+    }
   },
   "pub": {
     "privacy": "Seguimento seguro OculoTrack — nenhum dado médico é mostrado.",

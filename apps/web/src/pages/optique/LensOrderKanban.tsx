@@ -17,6 +17,7 @@ import type { LensOrder } from '../../features/optique/api';
 import { Avatar } from '../../components/Avatar';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { tr } from '../../lib/tr';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 const DAY = 24 * 60 * 60 * 1000;
 function daysBetween(a: string | number | Date, b: string | number | Date) {
@@ -157,16 +158,10 @@ function OrderCard({
         </div>
       </div>
 
-      {/* Monture : vignette photo si choisie */}
+      {/* Monture : vignette (symbole) si choisie */}
       {order.frameProduct && (
         <div className="flex items-center gap-2 rounded-lg bg-surface-2 p-1.5">
-          <div className="grid h-9 w-11 shrink-0 place-items-center overflow-hidden rounded-md bg-surface-3">
-            {order.frameProduct.photoUrl ? (
-              <img src={order.frameProduct.photoUrl} alt="" className="h-full w-full object-contain" />
-            ) : (
-              <Glasses className="h-4 w-4 text-content-faint" />
-            )}
-          </div>
+          <ProductSymbol category="MONTURE" className="h-9 w-11 shrink-0 rounded-md" />
           <span className="truncate text-xs font-medium text-content">
             {order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}
             {order.frameProduct.name}

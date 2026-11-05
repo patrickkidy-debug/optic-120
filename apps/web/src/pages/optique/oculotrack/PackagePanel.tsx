@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowRight, CheckCircle2, KeyRound, MessageCircle, Package, Printer, Truck, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, KeyRound, MessageCircle, Package, Phone, Printer, Truck, XCircle } from 'lucide-react';
 import { ot, type PackageDetail } from '../../../features/oculotrack/api';
 import { PackageBadge, QrImage, StageBadge, Timeline, qrDataUrl } from '../../../features/oculotrack/ui';
 import { Button } from '../../../components/ui';
@@ -17,6 +17,10 @@ async function printLabel(p: PackageDetail['package'], store: string) {
   const w = window.open('', '_blank', 'width=520,height=760');
   if (!w) return alert(tr('ot.allowPopups'));
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  // Au retour, c'est le laboratoire qui expédie vers le magasin.
+  const lab = p.supplier?.name ?? '';
+  const sender = p.direction === 'RETURN' ? lab : store;
+  const recipient = p.direction === 'RETURN' ? store : lab;
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(p.number)}</title>
 <style>@page{size:100mm 150mm;margin:0}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#000}
 .l{width:100mm;height:150mm;padding:6mm;display:flex;flex-direction:column;gap:3mm;border:1px dashed #bbb}
@@ -27,12 +31,14 @@ async function printLabel(p: PackageDetail['package'], store: string) {
 .i{font-size:9pt;border-top:1px solid #000;padding-top:2mm;display:grid;grid-template-columns:auto 1fr;gap:1mm 3mm}
 .i b{text-transform:uppercase;font-size:7.5pt}.o{font-family:ui-monospace,Consolas,monospace;font-size:8.5pt}
 .f{margin-top:auto;font-size:8pt;text-align:center}
+.p{font-weight:700;font-size:10pt}
 @media print{.l{border:0}}</style></head><body><div class="l">
 <div class="t"><span>OculoTrack</span><span>${esc(p.direction === 'RETURN' ? tr('ot.dir.RETURN') : tr('ot.dir.OUTBOUND'))}</span></div>
 <div class="n">${esc(p.number)}</div>
 <div class="q"><img src="${qr}" alt="QR"></div>
 <div class="r"><span>${esc(p.fromCity || store)}</span><span>→</span><span>${esc(p.toCity || p.supplier?.name || '')}</span></div>
-<div class="i"><b>${esc(tr('ot.f.from'))}</b><span>${esc(store)}</span><b>${esc(tr('ot.f.to'))}</b><span>${esc(p.supplier?.name ?? '')}</span>
+<div class="i"><b>${esc(tr('ot.f.from'))}</b><span>${esc(sender)}${p.senderPhone ? `<br><span class="p">${esc(tr('ot.f.tel'))} ${esc(p.senderPhone)}</span>` : ''}</span>
+<b>${esc(tr('ot.f.to'))}</b><span>${esc(recipient)}${p.recipientPhone ? `<br><span class="p">${esc(tr('ot.f.tel'))} ${esc(p.recipientPhone)}</span>` : ''}</span>
 <b>${esc(tr('ot.f.content'))}</b><span class="o">${esc(p.items.map((i) => i.lensOrder.trackCode).join(' · '))}</span>
 ${p.carrierName ? `<b>${esc(tr('ot.f.carrier'))}</b><span>${esc(p.carrierName)}${p.externalTracking ? ` · ${esc(p.externalTracking)}` : ''}</span>` : ''}
 <b>${esc(tr('ot.f.date'))}</b><span>${esc(formatDate(new Date().toISOString()))}</span></div>
@@ -64,6 +70,12 @@ export function PackagePanel({
     qc.invalidateQueries({ queryKey: ['lens-orders'] });
   };
   const cancel = useMutation({ mutationFn: () => ot.cancelPackage(id), onSuccess: refresh, onError: (e) => alert(apiErrorMessage(e)) });
+  const [contacts, setContacts] = useState<null | { senderPhone: string; recipientPhone: string }>(null);
+  const saveContacts = useMutation({
+    mutationFn: (c: { senderPhone: string; recipientPhone: string }) => ot.updateContacts(id, c),
+    onSuccess: () => { setContacts(null); refresh(); },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
   const { data: accesses } = useQuery({ queryKey: ['ot', 'accesses'], queryFn: ot.accesses, enabled: Boolean(onInvite), retry: false });
 
   if (isLoading || !data) {
@@ -98,6 +110,8 @@ export function PackagePanel({
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
             {[
               [tr('ot.f.supplier'), p.supplier?.name],
+              [tr('ot.f.senderPhone'), p.senderPhone],
+              [tr('ot.f.recipientPhone'), p.recipientPhone],
               [tr('ot.f.carrier'), p.carrierName],
               [tr('ot.f.tracking'), p.externalTracking],
               [tr('ot.f.created'), formatDateTime(p.createdAt)],
@@ -112,6 +126,31 @@ export function PackagePanel({
               </div>
             ))}
           </dl>
+          {canManage && !contacts && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary"
+              onClick={() => setContacts({ senderPhone: p.senderPhone ?? '', recipientPhone: p.recipientPhone ?? '' })}
+            >
+              <Phone className="h-3.5 w-3.5" /> {tr('ot.editPhones')}
+            </button>
+          )}
+          {contacts && (
+            <div className="grid grid-cols-1 gap-2 rounded-xl border p-3 sm:grid-cols-2">
+              <label className="text-xs text-content-muted">
+                {tr('ot.f.senderPhone')}
+                <input className="input mt-1" type="tel" value={contacts.senderPhone} onChange={(e) => setContacts({ ...contacts, senderPhone: e.target.value })} />
+              </label>
+              <label className="text-xs text-content-muted">
+                {tr('ot.f.recipientPhone')}
+                <input className="input mt-1" type="tel" value={contacts.recipientPhone} onChange={(e) => setContacts({ ...contacts, recipientPhone: e.target.value })} />
+              </label>
+              <div className="flex justify-end gap-2 sm:col-span-2">
+                <Button variant="ghost" onClick={() => setContacts(null)}>{tr('ot.cancel')}</Button>
+                <Button loading={saveContacts.isPending} onClick={() => saveContacts.mutate(contacts)}>{tr('ot.save')}</Button>
+              </div>
+            </div>
+          )}
           {p.lateDays > 0 && (
             <p className="flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-600 dark:text-red-300">
               <AlertTriangle className="h-4 w-4" /> {tr('ot.lateBanner', { n: p.lateDays })}

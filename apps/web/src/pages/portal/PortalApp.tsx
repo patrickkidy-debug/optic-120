@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, Navigate, NavLink, Outlet, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,6 +8,7 @@ import {
   Boxes,
   Camera,
   CheckCircle2,
+  ChevronRight,
   ClipboardCheck,
   CloudOff,
   Eraser,
@@ -18,9 +19,11 @@ import {
   MapPin,
   Package,
   PackageCheck,
+  Search,
   RotateCcw,
   ScanLine,
   Send,
+  ShieldCheck,
   Timer,
   Truck,
   Wrench,
@@ -40,6 +43,8 @@ import { trackFileToDataUrl } from '../../features/oculotrack/file';
 import { PackageBadge, PhotoButton, QrScanner, StageBadge, Timeline } from '../../features/oculotrack/ui';
 import { AnomalyForm, ChecksList } from '../optique/oculotrack/modals';
 import { Logo } from '../../components/Logo';
+import { Mascot } from '../../components/brand/Mascot';
+import { STICKER_TONES } from '../../components/ui';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { tr } from '../../lib/tr';
 
@@ -58,28 +63,104 @@ function useBootPortal() {
 function Splash() {
   return (
     <div className="grid min-h-screen place-items-center bg-bg">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center gap-3">
+        <Mascot pose="wave" className="w-24" />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
     </div>
   );
 }
 
+/** Fond nuit violette de la marque, avec halos dégradés (écrans du portail). */
+function Glow() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-[#7c3aed]/35 blur-[110px]" />
+      <div className="absolute -right-24 top-1/3 h-[360px] w-[360px] rounded-full bg-[#ec4899]/20 blur-[110px]" />
+      <div className="absolute -bottom-32 left-1/3 h-[380px] w-[380px] rounded-full bg-[#f97316]/15 blur-[120px]" />
+    </div>
+  );
+}
+
+const AUTH_FEATURES = [
+  { icon: ScanLine, key: 'pt.feat.scan', tone: STICKER_TONES.primary },
+  { icon: CloudOff, key: 'pt.feat.offline', tone: STICKER_TONES.pink },
+  { icon: ShieldCheck, key: 'pt.feat.proof', tone: STICKER_TONES.accent },
+];
+
 function AuthCard({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg p-4">
-      <div className="w-full max-w-sm space-y-5">
+    <div className="relative isolate flex min-h-screen items-center justify-center bg-bg p-4">
+      <Glow />
+      <div className="w-full max-w-md space-y-5">
         <div className="flex items-center justify-center gap-2">
           <Logo />
         </div>
-        <div className="card space-y-4 p-6">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">OculoTrack · {tr('pt.portal')}</p>
-            <h1 className="font-arcade text-xl text-content">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-content-muted">{subtitle}</p>}
+        <div className="relative">
+          <Mascot pose="wave" className="pointer-events-none absolute -top-[86px] right-2 hidden w-[110px] sm:block" />
+          <div className="card card-modal space-y-5 p-6 sm:p-7">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                <Truck className="h-3.5 w-3.5" /> OculoTrack · {tr('pt.portal')}
+              </span>
+              <h1 className="mt-3 font-arcade text-[22px] leading-tight text-content">{title}</h1>
+              <span aria-hidden className="mt-2 block h-1.5 w-12 rounded-full bg-brand" />
+              {subtitle && <p className="mt-3 text-sm text-content-muted">{subtitle}</p>}
+            </div>
+            {children}
           </div>
-          {children}
         </div>
+        <ul className="grid grid-cols-3 gap-2">
+          {AUTH_FEATURES.map((f) => (
+            <li key={f.key} className="flex flex-col items-center gap-1.5 rounded-2xl border bg-surface/70 px-2 py-3 text-center backdrop-blur">
+              <span className="grid h-9 w-9 place-items-center rounded-xl text-[#120a2b]" style={{ background: f.tone.chip, boxShadow: `3px 3px 0 ${f.tone.shadow}` }}>
+                <f.icon className="h-4 w-4" />
+              </span>
+              <span className="text-[11px] font-semibold leading-tight text-content-muted">{tr(f.key)}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
+  );
+}
+
+/** Titre de page du portail : police Bungee, soulignement dégradé, compteur. */
+function PortalTitle({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div>
+        <h1 className="font-arcade text-[22px] leading-tight text-content">{children}</h1>
+        <span aria-hidden className="mt-1.5 block h-1.5 w-12 rounded-full bg-brand" />
+      </div>
+      {count != null && <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold text-content-muted">{count}</span>}
+    </div>
+  );
+}
+
+/** Carte d'en-tête d'une fiche (colis, commande) : bandeau dégradé, code en grand. */
+function HeroCard({ code, badge, children }: { code: string; badge: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <section className="card overflow-hidden p-0">
+      <span aria-hidden className="block h-1.5 bg-brand" />
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-arcade text-[20px] leading-none tracking-wide text-content">{code}</span>
+          {badge}
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Titre de section avec pastille d'icône. */
+function SectionTitle({ icon: Icon, children }: { icon: typeof Package; children: React.ReactNode }) {
+  return (
+    <p className="mb-3 flex items-center gap-2 text-sm font-bold text-content">
+      <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary-soft text-primary"><Icon className="h-4 w-4" /></span>
+      {children}
+    </p>
   );
 }
 
@@ -181,12 +262,18 @@ export function PortalShell() {
     { to: '/portail/app/colis', icon: Package, label: tr('pt.packages') },
   ].filter((t) => !t.hide);
   return (
-    <div className="min-h-screen bg-bg pb-24">
-      <header className="sticky top-0 z-20 border-b bg-surface/95 backdrop-blur" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="relative isolate min-h-screen bg-bg pb-28">
+      <Glow />
+      <header className="sticky top-0 z-20 border-b bg-surface/85 backdrop-blur-xl" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">{carrier ? <Truck className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}</span>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white shadow-[0_3px_0_#4c1d95]">{carrier ? <Truck className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}</span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-content">{account.scopes[0]?.supplierName ?? account.name}</p>
+            <p className="flex items-center gap-2 truncate text-sm font-bold text-content">
+              <span className="truncate">{account.scopes[0]?.supplierName ?? account.name}</span>
+              <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                {tr(carrier ? 'pt.roleCarrier' : 'pt.roleLab')}
+              </span>
+            </p>
             <p className="truncate text-[11px] text-content-muted">OculoTrack · {account.name} · {tr('pt.stores', { n: account.scopes.length })}</p>
           </div>
           <button
@@ -204,24 +291,32 @@ export function PortalShell() {
           </p>
         )}
       </header>
-      <main className="mx-auto max-w-3xl space-y-4 p-4">
+      <main className="mx-auto max-w-3xl space-y-4 p-4 sm:space-y-5 sm:p-6">
         <Outlet />
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-surface/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="mx-auto flex max-w-3xl items-end justify-around px-2 pt-1.5">
+      <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+        <div className="mx-auto flex max-w-md items-end justify-around rounded-[22px] border bg-surface/90 px-2 pt-1.5 shadow-card-lg backdrop-blur-xl">
           {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
               end={t.end}
-              className={({ isActive }) => `flex flex-1 flex-col items-center gap-0.5 pb-1.5 text-[11px] font-medium ${isActive ? 'text-primary' : 'text-content-muted'}`}
+              className={({ isActive }) => `group flex flex-1 flex-col items-center gap-0.5 pb-2 text-[11px] font-semibold ${isActive ? 'text-content' : 'text-content-muted'}`}
             >
-              {t.big ? (
-                <span className="-mt-6 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-white shadow-card-lg"><t.icon className="h-6 w-6" /></span>
-              ) : (
-                <t.icon className="h-5 w-5" />
+              {({ isActive }) => (
+                <>
+                  {t.big ? (
+                    <span className="-mt-7 grid h-16 w-16 place-items-center rounded-2xl bg-brand text-white shadow-[0_5px_0_#4c1d95] transition group-active:translate-y-1 group-active:shadow-[0_1px_0_#4c1d95]">
+                      <t.icon className="h-7 w-7" />
+                    </span>
+                  ) : (
+                    <span className={`grid h-9 w-12 place-items-center rounded-xl transition ${isActive ? 'bg-primary-soft text-primary' : ''}`}>
+                      <t.icon className="h-5 w-5" />
+                    </span>
+                  )}
+                  {t.label}
+                </>
               )}
-              {t.label}
             </NavLink>
           ))}
         </div>
@@ -238,41 +333,64 @@ export function PortalHome() {
   const account = usePortal((s) => s.account)!;
   const { data } = useQuery({ queryKey: ['pt', 'dash'], queryFn: portal.dashboard, refetchInterval: 60_000 });
   const c = data?.counts ?? {};
+  const T = STICKER_TONES;
   const cards = account.kind === 'CARRIER'
     ? [
-        { key: 'toPickup', icon: Package, tone: 'bg-amber-500/14 text-amber-600', to: '/portail/app/colis?filter=pickup' },
-        { key: 'inTransit', icon: Truck, tone: 'bg-sky-500/12 text-sky-600', to: '/portail/app/colis?filter=transit' },
-        { key: 'delivered', icon: CheckCircle2, tone: 'bg-emerald-500/12 text-emerald-600', to: '/portail/app/colis' },
+        { key: 'toPickup', icon: Package, tone: T.accent, to: '/portail/app/colis?filter=pickup' },
+        { key: 'inTransit', icon: Truck, tone: T.primary, to: '/portail/app/colis?filter=transit' },
+        { key: 'delivered', icon: CheckCircle2, tone: T.success, to: '/portail/app/colis' },
       ]
     : [
-        { key: 'toReceive', icon: PackageCheck, tone: 'bg-sky-500/12 text-sky-600', to: '/portail/app/colis?filter=incoming' },
-        { key: 'processing', icon: Wrench, tone: 'bg-violet-500/12 text-violet-600', to: '/portail/app/commandes?filter=processing' },
-        { key: 'waiting', icon: Timer, tone: 'bg-amber-500/14 text-amber-600', to: '/portail/app/commandes?filter=waiting' },
-        { key: 'ready', icon: RotateCcw, tone: 'bg-emerald-500/12 text-emerald-600', to: '/portail/app/retour' },
-        { key: 'done', icon: CheckCircle2, tone: 'bg-emerald-500/12 text-emerald-600', to: '/portail/app/commandes?filter=done' },
-        { key: 'anomalies', icon: AlertTriangle, tone: 'bg-red-500/12 text-red-600', to: '/portail/app/commandes' },
+        { key: 'toReceive', icon: PackageCheck, tone: T.primary, to: '/portail/app/colis?filter=incoming' },
+        { key: 'processing', icon: Wrench, tone: T.pink, to: '/portail/app/commandes?filter=processing' },
+        { key: 'waiting', icon: Timer, tone: T.accent, to: '/portail/app/commandes?filter=waiting' },
+        { key: 'ready', icon: RotateCcw, tone: T.success, to: '/portail/app/retour' },
+        { key: 'done', icon: CheckCircle2, tone: T.success, to: '/portail/app/commandes?filter=done' },
+        { key: 'anomalies', icon: AlertTriangle, tone: T.danger, to: '/portail/app/commandes' },
       ];
   return (
     <>
-      <Link to="/portail/app/scan" className="flex items-center gap-4 rounded-3xl bg-gradient-to-br from-primary to-accent p-5 text-white shadow-card-lg">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/20"><ScanLine className="h-7 w-7" /></span>
-        <span className="min-w-0">
-          <span className="block font-display text-lg font-bold">{tr('pt.scanCta')}</span>
+      <section className="relative overflow-hidden rounded-[26px] border bg-surface/80 p-5 backdrop-blur sm:p-6">
+        <div className="relative z-10 max-w-[70%]">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">{tr('pt.hello')}</p>
+          <h1 className="mt-1 font-arcade text-[22px] leading-tight text-content sm:text-[26px]">{account.name}</h1>
+          <p className="mt-1 text-sm text-content-muted">{tr('pt.stores', { n: account.scopes.length })}</p>
+        </div>
+        <Mascot pose="wave" className="pointer-events-none absolute -bottom-4 right-1 w-[112px] sm:right-4 sm:w-[132px]" />
+      </section>
+
+      <Link
+        to="/portail/app/scan"
+        className="group flex items-center gap-4 rounded-[24px] bg-brand p-5 text-white shadow-[0_6px_0_#4c1d95] transition active:translate-y-1 active:shadow-[0_2px_0_#4c1d95]"
+      >
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/20 ring-2 ring-white/30"><ScanLine className="h-7 w-7" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-arcade text-lg leading-tight">{tr('pt.scanCta')}</span>
           <span className="block text-sm text-white/85">{tr(account.kind === 'CARRIER' ? 'pt.scanCtaCarrier' : 'pt.scanCtaHint')}</span>
         </span>
+        <ChevronRight className="h-6 w-6 shrink-0 transition group-hover:translate-x-1" />
       </Link>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {cards.map((x) => (
-          <Link key={x.key} to={x.to} className={`card p-4 transition hover:-translate-y-0.5 ${x.key === 'anomalies' && (c.anomalies ?? 0) > 0 ? 'ring-1 ring-red-500/40' : ''}`}>
-            <span className={`grid h-9 w-9 place-items-center rounded-xl ${x.tone}`}><x.icon className="h-4.5 w-4.5" /></span>
-            <p className="mt-3 font-display text-3xl font-bold text-content">{data ? c[x.key] ?? 0 : '…'}</p>
-            <p className="text-sm text-content-muted">{tr(`pt.k.${x.key}`)}</p>
-          </Link>
-        ))}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        {cards.map((x) => {
+          const hot = x.key === 'anomalies' && (c.anomalies ?? 0) > 0;
+          return (
+            <Link
+              key={x.key}
+              to={x.to}
+              className={`card card-sticker p-4 transition ${hot ? 'ring-2 ring-red-500/50' : ''}`}
+              style={{ '--sticker': x.tone.shadow } as CSSProperties}
+            >
+              <span className="grid h-10 w-10 place-items-center rounded-xl text-[#120a2b]" style={{ background: x.tone.chip }}><x.icon className="h-5 w-5" /></span>
+              <p className="mt-3 font-arcade text-[28px] leading-none text-content">{data ? c[x.key] ?? 0 : '…'}</p>
+              <p className="mt-1 text-sm font-medium text-content-muted">{tr(`pt.k.${x.key}`)}</p>
+            </Link>
+          );
+        })}
       </div>
       {account.kind === 'SUPPLIER' && (c.ready ?? 0) > 0 && (
-        <Link to="/portail/app/retour" className="btn-primary flex h-12 items-center justify-center gap-2 rounded-xl">
-          <Send className="h-4 w-4" /> {tr('pt.shipBack', { n: c.ready })}
+        <Link to="/portail/app/retour" className="btn-primary flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-bold">
+          <Send className="h-5 w-5" /> {tr('pt.shipBack', { n: c.ready })}
         </Link>
       )}
     </>
@@ -283,6 +401,15 @@ export function PortalHome() {
 /* Listes                                                              */
 /* ------------------------------------------------------------------ */
 
+function Empty({ icon: Icon, text }: { icon: typeof Package; text: string }) {
+  return (
+    <div className="card flex flex-col items-center gap-3 p-8 text-center">
+      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary-soft text-primary"><Icon className="h-7 w-7" /></span>
+      <p className="text-sm font-medium text-content-muted">{text}</p>
+    </div>
+  );
+}
+
 const FILTERS = ['incoming', 'processing', 'waiting', 'ready', 'done'] as const;
 
 export function PortalOrders() {
@@ -292,28 +419,37 @@ export function PortalOrders() {
   const { data, isLoading } = useQuery({ queryKey: ['pt', 'orders', filter, q], queryFn: () => portal.orders(filter || undefined, q || undefined) });
   return (
     <>
-      <h1 className="font-arcade text-xl text-content">{tr('pt.orders')}</h1>
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
+      <PortalTitle count={data?.length}>{tr('pt.orders')}</PortalTitle>
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {['', ...FILTERS].map((f) => (
-          <button key={f} type="button" onClick={() => setParams(f ? { filter: f } : {})} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${filter === f ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'}`}>
+          <button key={f} type="button" onClick={() => setParams(f ? { filter: f } : {})} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${filter === f ? 'border-transparent bg-brand text-white shadow-[0_3px_0_#4c1d95]' : 'bg-surface text-content-muted hover:text-content'}`}>
             {tr(`pt.f.${f || 'all'}`)}
           </button>
         ))}
       </div>
-      <input className="input h-11" placeholder={tr('pt.searchOrders')} value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+        <input className="input h-12 pl-10" placeholder={tr('pt.searchOrders')} value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
       {isLoading ? <Loader2 className="mx-auto h-6 w-6 animate-spin text-content-faint" /> : !data?.length ? (
-        <p className="card p-6 text-center text-sm text-content-muted">{tr('pt.noOrders')}</p>
+        <Empty icon={Boxes} text={tr('pt.noOrders')} />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {data.map((o) => (
             <li key={o.id}>
-              <Link to={`/portail/app/commande/${o.id}`} className="card flex items-center gap-3 p-3.5">
+              <Link to={`/portail/app/commande/${o.id}`} className={`card group flex items-center gap-3 p-3.5 transition hover:-translate-y-0.5 hover:border-primary/50 ${o.openAnomalies > 0 ? 'border-red-500/40' : ''}`}>
+                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${o.openAnomalies > 0 ? 'bg-red-500/12 text-red-500' : 'bg-primary-soft text-primary'}`}>
+                  {o.openAnomalies > 0 ? <AlertTriangle className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm font-bold text-content">{o.trackCode} {o.openAnomalies > 0 && <span className="text-red-500">⚠</span>}</p>
+                  <p className="font-mono text-sm font-bold text-content">{o.trackCode}</p>
                   <p className="truncate text-xs text-content-muted">{o.store} · {o.client ?? '—'} · {o.frameRef ?? o.description}</p>
                   {o.expectedAt && <p className="text-[11px] text-content-faint">{tr('pt.dueBy', { date: formatDate(o.expectedAt) })}</p>}
+                  {/* Téléphone : l'étape passe sous le texte pour ne pas l'écraser. */}
+                  <div className="mt-1.5 sm:hidden"><StageBadge stage={o.trackStage} issue={o.openAnomalies > 0} /></div>
                 </div>
-                <StageBadge stage={o.trackStage} issue={o.openAnomalies > 0} />
+                <div className="hidden shrink-0 sm:block"><StageBadge stage={o.trackStage} issue={o.openAnomalies > 0} /></div>
+                <ChevronRight className="hidden h-4 w-4 shrink-0 text-content-faint transition group-hover:translate-x-0.5 sm:block" />
               </Link>
             </li>
           ))}
@@ -329,20 +465,26 @@ export function PortalPackages() {
   const { data, isLoading } = useQuery({ queryKey: ['pt', 'packages', filter], queryFn: () => portal.packages(filter) });
   return (
     <>
-      <h1 className="font-arcade text-xl text-content">{tr('pt.packages')}</h1>
+      <PortalTitle count={data?.length}>{tr('pt.packages')}</PortalTitle>
       {isLoading ? <Loader2 className="mx-auto h-6 w-6 animate-spin text-content-faint" /> : !data?.length ? (
-        <p className="card p-6 text-center text-sm text-content-muted">{tr('pt.noPackages')}</p>
+        <Empty icon={Package} text={tr('pt.noPackages')} />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {data.map((p) => (
             <li key={p.id}>
-              <Link to={`/portail/app/colis/${p.id}`} className="card flex items-center gap-3 p-3.5">
-                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${p.direction === 'RETURN' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-sky-500/12 text-sky-600'}`}><Package className="h-5 w-5" /></span>
+              <Link to={`/portail/app/colis/${p.id}`} className="card group flex items-center gap-3 p-3.5 transition hover:-translate-y-0.5 hover:border-primary/50">
+                <span
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[#120a2b]"
+                  style={{ background: (p.direction === 'RETURN' ? STICKER_TONES.success : STICKER_TONES.primary).chip }}
+                >
+                  {p.direction === 'RETURN' ? <RotateCcw className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm font-bold text-content">{p.number}</p>
                   <p className="flex items-center gap-1 truncate text-xs text-content-muted">{p.fromCity || p.store} <ArrowRight className="h-3 w-3" /> {p.toCity || '—'} · {tr('ot.ordersCount', { n: p._count.items })}</p>
                 </div>
                 <PackageBadge status={p.status} />
+                <ChevronRight className="hidden h-4 w-4 shrink-0 text-content-faint transition group-hover:translate-x-0.5 sm:block" />
               </Link>
             </li>
           ))}
@@ -503,17 +645,19 @@ export function PortalPackage() {
   return (
     <>
       <Link to="/portail/app/colis" className="inline-flex items-center gap-1 text-sm text-content-muted"><ArrowLeft className="h-4 w-4" /> {tr('pt.packages')}</Link>
-      <section className="card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xl font-bold text-content">{p.number}</span>
-          <PackageBadge status={p.status} />
+      <HeroCard code={p.number} badge={<PackageBadge status={p.status} />}>
+        <p className="mt-2 text-sm font-medium text-content-muted">{p.store}</p>
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-2/70 p-3 text-sm font-semibold text-content">
+          <MapPin className="h-4 w-4 shrink-0 text-primary" />
+          <span className="truncate">{p.fromCity || '—'}</span>
+          <span aria-hidden className="h-px min-w-6 flex-1 border-t-2 border-dashed border-primary/40" />
+          <Truck className="h-4 w-4 shrink-0 text-primary" />
+          <span aria-hidden className="h-px min-w-6 flex-1 border-t-2 border-dashed border-primary/40" />
+          <span className="truncate">{p.toCity || '—'}</span>
         </div>
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-content-muted">
-          {p.store} · {p.fromCity || '—'} <ArrowRight className="h-3.5 w-3.5" /> {p.toCity || '—'}
-        </p>
-        {(p.carrierName || p.externalTracking) && <p className="text-xs text-content-faint">{p.carrierName} {p.externalTracking ? `· ${p.externalTracking}` : ''}</p>}
+        {(p.carrierName || p.externalTracking) && <p className="mt-2 text-xs text-content-faint">{p.carrierName} {p.externalTracking ? `· ${p.externalTracking}` : ''}</p>}
         {p.expectedAt && <p className="text-xs text-content-faint">{tr('ot.expected', { date: formatDate(p.expectedAt) })}</p>}
-      </section>
+      </HeroCard>
 
       {done && (
         <p className="flex items-center gap-2 rounded-2xl bg-emerald-500/12 p-4 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
@@ -565,7 +709,7 @@ export function PortalPackage() {
       )}
 
       <section className="card p-4">
-        <p className="mb-2 text-sm font-bold text-content">{tr('ot.content')}</p>
+        <SectionTitle icon={Boxes}>{tr('ot.content')}</SectionTitle>
         <ul className="divide-y">
           {p.items.map((i) => (
             <li key={i.lensOrderId} className="flex items-center gap-2 py-2.5">
@@ -582,7 +726,7 @@ export function PortalPackage() {
       </section>
 
       <section className="card p-4">
-        <p className="mb-3 text-sm font-bold text-content">{tr('ot.timeline')}</p>
+        <SectionTitle icon={Timer}>{tr('ot.timeline')}</SectionTitle>
         <Timeline events={data.events} />
       </section>
 
@@ -604,8 +748,9 @@ export function PortalPackage() {
 function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-5 sm:rounded-3xl" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
-        <p className="mb-4 font-display text-lg font-bold text-content">{title}</p>
+      <div className="card-modal max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border bg-surface p-5 sm:rounded-3xl" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+        <span aria-hidden className="mx-auto mb-4 block h-1.5 w-12 rounded-full bg-line sm:hidden" />
+        <p className="mb-4 font-arcade text-lg text-content">{title}</p>
         {children}
       </div>
     </div>
@@ -654,20 +799,20 @@ export function PortalOrder() {
   return (
     <>
       <Link to="/portail/app/commandes" className="inline-flex items-center gap-1 text-sm text-content-muted"><ArrowLeft className="h-4 w-4" /> {tr('pt.orders')}</Link>
-      <section className="card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xl font-bold text-content">{o.trackCode}</span>
-          <StageBadge stage={st} issue={o.openAnomalies > 0} />
-        </div>
-        <p className="mt-1 text-sm text-content-muted">{o.store} · {tr('pt.client')} {o.client ?? '—'} · {o.number}</p>
-        {o.expectedAt && <p className="text-xs text-content-faint">{tr('pt.dueBy', { date: formatDate(o.expectedAt) })}</p>}
-      </section>
+      <HeroCard code={o.trackCode} badge={<StageBadge stage={st} issue={o.openAnomalies > 0} />}>
+        <p className="mt-2 text-sm text-content-muted">{o.store} · {tr('pt.client')} {o.client ?? '—'} · {o.number}</p>
+        {o.expectedAt && (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#fed7aa] px-2.5 py-1 text-xs font-bold text-[#120a2b]">
+            <Timer className="h-3.5 w-3.5" /> {tr('pt.dueBy', { date: formatDate(o.expectedAt) })}
+          </p>
+        )}
+      </HeroCard>
 
       {msg && <p className="flex items-center gap-2 rounded-2xl bg-emerald-500/12 p-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" /> {msg}</p>}
 
       {canWork && (
         <section className="card space-y-3 p-4">
-          <p className="text-sm font-bold text-content">{tr('pt.updateStage')}</p>
+          <SectionTitle icon={Wrench}>{tr('pt.updateStage')}</SectionTitle>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {LAB_SETTABLE_STAGES.map((s) => {
               const current = s === st;
@@ -678,7 +823,7 @@ export function PortalOrder() {
                   type="button"
                   disabled={busy || current}
                   onClick={() => stage(s)}
-                  className={`flex h-12 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold transition ${current ? 'border-primary bg-primary text-white' : past ? 'text-content-faint' : 'hover:border-primary'}`}
+                  className={`flex h-12 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold transition ${current ? 'border-transparent bg-brand text-white shadow-[0_3px_0_#4c1d95]' : past ? 'text-content-faint' : 'hover:-translate-y-0.5 hover:border-primary'}`}
                 >
                   {current ? <CheckCircle2 className="h-4 w-4" /> : <span className={`h-2.5 w-2.5 rounded-full ${past ? 'bg-emerald-500' : 'bg-line'}`} />}
                   {tr(`ot.stage.${s}`)}
@@ -699,7 +844,7 @@ export function PortalOrder() {
       )}
 
       <section className="card p-4">
-        <p className="mb-2 text-sm font-bold text-content">{tr('pt.job')}</p>
+        <SectionTitle icon={ClipboardCheck}>{tr('pt.job')}</SectionTitle>
         <dl className="space-y-1 text-sm">
           {[
             [tr('ot.f.frame'), o.frameProduct ? `${o.frameProduct.brand ? `${o.frameProduct.brand} · ` : ''}${o.frameProduct.name}` : '—'],
@@ -711,7 +856,7 @@ export function PortalOrder() {
           ))}
         </dl>
         {rx && (
-          <table className="mt-3 w-full text-center text-sm">
+          <table className="mt-4 w-full overflow-hidden rounded-xl bg-surface-2/50 text-center text-sm">
             <thead><tr className="text-[11px] uppercase text-content-faint"><th /><th>Sph</th><th>Cyl</th><th>{tr('ot.f.axis')}</th><th>Add</th><th>{tr('ot.f.prism')}</th></tr></thead>
             <tbody className="font-mono">
               {([['OD', rx.od], ['OG', og]] as const).map(([eye, e]) => (
@@ -738,7 +883,7 @@ export function PortalOrder() {
 
       {o.trackAttachments.length > 0 && (
         <section className="card p-4">
-          <p className="mb-2 text-sm font-bold text-content">{tr('ot.sec.files')}</p>
+          <SectionTitle icon={FileText}>{tr('ot.sec.files')}</SectionTitle>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {o.trackAttachments.map((a) => (
               <li key={a.id}>
@@ -754,7 +899,7 @@ export function PortalOrder() {
 
       {o.trackAnomalies.length > 0 && (
         <section className="card p-4">
-          <p className="mb-2 text-sm font-bold text-content">{tr('ot.tab.anomalies')}</p>
+          <SectionTitle icon={AlertTriangle}>{tr('ot.tab.anomalies')}</SectionTitle>
           <ul className="space-y-2">
             {o.trackAnomalies.map((a) => (
               <li key={a.id} className={`rounded-xl border p-3 text-sm ${a.status === 'OPEN' ? 'border-red-500/40 bg-red-500/5' : 'opacity-60'}`}>
@@ -768,7 +913,7 @@ export function PortalOrder() {
       )}
 
       <section className="card p-4">
-        <p className="mb-3 text-sm font-bold text-content">{tr('ot.timeline')}</p>
+        <SectionTitle icon={Timer}>{tr('ot.timeline')}</SectionTitle>
         <Timeline events={data.events} />
       </section>
 
@@ -823,9 +968,9 @@ export function PortalReturn() {
   const proof = useProof();
   return (
     <>
-      <h1 className="font-arcade text-xl text-content">{tr('pt.shipToStore')}</h1>
+      <PortalTitle>{tr('pt.shipToStore')}</PortalTitle>
       {!data?.length ? (
-        <p className="card p-6 text-center text-sm text-content-muted">{tr('pt.noneReady')}</p>
+        <Empty icon={Send} text={tr('pt.noneReady')} />
       ) : (
         <section className="card space-y-3 p-4">
           {stores.length > 1 && (

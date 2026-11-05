@@ -27,7 +27,6 @@ import {
   type StockRow,
 } from '../../features/optique/api';
 import { listSuppliers } from '../../features/management/api';
-import { PhotoUploader } from '../../features/optique/PhotoUploader';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateProductViews } from '../../lib/invalidate';
 import { formatCurrency, toLocalDatetimeString } from '../../lib/format';
@@ -37,6 +36,7 @@ import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 /** État commun aux deux formulaires du catalogue. */
 interface BaseState {
@@ -121,14 +121,6 @@ function useSaveProduct({
         ? await updateProduct(product.id, payload)
         : await createProduct(payload);
 
-      // Le serveur renvoie la fiche telle qu'il l'a enregistrée. Si la photo
-      // envoyée n'y figure pas, on le dit : mieux vaut un message clair qu'une
-      // vignette manquante sans explication.
-      if (base.photoUrl && !saved?.photoUrl) {
-        throw new Error(
-          "La photo n'a pas été conservée par le serveur. Réessayez dans un instant ; si le problème persiste, signalez-le.",
-        );
-      }
       if (applyStock && branchId && base.trackStock) {
         const delta = base.qty - (stockRow?.quantity ?? 0);
         if (delta !== 0 || base.minAlert !== (stockRow?.minAlert ?? 0)) {
@@ -207,12 +199,6 @@ export function FrameFormModal({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
         {/* Saisie */}
         <div className="space-y-4">
-          <PhotoUploader
-            photoUrl={base.photoUrl}
-            photos={base.photos}
-            onChange={({ photoUrl, photos }) => set({ photoUrl, photos })}
-          />
-
           <div className="grid grid-cols-2 gap-3">
             <Field label={tr('ui.CatalogForms.marque')}>
               <input
@@ -722,11 +708,6 @@ export function LensFormModal({
               <p className="text-sm text-content-muted">
                 {tr('ui.CatalogForms.facultatifSansPhotoLeCatalogue')}
               </p>
-              <PhotoUploader
-                photoUrl={base.photoUrl}
-                photos={base.photos}
-                onChange={({ photoUrl, photos }) => set({ photoUrl, photos })}
-              />
             </>
           )}
 
@@ -836,15 +817,7 @@ function GenericProductPreview({
 }) {
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
-      <div className="aspect-[4/3] w-full bg-surface-2">
-        {photoUrl ? (
-          <img src={photoUrl} alt={tr('ui.CatalogForms.apercu')} className="h-full w-full object-contain" />
-        ) : (
-          <div className="grid h-full place-items-center">
-            <Package className="h-8 w-8 text-content-faint" />
-          </div>
-        )}
-      </div>
+      <ProductSymbol category={category} className="aspect-[4/3] w-full" />
       <div className="p-3">
         <span className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
           {genericCategoryLabel(category)}
@@ -923,12 +896,6 @@ export function GenericProductFormModal({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
         {/* Saisie */}
         <div className="space-y-4">
-          <PhotoUploader
-            photoUrl={base.photoUrl}
-            photos={base.photos}
-            onChange={({ photoUrl, photos }) => set({ photoUrl, photos })}
-          />
-
           <div className="grid grid-cols-2 gap-3">
             <Field label={tr('ui.CatalogForms.nomDuProduit')}>
               <input

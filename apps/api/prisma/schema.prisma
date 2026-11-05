@@ -2772,6 +2772,9 @@ model TrackPackage {
   supplier         Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   fromCity         String?
   toCity           String?
+  /// Téléphones imprimés sur l'étiquette du colis.
+  senderPhone      String?
+  recipientPhone   String?
   carrierName      String?
   /// Compte transporteur (portail) à qui le colis est confié.
   carrierAccessId  String?

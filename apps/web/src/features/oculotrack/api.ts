@@ -27,6 +27,9 @@ export interface TrackPackageRow {
   status: 'PREPARING' | 'HANDED_TO_CARRIER' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
   fromCity: string | null;
   toCity: string | null;
+  /** Téléphones imprimés sur l'étiquette. */
+  senderPhone?: string | null;
+  recipientPhone?: string | null;
   carrierName: string | null;
   externalTracking: string | null;
   expectedAt: string | null;
@@ -176,6 +179,8 @@ export const ot = {
     (await api.post(`/oculotrack/packages/${id}/handover`, body)).data,
   receive: async (id: string, body: { checks: Record<string, { received: boolean; reference: boolean; quantity: boolean; condition: boolean }>; note?: string; photo?: string }) =>
     (await api.post(`/oculotrack/packages/${id}/receive`, body)).data,
+  updateContacts: async (id: string, body: { senderPhone: string; recipientPhone: string }) =>
+    (await api.patch(`/oculotrack/packages/${id}/contacts`, body)).data,
   cancelPackage: async (id: string) => (await api.post(`/oculotrack/packages/${id}/cancel`)).data,
   assignCarrier: async (id: string, accessId: string | null) => (await api.post(`/oculotrack/packages/${id}/carrier`, { accessId })).data,
   resolveToken: async (token: string) => (await api.get<{ packageId: string }>(`/oculotrack/resolve/${encodeURIComponent(token)}`)).data.packageId,

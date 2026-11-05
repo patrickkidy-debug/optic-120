@@ -222,6 +222,9 @@ export const trackPackageCreateSchema = z.object({
   supplierId: z.string().uuid(),
   fromCity: optText(80),
   toCity: optText(80),
+  /** Téléphones imprimés sur l'étiquette (expéditeur, destinataire). */
+  senderPhone: optText(30),
+  recipientPhone: optText(30),
   carrierName: optText(120),
   externalTracking: optText(80),
   expectedAt: optDate,
@@ -229,6 +232,12 @@ export const trackPackageCreateSchema = z.object({
   note: optText(1000),
 });
 export type TrackPackageCreateInput = z.infer<typeof trackPackageCreateSchema>;
+
+/** Modification des téléphones d'un colis (avant ou après impression). */
+export const trackPackageContactsSchema = z.object({
+  senderPhone: optText(30),
+  recipientPhone: optText(30),
+});
 
 /** Remise au transporteur (magasin à l'aller, laboratoire au retour). */
 export const trackHandoverSchema = trackProofSchema.extend({

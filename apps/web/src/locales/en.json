@@ -1389,7 +1389,7 @@
       "indiceDeRefraction": "Refractive index",
       "choisissezDAbordLeMateriau": "Choose the material first to narrow down the available indices.",
       "gammePremiumMiseEnAvant": "Premium range (highlighted in the catalogue)",
-      "facultatifSansPhotoLeCatalogue": "Optional: without a photo, the catalogue uses the illustration for the chosen lens type.",
+      "facultatifSansPhotoLeCatalogue": "The catalogue shows this lens with the illustration of its type, in OculoSaaS colours.",
       "precedent": "Previous",
       "suivant": "Next",
       "ajouterLeVerre": "Add lens",
@@ -5572,7 +5572,10 @@
       "from": "Sender",
       "to": "Recipient",
       "content": "Contents",
-      "date": "Date"
+      "date": "Date",
+      "senderPhone": "Sender phone",
+      "recipientPhone": "Recipient phone",
+      "tel": "Tel."
     },
     "add": "Add",
     "noFiles": "No photos or documents.",
@@ -5642,7 +5645,9 @@
     "portalAccess": "Portal access",
     "noPortalForLab": "{{name}} has no OculoTrack portal access yet: invite them so they can scan and confirm receipt.",
     "scanFromPhoto": "Take a photo of the QR code",
-    "qrNotFound": "QR code not read: take the photo closer and sharper."
+    "qrNotFound": "QR code not read: take the photo closer and sharper.",
+    "editPhones": "Edit phone numbers",
+    "save": "Save"
   },
   "pt": {
     "portal": "Partner portal",
@@ -5720,7 +5725,15 @@
     "noneReady": "No orders ready for return.",
     "expectedStore": "Expected at store",
     "confirmShip": "SHIP ({{n}})",
-    "returnSent": "Return parcel shipped ✓ — the store has been notified."
+    "returnSent": "Return parcel shipped ✓ — the store has been notified.",
+    "roleLab": "Lab",
+    "roleCarrier": "Carrier",
+    "hello": "Hello",
+    "feat": {
+      "scan": "QR parcel scan",
+      "offline": "Works offline",
+      "proof": "Photo and signature"
+    }
   },
   "pub": {
     "privacy": "Secure OculoTrack tracking — no medical data is shown.",

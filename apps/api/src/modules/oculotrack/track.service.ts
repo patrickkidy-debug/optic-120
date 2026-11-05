@@ -231,6 +231,8 @@ export async function createOutboundPackage(
     supplierId: string;
     fromCity?: string | null;
     toCity?: string | null;
+    senderPhone?: string | null;
+    recipientPhone?: string | null;
     carrierName?: string | null;
     externalTracking?: string | null;
     expectedAt?: string | null;
@@ -239,7 +241,7 @@ export async function createOutboundPackage(
   },
   actor: Actor,
 ) {
-  const supplier = await db.supplier.findFirst({ where: { id: input.supplierId }, select: { id: true, name: true, city: true } });
+  const supplier = await db.supplier.findFirst({ where: { id: input.supplierId }, select: { id: true, name: true, city: true, phone: true } });
   if (!supplier) throw notFound('Fournisseur introuvable');
   const ids = [...new Set(input.lensOrderIds)];
   const orders = await db.lensOrder.findMany({
@@ -270,6 +272,8 @@ export async function createOutboundPackage(
       supplierId: supplier.id,
       fromCity: input.fromCity || null,
       toCity: input.toCity || supplier.city || null,
+      senderPhone: input.senderPhone || null,
+      recipientPhone: input.recipientPhone || supplier.phone || null,
       carrierName: input.carrierName || null,
       externalTracking: input.externalTracking || null,
       expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,
@@ -454,7 +458,12 @@ export async function createReturn(
   if (orders.length !== ids.length) throw notFound('Commande introuvable');
   const notReady = orders.find((o) => o.trackStage !== 'READY_FOR_RETURN');
   if (notReady) throw badRequest(`La commande ${notReady.trackCode} n'est pas « prête pour retour »`);
-  const supplier = await db.supplier.findFirst({ where: { id: supplierId }, select: { city: true } });
+  const supplier = await db.supplier.findFirst({ where: { id: supplierId }, select: { city: true, phone: true } });
+  // Destinataire du retour : le magasin principal (sinon le premier magasin joignable).
+  const tenant = await db.tenant.findFirst({ where: { id: tenantId }, select: { mainBranchId: true } });
+  const branch =
+    (tenant?.mainBranchId && (await db.branch.findFirst({ where: { id: tenant.mainBranchId }, select: { phone: true } }))) ||
+    (await db.branch.findFirst({ where: { phone: { not: null } }, select: { phone: true } }));
   const number = await nextTrackNumber(db, tenantId, 'PKG');
   const pkg = await db.trackPackage.create({
     data: {
@@ -464,6 +473,8 @@ export async function createReturn(
       status: 'PREPARING',
       supplierId,
       fromCity: supplier?.city ?? null,
+      senderPhone: supplier?.phone ?? null,
+      recipientPhone: branch?.phone ?? null,
       carrierName: input.carrierName || null,
       externalTracking: input.externalTracking || null,
       expectedAt: input.expectedAt ? new Date(input.expectedAt) : null,

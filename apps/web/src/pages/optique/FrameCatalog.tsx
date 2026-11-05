@@ -22,6 +22,7 @@ import { formatCurrency } from '../../lib/format';
 import { Badge, EmptyState } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 /** Attributs monture d'un produit, typés et sûrs même si le JSON est vide. */
 export function frameAttrs(p: Product): FrameAttributes {
@@ -47,16 +48,9 @@ export interface FrameActions {
   onDelete?: (p: Product) => void;
 }
 
-/** Vignette : la photo si elle existe, sinon un repère visuel neutre. */
+/** Vignette : le symbole de la famille (les photos produit ne sont plus utilisées). */
 function FrameThumb({ p, className = '' }: { p: Product; className?: string }) {
-  if (p.photoUrl) {
-    return <img src={p.photoUrl} alt={p.name} loading="lazy" className={`object-contain ${className}`} />;
-  }
-  return (
-    <div className={`grid place-items-center bg-surface-2 ${className}`}>
-      <Glasses className="h-8 w-8 text-content-faint" />
-    </div>
-  );
+  return <ProductSymbol category={p.category ?? 'MONTURE'} className={className} />;
 }
 
 /** Carte visuelle d'une monture : photo dominante, puis l'essentiel. */
@@ -453,37 +447,12 @@ export function FrameCatalog({
 /** Fiche détaillée d'une monture (galerie + caractéristiques). */
 export function FrameDetail({ p, stock }: { p: Product; stock?: StockRow }) {
   const a = frameAttrs(p);
-  const gallery = [p.photoUrl, ...(p.photos ?? [])].filter(Boolean) as string[];
-  const [active, setActive] = useState(0);
   const st = stockState(stock);
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div>
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl border bg-surface-2">
-          {gallery.length > 0 ? (
-            <img src={gallery[Math.min(active, gallery.length - 1)]} alt={p.name} className="h-full w-full object-contain" />
-          ) : (
-            <div className="grid h-full place-items-center">
-              <Glasses className="h-10 w-10 text-content-faint" />
-            </div>
-          )}
-        </div>
-        {gallery.length > 1 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {gallery.map((src, i) => (
-              <button
-                key={i}
-                onClick={() => setActive(i)}
-                className={`h-14 w-14 overflow-hidden rounded-lg border transition ${
-                  i === active ? 'border-primary ring-2 ring-primary/30' : 'hover:border-primary'
-                }`}
-              >
-                <img src={src} alt={tr('ui.FrameCatalog.vueV', { v: i + 1 })} className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
+        <ProductSymbol category="MONTURE" className="aspect-[4/3] w-full rounded-xl" />
       </div>
 
       <div>
@@ -549,15 +518,7 @@ export function FramePreview({
   const swatch = FRAME_COLORS.find((c) => c.name === color);
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
-      <div className="aspect-[4/3] w-full bg-surface-2">
-        {photoUrl ? (
-          <img src={photoUrl} alt={tr('ui.FrameCatalog.apercu')} className="h-full w-full object-contain" />
-        ) : (
-          <div className="grid h-full place-items-center">
-            <Glasses className="h-8 w-8 text-content-faint" />
-          </div>
-        )}
-      </div>
+      <ProductSymbol category="MONTURE" className="aspect-[4/3] w-full" />
       <div className="p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

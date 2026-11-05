@@ -26,6 +26,7 @@ import { tr } from '../../lib/tr';
 import { openLensOrderSheet } from '../../features/optique/lensOrderSheet';
 import { listMeasurements } from '../../features/optique/measurements';
 import type { CompanyInfo } from '../../features/optique/saleDocument';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 /** Étape WhatsApp la plus pertinente selon l'avancement de la commande. */
 function stageForStatus(status: LensOrderStatus): SaleWaStage {
@@ -201,13 +202,7 @@ export function LensOrderDetail({
 
           {order.frameProduct && (
             <div className="flex items-center gap-2 rounded-xl border p-3">
-              <div className="grid h-12 w-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-2">
-                {order.frameProduct.photoUrl ? (
-                  <img src={order.frameProduct.photoUrl} alt="" className="h-full w-full object-contain" />
-                ) : (
-                  <Glasses className="h-5 w-5 text-content-faint" />
-                )}
-              </div>
+              <ProductSymbol category="MONTURE" className="h-12 w-14 shrink-0 rounded-lg" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-content">
                   {order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}

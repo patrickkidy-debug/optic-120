@@ -49,6 +49,7 @@ import { formatCurrency, formatDate, currencySymbol } from '../../lib/format';
 import { Button, Field, Modal } from '../../components/ui';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
+import { ProductSymbol } from '../../components/brand/ProductSymbol';
 
 const LENS_CAT: Record<LensOrderCategory, { label: string; icon: LucideIcon }> = {
   VERRES: { get label() { return tr('ui.LensOrderForm.verres'); }, icon: Glasses },
@@ -135,13 +136,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
   if (value) {
     return (
       <div className="flex items-center gap-2 rounded-xl border bg-surface-2 p-2">
-        <div className="grid h-10 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-3">
-          {value.photoUrl ? (
-            <img src={value.photoUrl} alt="" className="h-full w-full object-contain" />
-          ) : (
-            <Glasses className="h-4 w-4 text-content-faint" />
-          )}
-        </div>
+        <ProductSymbol category="MONTURE" className="h-10 w-12 shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm text-content">
             {value.brand ? `${value.brand} · ` : ''}
@@ -184,13 +179,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
                 }}
                 className="flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition hover:border-primary"
               >
-                <div className="grid h-8 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-surface-2">
-                  {p.photoUrl ? (
-                    <img src={p.photoUrl} alt="" className="h-full w-full object-contain" />
-                  ) : (
-                    <Glasses className="h-3.5 w-3.5 text-content-faint" />
-                  )}
-                </div>
+                <ProductSymbol category="MONTURE" className="h-8 w-10 shrink-0 rounded-md" />
                 <span className="truncate">{p.brand ? `${p.brand} · ` : ''}{p.name}</span>
               </button>
             ))

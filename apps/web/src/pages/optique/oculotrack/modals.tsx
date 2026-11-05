@@ -11,6 +11,7 @@ import { Button, Field, Modal } from '../../../components/ui';
 import { apiErrorMessage } from '../../../lib/api';
 import { formatDate } from '../../../lib/format';
 import { tr } from '../../../lib/tr';
+import { useAuthStore } from '../../../store/auth';
 
 const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 const fmt = (n: number | null) => (n == null ? '—' : String(n).replace('.', ','));
@@ -121,6 +122,13 @@ export function CreatePackageModal({ onClose, onDone }: { onClose: () => void; o
   });
   const [toCity, setToCity] = useState('');
   useEffect(() => { if (supplier?.city) setToCity(supplier.city); }, [supplier]);
+  // Téléphones de l'étiquette : celui du magasin est mémorisé d'un colis à l'autre.
+  const storePhone = useAuthStore((s) => s.user?.tenantContactPhone) ?? '';
+  const [senderPhone, setSenderPhone] = useState(() => {
+    try { return localStorage.getItem('ot_sender_phone') || storePhone; } catch { return storePhone; }
+  });
+  const [recipientPhone, setRecipientPhone] = useState('');
+  useEffect(() => { setRecipientPhone(supplier?.phone ?? ''); }, [supplier]);
   const [carrierName, setCarrierName] = useState('');
   const [externalTracking, setExternalTracking] = useState('');
   const [expectedAt, setExpectedAt] = useState(inDays(supplier?.deliveryDays ? Math.min(supplier.deliveryDays, 7) : 2));
@@ -128,12 +136,17 @@ export function CreatePackageModal({ onClose, onDone }: { onClose: () => void; o
 
   const save = useMutation({
     mutationFn: () => {
-      try { localStorage.setItem('ot_from_city', fromCity); } catch { /* stockage indisponible */ }
+      try {
+        localStorage.setItem('ot_from_city', fromCity);
+        localStorage.setItem('ot_sender_phone', senderPhone);
+      } catch { /* stockage indisponible */ }
       return ot.createPackage({
         lensOrderIds: [...sel],
         supplierId,
         fromCity,
         toCity,
+        senderPhone,
+        recipientPhone,
         carrierName,
         externalTracking,
         expectedAt,
@@ -180,6 +193,8 @@ export function CreatePackageModal({ onClose, onDone }: { onClose: () => void; o
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={tr('ot.f.fromCity')}><input className="input" value={fromCity} onChange={(e) => setFromCity(e.target.value)} placeholder="Daloa" /></Field>
           <Field label={tr('ot.f.toCity')}><input className="input" value={toCity} onChange={(e) => setToCity(e.target.value)} placeholder="Abidjan" /></Field>
+          <Field label={tr('ot.f.senderPhone')}><input className="input" type="tel" value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} placeholder="+225 07 00 00 00 00" /></Field>
+          <Field label={tr('ot.f.recipientPhone')}><input className="input" type="tel" value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder="+225 05 00 00 00 00" /></Field>
           <Field label={tr('ot.f.carrier')}><input className="input" value={carrierName} onChange={(e) => setCarrierName(e.target.value)} placeholder={tr('ot.f.carrierPh')} /></Field>
           <Field label={tr('ot.f.tracking')}><input className="input" value={externalTracking} onChange={(e) => setExternalTracking(e.target.value)} placeholder="TRP-458921" /></Field>
           <Field label={tr('ot.f.expectedLab')}><input className="input" type="date" value={expectedAt} onChange={(e) => setExpectedAt(e.target.value)} /></Field>

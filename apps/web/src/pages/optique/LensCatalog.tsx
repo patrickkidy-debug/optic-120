@@ -57,11 +57,7 @@ function LensCard({
     >
       <div className="relative bg-surface-2 p-3">
         {/* Photo du fabricant si fournie, sinon l'illustration générée */}
-        {p.photoUrl ? (
-          <img src={p.photoUrl} alt={p.name} loading="lazy" className="mx-auto h-24 object-contain" />
-        ) : (
-          <LensVisual family={a.family} className="mx-auto h-24 w-full" />
-        )}
+        <LensVisual family={a.family} className="mx-auto h-24 w-full" />
         {a.premium && (
           <span className="absolute right-2 top-2">
             <Badge tone="warning">
@@ -364,11 +360,7 @@ export function LensPreview({
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
       <div className="bg-surface-2 p-3">
-        {photoUrl ? (
-          <img src={photoUrl} alt={tr('ui.LensCatalog.apercu')} className="mx-auto h-24 object-contain" />
-        ) : (
-          <LensVisual family={attrs.family} className="mx-auto h-24 w-full" />
-        )}
+        <LensVisual family={attrs.family} className="mx-auto h-24 w-full" />
       </div>
       <div className="p-3">
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-primary">

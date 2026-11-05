@@ -30,7 +30,6 @@ import {
 import { listSuppliers } from '../../features/management/api';
 import { ProductImportModal } from '../../features/optique/import/ProductImportModal';
 import { exportProductsExcel, exportProductsPdf } from '../../features/optique/import/exportProducts';
-import { PhotoUploader } from '../../features/optique/PhotoUploader';
 import { useUIStore } from '../../store/ui';
 import { usePermission, useAuthStore } from '../../store/auth';
 import { apiErrorMessage } from '../../lib/api';
@@ -732,8 +731,9 @@ function ProductModal({
     Boolean(attrs.index && !LENS_INDICES.some((i) => i.id === attrs.index)),
   );
   const [supplier, setSupplier] = useState(attrs.supplier ?? '');
-  const [photoUrl, setPhotoUrl] = useState<string>(product?.photoUrl ?? '');
-  const [photos, setPhotos] = useState<string[]>(product?.photos ?? []);
+  // Plus de téléversement de photo : on conserve celles déjà enregistrées.
+  const photoUrl = product?.photoUrl ?? '';
+  const photos = product?.photos ?? [];
   const [supplierOther, setSupplierOther] = useState(false);
   // Stock du magasin actif : quantité + seuil d'alerte, réglables dès la création.
   const [qty, setQty] = useState(stockRow?.quantity ?? 0);
@@ -871,15 +871,6 @@ function ProductModal({
   return (
     <Modal open onClose={onClose} title={product ? tr('ui.ProductsPage.modifierLeProduit') : tr('ui.ProductsPage.nouveauProduit')}>
       <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
-        {/* Gallery photo du produit */}
-        <PhotoUploader
-          photoUrl={photoUrl}
-          photos={photos}
-          onChange={(next) => {
-            setPhotoUrl(next.photoUrl);
-            setPhotos(next.photos);
-          }}
-        />
 
         <Field label={tr('ui.ProductsPage.nomDuProduit')}>
           <input className="input" {...register('name')} />
