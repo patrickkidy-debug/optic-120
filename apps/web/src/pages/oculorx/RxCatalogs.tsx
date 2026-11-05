@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileUp, KeyRound, MessageCircle, Pencil, Plus, Search, Settings2, Store } from 'lucide-react';
+import { Download, FileUp, KeyRound, MessageCircle, Pencil, Plus, Search, Settings2, Store, Trash2, X } from 'lucide-react';
 import {
   RX_GEOMETRIES,
   RX_GEOMETRY_LABELS,
@@ -34,6 +34,15 @@ export function RxCatalogs() {
   const [importing, setImporting] = useState(false);
   const [coef, setCoef] = useState(false);
   const [invite, setInvite] = useState<string | null>(null);
+  const qcRoot = useQueryClient();
+  const clear = useMutation({
+    mutationFn: (id: string) => rx.clearCatalog(id),
+    onSuccess: (r) => {
+      qcRoot.invalidateQueries({ queryKey: ['rx'] });
+      alert(`${r.deleted} verre(s) supprimé(s)${r.deactivated ? `, ${r.deactivated} désactivé(s) car déjà commandé(s)` : ''}.`);
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
   const canPortal = usePermission('oculotrack.portal');
 
   return (
@@ -42,8 +51,8 @@ export function RxCatalogs() {
         title="Fournisseurs"
         actions={manage && (
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" onClick={() => setCoef(true)}><Settings2 className="h-4 w-4" /> Coefficients et suppléments</Button>
-            <Button variant="outline" onClick={() => setImporting(true)}><FileUp className="h-4 w-4" /> Importer un catalogue</Button>
+            <Button variant="ghost" onClick={() => setCoef(true)}><Settings2 className="h-4 w-4" /> Suppléments et TVA</Button>
+            {margins && <Button variant="outline" onClick={() => setImporting(true)}><FileUp className="h-4 w-4" /> Importer un catalogue</Button>}
             <Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> Ajouter un fournisseur</Button>
           </div>
         )}
@@ -88,6 +97,17 @@ export function RxCatalogs() {
                           </button>
                         )}
                         <button type="button" className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label="Modifier" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
+                        {s._count.rxLenses > 0 && (
+                          <button
+                            type="button"
+                            className="btn-ghost h-8 w-8 rounded-lg p-0 text-danger"
+                            aria-label="Supprimer le catalogue importé"
+                            title="Supprimer le catalogue importé"
+                            onClick={() => confirm(`Supprimer les ${s._count.rxLenses} verre(s) importés de ${s.name} ? Les verres déjà commandés sont seulement désactivés.`) && clear.mutate(s.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -141,7 +161,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
       {view === 'shop' && (
         <p className="mb-3 text-xs text-content-muted">
           Donnez à chaque verre son nom commercial en boutique et son prix de vente à la paire : OculoRX calcule alors le bénéfice réel (prix boutique − prix d'achat fournisseur).
-          Sans prix boutique, le prix conseillé par le coefficient est utilisé.
+          Un verre sans prix boutique n'a pas de prix de vente : il est à fixer avant de le vendre.
         </p>
       )}
       <div className="mb-3 flex flex-wrap gap-2">
@@ -177,7 +197,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
                 <th className={th}>Traitement</th>
                 <th className={th}>Plage de fabrication</th>
                 {margins && <th className={`${th} text-right`}>Achat / paire</th>}
-                <th className={`${th} text-right`}>{view === 'shop' ? 'Prix boutique / paire' : 'Vente conseillée / paire'}</th>
+                <th className={`${th} text-right`}>Prix boutique / paire</th>
                 {margins && <th className={`${th} text-right`}>{view === 'shop' ? 'Bénéfice réel / paire' : 'Marge / paire'}</th>}
                 {manage && <th className={th}>{view === 'shop' ? '' : 'Actif'}</th>}
               </tr>
@@ -219,8 +239,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
                     </td>
                   )}
                   <td className={`${td} text-right`}>
-                    <Money value={l.suggestedPrice * 2} />
-                    {view === 'shop' && !l.shopPrice && <span className="block text-[10px] text-content-faint">coefficient</span>}
+                    {l.suggestedPrice != null ? <Money value={l.suggestedPrice * 2} /> : <span className="text-xs italic text-content-faint">à fixer</span>}
                   </td>
                   {margins && <td className={`${td} text-right font-semibold`}><Money value={l.margin != null ? l.margin * 2 : null} /></td>}
                   {manage && (
@@ -255,9 +274,8 @@ function ShopLensModal({ lens, margins, onClose }: { lens: RxLens; margins: bool
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rx'] }); onClose(); },
     onError: (e) => alert(apiErrorMessage(e)),
   });
-  const pair = pairPrice > 0 ? pairPrice : lens.coefficientPrice * 2;
   const buyPair = lens.purchasePrice != null ? lens.purchasePrice * 2 : null;
-  const profit = buyPair != null ? pair - buyPair : null;
+  const profit = buyPair != null && pairPrice > 0 ? pairPrice - buyPair : null;
   return (
     <Modal open onClose={onClose} title="Catalogue boutique" size="md">
       <div className="space-y-3">
@@ -268,9 +286,8 @@ function ShopLensModal({ lens, margins, onClose }: { lens: RxLens; margins: bool
         </div>
         <Field label="Nom commercial en boutique"><input className="input" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex. Verre Confort Écran 1.56" maxLength={200} /></Field>
         <Field label="Prix de vente de la paire (FCFA)">
-          <NumberInput min={0} value={pairPrice} onChange={setPairPrice} className="input text-right font-mono" placeholder={String(lens.coefficientPrice * 2)} />
+          <NumberInput min={0} value={pairPrice} onChange={setPairPrice} className="input text-right font-mono" placeholder="ex. 85000" />
         </Field>
-        <p className="text-xs text-content-muted">Laisser vide pour utiliser le prix conseillé par le coefficient ({(lens.coefficientPrice * 2).toLocaleString('fr-FR')} FCFA la paire).</p>
         {margins && profit != null && (
           <p className={clsx('rounded-lg px-3 py-2 text-sm font-bold', profit < 0 ? 'bg-[color:var(--danger)]/10 text-danger' : 'bg-[color:var(--success)]/10 text-success')}>
             Bénéfice réel par paire : {profit < 0 ? '− ' : ''}{Math.abs(profit).toLocaleString('fr-FR')} FCFA (achat {buyPair!.toLocaleString('fr-FR')} FCFA la paire)
@@ -298,7 +315,6 @@ function SupplierModal({ supplier, onClose }: { supplier: RxSupplier | null; onC
     phone: supplier?.phone ?? '',
     whatsapp: supplier?.whatsapp ?? '',
     orderEmail: supplier?.orderEmail ?? '',
-    rxCoefficient: supplier?.rxCoefficient ?? null,
     rxVatRate: supplier?.rxVatRate ?? null,
   });
   const set = (p: Partial<RxSupplierInput>) => setF((x) => ({ ...x, ...p }));
@@ -320,7 +336,6 @@ function SupplierModal({ supplier, onClose }: { supplier: RxSupplier | null; onC
         <Field label="Téléphone"><input className="input" type="tel" value={f.phone ?? ''} onChange={(e) => set({ phone: e.target.value })} /></Field>
         <Field label="WhatsApp (commandes et suivi)"><input className="input" type="tel" value={f.whatsapp ?? ''} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+221 77 000 00 00" /></Field>
         <Field label="Email de commande"><input className="input" type="email" value={f.orderEmail ?? ''} onChange={(e) => set({ orderEmail: e.target.value })} placeholder="commandes@fournisseur.com" /></Field>
-        <Field label="Coefficient de vente propre (optionnel)"><input className="input" inputMode="decimal" value={f.rxCoefficient ?? ''} onChange={(e) => set({ rxCoefficient: num(e.target.value) })} placeholder="ex. 2,6" /></Field>
         <Field label="TVA sur suppléments (%) (optionnel)"><input className="input" inputMode="decimal" value={f.rxVatRate ?? ''} onChange={(e) => set({ rxVatRate: num(e.target.value) })} placeholder="18" /></Field>
       </div>
       <div className="mt-4 flex justify-end gap-2">
@@ -343,6 +358,16 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
     onSuccess: (r) => { setResult(r); qc.invalidateQueries({ queryKey: ['rx'] }); },
     onError: (e) => setError(apiErrorMessage(e)),
   });
+
+  // Remise à zéro : un nouveau `key` vide aussi le champ fichier du navigateur.
+  const [fileKey, setFileKey] = useState(0);
+  function clearFile() {
+    setFileName('');
+    setParsed(null);
+    setError('');
+    setResult(null);
+    setFileKey((k) => k + 1);
+  }
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -382,11 +407,18 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
               <Button variant="ghost" onClick={downloadTemplate}><Download className="h-4 w-4" /> Fichier modèle</Button>
             </div>
           </div>
+          {fileName && (
+            <div className="flex items-center gap-3 rounded-xl border bg-surface-2/60 px-3 py-2 text-sm">
+              <FileUp className="h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate font-semibold text-content">{fileName}</span>
+              <Button variant="ghost" onClick={clearFile}><X className="h-4 w-4" /> Retirer le fichier</Button>
+            </div>
+          )}
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition hover:border-primary">
             <FileUp className="h-7 w-7 text-primary" />
-            <span className="text-sm font-semibold text-content">{fileName || 'Choisir un fichier CSV ou Excel'}</span>
+            <span className="text-sm font-semibold text-content">{fileName ? 'Choisir un autre fichier' : 'Choisir un fichier CSV ou Excel'}</span>
             <span className="text-xs text-content-faint">Colonnes : référence, désignation, géométrie, indice, matière, traitement, diamètre, sph/cyl/add min-max, fabrication (Stock ou RX), prix_achat_paire_ht, et facultativement nom_commercial et prix_vente_paire (catalogue boutique). Prix à la paire, comme sur les grilles fournisseurs. Séparateur « ; » ou « , », décimales avec virgule acceptées.</span>
-            <input type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={(e) => void onFile(e.target.files?.[0])} />
+            <input key={fileKey} type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={(e) => void onFile(e.target.files?.[0])} />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
           {parsed && (
@@ -440,47 +472,32 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
 function CoefficientModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const { settings } = useRx();
-  const [f, setF] = useState({ coefficient: '2,8', vatRate: '18', mountedFee: '2500', urgentFee: '3000', geo: {} as Record<string, string> });
+  const [f, setF] = useState({ vatRate: '18', mountedFee: '2500', urgentFee: '3000' });
   useEffect(() => {
     if (!settings) return;
-    const s = (n: number) => String(n).replace('.', ',');
-    setF({
-      coefficient: s(settings.coefficient),
-      vatRate: s(settings.vatRate),
-      mountedFee: String(settings.mountedFee),
-      urgentFee: String(settings.urgentFee),
-      geo: Object.fromEntries(Object.entries(settings.geometryCoefficients).map(([k, v]) => [k, v != null ? s(v) : ''])),
-    });
+    setF({ vatRate: String(settings.vatRate).replace('.', ','), mountedFee: String(settings.mountedFee), urgentFee: String(settings.urgentFee) });
   }, [settings]);
   const n = (v: string) => Number(v.replace(',', '.'));
   const save = useMutation({
+    // Les coefficients ne sont plus utilisés : on renvoie simplement les valeurs enregistrées.
     mutationFn: () =>
       rx.saveSettings({
-        coefficient: n(f.coefficient),
+        coefficient: settings?.coefficient ?? 2.8,
+        geometryCoefficients: {},
         vatRate: n(f.vatRate),
         mountedFee: Math.round(n(f.mountedFee)),
         urgentFee: Math.round(n(f.urgentFee)),
-        geometryCoefficients: Object.fromEntries(Object.entries(f.geo).filter(([, v]) => v.trim() !== '').map(([k, v]) => [k, n(v)])),
       }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rx'] }); onClose(); },
     onError: (e) => alert(apiErrorMessage(e)),
   });
   return (
-    <Modal open onClose={onClose} title="Coefficients et suppléments" size="lg">
-      <p className="mb-3 text-sm text-content-muted">Prix de vente conseillé = prix d'achat × coefficient, arrondi aux 500 FCFA. Priorité : coefficient du fournisseur, puis de la géométrie, puis le coefficient global. Les verres sont exonérés de TVA : seule la part des suppléments (taillé-monté, urgence) est taxée sur les relevés.</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field label="Coefficient global"><input className="input text-right font-mono" value={f.coefficient} onChange={(e) => setF({ ...f, coefficient: e.target.value })} /></Field>
+    <Modal open onClose={onClose} title="Suppléments et TVA" size="md">
+      <p className="mb-3 text-sm text-content-muted">Montants facturés par le fournisseur pour les options. Les verres sont exonérés de TVA : seule la part des suppléments est taxée sur les relevés. Les prix de vente se fixent dans le catalogue boutique.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="TVA sur suppléments (%)"><input className="input text-right font-mono" value={f.vatRate} onChange={(e) => setF({ ...f, vatRate: e.target.value })} /></Field>
         <Field label="Taillé-monté (FCFA)"><input className="input text-right font-mono" value={f.mountedFee} onChange={(e) => setF({ ...f, mountedFee: e.target.value })} /></Field>
         <Field label="Urgence (FCFA)"><input className="input text-right font-mono" value={f.urgentFee} onChange={(e) => setF({ ...f, urgentFee: e.target.value })} /></Field>
-      </div>
-      <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-content-faint">Par géométrie (laisser vide = global)</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {RX_GEOMETRIES.map((g) => (
-          <Field key={g} label={RX_GEOMETRY_LABELS[g]}>
-            <input className="input text-right font-mono" value={f.geo[g] ?? ''} placeholder={f.coefficient} onChange={(e) => setF({ ...f, geo: { ...f.geo, [g]: e.target.value } })} />
-          </Field>
-        ))}
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Annuler</Button>

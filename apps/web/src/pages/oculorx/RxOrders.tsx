@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link2, Mail, MessageCircle, Printer, Search } from 'lucide-react';
+import { Link2, Mail, MessageCircle, Package, Printer, Search } from 'lucide-react';
 import { RX_FRAME_LABELS, RX_NEXT_STATUSES, RX_STATUS_LABELS, rxDiopter, type RxFrameType, type RxStatus } from '@oculo/shared-types';
 import { rx, type RxOrder } from '../../features/oculorx/api';
 import { printOrderSheet } from '../../features/oculorx/print';
@@ -11,7 +11,7 @@ import { formatDate, formatDateTime } from '../../lib/format';
 import { useAuthStore } from '../../store/auth';
 import { Money, Panel, StatusBadge, td, th, useRx } from './ui';
 import { LensLinks } from './LensLinks';
-import { openWhatsapp, orderWhatsappText, waNumber } from '../../features/oculorx/whatsapp';
+import { openWhatsapp, orderWhatsappText, ordersWhatsappText, waNumber } from '../../features/oculorx/whatsapp';
 
 const FILTERS = [
   { id: '', label: 'Toutes' },
@@ -27,6 +27,11 @@ export function RxOrders() {
   const [to, setTo] = useState('');
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<RxOrder | null>(null);
+  // Envoi groupé : commandes cochées (même fournisseur).
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const today = new Date().toISOString().slice(0, 10);
   const { data: suppliers } = useQuery({ queryKey: ['rx', 'suppliers'], queryFn: rx.suppliers });
   const { data: orders, isLoading } = useQuery({
     queryKey: ['rx', 'orders', status, supplierId, from, to, q],
@@ -34,6 +39,21 @@ export function RxOrders() {
   });
   // Totaux de la sélection, hors commandes annulées ou retournées.
   const counted = (orders ?? []).filter((o) => o.status !== 'CANCELLED' && o.status !== 'RETURNED');
+  const picked = (orders ?? []).filter((o) => sel.has(o.id));
+  const pickedSupplier = picked[0]?.supplier;
+  const mixed = new Set(picked.map((o) => o.supplier.id)).size > 1;
+  const toggle = (o: RxOrder) => setSel((s) => { const n = new Set(s); n.has(o.id) ? n.delete(o.id) : n.add(o.id); return n; });
+  /** Commandes envoyées aujourd'hui, par fournisseur : sélection en un clic. */
+  const todaySent = (orders ?? []).filter((o) => o.status === 'SENT' && o.createdAt.slice(0, 10) === today);
+  const pack = useMutation({
+    mutationFn: () => rx.packageOrders(picked.map((o) => o.id)),
+    onSuccess: (p) => {
+      setSel(new Set());
+      qc.invalidateQueries({ queryKey: ['rx'] });
+      alert(`Colis ${p.number} créé : le fournisseur le voit sur son portail. Imprimez l'étiquette depuis OculoTrack.`);
+    },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
   const total = (k: 'purchasePrice' | 'salePrice' | 'margin') => counted.reduce((s, o) => s + (o[k] ?? 0), 0);
 
   return (
@@ -60,12 +80,46 @@ export function RxOrders() {
         </div>
       </Panel>
 
+      {/* Envoi groupé */}
+      <section className="card flex flex-wrap items-center gap-2 p-3">
+        <Package className="h-5 w-5 text-primary" />
+        <p className="min-w-0 flex-1 text-sm text-content-muted">
+          {picked.length
+            ? mixed
+              ? 'Sélectionnez les commandes d\'un seul fournisseur.'
+              : <><b className="text-content">{picked.length}</b> commande(s) pour <b className="text-content">{pickedSupplier?.name}</b></>
+            : 'Cochez les commandes du jour pour les envoyer ensemble au fournisseur.'}
+        </p>
+        {!picked.length && todaySent.length > 0 && (
+          <Button variant="ghost" onClick={() => setSel(new Set(todaySent.filter((o) => o.supplier.id === todaySent[0].supplier.id).map((o) => o.id)))}>
+            Sélectionner celles du jour ({todaySent.filter((o) => o.supplier.id === todaySent[0].supplier.id).length})
+          </Button>
+        )}
+        {picked.length > 0 && !mixed && (
+          <>
+            <Button
+              variant="outline"
+              disabled={!waNumber(pickedSupplier ?? {})}
+              title={waNumber(pickedSupplier ?? {}) ? undefined : 'Ajoutez le WhatsApp du fournisseur'}
+              onClick={() => openWhatsapp(waNumber(pickedSupplier!)!, ordersWhatsappText(picked, user?.tenantName ?? 'Magasin'))}
+            >
+              <MessageCircle className="h-4 w-4" /> WhatsApp
+            </Button>
+            <Button loading={pack.isPending} onClick={() => pack.mutate()}>
+              <Package className="h-4 w-4" /> Envoyer via le portail (colis)
+            </Button>
+            <Button variant="ghost" onClick={() => setSel(new Set())}>Vider</Button>
+          </>
+        )}
+      </section>
+
       <section className="card overflow-hidden p-0">
         {isLoading ? <PageLoader /> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-sm">
               <thead>
                 <tr className="border-b">
+                  <th className={`${th} w-8`} />
                   <th className={th}>N° / date</th>
                   <th className={th}>Patient</th>
                   <th className={th}>Fournisseur</th>
@@ -79,7 +133,10 @@ export function RxOrders() {
               </thead>
               <tbody>
                 {(orders ?? []).map((o) => (
-                  <tr key={o.id} onClick={() => setOpen(o)} className="cursor-pointer border-b last:border-0 hover:bg-primary-soft/30">
+                  <tr key={o.id} onClick={() => setOpen(o)} className={clsx('cursor-pointer border-b last:border-0 hover:bg-primary-soft/30', sel.has(o.id) && 'bg-primary-soft/40')}>
+                    <td className={td} onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={sel.has(o.id)} onChange={() => toggle(o)} aria-label={`Sélectionner ${o.number}`} disabled={o.status === 'CANCELLED'} />
+                    </td>
                     <td className={td}>
                       <span className="whitespace-nowrap font-mono text-xs font-bold text-content">{o.number}</span>
                       <span className="block text-[11px] text-content-faint">{formatDate(o.createdAt)}</span>
@@ -100,12 +157,12 @@ export function RxOrders() {
                     </td>
                   </tr>
                 ))}
-                {!orders?.length && <tr><td colSpan={9} className={`${td} py-8 text-center text-content-muted`}>Aucune commande.</td></tr>}
+                {!orders?.length && <tr><td colSpan={10} className={`${td} py-8 text-center text-content-muted`}>Aucune commande.</td></tr>}
               </tbody>
               {!!counted.length && (
                 <tfoot>
                   <tr className="border-t-2 bg-surface-2/50 font-bold">
-                    <td className={td} colSpan={5}>Total sélection · {counted.length} commande(s) <span className="font-normal text-content-faint">(hors annulées / retours)</span></td>
+                    <td className={td} colSpan={6}>Total sélection · {counted.length} commande(s) <span className="font-normal text-content-faint">(hors annulées / retours)</span></td>
                     {margins && <td className={`${td} text-right`}><Money value={total('purchasePrice')} /></td>}
                     <td className={`${td} text-right`}><Money value={total('salePrice')} /></td>
                     {margins && <td className={`${td} text-right`}><Money value={total('margin')} /></td>}

@@ -34,9 +34,10 @@ export async function getRxSettings(db: TenantPrisma): Promise<RxSettingsView> {
   };
 }
 
-/** Prix d'achat et marges : réservés à la permission dédiée (gérant). */
+/** Prix d'achat et marges : réservés aux administrateurs de l'établissement. */
+export const RX_ADMIN_ROLES = ['admin', 'super_admin'];
 export function canSeeMargins(req: FastifyRequest): boolean {
-  return isUnrestricted(req) || Boolean(req.auth?.permissions.has('oculorx.margins'));
+  return isUnrestricted(req) || RX_ADMIN_ROLES.includes(req.auth?.roleCode ?? '');
 }
 
 export function suggestedFor(settings: RxSettingsView, lens: { purchasePrice: number; geometry: string }, supplierCoef: number | null | undefined) {

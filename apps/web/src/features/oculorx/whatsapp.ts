@@ -33,6 +33,25 @@ export function orderWhatsappText(o: RxOrder, storeName: string): string {
   return lines.join('\n');
 }
 
+/** Un seul message pour plusieurs commandes du même fournisseur (envoi groupé). */
+export function ordersWhatsappText(orders: RxOrder[], storeName: string): string {
+  const eye = (e: RxOrder['od']) => `${rxDiopter(e.sph)}${e.cyl ? ` (${rxDiopter(e.cyl)}) ${e.axis ?? 0}°` : ''}`;
+  const blocks = orders.map((o, i) => [
+    `*${i + 1}. ${o.number}* — ${o.lens.reference} · ${o.lens.designation}`,
+    `   Patient : ${o.patientName}${o.fileNumber ? ` (${o.fileNumber})` : ''}`,
+    `   OD ${eye(o.od)} · OG ${eye(o.og)}${o.addition != null ? ` · Add ${rxDiopter(o.addition)}` : ''}`,
+    `   EP ${o.pd ?? '—'} · H ${o.height ?? '—'}${o.frameType ? ` · ${RX_FRAME_LABELS[o.frameType as RxFrameType]}` : ''}${o.mounted ? ' · Taillé-monté' : ''}${o.urgent ? ' · URGENT' : ''}`,
+    ...(o.comment ? [`   ${o.comment}`] : []),
+  ].join('\n'));
+  return [
+    `Bonjour, voici nos ${orders.length} commande(s) de verres du jour — ${storeName}`,
+    '',
+    ...blocks,
+    '',
+    `Suivi et mise à jour sur votre portail : ${window.location.origin}/portail`,
+  ].join('\n');
+}
+
 export function openWhatsapp(number: string, text: string) {
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
 }

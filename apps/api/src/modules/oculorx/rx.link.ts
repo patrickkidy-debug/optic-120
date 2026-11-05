@@ -56,7 +56,6 @@ export async function createLinkedLensOrder(
             ogLens: eyeText(og, rx.addition),
             status: 'ORDERED',
             expectedAt,
-            cost: rx.purchasePrice,
             notes: `Commande OculoRX ${rx.number} · patient ${rx.patientName}${rx.comment ? ` · ${rx.comment}` : ''}`,
             lensConfig: {
               lensType: RX_GEOMETRY_LABELS[lens.geometry as RxGeometry] ?? lens.geometry,

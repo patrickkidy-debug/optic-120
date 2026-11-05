@@ -6,7 +6,6 @@ import {
   rxChecks,
   rxImportSchema,
   rxLensUpdateSchema,
-  rxShopUnitPrice,
   rxIsLoss,
   rxOrderCreateSchema,
   rxSettingsSchema,
@@ -17,7 +16,7 @@ import {
 } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
-import { badRequest, conflict, notFound } from '../../lib/http-error.js';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error.js';
 import { prisma } from '../../lib/prisma.js';
 import {
   OPEN,
@@ -29,14 +28,19 @@ import {
   monthRange,
   nextOrderNumber,
   orderSheetHtml,
-  suggestedFor,
 } from './rx.service.js';
 import { clearRxDemo, seedRxDemo } from './rx.demo.js';
 import { createLinkedLensOrder, syncLensOrderFromRx } from './rx.link.js';
+import { createOutboundPackage } from '../oculotrack/track.service.js';
 
 const VIEW = requirePermission('oculorx.view');
 const ORDER = requirePermission('oculorx.order');
 const MANAGE = requirePermission('oculorx.manage');
+
+/** Relevés fournisseurs (montants d'achat) : administrateurs uniquement. */
+async function ADMIN(req: FastifyRequest) {
+  if (!canSeeMargins(req)) throw forbidden("Réservé aux administrateurs : les prix d'achat ne sont visibles que par eux.");
+}
 
 async function userName(req: FastifyRequest): Promise<string> {
   const u = await prisma.user.findUnique({ where: { id: req.auth!.userId }, select: { firstName: true, lastName: true } });
@@ -161,24 +165,23 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
         ...(q.treatment ? { treatment: { contains: q.treatment, mode: 'insensitive' as const } } : {}),
         ...(text ? { OR: [{ reference: { contains: text, mode: 'insensitive' as const } }, { designation: { contains: text, mode: 'insensitive' as const } }] } : {}),
       },
-      include: { supplier: { select: { ...SUPPLIER_SELECT, rxCoefficient: true } } },
+      include: { supplier: { select: SUPPLIER_SELECT } },
       orderBy: [{ supplierId: 'asc' }, { geometry: 'asc' }, { lensIndex: 'asc' }, { reference: 'asc' }],
       take: 1000,
     });
     return reply.send({
       lenses: lenses.map((l) => {
-        // Prix conseillé = prix boutique s'il est renseigné, sinon achat × coefficient.
-        const coefficientPrice = suggestedFor(settings, l, l.supplier.rxCoefficient);
-        const suggested = rxShopUnitPrice(l, coefficientPrice);
+        // Prix de vente = prix du catalogue boutique uniquement (null tant qu'il n'est pas fixé).
+        const suggested = l.shopPrice && l.shopPrice > 0 ? l.shopPrice : null;
         const { purchasePrice, priceHistory, ...rest } = l;
         return margins
-          ? { ...rest, purchasePrice, priceHistory, coefficientPrice, suggestedPrice: suggested, margin: suggested - purchasePrice }
-          : { ...rest, coefficientPrice, suggestedPrice: suggested };
+          ? { ...rest, purchasePrice, priceHistory, suggestedPrice: suggested, margin: suggested != null ? suggested - purchasePrice : null }
+          : { ...rest, suggestedPrice: suggested };
       }),
     });
   });
 
-  app.post('/lenses/import', { preHandler: MANAGE, bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
+  app.post('/lenses/import', { preHandler: [MANAGE, ADMIN], bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     const input = rxImportSchema.parse(req.body);
     const db = req.db!;
     const tenantId = req.auth!.tenantId;
@@ -213,6 +216,21 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
       }
     }
     return reply.send({ added, updated, unchanged });
+  });
+
+  /**
+   * Retire le catalogue importé d'un fournisseur (mauvais fichier, nouvelle
+   * grille). Les verres déjà commandés sont seulement désactivés, pour garder
+   * l'historique des commandes intact.
+   */
+  app.delete('/suppliers/:id/lenses', { preHandler: MANAGE }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const db = req.db!;
+    const supplier = await db.supplier.findFirst({ where: { id }, select: { id: true } });
+    if (!supplier) throw notFound('Fournisseur introuvable');
+    const deactivated = await db.rxLens.updateMany({ where: { supplierId: id, orders: { some: {} } }, data: { isActive: false } });
+    const deleted = await db.rxLens.deleteMany({ where: { supplierId: id, orders: { none: {} } } });
+    return reply.send({ deleted: deleted.count, deactivated: deactivated.count });
   });
 
   app.patch('/lenses/:id', { preHandler: MANAGE }, async (req, reply) => {
@@ -292,7 +310,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
       throw badRequest(
         canSeeMargins(req)
           ? `Vente à perte refusée : le prix de vente (${input.salePrice.toLocaleString('fr-FR')} FCFA) est inférieur au prix d'achat (${purchasePrice.toLocaleString('fr-FR')} FCFA).`
-          : 'Vente à perte refusée : ce prix de vente est trop bas pour ce verre. Revenez au prix conseillé.',
+          : 'Vente à perte refusée : ce prix de vente est trop bas pour ce verre. Utilisez le prix boutique.',
       );
     }
     const now = new Date();
@@ -385,6 +403,81 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  /**
+   * Ordonnances d'un patient : celles de son dossier (Clients) et celles de
+   * ses « Commandes de verres », pour pré-remplir une commande OculoRX.
+   */
+  app.get('/patient-rx', { preHandler: ORDER }, async (req, reply) => {
+    const { customerId } = z.object({ customerId: z.string().uuid() }).parse(req.query);
+    const db = req.db!;
+    const num = (v: unknown) => {
+      if (v == null || v === '') return null;
+      const n = Number(String(v).replace(',', '.').replace(/^plan$/i, '0'));
+      return Number.isFinite(n) ? n : null;
+    };
+    const rxs = await db.opticalPrescription.findMany({ where: { customerId }, orderBy: { date: 'desc' }, take: 10 });
+    const lensOrders = await db.lensOrder.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: { id: true, number: true, createdAt: true, description: true, lensConfig: true },
+    });
+    type Eye = { sphere?: number; cylinder?: number; axis?: number; addition?: number };
+    const fromRx = rxs.map((p) => ({
+      source: 'PRESCRIPTION' as const,
+      id: p.id,
+      date: p.date,
+      label: `Ordonnance du ${p.date.toLocaleDateString('fr-FR')}${p.prescriberName ? ` · ${p.prescriberName}` : ''}`,
+      od: { sph: num(p.odSphere), cyl: num(p.odCylinder), axis: num(p.odAxis) },
+      og: { sph: num(p.ogSphere), cyl: num(p.ogCylinder), axis: num(p.ogAxis) },
+      addition: num(p.odAddition) ?? num(p.ogAddition),
+      pd: num(p.pupillaryDistance),
+      height: num((p as { odHeight?: unknown }).odHeight),
+    }));
+    const fromOrders = lensOrders
+      .map((o) => {
+        const cfg = o.lensConfig as { prescription?: { sameForBoth?: boolean; od?: Eye; og?: Eye } } | null;
+        const rx = cfg?.prescription;
+        if (!rx?.od) return null;
+        const og = rx.sameForBoth ? rx.od : rx.og ?? {};
+        return {
+          source: 'LENS_ORDER' as const,
+          id: o.id,
+          date: o.createdAt,
+          label: `Commande de verres ${o.number} · ${o.description}`,
+          od: { sph: rx.od.sphere ?? null, cyl: rx.od.cylinder ?? null, axis: rx.od.axis ?? null },
+          og: { sph: og.sphere ?? null, cyl: og.cylinder ?? null, axis: og.axis ?? null },
+          addition: rx.od.addition ?? og.addition ?? null,
+          pd: null,
+          height: null,
+        };
+      })
+      .filter(Boolean);
+    return reply.send({ sources: [...fromRx, ...fromOrders] });
+  });
+
+  /**
+   * Envoi groupé : les commandes de la journée d'un même fournisseur partent
+   * dans un seul colis OculoTrack, visible aussitôt sur son portail.
+   */
+  app.post('/orders/package', { preHandler: ORDER }, async (req, reply) => {
+    const { orderIds } = z.object({ orderIds: z.array(z.string().uuid()).min(1).max(50) }).parse(req.body);
+    const db = req.db!;
+    const orders = await db.rxOrder.findMany({ where: { id: { in: orderIds } }, select: { id: true, number: true, supplierId: true, lensOrderId: true, status: true } });
+    if (orders.length !== orderIds.length) throw notFound('Commande introuvable');
+    const suppliers = new Set(orders.map((o) => o.supplierId));
+    if (suppliers.size > 1) throw badRequest('Un envoi groupé ne concerne qu\'un seul fournisseur');
+    const missing = orders.find((o) => !o.lensOrderId);
+    if (missing) throw badRequest(`La commande ${missing.number} n'a pas de suivi OculoTrack`);
+    const pkg = await createOutboundPackage(
+      db,
+      req.auth!.tenantId,
+      { lensOrderIds: orders.map((o) => o.lensOrderId!), supplierId: [...suppliers][0], note: `OculoRX : ${orders.map((o) => o.number).join(', ')}` },
+      { type: 'STAFF', id: req.auth!.userId, name: await userName(req), ip: req.ip, userAgent: req.headers['user-agent'] ?? null },
+    );
+    return reply.send({ package: { id: pkg.id, number: pkg.number } });
+  });
+
   /* ------------------------------ Tableau de bord ------------------------------ */
 
   app.get('/dashboard', { preHandler: VIEW }, async (req, reply) => {
@@ -427,12 +520,12 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
 
   /* ------------------------------ Relevés mensuels ------------------------------ */
 
-  app.get('/statements', { preHandler: MANAGE }, async (req, reply) => {
+  app.get('/statements', { preHandler: [MANAGE, ADMIN] }, async (req, reply) => {
     const statements = await req.db!.rxStatement.findMany({ include: { supplier: { select: SUPPLIER_SELECT } }, orderBy: [{ month: 'desc' }, { generatedAt: 'desc' }] });
     return reply.send({ statements });
   });
 
-  app.get('/statements/preview', { preHandler: MANAGE }, async (req, reply) => {
+  app.get('/statements/preview', { preHandler: [MANAGE, ADMIN] }, async (req, reply) => {
     const q = z.object({ supplierId: z.string().uuid(), month: z.string().regex(/^\d{4}-\d{2}$/) }).parse(req.query);
     const db = req.db!;
     const st = await computeStatement(db, q.supplierId, q.month, await getRxSettings(db));
@@ -441,7 +534,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ statement: st, saved });
   });
 
-  app.post('/statements', { preHandler: MANAGE }, async (req, reply) => {
+  app.post('/statements', { preHandler: [MANAGE, ADMIN] }, async (req, reply) => {
     const input = z.object({ supplierId: z.string().uuid(), month: z.string().regex(/^\d{4}-\d{2}$/) }).parse(req.body);
     const db = req.db!;
     const tenantId = req.auth!.tenantId;
@@ -456,7 +549,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ statement: st, saved });
   });
 
-  app.post('/statements/:id/pay', { preHandler: MANAGE }, async (req, reply) => {
+  app.post('/statements/:id/pay', { preHandler: [MANAGE, ADMIN] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const input = rxStatementPaySchema.parse(req.body);
     const res = await req.db!.rxStatement.updateMany({

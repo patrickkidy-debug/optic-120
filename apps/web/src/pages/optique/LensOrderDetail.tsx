@@ -274,6 +274,13 @@ export function LensOrderDetail({
             <FileDown className="h-4 w-4" /> {tr('labSheet.button')}
           </Button>
 
+          {/* OculoRX : commander ces verres au fournisseur, ordonnance reprise. */}
+          {order.customerId && !order.trackCode && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+            <Link to={`/oculorx/nouvelle?customer=${order.customerId}&lensOrder=${order.id}`} className="btn-outline flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm">
+              <Glasses className="h-4 w-4" /> Commander via OculoRX
+            </Link>
+          )}
+
           {/* OculoTrack : suivi de la monture jusqu'au laboratoire et retour. */}
           {order.trackCode ? (
             <Link to={`/optique/oculotrack?order=${order.id}`} className="btn-outline flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm">

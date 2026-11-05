@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, MessageCircle, Printer, Send } from 'lucide-react';
+import { CheckCircle2, CircleAlert, FileText, MessageCircle, Printer, Search, Send } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
   RX_FRAME_LABELS,
   RX_FRAME_TYPES,
@@ -14,7 +15,7 @@ import {
   rxParseNumber,
   type RxFrameType,
 } from '@oculo/shared-types';
-import { rx, type RxLens, type RxOrder } from '../../features/oculorx/api';
+import { rx, type RxLens, type RxOrder, type RxPatientSource } from '../../features/oculorx/api';
 import { printOrderSheet } from '../../features/oculorx/print';
 import { CustomerSearch } from '../../features/optique/SaleTools';
 import { Button, PageLoader } from '../../components/ui';
@@ -62,12 +63,23 @@ export function RxNewOrder() {
   const [geometry, setGeometry] = useState('');
   const [index, setIndex] = useState<number | null>(null);
   const { data: lenses, isLoading } = useQuery({ queryKey: ['rx', 'lenses', supplierId], queryFn: () => rx.lenses({ supplierId }), enabled: Boolean(supplierId) });
-  const shown = (lenses ?? []).filter((l) => (!geometry || l.geometry === geometry) && (index == null || l.lensIndex === index));
+  const [lensQuery, setLensQuery] = useState('');
+  const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const shown = (lenses ?? []).filter(
+    (l) =>
+      (!geometry || l.geometry === geometry) &&
+      (index == null || l.lensIndex === index) &&
+      (!lensQuery.trim() || norm([l.shopName, l.designation, l.reference, l.treatment, l.material].filter(Boolean).join(' ')).includes(norm(lensQuery.trim()))),
+  );
   const indices = [...new Set((lenses ?? []).map((l) => l.lensIndex).filter((x): x is number => x != null))].sort((a, b) => a - b);
   const [lens, setLens] = useState<RxLens | null>(null);
 
   // Patient et ordonnance
-  const [customerId, setCustomerId] = useState<string | null>(null);
+  // Arrivée depuis un dossier client / une commande de verres : ?customer=…&lensOrder=…
+  const [params] = useSearchParams();
+  const [customerId, setCustomerId] = useState<string | null>(params.get('customer'));
+  const { data: sources } = useQuery({ queryKey: ['rx', 'patient-rx', customerId], queryFn: () => rx.patientRx(customerId!), enabled: Boolean(customerId) });
+  const [usedSource, setUsedSource] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [patientName, setPatientName] = useState('');
   const [fileNumber, setFileNumber] = useState('');
@@ -83,9 +95,26 @@ export function RxNewOrder() {
   const [salePrice, setSalePrice] = useState(0);
   const [done, setDone] = useState<{ order: RxOrder; emailed: boolean } | null>(null);
 
-  // Prix conseillé de la paire : calculé par le serveur (achat × coefficient, arrondi 500).
-  const suggested = lens ? lens.suggestedPrice * 2 : 0;
+  // Prix de vente de la paire : celui du catalogue boutique (sinon à saisir).
+  const suggested = lens?.suggestedPrice ? lens.suggestedPrice * 2 : 0;
   useEffect(() => setSalePrice(suggested), [lens?.id, suggested]);
+
+  function applySource(s: RxPatientSource) {
+    const txt = (v: number | null) => (v == null ? '' : rxDiopter(v));
+    setOd({ sph: txt(s.od.sph), cyl: s.od.cyl ? txt(s.od.cyl) : '', axis: s.od.cyl && s.od.axis != null ? String(Math.round(s.od.axis)) : '' });
+    setOg({ sph: txt(s.og.sph), cyl: s.og.cyl ? txt(s.og.cyl) : '', axis: s.og.cyl && s.og.axis != null ? String(Math.round(s.og.axis)) : '' });
+    setAddition(s.addition ? txt(s.addition) : '');
+    if (s.pd) setPd(String(s.pd).replace('.', ','));
+    if (s.height) setHeight(String(s.height).replace('.', ','));
+    setUsedSource(s.id);
+  }
+  // Commande de verres d'origine : son ordonnance est reprise d'office.
+  useEffect(() => {
+    const wanted = params.get('lensOrder');
+    const s = sources?.find((x) => x.id === wanted) ?? (wanted ? undefined : undefined);
+    if (s && !usedSource) applySource(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources]);
 
   const eye = (e: EyeText) => ({ sph: rxParseNumber(e.sph), cyl: rxParseNumber(e.cyl), axis: e.axis.trim() === '' ? null : Math.round(rxParseNumber(e.axis) ?? -1) });
   const needsAdd = lens ? rxNeedsAddition(lens.geometry) : false;
@@ -202,6 +231,10 @@ export function RxNewOrder() {
               </button>
             ))}
           </div>
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
+            <input className="input h-10 pl-9" placeholder="Rechercher un verre : progressif, lumière bleue, photo, 1.67, LUNEO…" value={lensQuery} onChange={(e) => setLensQuery(e.target.value)} />
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" className={chip(!geometry)} onClick={() => setGeometry('')}>Toutes géométries</button>
             {RX_GEOMETRIES.map((g) => (
@@ -240,7 +273,7 @@ export function RxNewOrder() {
                         {rxNeedsAddition(l.geometry) && <span className="block">add {rxDiopter(l.addMin)} / {rxDiopter(l.addMax)}</span>}
                       </td>
                       <td className={`${td} text-right`}>
-                        <Money value={margins ? (l.purchasePrice ?? 0) * 2 : l.suggestedPrice * 2} />
+                        <Money value={margins ? (l.purchasePrice ?? 0) * 2 : l.suggestedPrice != null ? l.suggestedPrice * 2 : null} />
                         <span className="mt-0.5 block"><FabricationBadge value={l.fabrication} /></span>
                       </td>
                       <td className={`${td} text-right`}>
@@ -260,13 +293,32 @@ export function RxNewOrder() {
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <div>
               <p className="label">Patient OculoSaaS</p>
-              <CustomerSearch value={customerId} onChange={(id, c) => { setCustomerId(id); setCustomerName(c ? `${c.firstName} ${c.lastName}` : ''); }} />
+              <CustomerSearch value={customerId} onChange={(id, c) => { setCustomerId(id); setCustomerName(c ? `${c.firstName} ${c.lastName}` : ''); setUsedSource(null); }} />
             </div>
             <div className="grid grid-cols-[1fr_8rem] gap-2">
               <label className="block"><span className="label">… ou nom du patient</span><input className="input" value={patientName} onChange={(e) => setPatientName(e.target.value)} disabled={Boolean(customerId)} placeholder={customerName || 'Nom et prénom'} /></label>
               <label className="block"><span className="label">N° dossier</span><input className="input" value={fileNumber} onChange={(e) => setFileNumber(e.target.value)} /></label>
             </div>
           </div>
+
+          {customerId && (
+            <div className="mt-3 rounded-xl border p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-content-faint">
+                <FileText className="h-3.5 w-3.5" /> Ordonnances du patient
+              </p>
+              {!sources?.length ? (
+                <p className="text-xs text-content-muted">Aucune ordonnance enregistrée dans son dossier ni dans ses commandes de verres.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {sources.map((s) => (
+                    <button key={s.id} type="button" onClick={() => applySource(s)} className={chip(usedSource === s.id)}>
+                      {usedSource === s.id ? '✓ ' : ''}{s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="-mx-4 mt-4 overflow-x-auto px-4">
             <table className="w-full min-w-[420px]">
@@ -355,8 +407,8 @@ export function RxNewOrder() {
                   <span className="font-semibold">Prix de vente patient</span>
                   <NumberInput min={0} value={salePrice} onChange={setSalePrice} className="input h-9 w-36 text-right font-mono" />
                 </label>
-                {salePrice !== suggested && (
-                  <button type="button" className="text-[11px] text-primary" onClick={() => setSalePrice(suggested)}>Revenir au prix conseillé ({suggested.toLocaleString('fr-FR')} FCFA)</button>
+                {suggested > 0 && salePrice !== suggested && (
+                  <button type="button" className="text-[11px] text-primary" onClick={() => setSalePrice(suggested)}>Revenir au prix boutique ({suggested.toLocaleString('fr-FR')} FCFA)</button>
                 )}
                 {margins && margin != null && (
                   <div className={clsx('flex justify-between rounded-lg px-2 py-1.5 font-bold', margin < 0 ? 'bg-[color:var(--danger)]/10 text-danger' : 'bg-[color:var(--success)]/10 text-success')}>

@@ -15,13 +15,14 @@ import { RxBilling } from './RxBilling';
  */
 export function OculoRxPage() {
   const { tab = '' } = useParams();
-  const { manage, order } = useRx();
+  const { manage, order, margins } = useRx();
   const items = [
     { to: '', label: 'Tableau de bord', icon: LayoutDashboard, show: true },
     { to: 'nouvelle', label: 'Nouvelle commande', icon: FilePlus2, show: order },
     { to: 'commandes', label: 'Suivi des commandes', icon: ClipboardList, show: true },
     { to: 'catalogues', label: 'Catalogues fournisseurs', icon: BookOpen, show: true },
-    { to: 'facturation', label: 'Facturation mensuelle', icon: ReceiptText, show: manage },
+    // Relevés = prix d'achat : administrateurs uniquement.
+    { to: 'facturation', label: 'Facturation mensuelle', icon: ReceiptText, show: manage && margins },
   ].filter((i) => i.show);
 
   return (

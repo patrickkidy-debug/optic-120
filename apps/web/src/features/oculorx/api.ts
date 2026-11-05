@@ -46,10 +46,8 @@ export interface RxLens {
   /** Catalogue boutique : nom commercial et prix de vente d'un verre au magasin. */
   shopName: string | null;
   shopPrice: number | null;
-  /** Prix conseillé par le coefficient (achat × coef, arrondi 500). */
-  coefficientPrice: number;
-  /** Prix de vente retenu : prix boutique, sinon prix conseillé. */
-  suggestedPrice: number;
+  /** Prix de vente d'un verre : celui du catalogue boutique (null tant qu'il n'est pas fixé). */
+  suggestedPrice: number | null;
   /** Présents seulement avec la permission « marges ». */
   purchasePrice?: number;
   margin?: number;
@@ -166,7 +164,22 @@ export interface RxSavedStatement {
   paymentMethod: string | null;
 }
 
+/** Ordonnance d'un patient (dossier client ou commande de verres), prête à reprendre. */
+export interface RxPatientSource {
+  source: 'PRESCRIPTION' | 'LENS_ORDER';
+  id: string;
+  date: string;
+  label: string;
+  od: RxEyeValue;
+  og: RxEyeValue;
+  addition: number | null;
+  pd: number | null;
+  height: number | null;
+}
+
 export const rx = {
+  patientRx: async (customerId: string) => (await api.get<{ sources: RxPatientSource[] }>('/oculorx/patient-rx', { params: { customerId } })).data.sources,
+  packageOrders: async (orderIds: string[]) => (await api.post<{ package: { id: string; number: string } }>('/oculorx/orders/package', { orderIds })).data.package,
   settings: async () => (await api.get<{ settings: RxSettings; canSeeMargins: boolean }>('/oculorx/settings')).data,
   saveSettings: async (s: RxSettingsInput) => (await api.put<{ settings: RxSettings }>('/oculorx/settings', s)).data.settings,
   suppliers: async () => (await api.get<{ suppliers: RxSupplier[] }>('/oculorx/suppliers')).data.suppliers,
@@ -177,6 +190,7 @@ export const rx = {
   importLenses: async (supplierId: string, rows: RxLensRow[]) =>
     (await api.post<{ added: number; updated: number; unchanged: number }>('/oculorx/lenses/import', { supplierId, rows })).data,
   setLensActive: async (id: string, isActive: boolean) => (await api.patch(`/oculorx/lenses/${id}`, { isActive })).data,
+  clearCatalog: async (supplierId: string) => (await api.delete<{ deleted: number; deactivated: number }>(`/oculorx/suppliers/${supplierId}/lenses`)).data,
   updateLens: async (id: string, body: { shopName?: string | null; shopPrice?: number | null }) => (await api.patch(`/oculorx/lenses/${id}`, body)).data,
   orders: async (params: { status?: string; supplierId?: string; from?: string; to?: string; q?: string }) =>
     (await api.get<{ orders: RxOrder[] }>('/oculorx/orders', { params })).data.orders,
