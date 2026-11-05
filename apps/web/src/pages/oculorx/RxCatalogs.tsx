@@ -51,7 +51,7 @@ export function RxCatalogs() {
         title="Fournisseurs"
         actions={manage && (
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" onClick={() => setCoef(true)}><Settings2 className="h-4 w-4" /> Suppléments et TVA</Button>
+            <Button variant="ghost" onClick={() => setCoef(true)}><Settings2 className="h-4 w-4" /> Suppléments, montage et TVA</Button>
             {margins && <Button variant="outline" onClick={() => setImporting(true)}><FileUp className="h-4 w-4" /> Importer un catalogue</Button>}
             <Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> Ajouter un fournisseur</Button>
           </div>
@@ -143,6 +143,7 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
   });
   const toggle = useMutation({ mutationFn: ({ id, on }: { id: string; on: boolean }) => rx.setLensActive(id, on), onSuccess: () => qc.invalidateQueries({ queryKey: ['rx', 'lenses'] }) });
   const [shopEdit, setShopEdit] = useState<RxLens | null>(null);
+  const { settings } = useRx();
   const [view, setView] = useState<'supplier' | 'shop'>('supplier');
 
   return (
@@ -158,6 +159,11 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
         </div>
       }
     >
+      {!!settings?.shopMountingFee && (
+        <p className="mb-3 rounded-lg bg-primary-soft/50 px-3 py-2 text-xs font-semibold text-content">
+          Montage inclus : + {settings.shopMountingFee.toLocaleString('fr-FR')} F sur chaque paire (réglable dans « Suppléments, montage et TVA »).
+        </p>
+      )}
       {view === 'shop' && (
         <p className="mb-3 text-xs text-content-muted">
           Donnez à chaque verre son nom commercial en boutique et son prix de vente à la paire : OculoRX calcule alors le bénéfice réel (prix boutique − prix d'achat fournisseur).
@@ -472,10 +478,10 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
 function CoefficientModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const { settings } = useRx();
-  const [f, setF] = useState({ vatRate: '18', mountedFee: '2500', urgentFee: '3000' });
+  const [f, setF] = useState({ vatRate: '18', mountedFee: '2500', urgentFee: '3000', shopMountingFee: '0' });
   useEffect(() => {
     if (!settings) return;
-    setF({ vatRate: String(settings.vatRate).replace('.', ','), mountedFee: String(settings.mountedFee), urgentFee: String(settings.urgentFee) });
+    setF({ vatRate: String(settings.vatRate).replace('.', ','), mountedFee: String(settings.mountedFee), urgentFee: String(settings.urgentFee), shopMountingFee: String(settings.shopMountingFee ?? 0) });
   }, [settings]);
   const n = (v: string) => Number(v.replace(',', '.'));
   const save = useMutation({
@@ -487,6 +493,7 @@ function CoefficientModal({ onClose }: { onClose: () => void }) {
         vatRate: n(f.vatRate),
         mountedFee: Math.round(n(f.mountedFee)),
         urgentFee: Math.round(n(f.urgentFee)),
+        shopMountingFee: Math.round(n(f.shopMountingFee) || 0),
       }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['rx'] }); onClose(); },
     onError: (e) => alert(apiErrorMessage(e)),
@@ -498,6 +505,12 @@ function CoefficientModal({ onClose }: { onClose: () => void }) {
         <Field label="TVA sur suppléments (%)"><input className="input text-right font-mono" value={f.vatRate} onChange={(e) => setF({ ...f, vatRate: e.target.value })} /></Field>
         <Field label="Taillé-monté (FCFA)"><input className="input text-right font-mono" value={f.mountedFee} onChange={(e) => setF({ ...f, mountedFee: e.target.value })} /></Field>
         <Field label="Urgence (FCFA)"><input className="input text-right font-mono" value={f.urgentFee} onChange={(e) => setF({ ...f, urgentFee: e.target.value })} /></Field>
+      </div>
+      <div className="mt-4 rounded-xl border border-primary/40 bg-primary-soft/40 p-3">
+        <Field label="Montage ajouté au prix de vente (FCFA par paire)">
+          <input className="input text-right font-mono" inputMode="numeric" value={f.shopMountingFee} onChange={(e) => setF({ ...f, shopMountingFee: e.target.value.replace(/\D/g, '') })} placeholder="0" />
+        </Field>
+        <p className="mt-1 text-xs text-content-muted">Ajouté à tous les prix boutique (ex. 1 000 F tant que le montage est payé à l'extérieur). Mettez 0 pour revenir aux prix de l'affiche.</p>
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Annuler</Button>

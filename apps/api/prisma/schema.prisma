@@ -3128,5 +3128,8 @@ model RxSettings {
   vatRate              Float    @default(18)
   mountedFee           Int      @default(2500)
   urgentFee            Int      @default(3000)
+  /// Montage ajouté au prix de vente de CHAQUE paire (ex. 1 000 F tant que le
+  /// montage est sous-traité). 0 = aucun.
+  shopMountingFee      Int      @default(0)
   updatedAt            DateTime @updatedAt
 }

@@ -2,6 +2,7 @@ import type { RxLensRow, RxOrderCreateInput, RxSettingsInput, RxStatus, RxSuppli
 import { api } from '../../lib/api';
 
 export interface RxSettings extends RxSettingsInput {
+  shopMountingFee: number;
   geometryCoefficients: Partial<Record<string, number>>;
 }
 

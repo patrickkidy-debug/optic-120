@@ -171,8 +171,9 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
     });
     return reply.send({
       lenses: lenses.map((l) => {
-        // Prix de vente = prix du catalogue boutique uniquement (null tant qu'il n'est pas fixé).
-        const suggested = l.shopPrice && l.shopPrice > 0 ? l.shopPrice : null;
+        // Prix de vente = prix du catalogue boutique (null tant qu'il n'est pas fixé),
+        // plus le montage éventuel (réglage par paire, donc moitié par verre).
+        const suggested = l.shopPrice && l.shopPrice > 0 ? l.shopPrice + Math.round(settings.shopMountingFee / 2) : null;
         const { purchasePrice, priceHistory, ...rest } = l;
         return margins
           ? { ...rest, purchasePrice, priceHistory, suggestedPrice: suggested, margin: suggested != null ? suggested - purchasePrice : null }

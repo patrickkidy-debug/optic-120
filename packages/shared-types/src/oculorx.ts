@@ -394,6 +394,8 @@ export const rxSettingsSchema = z.object({
   vatRate: z.number().min(0).max(100),
   mountedFee: z.number().int().min(0).max(1_000_000),
   urgentFee: z.number().int().min(0).max(1_000_000),
+  /** Montage ajouté au prix de vente de chaque paire (0 = aucun). */
+  shopMountingFee: z.number().int().min(0).max(1_000_000).default(0),
 });
 export type RxSettingsInput = z.infer<typeof rxSettingsSchema>;
 

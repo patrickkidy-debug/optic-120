@@ -20,6 +20,8 @@ export interface RxSettingsView extends RxCoefficientSettings {
   vatRate: number;
   mountedFee: number;
   urgentFee: number;
+  /** Montage ajouté au prix de vente de chaque paire. */
+  shopMountingFee: number;
 }
 
 /** Réglages du magasin (valeurs par défaut tant que rien n'est enregistré). */
@@ -31,6 +33,7 @@ export async function getRxSettings(db: TenantPrisma): Promise<RxSettingsView> {
     vatRate: s?.vatRate ?? RX_DEFAULTS.vatRate,
     mountedFee: s?.mountedFee ?? RX_DEFAULTS.mountedFee,
     urgentFee: s?.urgentFee ?? RX_DEFAULTS.urgentFee,
+    shopMountingFee: s?.shopMountingFee ?? 0,
   };
 }
 
