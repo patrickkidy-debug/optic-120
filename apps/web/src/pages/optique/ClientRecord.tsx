@@ -297,7 +297,7 @@ export function SaleRow({ sale }: { sale: CustomerSale }) {
         <ul className="mt-2 space-y-1 border-t pt-2 text-xs text-content-muted">
           {sale.items.map((it) => (
             <li key={it.id} className="flex items-center justify-between gap-2">
-              <span className="truncate">{it.quantity} × {it.product.name}</span>
+              <span className="truncate">{it.quantity} × {it.label || it.product.name}</span>
               <span className="shrink-0">{formatCurrency(Number(it.lineTotal))}</span>
             </li>
           ))}

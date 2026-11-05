@@ -2,13 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import JsBarcode from 'jsbarcode';
 import { Printer, Barcode as BarcodeIcon } from 'lucide-react';
-import { lensBaseOptions, lensLabel, lensSku, DEFAULT_LENS_PRICING } from '@oculo/shared-types';
 import { listProducts, type Product } from '../../features/optique/api';
-import { useAuthStore } from '../../store/auth';
 import { PageHeader, Button, Field, PageLoader, EmptyState } from '../../components/ui';
 import { formatCurrency } from '../../lib/format';
 import { tr } from '../../lib/tr';
-import i18n from 'i18next';
 
 interface LabelData {
   name: string;
@@ -16,18 +13,25 @@ interface LabelData {
   price: number;
 }
 
+/**
+ * Étiquette de branche de monture : 38 × 12 mm, à enrouler / coller sur la
+ * branche. Nom court, code-barres fin, prix. Les verres n'ont pas d'étiquette
+ * (fabriqués sur commande, jamais en rayon).
+ */
+const LABEL_W = '38mm';
+const LABEL_H = '12mm';
+
 function Barcode({ value }: { value: string }) {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
     if (!ref.current || !value) return;
     try {
-      // Format compact : facile à coller sur une monture / un étui de verres.
       JsBarcode(ref.current, value, {
         format: 'CODE128',
-        width: 1.1,
-        height: 26,
-        fontSize: 9,
-        margin: 2,
+        width: 0.8,
+        height: 16,
+        displayValue: false,
+        margin: 0,
         background: '#ffffff',
         lineColor: '#000000',
       });
@@ -35,26 +39,30 @@ function Barcode({ value }: { value: string }) {
       /* SKU non encodable : ignoré */
     }
   }, [value]);
-  return <svg ref={ref} className="w-full max-w-full" />;
+  return <svg ref={ref} preserveAspectRatio="none" style={{ width: '100%', height: '4.2mm', display: 'block' }} />;
 }
-// Devise de l'établissement (FCFA, €, CHF, RWF…), comme partout ailleurs.
-const money = (n: number) => formatCurrency(n);
 
 function LabelCard({ name, code, price, onPrint }: LabelData & { onPrint?: () => void }) {
   return (
-    <div className="group relative flex flex-col items-center gap-0.5 rounded-md border border-line bg-white p-2 text-center text-black">
+    <div
+      className="group relative flex flex-col justify-between overflow-hidden border border-dashed border-black/30 bg-white px-[1mm] py-[0.6mm] text-black"
+      style={{ width: LABEL_W, height: LABEL_H, breakInside: 'avoid' }}
+    >
       {onPrint && (
         <button
           onClick={onPrint}
           title={tr('ui.LabelsPage.imprimerCetteEtiquetteSeule')}
-          className="print-hide absolute right-1 top-1 rounded-md bg-black/5 p-1 text-black/50 opacity-0 transition hover:bg-black/10 hover:text-black group-hover:opacity-100"
+          className="print-hide absolute right-0.5 top-0.5 rounded bg-black/5 p-0.5 text-black/50 opacity-0 transition hover:bg-black/10 hover:text-black group-hover:opacity-100"
         >
-          <Printer className="h-3.5 w-3.5" />
+          <Printer className="h-3 w-3" />
         </button>
       )}
-      <div className="line-clamp-2 text-[10px] font-semibold leading-tight">{name}</div>
+      <div className="flex items-baseline justify-between gap-[1mm] leading-none">
+        <span className="truncate font-semibold" style={{ fontSize: '6.5pt' }}>{name}</span>
+        <span className="shrink-0 font-bold" style={{ fontSize: '7pt' }}>{formatCurrency(price)}</span>
+      </div>
       <Barcode value={code} />
-      <div className="text-xs font-bold leading-none">{money(price)}</div>
+      <div className="truncate text-center font-mono leading-none" style={{ fontSize: '5.5pt' }}>{code}</div>
     </div>
   );
 }
@@ -64,28 +72,13 @@ export function LabelsPage() {
   // Étiquette à imprimer seule (null = impression de toute la planche).
   const [printOne, setPrintOne] = useState<LabelData | null>(null);
 
-  // Étiquettes réservées aux montures (produits physiques) et aux types de verres.
+  // Étiquettes réservées aux montures : ce sont les seuls articles exposés en rayon.
   const { data, isLoading } = useQuery({
     queryKey: ['products-labels', 'MONTURE', search],
-    queryFn: () => listProducts({ category: 'MONTURE', search: search || undefined }),
+    queryFn: () => listProducts({ category: 'MONTURE', search: search || undefined, pageSize: 100 }),
   });
-  const montures: Product[] = data?.items ?? [];
+  const montures: Product[] = (data?.items ?? []).filter((p) => p.isActive !== false);
 
-  const pricing = useAuthStore((s) => s.user?.tenantLensPricing) ?? DEFAULT_LENS_PRICING;
-  // Un seul étiquetage par type de verre (fixes + personnalisés), pas par produit.
-  const lensTypes: LabelData[] = lensBaseOptions(pricing).map((b) => ({
-    // Libellé dans la langue active ; un type personnalisé garde son nom.
-    name: i18n.exists(`lensBases.${b.key}`)
-      ? tr('ui.ProductsPage.verreValue', { value: i18n.t(`lensBases.${b.key}`) })
-      : lensLabel(pricing, b.key, []),
-    code: lensSku(b.key, []),
-    price: b.price,
-  }));
-
-  const nothing = montures.length === 0 && lensTypes.length === 0;
-
-  // Impression d'une seule étiquette : on la rend dans une zone dédiée puis on
-  // déclenche l'impression ; l'écouteur `afterprint` remet l'état à zéro.
   useEffect(() => {
     if (!printOne) return;
     const done = () => setPrintOne(null);
@@ -102,68 +95,41 @@ export function LabelsPage() {
       <div className="print-hide">
         <PageHeader
           title={tr('ui.LabelsPage.etiquettesCodesBarres')}
-          subtitle={tr('ui.LabelsPage.monturesEtTypesDeVerres')}
+          subtitle="Étiquettes de branche (38 × 12 mm) pour les montures en rayon."
           actions={
-            <Button onClick={() => window.print()} disabled={nothing}>
+            <Button onClick={() => window.print()} disabled={!montures.length}>
               <Printer className="h-4 w-4" /> {tr('ui.LabelsPage.toutImprimer')}
             </Button>
           }
         />
         <div className="mb-4 max-w-sm">
           <Field label={tr('ui.LabelsPage.rechercherUneMonture')}>
-            <input
-              className="input"
-              placeholder={tr('ui.LabelsPage.nomReferenceMarque')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <input className="input" placeholder={tr('ui.LabelsPage.nomReferenceMarque')} value={search} onChange={(e) => setSearch(e.target.value)} />
           </Field>
         </div>
       </div>
 
       {isLoading ? (
         <PageLoader />
-      ) : nothing ? (
-        <EmptyState icon={BarcodeIcon} title={tr('ui.LabelsPage.aucuneEtiquetteAGenerer')} />
+      ) : !montures.length ? (
+        <EmptyState icon={BarcodeIcon} title={tr('ui.LabelsPage.aucuneMontureAuCatalogue')} />
       ) : (
-        // Quand on imprime une seule étiquette, la planche complète n'est plus
-        // « print-area » (donc non imprimée) : seule l'étiquette choisie sort.
-        <div className={printOne ? 'space-y-6' : 'print-area space-y-6'}>
-          <section>
-            <h2 className="print-hide mb-2 text-sm font-semibold uppercase tracking-wide text-content-faint">
-              {tr('ui.LabelsPage.montures')}
-            </h2>
-            {montures.length === 0 ? (
-              <p className="print-hide text-sm text-content-muted">{tr('ui.LabelsPage.aucuneMontureAuCatalogue')}</p>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-                {montures.map((p) => {
-                  const label: LabelData = { name: p.name, code: p.sku, price: Number(p.sellPrice) };
-                  return <LabelCard key={p.id} {...label} onPrint={() => setPrintOne(label)} />;
-                })}
-              </div>
-            )}
-          </section>
-
-          <section>
-            <h2 className="print-hide mb-2 text-sm font-semibold uppercase tracking-wide text-content-faint">
-              {tr('ui.LabelsPage.typesDeVerres')}
-            </h2>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-              {lensTypes.map((l) => (
-                <LabelCard key={l.code} {...l} onPrint={() => setPrintOne(l)} />
-              ))}
-            </div>
-          </section>
+        <div className={printOne ? '' : 'print-area'}>
+          <p className="print-hide mb-2 text-xs text-content-muted">{montures.length} monture(s) · taille réelle à l'impression.</p>
+          <div className="flex flex-wrap gap-[1.5mm] rounded-xl bg-white p-[2mm]">
+            {montures.map((p) => {
+              // Marque devant le modèle, sauf si le nom la contient déjà.
+              const withBrand = p.brand && !p.name.toLowerCase().includes(p.brand.toLowerCase());
+              const label: LabelData = { name: withBrand ? `${p.brand} ${p.name}` : p.name, code: p.sku, price: Number(p.sellPrice) };
+              return <LabelCard key={p.id} {...label} onPrint={() => setPrintOne(label)} />;
+            })}
+          </div>
         </div>
       )}
 
-      {/* Zone d'impression d'une seule étiquette (largeur d'une vignette). */}
       {printOne && (
-        <div className="print-area fixed left-2 top-2">
-          <div className="w-40">
-            <LabelCard {...printOne} />
-          </div>
+        <div className="print-area fixed left-0 top-0">
+          <LabelCard {...printOne} />
         </div>
       )}
     </div>

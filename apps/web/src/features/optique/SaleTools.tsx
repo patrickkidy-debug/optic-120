@@ -375,7 +375,7 @@ export function LensComposer({
   onAdd,
 }: {
   pricing: LensPricing;
-  onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number; category: string }) => void;
+  onAdd: (line: { productId: string; name: string; sku: string; unitPrice: number; category: string; label?: string }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [base, setBase] = useState<string>('');
@@ -386,7 +386,8 @@ export function LensComposer({
   const mut = useMutation({
     mutationFn: () => ensureLensProduct({ base, treatments }),
     onSuccess: (p) => {
-      onAdd({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice), category: 'VERRE' });
+      // Fiche unique « Verre sur mesure » : la désignation et le prix suivent la ligne.
+      onAdd({ productId: p.id, name: p.name, sku: p.sku, unitPrice: Number(p.sellPrice), category: 'VERRE', label: p.name });
       setBase('');
       setTreatments([]);
       setError('');

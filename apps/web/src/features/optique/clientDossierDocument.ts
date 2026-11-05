@@ -77,7 +77,7 @@ function rxTable(rx: Prescription, accent: string): string {
 }
 
 function saleRow(s: CustomerSale): string {
-  const items = s.items.map((it) => `${it.quantity}× ${esc(it.product.name)}`).join(', ');
+  const items = s.items.map((it) => `${it.quantity}× ${esc(it.label || it.product.name)}`).join(', ');
   return `
     <tr>
       <td style="padding:7px 10px;border-bottom:1px solid #e2e8f0;">${esc(s.number)}</td>

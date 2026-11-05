@@ -77,7 +77,7 @@ function buildTimeline(c: CustomerDetail): TimelineEvent[] {
   const ev: TimelineEvent[] = [];
   for (const s of c.sales) {
     if (s.status === 'CANCELLED') continue;
-    const items = s.items.map((i) => i.product.name).join(', ');
+    const items = s.items.map((i) => i.label || i.product.name).join(', ');
     ev.push({
       at: s.createdAt,
       kind: s.type === 'QUOTE' ? 'quote' : 'sale',

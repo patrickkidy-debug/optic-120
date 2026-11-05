@@ -1783,6 +1783,8 @@ export const saleItemSchema = z.object({
   reference: z.string().max(80).optional().or(z.literal('')),
   /** Verre : œil concerné (une ligne OD et une ligne OG au lieu d'une quantité 2). */
   eye: z.enum(['OD', 'OG']).nullable().optional(),
+  /** Désignation de la ligne (verre composé en caisse : type + traitements). */
+  label: z.string().trim().max(200).optional().or(z.literal('')),
 });
 
 /**

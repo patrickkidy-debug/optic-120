@@ -891,7 +891,7 @@ function SaleDetailModal({
                 <tr key={i.id} className="border-b last:border-0">
                   <td className="table-cell">
                     <div className="text-content">
-                      {i.product.name}
+                      {i.label || i.product.name}
                       {i.eye && <span className="ml-1.5"><Badge tone="info">{i.eye}</Badge></span>}
                     </div>
                     <div className="font-mono text-[11px] text-content-faint">{i.product.sku}</div>
@@ -1158,9 +1158,10 @@ function QuoteModal({
   const [lines, setLines] = useState<QuoteLine[]>(
     seed
       ? seed.items.map((i) => ({
-          key: lineKey(i.productId, i.eye),
+          key: lineKey(i.productId, i.eye, i.label),
           productId: i.productId,
-          name: i.product.name,
+          name: i.label || i.product.name,
+          label: i.label ?? undefined,
           sku: i.product.sku,
           unitPrice: Number(i.unitPrice),
           quantity: i.quantity,
@@ -1221,9 +1222,9 @@ function QuoteModal({
       p.sku.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function addLine(p: { productId: string; name: string; sku: string; sellPrice: number; category?: string }) {
+  function addLine(p: { productId: string; name: string; sku: string; sellPrice: number; category?: string; label?: string }) {
     setLines((prev) =>
-      addCartLine(prev, { productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice, category: p.category }),
+      addCartLine(prev, { productId: p.productId, name: p.name, sku: p.sku, unitPrice: p.sellPrice, category: p.category, label: p.label }),
     );
   }
   function setQty(key: string, qty: number) {
@@ -1287,6 +1288,7 @@ function QuoteModal({
     unitPrice: l.unitPrice,
     reference: l.reference || undefined,
     eye: l.eye ?? null,
+    label: l.label || undefined,
   }));
 
   const createMut = useMutation({
@@ -1351,7 +1353,7 @@ function QuoteModal({
               <LensComposer
                 pricing={pricing}
                 onAdd={(line) =>
-                  addLine({ productId: line.productId, name: line.name, sku: line.sku, sellPrice: line.unitPrice, category: line.category })
+                  addLine({ productId: line.productId, name: line.name, sku: line.sku, sellPrice: line.unitPrice, category: line.category, label: line.label })
                 }
               />
             </div>

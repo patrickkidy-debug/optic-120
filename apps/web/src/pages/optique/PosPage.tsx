@@ -204,6 +204,7 @@ export function PosPage() {
           unitPrice: l.unitPrice,
           reference: l.reference || undefined,
           eye: l.eye ?? undefined,
+          label: l.label || undefined,
         })),
         discountAmount: pos.discountAmount,
         insuranceAmount: pos.insuranceAmount,

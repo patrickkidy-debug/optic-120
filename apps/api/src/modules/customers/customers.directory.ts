@@ -195,7 +195,7 @@ export async function getDirectory(db: TenantPrisma, tenantId: string, q: Direct
             number: true,
             totalAmount: true,
             createdAt: true,
-            items: { take: 2, select: { product: { select: { name: true } } } },
+            items: { take: 2, select: { label: true, product: { select: { name: true } } } },
           },
         }),
       ])
@@ -226,7 +226,7 @@ export async function getDirectory(db: TenantPrisma, tenantId: string, q: Direct
               number: ls.number,
               total: Number(ls.totalAmount),
               at: ls.createdAt.toISOString(),
-              label: ls.items.map((i) => i.product.name).join(', ') || null,
+              label: ls.items.map((i) => i.label || i.product.name).join(', ') || null,
             }
           : null,
       },

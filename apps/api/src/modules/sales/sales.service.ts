@@ -22,6 +22,10 @@ import {
 import { mergeOpticalSettings, addMonths } from '../../lib/optical-settings.js';
 import { adjustStockBy, decrementStockIfAvailable } from '../../lib/stock-atomic.js';
 import { canUseWarrantyPlan, isWarrantyPlanSku, warrantyPlanProduct } from '../../lib/warranty-plan.js';
+import { CUSTOM_LENS_SKU } from '../../lib/custom-lens.js';
+
+/** Fiches système masquées du catalogue mais vendables en caisse. */
+const SYSTEM_SKUS = [CUSTOM_LENS_SKU, WARRANTY_PLAN.lensSku, WARRANTY_PLAN.frameSku];
 
 type Tx = Prisma.TransactionClient;
 
@@ -94,6 +98,8 @@ interface ComputedLine {
   reference: string | null;
   /** Verre détaillé œil par œil (OD / OG). */
   eye: string | null;
+  /** Désignation de la ligne (verre composé en caisse). */
+  label?: string | null;
   /** false = article de présentation : aucun mouvement de stock. */
   trackStock: boolean;
 }
@@ -147,8 +153,10 @@ export async function createSale(
     }
 
     const productIds = input.items.map((i) => i.productId);
+    // Fiches actives, plus les fiches système masquées (verre sur mesure,
+    // suppléments garantie) que la caisse utilise sans les montrer au catalogue.
     const products = await tx.product.findMany({
-      where: { id: { in: productIds }, tenantId, isActive: true },
+      where: { id: { in: productIds }, tenantId, OR: [{ isActive: true }, { sku: { in: SYSTEM_SKUS } }] },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -170,6 +178,7 @@ export async function createSale(
         category: p.category,
         reference: i.reference?.trim() || null,
         eye: i.eye ?? null,
+        label: i.label?.trim() || null,
         trackStock: p.trackStock,
       };
     });
@@ -290,6 +299,7 @@ export async function createSale(
             lineTotal: l.lineTotal,
             reference: l.reference,
             eye: l.eye,
+            label: l.label ?? null,
           })),
         },
       },
@@ -416,8 +426,9 @@ export async function updateSale(
     const lines: ComputedLine[] = input.items
       ? input.items.map((i) => {
           const p = byId.get(i.productId);
-          // Les lignes de supplément garantie restent modifiables (fiches masquées).
-          if (!p || (!p.isActive && !isWarrantyPlanSku(p.sku))) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
+          // Fiches masquées acceptées : système (verre sur mesure, garantie) ou
+          // déjà présentes sur la pièce (ancien verre composé désactivé).
+          if (!p || (!p.isActive && !isWarrantyPlanSku(p.sku) && !SYSTEM_SKUS.includes(p.sku) && !sale.items.some((x) => x.productId === p.id))) throw badRequest(`Produit introuvable ou inactif : ${i.productId}`);
           const unitPrice =
             i.unitPrice != null && i.unitPrice >= 0 ? Math.round(i.unitPrice) : Number(p.sellPrice);
           return {
@@ -429,6 +440,7 @@ export async function updateSale(
             category: p.category,
             reference: i.reference?.trim() || null,
             eye: i.eye ?? null,
+            label: i.label?.trim() || null,
             trackStock: p.trackStock,
           };
         })
@@ -441,6 +453,7 @@ export async function updateSale(
           category: byId.get(i.productId)?.category ?? '',
           reference: i.reference,
           eye: i.eye,
+          label: i.label,
           trackStock: byId.get(i.productId)?.trackStock ?? true,
         }));
 
@@ -594,6 +607,7 @@ export async function updateSale(
                   lineTotal: l.lineTotal,
                   reference: l.reference,
                   eye: l.eye,
+                  label: l.label ?? null,
                 })),
               },
             }
@@ -662,6 +676,8 @@ export async function createReturn(tenantId: string, saleId: string, userId: str
             unitPrice: i.unitPrice,
             lineTotal: i.lineTotal,
             eye: i.eye,
+            reference: i.reference,
+            label: i.label,
           })),
         },
       },

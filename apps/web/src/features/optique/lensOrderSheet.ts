@@ -346,7 +346,7 @@ export function saleToLensOrder(sale: SaleDetail): LensOrder {
   const lensName = (eye: 'OD' | 'OG') =>
     lenses
       .filter((i) => !i.eye || i.eye === eye)
-      .map((i) => i.product.name + (i.reference ? ` (${i.reference})` : ''))
+      .map((i) => (i.label || i.product.name) + (i.reference ? ` (${i.reference})` : ''))
       .join(' + ') || null;
   const attrs = (lenses[0]?.product.attributes ?? {}) as { lensBase?: string; treatments?: string[] };
   const baseLabel = attrs.lensBase ? lensBaseOptions(pricing).find((o) => o.key === attrs.lensBase)?.label : undefined;
@@ -359,7 +359,7 @@ export function saleToLensOrder(sale: SaleDetail): LensOrder {
     category: lenses.length ? 'VERRES' : null,
     supplierName: null,
     description: sale.items
-      .map((i) => `${i.quantity} × ${i.product.name}${i.eye ? ` — ${i.eye}` : ''}${i.reference ? ` (${i.reference})` : ''}`)
+      .map((i) => `${i.quantity} × ${i.label || i.product.name}${i.eye ? ` — ${i.eye}` : ''}${i.reference ? ` (${i.reference})` : ''}`)
       .join(' · '),
     odLens: lensName('OD'),
     ogLens: lensName('OG'),

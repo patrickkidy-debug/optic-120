@@ -311,7 +311,7 @@ export interface CustomerSale {
   status: string;
   createdAt: string;
   branch: { name: string };
-  items: { id: string; quantity: number; unitPrice: string; lineTotal: string; product: { name: string; sku: string; category: string } }[];
+  items: { id: string; quantity: number; unitPrice: string; lineTotal: string; label?: string | null; product: { name: string; sku: string; category: string } }[];
 }
 /** Commande de verres d'un client (fiche client 360°). */
 export interface CustomerLensOrder {
@@ -487,6 +487,8 @@ export interface SaleDetailItem {
   reference: string | null;
   /** Verre : œil concerné (OD / OG). */
   eye?: 'OD' | 'OG' | null;
+  /** Désignation de la ligne (verre composé en caisse), à la place du nom produit. */
+  label?: string | null;
   product: { name: string; sku: string; category?: string; brand?: string | null; attributes?: Record<string, unknown> | null };
 }
 

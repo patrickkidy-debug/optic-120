@@ -853,6 +853,9 @@ model SaleItem {
   reference String? @db.VarChar(80)
   /// Verre : œil concerné (OD / OG) quand les verres sont détaillés œil par œil.
   eye       String? @db.VarChar(2)
+  /// Désignation affichée à la place du nom produit (verre composé en caisse :
+  /// type + traitements), sans créer de fiche produit par combinaison.
+  label     String? @db.VarChar(200)
 
   @@index([saleId])
 }

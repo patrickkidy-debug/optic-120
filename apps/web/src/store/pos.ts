@@ -18,11 +18,14 @@ export interface CartLine {
   /** Verre : œil concerné (OD / OG), sinon absent. */
   eye?: Eye | null;
   category?: string;
+  /** Désignation de la ligne (verre composé : type + traitements), sans fiche produit dédiée. */
+  label?: string;
 }
 
 export type NewCartLine = Omit<CartLine, 'quantity' | 'key'>;
 
-export const lineKey = (productId: string, eye?: Eye | null) => (eye ? `${productId}:${eye}` : productId);
+export const lineKey = (productId: string, eye?: Eye | null, label?: string | null) =>
+  `${productId}${label ? `#${label}` : ''}${eye ? `:${eye}` : ''}`;
 
 /** Réglage de l'établissement : verres sur une ligne OD et une ligne OG. */
 export function splitLensEyesEnabled() {
@@ -37,11 +40,11 @@ export function splitLensEyesEnabled() {
  */
 export function addCartLine<L extends CartLine>(lines: L[], line: NewCartLine, split = splitLensEyesEnabled()): L[] {
   if (split && !line.eye && line.category === 'VERRE') {
-    const missing = (['OD', 'OG'] as const).filter((e) => !lines.some((l) => l.key === lineKey(line.productId, e)));
+    const missing = (['OD', 'OG'] as const).filter((e) => !lines.some((l) => l.key === lineKey(line.productId, e, line.label)));
     if (missing.length === 0) return lines;
-    return [...lines, ...missing.map((eye) => ({ ...line, eye, key: lineKey(line.productId, eye), quantity: 1 }) as L)];
+    return [...lines, ...missing.map((eye) => ({ ...line, eye, key: lineKey(line.productId, eye, line.label), quantity: 1 }) as L)];
   }
-  const key = lineKey(line.productId, line.eye);
+  const key = lineKey(line.productId, line.eye, line.label);
   if (lines.some((l) => l.key === key)) {
     return lines.map((l) => (l.key === key ? { ...l, quantity: l.quantity + 1 } : l));
   }
@@ -52,7 +55,7 @@ export function addCartLine<L extends CartLine>(lines: L[], line: NewCartLine, s
 export function setCartLineEye<L extends CartLine>(lines: L[], key: string, eye: Eye | null): L[] {
   const line = lines.find((l) => l.key === key);
   if (!line) return lines;
-  const nextKey = lineKey(line.productId, eye);
+  const nextKey = lineKey(line.productId, eye, line.label);
   if (nextKey === key) return lines;
   const target = lines.find((l) => l.key === nextKey);
   if (target) {

@@ -7,7 +7,6 @@ import {
   productsRecategorizeSchema,
   lensProductSchema,
   computeLensPrice,
-  lensSku,
   lensLabel,
   lensBaseOptions,
   DEFAULT_LENS_PRICING,
@@ -19,6 +18,7 @@ import { requirePermission, requireAnyPermission, assertBranchAccess } from '../
 import type { FastifyRequest } from 'fastify';
 import { notFound, conflict, badRequest } from '../../lib/http-error.js';
 import { generateSku } from './products-import.service.js';
+import { CUSTOM_LENS_SKU } from '../../lib/custom-lens.js';
 
 
 /**
@@ -171,9 +171,9 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(201).send({ product });
   });
 
-  // Verre à la carte (caisse / ventes) : crée ou réutilise un produit VERRE
-  // déterministe dont le prix vient du barème de l'établissement (Réglages).
-  // Idempotent : même configuration = même produit, prix resynchronisé.
+  // Verre à la carte (caisse / ventes) : renvoie la fiche unique « Verre sur
+  // mesure » (masquée du catalogue) avec la désignation et le prix du barème.
+  // Aucune fiche n'est créée par combinaison type + traitements.
   app.post('/lens', { preHandler: requireAnyPermission('optique.sales.create', 'optique.quotes.create') }, async (req, reply) => {
     const { base, treatments } = lensProductSchema.parse(req.body);
     const tenantId = req.auth!.tenantId;
@@ -184,23 +184,23 @@ export async function productsRoutes(app: FastifyInstance): Promise<void> {
       throw badRequest('Type de verre inconnu');
     }
     const price = computeLensPrice(pricing, base, treatments);
-    const sku = lensSku(base, treatments);
     const name = lensLabel(pricing, base, treatments);
-    const attributes = { lensBase: base, treatments };
     const product = await req.db!.product.upsert({
-      where: { tenantId_sku: { tenantId, sku } },
-      update: { name, sellPrice: price, isActive: true, attributes },
+      where: { tenantId_sku: { tenantId, sku: CUSTOM_LENS_SKU } },
+      update: {},
       create: {
         tenantId,
-        sku,
+        sku: CUSTOM_LENS_SKU,
         category: ProductCategory.VERRE,
-        name,
-        sellPrice: price,
+        name: 'Verre sur mesure',
+        sellPrice: 0,
         buyPrice: 0,
-        attributes,
+        isActive: false,
+        trackStock: false,
       },
     });
-    return reply.send({ product });
+    // La ligne de vente porte la désignation et le prix de cette configuration.
+    return reply.send({ product: { ...product, name, sellPrice: price }, label: name, price });
   });
 
   app.patch('/:id', { preHandler: requirePermission('optique.products.update') }, async (req, reply) => {

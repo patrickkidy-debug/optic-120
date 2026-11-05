@@ -143,7 +143,7 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
       (it, i) => `
       <tr style="${i % 2 ? 'background:#f8fafc;' : ''}">
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
-          <div style="font-weight:600;color:#0f172a;">${esc(it.product.name)}${
+          <div style="font-weight:600;color:#0f172a;">${esc(it.label || it.product.name)}${
             it.eye ? ` <span style="font-weight:700;color:${accent};">— ${esc(tr(it.eye === 'OD' ? 'doc.eyeOd' : 'doc.eyeOg'))}</span>` : ''
           }</div>
           <div style="font-size:11px;color:#94a3b8;">${esc(it.product.sku)}</div>
@@ -316,6 +316,7 @@ export function buildSaleDocumentHtml(sale: SaleDetail, company: CompanyInfo): s
         <tr><td colspan="2" style="padding:4px 0;"><div style="border-top:2px solid ${accent};"></div></td></tr>
         ${totalRow(tr('doc.grandTotal'), money(sale.totalAmount, currency), { strong: true })}
       </table>
+      ${sale.items.some((i) => i.product.category === 'VERRE') ? `<div style="margin-top:6px;text-align:right;font-size:11px;color:#64748b;">Verres correcteurs exonérés de TVA</div>` : ''}
     </div>
 
     ${paymentBlock}
