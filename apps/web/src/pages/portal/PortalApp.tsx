@@ -44,7 +44,7 @@ import { PackageBadge, PhotoButton, QrScanner, StageBadge, Timeline } from '../.
 import { AnomalyForm, ChecksList } from '../optique/oculotrack/modals';
 import { Logo } from '../../components/Logo';
 import { Mascot } from '../../components/brand/Mascot';
-import { STICKER_TONES } from '../../components/ui';
+import { PasswordInput, STICKER_TONES } from '../../components/ui';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { tr } from '../../lib/tr';
 
@@ -191,8 +191,8 @@ export function PortalLogin() {
           }
         }}
       >
-        <input className="input h-12" type="email" autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className="input h-12" type="password" autoComplete="current-password" placeholder={tr('pt.password')} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input className="input h-12" type="email" autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value.trim())} />
+        <PasswordInput className="h-12" autoComplete="current-password" placeholder={tr('pt.password')} value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p className="text-sm text-danger">{error}</p>}
         <button className="btn-primary h-12 w-full rounded-xl text-base" disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : tr('pt.login')}</button>
       </form>
@@ -228,7 +228,7 @@ export function PortalInvite() {
           }
         }}
       >
-        <input className="input h-12" type="password" autoComplete="new-password" minLength={8} placeholder={tr('pt.newPassword')} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordInput className="h-12" autoComplete="new-password" minLength={8} placeholder={tr('pt.newPassword')} value={password} onChange={(e) => setPassword(e.target.value)} />
         {err && <p className="text-sm text-danger">{err}</p>}
         <button className="btn-primary h-12 w-full rounded-xl" disabled={busy || password.length < 8}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : tr('pt.activate')}</button>
       </form>

@@ -14,6 +14,7 @@ export interface RxSupplier {
   deliveryDays: number | null;
   contactName: string | null;
   phone: string | null;
+  whatsapp: string | null;
   email: string | null;
   orderEmail: string | null;
   rxCoefficient: number | null;
@@ -40,6 +41,12 @@ export interface RxLens {
   addMax: number | null;
   isActive: boolean;
   priceUpdatedAt: string;
+  /** Catalogue boutique : nom commercial et prix de vente d'un verre au magasin. */
+  shopName: string | null;
+  shopPrice: number | null;
+  /** Prix conseillé par le coefficient (achat × coef, arrondi 500). */
+  coefficientPrice: number;
+  /** Prix de vente retenu : prix boutique, sinon prix conseillé. */
   suggestedPrice: number;
   /** Présents seulement avec la permission « marges ». */
   purchasePrice?: number;
@@ -69,8 +76,8 @@ export interface RxOrder {
   createdAt: string;
   status: RxStatus;
   statusHistory: { status: RxStatus; at: string; by?: string; note?: string }[];
-  supplier: { id: string; name: string; code: string | null };
-  lens: { reference: string; designation: string; geometry: string; lensIndex: number | null; material: string | null; treatment: string | null };
+  supplier: { id: string; name: string; code: string | null; phone?: string | null; whatsapp?: string | null };
+  lens: { reference: string; designation: string; shopName?: string | null; geometry: string; lensIndex: number | null; material: string | null; treatment: string | null };
   customerId: string | null;
   patientName: string;
   fileNumber: string | null;
@@ -168,6 +175,7 @@ export const rx = {
   importLenses: async (supplierId: string, rows: RxLensRow[]) =>
     (await api.post<{ added: number; updated: number; unchanged: number }>('/oculorx/lenses/import', { supplierId, rows })).data,
   setLensActive: async (id: string, isActive: boolean) => (await api.patch(`/oculorx/lenses/${id}`, { isActive })).data,
+  updateLens: async (id: string, body: { shopName?: string | null; shopPrice?: number | null }) => (await api.patch(`/oculorx/lenses/${id}`, body)).data,
   orders: async (params: { status?: string; supplierId?: string; from?: string; to?: string; q?: string }) =>
     (await api.get<{ orders: RxOrder[] }>('/oculorx/orders', { params })).data.orders,
   createOrder: async (input: RxOrderCreateInput) => (await api.post<{ order: RxOrder; emailed: boolean }>('/oculorx/orders', input)).data,

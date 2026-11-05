@@ -155,12 +155,15 @@ export interface RxLensRow {
   addMin: number | null;
   addMax: number | null;
   purchasePrice: number;
+  /** Catalogue boutique (facultatif) : nom commercial et prix de vente d'un verre. */
+  shopName?: string | null;
+  shopPrice?: number | null;
 }
 
-/** En-têtes du fichier modèle, dans l'ordre. */
+/** En-têtes du fichier modèle, dans l'ordre (les deux derniers sont facultatifs). */
 export const RX_IMPORT_COLUMNS = [
   'reference', 'designation', 'geometrie', 'indice', 'matiere', 'traitement', 'diametre',
-  'sph_min', 'sph_max', 'cyl_max', 'add_min', 'add_max', 'prix_achat_ht',
+  'sph_min', 'sph_max', 'cyl_max', 'add_min', 'add_max', 'prix_achat_ht', 'nom_commercial', 'prix_vente_boutique',
 ] as const;
 
 /** En-tête normalisé : minuscules, sans accents ni espaces superflus. */
@@ -228,6 +231,11 @@ export function rxParseRows(records: Record<string, unknown>[]): { valid: RxLens
       addMin: rxParseNumber(r.add_min),
       addMax: rxParseNumber(r.add_max),
       purchasePrice: Math.round(price!),
+      ...(() => {
+        const shopName = String(r.nom_commercial ?? r.nom_boutique ?? '').trim();
+        const shopPrice = rxParseNumber(r.prix_vente_boutique ?? r.prix_vente ?? r.prix_boutique);
+        return { ...(shopName ? { shopName } : {}), ...(shopPrice != null && shopPrice > 0 ? { shopPrice: Math.round(shopPrice) } : {}) };
+      })(),
     });
   });
   return { valid, invalid };
@@ -246,6 +254,8 @@ export const rxSupplierSchema = z.object({
   deliveryDays: z.number().int().min(0).max(120).nullable().optional(),
   contactName: optStr(120),
   phone: optStr(40),
+  /** Numéro WhatsApp du fournisseur (s'il diffère du téléphone). */
+  whatsapp: optStr(40),
   orderEmail: z.string().trim().email('Email invalide').max(160).nullable().optional().or(z.literal('')),
   rxCoefficient: z.number().min(0.5).max(10).nullable().optional(),
   rxVatRate: z.number().min(0).max(100).nullable().optional(),
@@ -266,6 +276,8 @@ export const rxLensRowSchema = z.object({
   addMin: optNum,
   addMax: optNum,
   purchasePrice: z.number().int().min(0).max(100_000_000),
+  shopName: optStr(200),
+  shopPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
 });
 
 export const rxImportSchema = z.object({
@@ -294,6 +306,18 @@ export const rxOrderCreateSchema = z.object({
   branchId: z.string().uuid().nullable().optional(),
 });
 export type RxOrderCreateInput = z.infer<typeof rxOrderCreateSchema>;
+
+/** Fiche d'un verre : catalogue boutique et activation. */
+export const rxLensUpdateSchema = z.object({
+  isActive: z.boolean().optional(),
+  shopName: optStr(200),
+  shopPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
+});
+
+/** Prix de vente d'un verre : celui de la boutique, sinon le prix conseillé. */
+export function rxShopUnitPrice(lens: { shopPrice?: number | null }, suggested: number): number {
+  return lens.shopPrice && lens.shopPrice > 0 ? lens.shopPrice : suggested;
+}
 
 export const rxStatusSchema = z.object({ status: z.enum(RX_STATUSES), note: optStr(300) });
 

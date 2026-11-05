@@ -35,10 +35,14 @@ export const PasswordInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HT
     const [show, setShow] = useState(false);
     return (
       <div className="relative">
+        {/* Pas de majuscule ni de correction automatiques (claviers mobiles). */}
         <input
           ref={ref}
           type={show ? 'text' : 'password'}
           className={clsx('input pr-11', className)}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           {...props}
         />
         <button

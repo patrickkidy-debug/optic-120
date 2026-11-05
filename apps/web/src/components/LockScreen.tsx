@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/auth';
 import { verifyPassword, logout } from '../features/auth/api';
 import { tryLocalUnlock, setUnlockSecret } from '../lib/unlock';
 import { Logo } from './Logo';
-import { Button } from './ui';
+import { Button, PasswordInput } from './ui';
 import { tr } from '../lib/tr';
 
 export function LockScreen() {
@@ -52,9 +52,8 @@ export function LockScreen() {
           </p>
         )}
         <form onSubmit={onSubmit} className="mt-4 space-y-3 text-left">
-          <input
-            type="password"
-            className="input"
+          <PasswordInput
+            autoComplete="current-password"
             placeholder={t('auth.password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -947,7 +947,7 @@ export const googleSignupSchema = z.object({
 export type GoogleSignupInput = z.infer<typeof googleSignupSchema>;
 
 export const loginSchema = z.object({
-  identifier: z.string().min(1, "Email ou nom d'utilisateur requis"),
+  identifier: z.string().trim().min(1, "Email ou nom d'utilisateur requis"),
   password: z.string().min(1, 'Mot de passe requis'),
 });
 export type LoginInput = z.infer<typeof loginSchema>;

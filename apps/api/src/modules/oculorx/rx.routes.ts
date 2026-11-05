@@ -5,6 +5,8 @@ import {
   RX_NEXT_STATUSES,
   rxChecks,
   rxImportSchema,
+  rxLensUpdateSchema,
+  rxShopUnitPrice,
   rxOrderCreateSchema,
   rxSettingsSchema,
   rxStatementPaySchema,
@@ -85,7 +87,7 @@ function orderView(o: OrderRow, margins: boolean, link?: LensLink | null) {
   return { ...base, purchasePrice: o.purchasePrice, supplements: o.supplements, margin: o.salePrice - o.purchasePrice };
 }
 
-const SUPPLIER_SELECT = { id: true, name: true, code: true } as const;
+const SUPPLIER_SELECT = { id: true, name: true, code: true, phone: true, whatsapp: true } as const;
 
 export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
@@ -115,7 +117,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
       where: { isActive: true },
       orderBy: { name: 'asc' },
       select: {
-        id: true, name: true, code: true, city: true, country: true, deliveryDays: true, contactName: true, phone: true,
+        id: true, name: true, code: true, city: true, country: true, deliveryDays: true, contactName: true, phone: true, whatsapp: true,
         email: true, orderEmail: true, rxCoefficient: true, rxVatRate: true, rxDemo: true,
         _count: { select: { rxLenses: true, rxOrders: true } },
       },
@@ -164,11 +166,13 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
     });
     return reply.send({
       lenses: lenses.map((l) => {
-        const suggested = suggestedFor(settings, l, l.supplier.rxCoefficient);
+        // Prix conseillé = prix boutique s'il est renseigné, sinon achat × coefficient.
+        const coefficientPrice = suggestedFor(settings, l, l.supplier.rxCoefficient);
+        const suggested = rxShopUnitPrice(l, coefficientPrice);
         const { purchasePrice, priceHistory, ...rest } = l;
         return margins
-          ? { ...rest, purchasePrice, priceHistory, suggestedPrice: suggested, margin: suggested - purchasePrice }
-          : { ...rest, suggestedPrice: suggested };
+          ? { ...rest, purchasePrice, priceHistory, coefficientPrice, suggestedPrice: suggested, margin: suggested - purchasePrice }
+          : { ...rest, coefficientPrice, suggestedPrice: suggested };
       }),
     });
   });
@@ -191,7 +195,9 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
       if (seen.has(key)) continue; // doublon dans le fichier : la première ligne fait foi
       seen.add(key);
       const prev = byRef.get(key);
-      const data = { ...row, isActive: true };
+      // Nom et prix boutique absents du fichier : on garde ceux déjà saisis.
+      const { shopName, shopPrice, ...base } = row;
+      const data = { ...base, ...(shopName ? { shopName } : {}), ...(shopPrice ? { shopPrice } : {}), isActive: true };
       if (!prev) {
         await db.rxLens.create({ data: { ...data, tenantId, supplierId: supplier.id } as never });
         added++;
@@ -210,8 +216,15 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
 
   app.patch('/lenses/:id', { preHandler: MANAGE }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const input = z.object({ isActive: z.boolean() }).parse(req.body);
-    const res = await req.db!.rxLens.updateMany({ where: { id }, data: input });
+    const input = rxLensUpdateSchema.parse(req.body);
+    const res = await req.db!.rxLens.updateMany({
+      where: { id },
+      data: {
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.shopName !== undefined ? { shopName: input.shopName || null } : {}),
+        ...(input.shopPrice !== undefined ? { shopPrice: input.shopPrice || null } : {}),
+      },
+    });
     if (res.count === 0) throw notFound('Verre introuvable');
     return reply.send({ ok: true });
   });
@@ -283,7 +296,7 @@ export async function oculorxRoutes(app: FastifyInstance): Promise<void> {
             userName: by,
             supplierId: lens.supplierId,
             lensId: lens.id,
-            lensSnapshot: { reference: lens.reference, designation: lens.designation, geometry: lens.geometry, lensIndex: lens.lensIndex, material: lens.material, treatment: lens.treatment, unitPrice: lens.purchasePrice },
+            lensSnapshot: { reference: lens.reference, designation: lens.designation, shopName: lens.shopName, geometry: lens.geometry, lensIndex: lens.lensIndex, material: lens.material, treatment: lens.treatment, unitPrice: lens.purchasePrice },
             customerId: input.customerId ?? null,
             patientName,
             fileNumber,

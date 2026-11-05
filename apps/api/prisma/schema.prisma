@@ -3017,6 +3017,10 @@ model RxLens {
   addMax         Float?
   /// Prix d'achat HT d'UN verre, en FCFA.
   purchasePrice  Int
+  /// Catalogue boutique : nom commercial du verre au magasin et prix de
+  /// vente d'UN verre (sinon : prix conseillé par le coefficient).
+  shopName       String?
+  shopPrice      Int?
   /// Anciens prix : [{ price, until }] — le plus récent en dernier.
   priceHistory   Json     @default("[]")
   priceUpdatedAt DateTime @default(now())

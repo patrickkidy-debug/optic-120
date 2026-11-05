@@ -11,13 +11,31 @@ const OPTIONS = {
   parallelism: 1,
 };
 
+/**
+ * Mot de passe tel qu'il doit être compris : sans espaces en début / fin ni
+ * caractères invisibles. Un mot de passe copié depuis WhatsApp ou un email
+ * embarque souvent une espace finale, une espace insécable ou un marqueur de
+ * direction (U+200E…) : la connexion échouait alors sans raison visible.
+ */
+export function normalizePassword(plain: string): string {
+  return plain
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '')
+    .replace(/[\u00A0\u202F]/g, ' ')
+    .normalize('NFC')
+    .trim();
+}
+
 export function hashPassword(plain: string): Promise<string> {
-  return hash(plain, OPTIONS);
+  return hash(normalizePassword(plain), OPTIONS);
 }
 
 export async function verifyPassword(hashStr: string, plain: string): Promise<boolean> {
   try {
-    return await verify(hashStr, plain);
+    // Forme normalisée d'abord (nouveaux mots de passe), puis telle quelle :
+    // un ancien mot de passe enregistré avec une espace reste valable.
+    const clean = normalizePassword(plain);
+    if (await verify(hashStr, clean)) return true;
+    return clean !== plain ? await verify(hashStr, plain) : false;
   } catch {
     return false;
   }

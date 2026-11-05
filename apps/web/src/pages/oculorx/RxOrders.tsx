@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link2, Mail, Printer, Search } from 'lucide-react';
+import { Link2, Mail, MessageCircle, Printer, Search } from 'lucide-react';
 import { RX_FRAME_LABELS, RX_NEXT_STATUSES, RX_STATUS_LABELS, rxDiopter, type RxFrameType, type RxStatus } from '@oculo/shared-types';
 import { rx, type RxOrder } from '../../features/oculorx/api';
 import { printOrderSheet } from '../../features/oculorx/print';
@@ -11,6 +11,7 @@ import { formatDate, formatDateTime } from '../../lib/format';
 import { useAuthStore } from '../../store/auth';
 import { Money, Panel, StatusBadge, td, th, useRx } from './ui';
 import { LensLinks } from './LensLinks';
+import { openWhatsapp, orderWhatsappText, waNumber } from '../../features/oculorx/whatsapp';
 
 const FILTERS = [
   { id: '', label: 'Toutes' },
@@ -85,7 +86,7 @@ export function RxOrders() {
                     </td>
                     <td className={td}>{o.patientName}{o.fileNumber && <span className="block text-[11px] text-content-faint">{o.fileNumber}</span>}</td>
                     <td className={`${td} text-content-muted`}>{o.supplier.name}</td>
-                    <td className={`${td} text-xs`}>{o.lens.designation}<span className="block font-mono text-[11px] text-content-faint">{o.lens.reference}</span></td>
+                    <td className={`${td} text-xs`}>{o.lens.shopName || o.lens.designation}<span className="block font-mono text-[11px] text-content-faint">{o.lens.reference}{o.lens.shopName ? ` · ${o.lens.designation}` : ''}</span></td>
                     <td className={`${td} whitespace-nowrap font-mono text-[11px] text-content-muted`}>
                       {rxDiopter(o.od.sph)} {o.od.cyl ? `(${rxDiopter(o.od.cyl)})` : ''}
                       <span className="block">{rxDiopter(o.og.sph)} {o.og.cyl ? `(${rxDiopter(o.og.cyl)})` : ''}</span>
@@ -196,6 +197,13 @@ function OrderModal({ order: o, margins, onClose }: { order: RxOrder; margins: b
         )}
 
         <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+          {waNumber(o.supplier) ? (
+            <Button variant="outline" onClick={() => openWhatsapp(waNumber(o.supplier)!, orderWhatsappText(o, user?.tenantName ?? 'Magasin'))}>
+              <MessageCircle className="h-4 w-4" /> Envoyer sur WhatsApp
+            </Button>
+          ) : (
+            <span className="self-center text-xs text-content-faint">Ajoutez le WhatsApp du fournisseur pour lui écrire.</span>
+          )}
           {canOrder && <Button variant="ghost" loading={resend.isPending} onClick={() => resend.mutate()}><Mail className="h-4 w-4" /> Renvoyer par email</Button>}
           <Button variant="outline" onClick={() => printOrderSheet(o, { name: user?.tenantName ?? 'Magasin', phone: user?.tenantContactPhone })}><Printer className="h-4 w-4" /> Bon de commande</Button>
         </div>

@@ -599,7 +599,14 @@ async function registerFailedAttempt(user: UserWithCtxRow, meta: RequestMeta): P
  */
 export async function login(input: LoginInput, meta: RequestMeta): Promise<LoginOrSelect> {
   const candidates = await prisma.user.findMany({
-    where: { OR: [{ email: input.identifier }, { username: input.identifier }] },
+    // Sans tenir compte des majuscules : un clavier de téléphone met souvent
+    // une capitale à la première lettre de l'email.
+    where: {
+      OR: [
+        { email: { equals: input.identifier, mode: 'insensitive' } },
+        { username: { equals: input.identifier, mode: 'insensitive' } },
+      ],
+    },
     include: USER_INCLUDE,
   });
   // Réponse identique si aucun compte (anti-énumération).

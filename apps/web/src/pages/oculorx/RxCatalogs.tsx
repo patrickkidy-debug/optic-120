@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileUp, Pencil, Plus, Search, Settings2 } from 'lucide-react';
+import { Download, FileUp, KeyRound, MessageCircle, Pencil, Plus, Search, Settings2, Store } from 'lucide-react';
 import {
   RX_GEOMETRIES,
   RX_GEOMETRY_LABELS,
@@ -12,12 +12,16 @@ import {
   type RxLensRow,
   type RxSupplierInput,
 } from '@oculo/shared-types';
-import { rx, type RxSupplier } from '../../features/oculorx/api';
+import { rx, type RxLens, type RxSupplier } from '../../features/oculorx/api';
 import { downloadTemplate, readCatalogFile } from '../../features/oculorx/importFile';
 import { Button, Field, Modal, PageLoader } from '../../components/ui';
 import { apiErrorMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { Money, Panel, td, th, useRx } from './ui';
+import { InviteModal } from '../optique/oculotrack/modals';
+import { usePermission } from '../../store/auth';
+import { waNumber } from '../../features/oculorx/whatsapp';
+import { NumberInput } from '../../components/NumberInput';
 
 const geoLabel = (g: string) => RX_GEOMETRY_LABELS[g as keyof typeof RX_GEOMETRY_LABELS] ?? g;
 const idx = (v: number | null) => (v == null ? '—' : v.toFixed(2).replace('.', ','));
@@ -28,6 +32,8 @@ export function RxCatalogs() {
   const [editing, setEditing] = useState<RxSupplier | 'new' | null>(null);
   const [importing, setImporting] = useState(false);
   const [coef, setCoef] = useState(false);
+  const [invite, setInvite] = useState<string | null>(null);
+  const canPortal = usePermission('oculotrack.portal');
 
   return (
     <>
@@ -63,10 +69,26 @@ export function RxCatalogs() {
                     <td className={`${td} font-mono text-xs`}>{s.code || '—'}</td>
                     <td className={`${td} text-content-muted`}>{[s.city, s.country].filter(Boolean).join(', ') || '—'}</td>
                     <td className={`${td} text-right font-mono`}>{s.deliveryDays != null ? `${s.deliveryDays} j` : '—'}</td>
-                    <td className={`${td} text-content-muted`}>{[s.contactName, s.phone].filter(Boolean).join(' · ') || '—'}</td>
+                    <td className={`${td} text-content-muted`}>
+                      {[s.contactName, s.phone].filter(Boolean).join(' · ') || '—'}
+                      {waNumber(s) && (
+                        <a href={`https://wa.me/${waNumber(s)}`} target="_blank" rel="noreferrer" className="ml-1.5 inline-flex align-middle text-success" title="Écrire sur WhatsApp">
+                          <MessageCircle className="h-4 w-4" />
+                        </a>
+                      )}
+                    </td>
                     <td className={`${td} text-content-muted`}>{s.orderEmail || <span className="text-warning">à renseigner</span>}</td>
                     <td className={`${td} text-right font-mono`}>{s._count.rxLenses}</td>
-                    {manage && <td className={`${td} text-right`}><button type="button" className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label="Modifier" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button></td>}
+                    {manage && (
+                      <td className={`${td} whitespace-nowrap text-right`}>
+                        {canPortal && (
+                          <button type="button" className="btn-ghost h-8 rounded-lg px-2 text-xs" title="Donner un accès au portail fournisseur (suivi des commandes)" onClick={() => setInvite(s.id)}>
+                            <KeyRound className="mr-1 inline h-3.5 w-3.5" /> Portail
+                          </button>
+                        )}
+                        <button type="button" className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label="Modifier" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {!suppliers.length && <tr><td colSpan={8} className={`${td} text-content-muted`}>Aucun fournisseur.</td></tr>}
@@ -81,6 +103,7 @@ export function RxCatalogs() {
       {editing && <SupplierModal supplier={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {importing && suppliers && <ImportModal suppliers={suppliers} onClose={() => setImporting(false)} />}
       {coef && <CoefficientModal onClose={() => setCoef(false)} />}
+      {invite && <InviteModal supplierId={invite} onClose={() => setInvite(null)} />}
     </>
   );
 }
@@ -97,9 +120,28 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
     queryFn: () => rx.lenses({ supplierId: supplierId || undefined, q: q.trim() || undefined, geometry: geometry || undefined, index: index ? Number(index) : undefined, treatment: treatment || undefined, all: manage }),
   });
   const toggle = useMutation({ mutationFn: ({ id, on }: { id: string; on: boolean }) => rx.setLensActive(id, on), onSuccess: () => qc.invalidateQueries({ queryKey: ['rx', 'lenses'] }) });
+  const [shopEdit, setShopEdit] = useState<RxLens | null>(null);
+  const [view, setView] = useState<'supplier' | 'shop'>('supplier');
 
   return (
-    <Panel title={`Catalogue${lenses ? ` · ${lenses.length} verre(s)` : ''}`}>
+    <Panel
+      title={`Catalogue${lenses ? ` · ${lenses.length} verre(s)` : ''}`}
+      actions={
+        <div className="flex gap-1 rounded-xl bg-surface-2 p-1">
+          {([['supplier', 'Catalogue fournisseur'], ['shop', 'Catalogue boutique']] as const).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setView(k)} className={clsx('rounded-lg px-3 py-1.5 text-xs font-semibold', view === k ? 'bg-surface text-content shadow-sm' : 'text-content-muted')}>
+              {label}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      {view === 'shop' && (
+        <p className="mb-3 text-xs text-content-muted">
+          Donnez à chaque verre son nom commercial en boutique et son prix de vente : OculoRX calcule alors le bénéfice réel (prix boutique − prix d'achat fournisseur).
+          Sans prix boutique, le prix conseillé par le coefficient est utilisé.
+        </p>
+      )}
       <div className="mb-3 flex flex-wrap gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-faint" />
@@ -125,23 +167,35 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
             <thead>
               <tr className="border-b">
                 <th className={th}>Référence</th>
-                <th className={th}>Désignation</th>
+                <th className={th}>{view === 'shop' ? 'Nom boutique / fournisseur' : 'Désignation'}</th>
                 <th className={th}>Géométrie</th>
                 <th className={`${th} text-right`}>Indice</th>
                 <th className={th}>Matière</th>
                 <th className={th}>Traitement</th>
                 <th className={th}>Plage de fabrication</th>
                 {margins && <th className={`${th} text-right`}>Achat / verre</th>}
-                <th className={`${th} text-right`}>Vente conseillée</th>
-                {margins && <th className={`${th} text-right`}>Marge / verre</th>}
-                {manage && <th className={th}>Actif</th>}
+                <th className={`${th} text-right`}>{view === 'shop' ? 'Prix boutique' : 'Vente conseillée'}</th>
+                {margins && <th className={`${th} text-right`}>{view === 'shop' ? 'Bénéfice réel / verre' : 'Marge / verre'}</th>}
+                {manage && <th className={th}>{view === 'shop' ? '' : 'Actif'}</th>}
               </tr>
             </thead>
             <tbody>
               {(lenses ?? []).map((l) => (
                 <tr key={l.id} className={clsx('border-b last:border-0', !l.isActive && 'opacity-50')}>
                   <td className={`${td} font-mono text-xs font-bold`}>{l.reference}<span className="block font-sans text-[11px] font-normal text-content-faint">{l.supplier.name}</span></td>
-                  <td className={td}>{l.designation}</td>
+                  <td className={td}>
+                    {view === 'shop' ? (
+                      <>
+                        <span className={l.shopName ? 'font-semibold text-content' : 'italic text-content-faint'}>{l.shopName || 'Nom boutique à renseigner'}</span>
+                        <span className="block text-[11px] text-content-faint">Fournisseur : {l.designation}</span>
+                      </>
+                    ) : (
+                      <>
+                        {l.designation}
+                        {l.shopName && <span className="block text-[11px] text-content-faint">Boutique : {l.shopName}</span>}
+                      </>
+                    )}
+                  </td>
                   <td className={`${td} text-content-muted`}>{geoLabel(l.geometry)}</td>
                   <td className={`${td} text-right font-mono`}>{idx(l.lensIndex)}</td>
                   <td className={`${td} text-content-muted`}>{l.material || '—'}</td>
@@ -160,9 +214,20 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
                       )}
                     </td>
                   )}
-                  <td className={`${td} text-right`}><Money value={l.suggestedPrice} /></td>
+                  <td className={`${td} text-right`}>
+                    <Money value={l.suggestedPrice} />
+                    {view === 'shop' && !l.shopPrice && <span className="block text-[10px] text-content-faint">coefficient</span>}
+                  </td>
                   {margins && <td className={`${td} text-right font-semibold`}><Money value={l.margin} /></td>}
-                  {manage && <td className={td}><input type="checkbox" checked={l.isActive} onChange={(e) => toggle.mutate({ id: l.id, on: e.target.checked })} aria-label="Verre actif" /></td>}
+                  {manage && (
+                    <td className={td}>
+                      {view === 'shop' ? (
+                        <button type="button" className="btn-ghost h-8 w-8 rounded-lg p-0" aria-label="Nom et prix boutique" onClick={() => setShopEdit(l)}><Store className="h-4 w-4" /></button>
+                      ) : (
+                        <input type="checkbox" checked={l.isActive} onChange={(e) => toggle.mutate({ id: l.id, on: e.target.checked })} aria-label="Verre actif" />
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
               {!lenses?.length && <tr><td colSpan={11} className={`${td} py-6 text-center text-content-muted`}>Aucun verre.</td></tr>}
@@ -170,7 +235,47 @@ function CatalogTable({ suppliers, margins, manage }: { suppliers: RxSupplier[];
           </table>
         </div>
       )}
+      {shopEdit && <ShopLensModal lens={shopEdit} margins={margins} onClose={() => setShopEdit(null)} />}
     </Panel>
+  );
+}
+
+/** Catalogue boutique d'un verre : nom commercial et prix de vente au magasin. */
+function ShopLensModal({ lens, margins, onClose }: { lens: RxLens; margins: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [shopName, setShopName] = useState(lens.shopName ?? '');
+  const [shopPrice, setShopPrice] = useState(lens.shopPrice ?? 0);
+  const save = useMutation({
+    mutationFn: () => rx.updateLens(lens.id, { shopName: shopName.trim() || null, shopPrice: shopPrice > 0 ? shopPrice : null }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rx'] }); onClose(); },
+    onError: (e) => alert(apiErrorMessage(e)),
+  });
+  const price = shopPrice > 0 ? shopPrice : lens.coefficientPrice;
+  const profit = lens.purchasePrice != null ? price - lens.purchasePrice : null;
+  return (
+    <Modal open onClose={onClose} title="Catalogue boutique" size="md">
+      <div className="space-y-3">
+        <div className="rounded-xl bg-surface-2 p-3 text-sm">
+          <p className="text-[11px] uppercase tracking-wide text-content-faint">Verre du fournisseur</p>
+          <p className="font-semibold text-content">{lens.designation}</p>
+          <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
+        </div>
+        <Field label="Nom commercial en boutique"><input className="input" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex. Verre Confort Écran 1.56" maxLength={200} /></Field>
+        <Field label="Prix de vente d'un verre (FCFA)">
+          <NumberInput min={0} value={shopPrice} onChange={setShopPrice} className="input text-right font-mono" placeholder={String(lens.coefficientPrice)} />
+        </Field>
+        <p className="text-xs text-content-muted">Laisser vide pour utiliser le prix conseillé par le coefficient ({lens.coefficientPrice.toLocaleString('fr-FR')} FCFA).</p>
+        {margins && profit != null && (
+          <p className={clsx('rounded-lg px-3 py-2 text-sm font-bold', profit < 0 ? 'bg-[color:var(--danger)]/10 text-danger' : 'bg-[color:var(--success)]/10 text-success')}>
+            Bénéfice réel par verre : {profit < 0 ? '− ' : ''}{Math.abs(profit).toLocaleString('fr-FR')} FCFA ({lens.purchasePrice!.toLocaleString('fr-FR')} FCFA d'achat)
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button loading={save.isPending} onClick={() => save.mutate()}>Enregistrer</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -184,6 +289,7 @@ function SupplierModal({ supplier, onClose }: { supplier: RxSupplier | null; onC
     deliveryDays: supplier?.deliveryDays ?? null,
     contactName: supplier?.contactName ?? '',
     phone: supplier?.phone ?? '',
+    whatsapp: supplier?.whatsapp ?? '',
     orderEmail: supplier?.orderEmail ?? '',
     rxCoefficient: supplier?.rxCoefficient ?? null,
     rxVatRate: supplier?.rxVatRate ?? null,
@@ -205,6 +311,7 @@ function SupplierModal({ supplier, onClose }: { supplier: RxSupplier | null; onC
         <Field label="Délai moyen de livraison (jours)"><input className="input" inputMode="numeric" value={f.deliveryDays ?? ''} onChange={(e) => set({ deliveryDays: e.target.value ? Number(e.target.value.replace(/\D/g, '')) : null })} /></Field>
         <Field label="Contact"><input className="input" value={f.contactName ?? ''} onChange={(e) => set({ contactName: e.target.value })} /></Field>
         <Field label="Téléphone"><input className="input" type="tel" value={f.phone ?? ''} onChange={(e) => set({ phone: e.target.value })} /></Field>
+        <Field label="WhatsApp (commandes et suivi)"><input className="input" type="tel" value={f.whatsapp ?? ''} onChange={(e) => set({ whatsapp: e.target.value })} placeholder="+221 77 000 00 00" /></Field>
         <Field label="Email de commande"><input className="input" type="email" value={f.orderEmail ?? ''} onChange={(e) => set({ orderEmail: e.target.value })} placeholder="commandes@fournisseur.com" /></Field>
         <Field label="Coefficient de vente propre (optionnel)"><input className="input" inputMode="decimal" value={f.rxCoefficient ?? ''} onChange={(e) => set({ rxCoefficient: num(e.target.value) })} placeholder="ex. 2,6" /></Field>
         <Field label="TVA sur suppléments (%) (optionnel)"><input className="input" inputMode="decimal" value={f.rxVatRate ?? ''} onChange={(e) => set({ rxVatRate: num(e.target.value) })} placeholder="18" /></Field>
@@ -271,7 +378,7 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition hover:border-primary">
             <FileUp className="h-7 w-7 text-primary" />
             <span className="text-sm font-semibold text-content">{fileName || 'Choisir un fichier CSV ou Excel'}</span>
-            <span className="text-xs text-content-faint">Colonnes : référence, désignation, géométrie, indice, matière, traitement, diamètre, sph/cyl/add min-max, prix_achat_ht. Séparateur « ; » ou « , », décimales avec virgule acceptées.</span>
+            <span className="text-xs text-content-faint">Colonnes : référence, désignation, géométrie, indice, matière, traitement, diamètre, sph/cyl/add min-max, prix_achat_ht, et facultativement nom_commercial et prix_vente_boutique (catalogue boutique). Séparateur « ; » ou « , », décimales avec virgule acceptées.</span>
             <input type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={(e) => void onFile(e.target.files?.[0])} />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -286,7 +393,7 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
                   <thead className="sticky top-0 bg-surface">
                     <tr className="border-b">
                       <th className={th}>Réf.</th><th className={th}>Désignation</th><th className={th}>Géom.</th><th className={`${th} text-right`}>Indice</th>
-                      <th className={th}>Traitement</th><th className={th}>Plage</th><th className={`${th} text-right`}>Prix HT</th>
+                      <th className={th}>Traitement</th><th className={th}>Plage</th><th className={`${th} text-right`}>Prix HT</th><th className={th}>Nom boutique</th><th className={`${th} text-right`}>Prix boutique</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -296,6 +403,8 @@ function ImportModal({ suppliers, onClose }: { suppliers: RxSupplier[]; onClose:
                         <td className={`${td} text-right font-mono`}>{idx(r.lensIndex)}</td><td className={td}>{r.treatment || '—'}</td>
                         <td className={`${td} font-mono`}>{rxDiopter(r.sphMin)} / {rxDiopter(r.sphMax)} · cyl {idx(r.cylMax)}</td>
                         <td className={`${td} text-right`}><Money value={r.purchasePrice} /></td>
+                        <td className={td}>{r.shopName || '—'}</td>
+                        <td className={`${td} text-right`}>{r.shopPrice ? <Money value={r.shopPrice} /> : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

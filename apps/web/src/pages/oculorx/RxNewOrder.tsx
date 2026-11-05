@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, Printer, Send } from 'lucide-react';
+import { CheckCircle2, CircleAlert, MessageCircle, Printer, Send } from 'lucide-react';
 import {
   RX_FRAME_LABELS,
   RX_FRAME_TYPES,
@@ -23,6 +23,7 @@ import { useAuthStore } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { Money, Panel, td, th, useRx } from './ui';
 import { LensLinks } from './LensLinks';
+import { openWhatsapp, orderWhatsappText, waNumber } from '../../features/oculorx/whatsapp';
 
 type EyeText = { sph: string; cyl: string; axis: string };
 const blankEye: EyeText = { sph: '', cyl: '', axis: '' };
@@ -161,6 +162,11 @@ export function RxNewOrder() {
             <Button variant="outline" onClick={() => printOrderSheet(done.order, { name: user?.tenantName ?? 'Magasin', phone: user?.tenantContactPhone })}>
               <Printer className="h-4 w-4" /> Bon de commande (PDF)
             </Button>
+            {waNumber(done.order.supplier) && (
+              <Button variant="outline" onClick={() => openWhatsapp(waNumber(done.order.supplier)!, orderWhatsappText(done.order, user?.tenantName ?? 'Magasin'))}>
+                <MessageCircle className="h-4 w-4" /> Envoyer sur WhatsApp
+              </Button>
+            )}
             <Button onClick={reset}>Nouvelle commande</Button>
           </div>
         </div>
@@ -211,8 +217,9 @@ export function RxNewOrder() {
                   {shown.map((l) => (
                     <tr key={l.id} className={clsx('border-b last:border-0', lens?.id === l.id && 'bg-primary-soft/50')}>
                       <td className={td}>
-                        <span className="font-medium text-content">{l.designation}</span>
+                        <span className="font-medium text-content">{l.shopName || l.designation}</span>
                         <span className="block text-[11px] text-content-faint">
+                          {l.shopName && <>{l.designation} · </>}
                           <span className="font-mono">{l.reference}</span> · {RX_GEOMETRY_LABELS[l.geometry as keyof typeof RX_GEOMETRY_LABELS] ?? l.geometry}
                           {l.lensIndex ? ` · ${String(l.lensIndex).replace('.', ',')}` : ''} {l.treatment ? `· ${l.treatment}` : ''}
                         </span>
@@ -298,8 +305,9 @@ export function RxNewOrder() {
           ) : (
             <div className="space-y-3 text-sm">
               <div className="rounded-xl bg-surface-2 p-3">
-                <p className="font-semibold text-content">{lens.designation}</p>
+                <p className="font-semibold text-content">{lens.shopName || lens.designation}</p>
                 <p className="font-mono text-[11px] text-content-faint">{lens.reference} · {lens.supplier.name}</p>
+                {lens.shopName && <p className="text-[11px] text-content-faint">Fournisseur : {lens.designation}</p>}
               </div>
               <ul className="space-y-1">
                 {checks.map((c) => (
