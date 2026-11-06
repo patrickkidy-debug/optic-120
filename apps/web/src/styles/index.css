@@ -723,3 +723,13 @@ html.premium-ui .app-shell .card.card-modal {
   letter-spacing: 0;
   line-height: 1.15;
 }
+
+/* Réglages → Préférences : animations réduites (choix de l'utilisateur). */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

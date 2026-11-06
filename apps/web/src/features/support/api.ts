@@ -5,6 +5,20 @@ export async function createSupportTicket(input: SupportTicketInput): Promise<vo
   await api.post('/support', input);
 }
 
+export interface MySupportTicket {
+  id: string;
+  subject: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+/** Demandes envoyées par l'utilisateur connecté. */
+export async function listMySupportTickets(): Promise<MySupportTicket[]> {
+  const { data } = await api.get<{ tickets: MySupportTicket[] }>('/support/mine');
+  return data.tickets;
+}
+
 /* --- Console fondateur --- */
 export interface SupportTicket {
   id: string;

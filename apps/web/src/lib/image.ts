@@ -39,13 +39,21 @@ export async function fileToResizedDataUrl(
   file: File,
   maxSize = 256,
   maxOutputBytes = DEFAULT_MAX_OUTPUT_BYTES,
+  /**
+   * Photos prises au téléphone : tout format image que le navigateur sait
+   * décoder (HEIC/HEIF sur iPhone, type vide sur certains Android) et des
+   * fichiers plus lourds (capteurs haute résolution).
+   */
+  opts: { anyImage?: boolean; maxInputBytes?: number } = {},
 ): Promise<string> {
-  if (!ACCEPTED_TYPES.includes(file.type)) {
+  const typeOk = opts.anyImage ? file.type === '' || file.type.startsWith('image/') : ACCEPTED_TYPES.includes(file.type);
+  if (!typeOk) {
     throw new Error(tr('ui.image.formatNonSupporteUtilisezUne'));
   }
-  if (file.size > MAX_INPUT_BYTES) {
+  const maxInput = opts.maxInputBytes ?? MAX_INPUT_BYTES;
+  if (file.size > maxInput) {
     throw new Error(
-      tr('ui.image.imageTropLourdeSizeMaximum', { size: formatBytes(file.size), MAX_INPUT_BYTES: formatBytes(MAX_INPUT_BYTES) }),
+      tr('ui.image.imageTropLourdeSizeMaximum', { size: formatBytes(file.size), MAX_INPUT_BYTES: formatBytes(maxInput) }),
     );
   }
 

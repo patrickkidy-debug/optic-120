@@ -161,7 +161,7 @@ function OrderCard({
       {/* Monture : vignette (symbole) si choisie */}
       {order.frameProduct && (
         <div className="flex items-center gap-2 rounded-lg bg-surface-2 p-1.5">
-          <ProductSymbol category="MONTURE" className="h-9 w-11 shrink-0 rounded-md" />
+          <ProductSymbol category="MONTURE" seed={order.frameProduct.id} name={order.frameProduct.name} brand={order.frameProduct.brand} className="h-9 w-11 shrink-0 rounded-md" />
           <span className="truncate text-xs font-medium text-content">
             {order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}
             {order.frameProduct.name}

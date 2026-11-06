@@ -362,16 +362,39 @@ export function QrScanner({ onResult, onClose, title }: { onResult: (token: stri
 
 /* ------------------------------ Photo rapide ------------------------------ */
 
-/** Bouton « Prendre une photo » (appareil photo du téléphone) qui rend une data URL réduite. */
-export function PhotoButton({ onPhoto, label, busy, className = '' }: { onPhoto: (file: File) => void; label: string; busy?: boolean; className?: string }) {
-  const ref = useRef<HTMLInputElement>(null);
+/**
+ * Bouton « Prendre une photo » (appareil photo du téléphone) + lien « galerie »
+ * de secours : certains téléphones refusent l'ouverture directe de la caméra,
+ * la galerie permet alors d'envoyer une photo déjà prise. Toute erreur
+ * (format, taille…) est affichée au lieu d'être ignorée en silence.
+ */
+export function PhotoButton({ onPhoto, label, busy, className = '' }: { onPhoto: (file: File) => void | Promise<void>; label: string; busy?: boolean; className?: string }) {
+  const camRef = useRef<HTMLInputElement>(null);
+  const galRef = useRef<HTMLInputElement>(null);
+  const [working, setWorking] = useState(false);
+  const handle = async (f: File | undefined) => {
+    if (!f) return;
+    setWorking(true);
+    try {
+      await onPhoto(f);
+    } catch (err) {
+      window.alert(`Photo non envoyée : ${err instanceof Error ? err.message : 'erreur inconnue'}`);
+    } finally {
+      setWorking(false);
+    }
+  };
+  const spin = busy || working;
   return (
-    <>
-      <button type="button" onClick={() => ref.current?.click()} className={`btn-outline h-10 rounded-xl px-3 text-sm ${className}`} disabled={busy}>
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />} {label}
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => camRef.current?.click()} className={`btn-outline h-10 rounded-xl px-3 text-sm ${className}`} disabled={spin}>
+        {spin ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />} {label}
       </button>
-      <input ref={ref} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ''; }} />
-    </>
+      <button type="button" onClick={() => galRef.current?.click()} className="text-xs font-medium text-primary underline-offset-2 hover:underline" disabled={spin}>
+        ou choisir dans la galerie
+      </button>
+      <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void handle(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void handle(e.target.files?.[0]); e.target.value = ''; }} />
+    </span>
   );
 }
 

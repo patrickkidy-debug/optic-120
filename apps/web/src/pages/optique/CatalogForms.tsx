@@ -817,7 +817,7 @@ function GenericProductPreview({
 }) {
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
-      <ProductSymbol category={category} className="aspect-[4/3] w-full" />
+      <ProductSymbol category={category} seed={sku || name} name={name} brand={brand} className="aspect-[4/3] w-full" />
       <div className="p-3">
         <span className="badge bg-surface-3 px-2 py-0.5 text-[10px] text-content-muted">
           {genericCategoryLabel(category)}

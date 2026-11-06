@@ -273,7 +273,7 @@ export function PosPage() {
                   className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
                 >
                   {/* Symbole de la famille du produit (monture, verre, entretien…). */}
-                  <ProductSymbol category={p.category} className="mb-2 aspect-[16/9] w-full rounded-lg" />
+                  <ProductSymbol category={p.category} seed={p.sku || p.productId} name={p.name} brand={p.brand} className="mb-2 aspect-[16/9] w-full rounded-lg" />
                   <div className="flex items-start justify-between">
                     <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
                     {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
@@ -334,7 +334,7 @@ export function PosPage() {
               <div className="space-y-2">
                 {pos.lines.map((l) => (
                   <div key={l.key} className="flex items-center gap-2 rounded-xl bg-surface-2 p-2.5">
-                    <ProductSymbol category={l.category ?? categoryOf(l.productId)} className="h-11 w-11 shrink-0 rounded-lg" />
+                    <ProductSymbol category={l.category ?? categoryOf(l.productId)} seed={l.sku || l.productId} name={l.name} className="h-11 w-11 shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium text-content">{l.name}</p>
                       {categoryOf(l.productId) === 'VERRE' && (

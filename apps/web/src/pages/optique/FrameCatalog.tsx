@@ -50,7 +50,10 @@ export interface FrameActions {
 
 /** Vignette : le symbole de la famille (les photos produit ne sont plus utilisées). */
 function FrameThumb({ p, className = '' }: { p: Product; className?: string }) {
-  return <ProductSymbol category={p.category ?? 'MONTURE'} className={className} />;
+  const a = frameAttrs(p);
+  return (
+    <ProductSymbol category={p.category ?? 'MONTURE'} seed={p.sku || p.id} name={p.name} brand={p.brand} shape={a.shape} color={a.color} className={className} />
+  );
 }
 
 /** Carte visuelle d'une monture : photo dominante, puis l'essentiel. */
@@ -452,7 +455,7 @@ export function FrameDetail({ p, stock }: { p: Product; stock?: StockRow }) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div>
-        <ProductSymbol category="MONTURE" className="aspect-[4/3] w-full rounded-xl" />
+        <ProductSymbol category="MONTURE" seed={p.sku || p.id} name={p.name} brand={p.brand} shape={a.shape} color={a.color} className="aspect-[4/3] w-full rounded-xl" />
       </div>
 
       <div>
@@ -518,7 +521,7 @@ export function FramePreview({
   const swatch = FRAME_COLORS.find((c) => c.name === color);
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
-      <ProductSymbol category="MONTURE" className="aspect-[4/3] w-full" />
+      <ProductSymbol category="MONTURE" seed={sku || model} name={model} brand={brand} shape={shape} color={color} className="aspect-[4/3] w-full" />
       <div className="p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

@@ -18,5 +18,5 @@ export async function trackFileToDataUrl(file: File): Promise<string> {
       r.readAsDataURL(file);
     });
   }
-  return fileToResizedDataUrl(file, 1600, 900 * 1024);
+  return fileToResizedDataUrl(file, 1600, 900 * 1024, { anyImage: true, maxInputBytes: 30 * 1024 * 1024 });
 }

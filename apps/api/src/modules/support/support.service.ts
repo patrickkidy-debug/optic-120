@@ -1,6 +1,16 @@
 import { prisma } from '../../lib/prisma.js';
 import type { SupportTicketInput } from '@oculo/shared-types';
 
+/** Demandes envoyées par l'utilisateur connecté (les plus récentes d'abord). */
+export function listMyTickets(tenantId: string, userId: string) {
+  return prisma.supportTicket.findMany({
+    where: { tenantId, userId },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { id: true, subject: true, message: true, status: true, createdAt: true },
+  });
+}
+
 /** Crée un ticket de support en récupérant le contact depuis le compte. */
 export async function createTicket(
   tenantId: string,

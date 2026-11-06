@@ -49,9 +49,10 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     # Force HTTPS pendant 2 ans (préchargement navigateur inclus).
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    # Désactive les API sensibles non utilisées (display-capture laissé actif
-    # pour l'enregistrement des vidéos de présentation).
-    Permissions-Policy = "geolocation=(), microphone=(), camera=(), payment=()"
+    # API sensibles : caméra et position autorisées pour le site lui-même
+    # (scan QR et photos de preuve OculoTrack, prise de mesures, position de
+    # livraison), interdites aux contenus tiers. Micro et paiement coupés.
+    Permissions-Policy = "geolocation=(self), microphone=(), camera=(self), payment=()"
     # Anti-clickjacking moderne (en plus de X-Frame-Options).
     Content-Security-Policy = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
     # Isole le contexte de navigation tout en autorisant les popups (checkout).

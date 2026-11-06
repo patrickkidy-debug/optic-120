@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus, SlidersHorizontal } from 'lucide-react';
+import { DevicePreferences, SettingsHub } from './DevicePreferences';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import type { ThemeMode } from '../../lib/theme';
@@ -197,6 +198,7 @@ export function ProfilePage() {
     { key: 'profil', label: tr('ui.ProfilePage.monProfil'), icon: User, show: true },
     { key: 'marque', label: tr('ui.ProfilePage.imageDeMarque'), icon: Building2, show: canBranding },
     { key: 'documents', label: tr('ui.ProfilePage.personnalisationDesDocuments'), icon: FileText, show: canBranding },
+    { key: 'appareil', label: 'Préférences et appareil', icon: SlidersHorizontal, show: true },
   ].filter((tb) => tb.show);
   const requested = params.get('tab') ?? 'profil';
   const active = TABS.some((tb) => tb.key === requested) ? requested : 'profil';
@@ -221,6 +223,10 @@ export function ProfilePage() {
           </button>
         ))}
       </div>
+
+      {active === 'profil' && <SettingsHub />}
+
+      {active === 'appareil' && <DevicePreferences />}
 
       {active === 'profil' && (
       <div className="mb-4">

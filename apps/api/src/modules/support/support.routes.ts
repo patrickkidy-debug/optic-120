@@ -30,6 +30,11 @@ export async function accountDeletionRoutes(app: FastifyInstance): Promise<void>
 export async function supportRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
+  app.get('/mine', async (req, reply) => {
+    const tickets = await support.listMyTickets(req.auth!.tenantId, req.auth!.userId);
+    return reply.send({ tickets });
+  });
+
   app.post('/', async (req, reply) => {
     const input = supportTicketSchema.parse(req.body);
     const ticket = await support.createTicket(req.auth!.tenantId, req.auth!.userId, input);

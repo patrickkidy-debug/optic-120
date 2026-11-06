@@ -202,7 +202,7 @@ export function LensOrderDetail({
 
           {order.frameProduct && (
             <div className="flex items-center gap-2 rounded-xl border p-3">
-              <ProductSymbol category="MONTURE" className="h-12 w-14 shrink-0 rounded-lg" />
+              <ProductSymbol category="MONTURE" seed={order.frameProduct.id} name={order.frameProduct.name} brand={order.frameProduct.brand} className="h-12 w-14 shrink-0 rounded-lg" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-content">
                   {order.frameProduct.brand ? `${order.frameProduct.brand} · ` : ''}

@@ -14,8 +14,10 @@ import { refreshSession } from './lib/api';
 import { trackPixelPageView } from './lib/pixel';
 import { captureReferralFromUrl } from './lib/partnerReferral';
 import { startOffline } from './lib/offline';
+import { applyDisplayPrefs } from './lib/displayPrefs';
 
 applyTheme(getStoredTheme());
+applyDisplayPrefs();
 
 // SPA : le script de base (index.html) ne déclenche le PageView Meta Pixel
 // qu'au tout premier chargement. On retrace chaque navigation client ici.

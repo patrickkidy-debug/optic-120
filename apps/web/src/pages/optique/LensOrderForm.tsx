@@ -136,7 +136,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
   if (value) {
     return (
       <div className="flex items-center gap-2 rounded-xl border bg-surface-2 p-2">
-        <ProductSymbol category="MONTURE" className="h-10 w-12 shrink-0 rounded-lg" />
+        <ProductSymbol category="MONTURE" seed={value.sku || value.id} name={value.name} brand={value.brand} shape={(value.attributes as { shape?: string } | null)?.shape} color={(value.attributes as { color?: string } | null)?.color} className="h-10 w-12 shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm text-content">
             {value.brand ? `${value.brand} · ` : ''}
@@ -179,7 +179,7 @@ function FramePicker({ value, onChange }: { value: Product | null; onChange: (p:
                 }}
                 className="flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition hover:border-primary"
               >
-                <ProductSymbol category="MONTURE" className="h-8 w-10 shrink-0 rounded-md" />
+                <ProductSymbol category="MONTURE" seed={p.sku || p.id} name={p.name} brand={p.brand} shape={(p.attributes as { shape?: string } | null)?.shape} color={(p.attributes as { color?: string } | null)?.color} className="h-8 w-10 shrink-0 rounded-md" />
                 <span className="truncate">{p.brand ? `${p.brand} · ` : ''}{p.name}</span>
               </button>
             ))
