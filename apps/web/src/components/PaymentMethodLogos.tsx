@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { tr } from '../lib/tr';
 
 /* ============================================================
- * Logos des moyens de paiement acceptés (via Moneroo).
+ * Logos des moyens de paiement acceptés (via GeniusPay).
  * Badges de marque reconstitués en SVG/CSS — aucune dépendance
  * externe, donc 100 % fiables hors-ligne et en production. Pour
  * des logos officiels, déposer des SVG dans apps/web/public/ et

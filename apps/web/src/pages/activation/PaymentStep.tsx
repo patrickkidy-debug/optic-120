@@ -10,6 +10,7 @@ import {
   type PaymentMethod,
 } from '@oculo/shared-types';
 import { Button } from '../../components/ui';
+import { PaymentMethodLogos } from '../../components/PaymentMethodLogos';
 import type { BankDetails, BankTransferRequest } from '../../features/activation/api';
 import { TEAM_WHATSAPP_DISPLAY, demoWhatsappLink, transferReceiptLink } from '../../lib/whatsapp';
 import { ActionBar, ActivationShell, ChoiceCard, PrimaryAction } from './shared';
@@ -51,7 +52,7 @@ function xofLabel(xof: number, withEuro: boolean): string {
   return `${money(xof)} FCFA${withEuro ? ` (${money(eur)} €)` : ''}`;
 }
 
-/** Pays hors zone FCFA : Moneroo n'y encaisse pas, seul le virement est proposé. */
+/** Pays hors zone FCFA : paiement en ligne non proposé, seul le virement l'est. */
 function isOutsideCfa(country: string | null): boolean {
   const currency = SUPPORTED_COUNTRIES.find((c) => c.code === country)?.currency ?? 'XOF';
   return !(['XOF', 'XAF'] as string[]).includes(currency);
@@ -60,11 +61,10 @@ function isOutsideCfa(country: string | null): boolean {
 /**
  * Étape 5 — choix libre : tester gratuitement ou activer l'abonnement.
  *
- * Deux façons d'activer : Mobile Money via Moneroo (checkout,
- * activation à la confirmation de la passerelle), ou virement bancaire
- * (facture en attente, activation par l'équipe à réception du reçu envoyé
- * sur WhatsApp). Depuis l'Europe, Moneroo n'encaisse pas : seul le virement
- * est proposé.
+ * Deux façons d'activer : GeniusPay (page de paiement hébergée où le client
+ * choisit son opérateur ; activation à la confirmation de la passerelle), ou
+ * virement bancaire (facture en attente, activation par l'équipe à réception
+ * du reçu envoyé sur WhatsApp). Hors zone FCFA : seul le virement est proposé.
  */
 export function PaymentStep({
   planCode,
@@ -105,9 +105,12 @@ export function PaymentStep({
   const outsideCfa = isOutsideCfa(country);
 
   const mobile = paymentMethodsForCountry(country).filter((m) => m !== 'CASH' && m !== 'CHEQUE');
-  // Pas de carte bancaire : Mobile Money via Moneroo, ou virement.
-  const online: PaymentMethod[] = outsideCfa ? [] : mobile.filter((m) => m !== 'CARD');
+  // Une seule entrée en ligne : GeniusPay affiche lui-même les opérateurs du
+  // pays (la méthode envoyée n'est qu'indicative, le checkout est hébergé).
+  const operators = mobile.filter((m) => m !== 'CARD');
+  const online: PaymentMethod[] = outsideCfa || operators.length === 0 ? [] : [operators[0]!];
   const methods: PaymentMethod[] = [...online, ...(bank ? (['BANK_TRANSFER'] as PaymentMethod[]) : [])];
+  const operatorsHint = operators.map((m) => METHOD_LABELS[m] ?? m).join(' · ');
   const [method, setMethod] = useState<PaymentMethod | null>(methods[0] ?? null);
 
   const trial = trialMinutes > 0;
@@ -174,7 +177,8 @@ export function PaymentStep({
             {methods.map((m) => (
               <ChoiceCard
                 key={m}
-                label={METHOD_LABELS[m] ?? m}
+                label={m === 'BANK_TRANSFER' ? (METHOD_LABELS[m] ?? m) : 'Mobile Money ou carte — GeniusPay'}
+                hint={m === 'BANK_TRANSFER' ? undefined : operatorsHint}
                 selected={method === m}
                 onSelect={() => setMethod(m)}
               />
@@ -200,9 +204,13 @@ export function PaymentStep({
       {!isTransfer && methods.length > 0 && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs text-content-muted ring-1 ring-line">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
+          <span>
+            Paiement sécurisé par <strong className="text-content">GeniusPay</strong> : vous choisirez votre
+            opérateur sur la page suivante. {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
+          </span>
         </p>
       )}
+      {!isTransfer && methods.length > 0 && <PaymentMethodLogos className="mt-3 justify-center" />}
 
       {error && (
         <p className="mt-3 rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
