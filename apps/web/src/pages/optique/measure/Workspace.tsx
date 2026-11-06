@@ -54,6 +54,7 @@ import { NumberInput } from '../../../components/NumberInput';
 import { apiErrorMessage } from '../../../lib/api';
 import { displayLocale } from '../../../lib/format';
 import { tr } from '../../../lib/tr';
+import { ParamsAssistant } from './ParamsAssistant';
 
 /** Contenu enregistré dans `markers` (version 1). */
 export interface SavedMarkers {
@@ -128,6 +129,7 @@ export function Workspace({
   const [refMm, setRefMm] = useState(existing?.saved.calibration.mode === 'REFERENCE' ? existing.saved.calibration.mm : 0);
   const [engineOff, setEngineOff] = useState(false);
   const [params, setParams] = useState(existing?.params ?? { vertex: null, pantoTilt: null, wrapAngle: null, nearPd: null });
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [frameLabel, setFrameLabel] = useState(existing?.frameLabel ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [panelOpen, setPanelOpen] = useState(false);
@@ -604,6 +606,15 @@ export function Workspace({
             onDone={() => setPhase('measure')}
           />
         )}
+        {assistantOpen && (
+          <ParamsAssistant
+            pdTotal={values.pdTotal ?? null}
+            lensHeight={values.lensHeight ?? null}
+            initial={params}
+            onApply={(r) => setParams(r)}
+            onClose={() => setAssistantOpen(false)}
+          />
+        )}
         {phase === 'measure' && (
           <MeasurePanel
             open={panelOpen}
@@ -621,6 +632,7 @@ export function Workspace({
             setFrameLabel={setFrameLabel}
             notes={notes}
             setNotes={setNotes}
+            onAssistant={() => setAssistantOpen(true)}
             onRecalibrate={() => { setReview(null); setPhase('calibrate'); }}
             onReview={() => { setReview(0); focus(REVIEW_ORDER[0]!); setPanelOpen(false); }}
             error={error}
@@ -952,6 +964,7 @@ function MeasurePanel({
   setNotes,
   onRecalibrate,
   onReview,
+  onAssistant,
   error,
 }: {
   open: boolean;
@@ -971,6 +984,7 @@ function MeasurePanel({
   setNotes: (s: string) => void;
   onRecalibrate: () => void;
   onReview: () => void;
+  onAssistant: () => void;
   error: string;
 }) {
   const tone = rel.score >= 80 ? 'text-emerald-300' : rel.score >= 60 ? 'text-amber-300' : 'text-red-300';
@@ -1055,6 +1069,9 @@ function MeasurePanel({
           <p className="pb-1 text-[10px] text-white/40">{tr('cz.decHint')}</p>
         </Section>
         <Section title={tr('cz.sec.params')}>
+          <button type="button" onClick={onAssistant} className="mb-1 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-violet-400/40 bg-violet-500/15 text-xs font-semibold text-violet-100">
+            <Sparkles className="h-3.5 w-3.5" /> Mesurer au téléphone (profil, galbe, capteur)
+          </button>
           {param('vertex', tr('cz.vertex'), 'mm', 30)}
           {param('pantoTilt', tr('cz.panto'), '°', 30)}
           {param('wrapAngle', tr('cz.wrap'), '°', 40)}
