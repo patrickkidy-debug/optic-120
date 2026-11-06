@@ -142,8 +142,9 @@ export class GeniusPayProvider implements PaymentProvider {
       // référence générée par GeniusPay.
       metadata: { payment_id: input.paymentId, sale_number: input.saleNumber },
       ...(methodCode ? { payment_method: methodCode } : {}),
-      ...(this.config.successUrl ? { success_url: this.config.successUrl } : {}),
-      ...(this.config.errorUrl ? { error_url: this.config.errorUrl } : {}),
+      // Le tunnel d'activation impose son propre retour, paiement par paiement.
+      ...(input.returnUrl || this.config.successUrl ? { success_url: input.returnUrl || this.config.successUrl } : {}),
+      ...(input.returnUrl || this.config.errorUrl ? { error_url: input.returnUrl || this.config.errorUrl } : {}),
     };
 
     let res: Response;

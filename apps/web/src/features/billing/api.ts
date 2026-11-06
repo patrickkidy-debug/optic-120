@@ -536,6 +536,12 @@ export async function getDemoEngagement(): Promise<DemoEngagementRow[]> {
 
 export interface PaymentProviderStatus {
   active: string;
+  selected?: 'geniuspay' | 'moneroo' | 'chariow';
+  geniusPayConfigured?: boolean;
+  geniusPayWebhookSecret?: boolean;
+  /** « live », « sandbox » ou vide (lu dans le préfixe de la clé). */
+  geniusPayEnvironment?: string;
+  geniusPayWebhookUrl?: string;
   simulation: boolean;
   monerooConfigured: boolean;
   monerooWebhookSecret: boolean;

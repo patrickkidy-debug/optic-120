@@ -3,6 +3,7 @@ import type { PaymentProvider } from '../payments/payment-provider.interface.js'
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
 import { MonerooProvider } from '../payments/providers/moneroo.provider.js';
 import { ChariowProvider, parseChariowProducts } from '../payments/providers/chariow.provider.js';
+import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
 
 /**
  * Fournisseur de paiement de la PLATEFORME : l'editeur encaisse les
@@ -10,20 +11,48 @@ import { ChariowProvider, parseChariowProducts } from '../payments/providers/cha
  * d'un magasin.
  *
  * UNE SEULE passerelle a la fois, choisie par PLATFORM_PAYMENT_PROVIDER :
- * « moneroo » (defaut) ou « chariow ». La cascade d'autrefois (Moneroo, puis
+ * « geniuspay » (defaut depuis le 2026-11-06), « moneroo » ou « chariow ». La cascade d'autrefois (Moneroo, puis
  * GeniusPay, puis PayTech) faisait qu'une cle absente ou invalide basculait
  * silencieusement sur une autre passerelle : les paiements partaient ailleurs
  * sans que personne ne le remarque. Ici, la passerelle choisie sans ses cles
  * ECHOUE en production au lieu de se rabattre sur l'autre.
  *
- * Les fournisseurs GeniusPay et PayTech restent dans le code : ils servent
- * encore aux encaissements des magasins, qui ne passent pas par ici.
+ * Moneroo et PayTech restent dans le code : ils servent encore aux
+ * encaissements des magasins, qui ne passent pas par ici.
  */
+function geniusPayReady(): boolean {
+  return Boolean(env.GENIUSPAY_API_KEY && env.GENIUSPAY_API_SECRET);
+}
+
 function chariowReady(): boolean {
   return Boolean(env.CHARIOW_API_KEY) && Object.keys(parseChariowProducts(env.CHARIOW_PRODUCTS)).length > 0;
 }
 
 export function resolvePlatformProvider(): PaymentProvider {
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'geniuspay') {
+    if (geniusPayReady()) {
+      return new GeniusPayProvider({
+        apiKey: env.GENIUSPAY_API_KEY,
+        apiSecret: env.GENIUSPAY_API_SECRET,
+        baseUrl: env.GENIUSPAY_BASE_URL,
+        webhookSecret: env.GENIUSPAY_WEBHOOK_SECRET || undefined,
+        // Retour par defaut ; le tunnel d'activation impose le sien.
+        successUrl: `${appOrigin}/parametres/abonnement`,
+        errorUrl: `${appOrigin}/parametres/abonnement`,
+        // L'ecran d'abonnement envoie « WAVE » en dur : on laisse GeniusPay
+        // afficher sa page, seule a connaitre les operateurs du pays du client.
+        forceHostedCheckout: true,
+      });
+    }
+    if (isProd) {
+      throw new Error(
+        'GeniusPay choisi (PLATFORM_PAYMENT_PROVIDER=geniuspay) mais non configure : ' +
+          'definissez GENIUSPAY_API_KEY et GENIUSPAY_API_SECRET.',
+      );
+    }
+    return new SimulatedPaymentProvider();
+  }
+
   if (env.PLATFORM_PAYMENT_PROVIDER === 'chariow') {
     if (chariowReady()) {
       return new ChariowProvider({
@@ -66,6 +95,20 @@ export function resolvePlatformProvider(): PaymentProvider {
 }
 
 /**
+ * Lecture des paiements Moneroo lancés avant le passage à une autre passerelle
+ * (webhook tardif). Null sans clé Moneroo.
+ */
+export function monerooVerifier(): PaymentProvider | null {
+  if (!env.MONEROO_SECRET_KEY) return null;
+  return new MonerooProvider({
+    secretKey: env.MONEROO_SECRET_KEY,
+    baseUrl: env.MONEROO_BASE_URL,
+    returnUrl: `${appOrigin}/parametres/abonnement`,
+    webhookSecret: env.MONEROO_WEBHOOK_SECRET || undefined,
+  });
+}
+
+/**
  * Etat de la passerelle d'encaissement des abonnements, pour la console
  * fondateur.
  *
@@ -75,10 +118,17 @@ export function resolvePlatformProvider(): PaymentProvider {
  * booleens et des URLs publiques.
  */
 export interface PaymentProviderStatus {
-  /** Passerelle retenue : « moneroo », « chariow » ou « simulation ». */
+  /** Passerelle retenue : « geniuspay », « moneroo », « chariow » ou « simulation ». */
   active: string;
   /** Passerelle choisie dans la configuration, meme si ses cles manquent. */
-  selected: 'moneroo' | 'chariow';
+  selected: 'geniuspay' | 'moneroo' | 'chariow';
+  geniusPayConfigured: boolean;
+  /** Secret whsec_ du webhook GeniusPay renseigne (sans lui, webhooks refuses). */
+  geniusPayWebhookSecret: boolean;
+  /** Environnement lu dans le prefixe de la cle : « live », « sandbox » ou vide. */
+  geniusPayEnvironment: string;
+  /** URL a declarer chez GeniusPay (webhook). */
+  geniusPayWebhookUrl: string;
   chariowConfigured: boolean;
   chariowPulseSecret: boolean;
   /** Offres couvertes par un produit Chariow, ex. ["STANDARD:1"]. */
@@ -105,10 +155,25 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
   const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
   const selected = env.PLATFORM_PAYMENT_PROVIDER;
   const active =
-    selected === 'chariow' ? (chariowReady() ? 'chariow' : 'simulation') : monerooConfigured ? 'moneroo' : 'simulation';
+    selected === 'geniuspay'
+      ? geniusPayReady()
+        ? 'geniuspay'
+        : 'simulation'
+      : selected === 'chariow'
+        ? chariowReady()
+          ? 'chariow'
+          : 'simulation'
+        : monerooConfigured
+          ? 'moneroo'
+          : 'simulation';
+  const key = env.GENIUSPAY_API_KEY;
   return {
     active,
     selected,
+    geniusPayConfigured: geniusPayReady(),
+    geniusPayWebhookSecret: Boolean(env.GENIUSPAY_WEBHOOK_SECRET),
+    geniusPayEnvironment: key.startsWith('pk_live_') ? 'live' : key.startsWith('pk_sandbox_') ? 'sandbox' : '',
+    geniusPayWebhookUrl: apiBase ? `${apiBase}/webhooks/geniuspay-subscription` : '',
     chariowConfigured: chariowReady(),
     chariowPulseSecret: Boolean(env.CHARIOW_PULSE_SECRET),
     chariowProducts: Object.keys(parseChariowProducts(env.CHARIOW_PRODUCTS)),
@@ -124,6 +189,7 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
 export function isPlatformSimulation(): boolean {
   // Jamais de simulation en production : seul un paiement reel active un abonnement.
   if (isProd) return false;
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'geniuspay') return !geniusPayReady();
   if (env.PLATFORM_PAYMENT_PROVIDER === 'chariow') return !chariowReady();
   return !env.MONEROO_SECRET_KEY;
 }

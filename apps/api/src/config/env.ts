@@ -56,11 +56,11 @@ const envSchema = z.object({
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
   /**
-   * Passerelle d'encaissement des ABONNEMENTS : « moneroo » (defaut) ou
-   * « chariow ». Une seule a la fois : pas de bascule silencieuse de l'une a
-   * l'autre si une cle manque (voir platform-provider.ts).
+   * Passerelle d'encaissement des ABONNEMENTS : « geniuspay » (defaut),
+   * « moneroo » ou « chariow ». Une seule a la fois : pas de bascule
+   * silencieuse de l'une a l'autre si une cle manque (voir platform-provider.ts).
    */
-  PLATFORM_PAYMENT_PROVIDER: z.enum(['moneroo', 'chariow']).default('moneroo'),
+  PLATFORM_PAYMENT_PROVIDER: z.enum(['geniuspay', 'moneroo', 'chariow']).default('geniuspay'),
   CHARIOW_API_KEY: z.string().optional().default(''),
   CHARIOW_BASE_URL: z.string().default('https://api.chariow.com/v1'),
   /** Secret de signature du Pulse (whsec_...), propre a chaque Pulse. */

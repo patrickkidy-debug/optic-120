@@ -14,7 +14,7 @@ import { prisma } from '../../lib/prisma.js';
 import { isProd, env } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
-import { resolvePlatformProvider } from './platform-provider.js';
+import { monerooVerifier, resolvePlatformProvider } from './platform-provider.js';
 import { purgeDemoData } from '../demo/demo.service.js';
 
 /** Contexte Meta CAPI à partir de la requête : IP/UA + cookies posés par le Pixel navigateur. */
@@ -236,6 +236,9 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
     if (event === 'webhook.test') return reply.send({ ok: true, test: true });
 
     const provider = resolvePlatformProvider();
+    if (provider.name !== 'geniuspay') {
+      return reply.status(409).send({ error: "GeniusPay n'est pas la passerelle active" });
+    }
     // SECURITE : la signature HMAC est verifiee ici. Un webhook non signe, mal
     // signe ou trop ancien leve une erreur et ne credite rien.
     const advisory = await provider.handleWebhook(
@@ -333,7 +336,8 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
     const payment = await billing.findPaymentByProviderRef(providerRef);
     if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
     // Statut authentique re-vérifié côté serveur (corps du webhook non fiable).
-    const provider = resolvePlatformProvider();
+    // Paiement lancé avant le passage à GeniusPay : relu chez Moneroo.
+    const provider = monerooVerifier() ?? resolvePlatformProvider();
     const verified = await provider.verifyPayment(providerRef);
     await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
     return reply.send({ ok: true });
