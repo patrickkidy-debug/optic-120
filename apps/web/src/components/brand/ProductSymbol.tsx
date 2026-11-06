@@ -85,36 +85,56 @@ function lens(shape: Shape, cx: number, cy: number, left: boolean): string {
   }
 }
 
-function Frame({ shape, color }: { shape: Shape; color: string }) {
+function Frame({ shape, color, gid, tint }: { shape: Shape; color: string; gid: string; tint: string }) {
   const light = isLight(color);
   const rimless = shape === 'Sans monture';
   const L = lens(shape, 38, 34, true);
   const R = lens(shape, 82, 34, false);
-  const bridge = shape === 'Aviateur' ? 'M53 27q7 -5 14 0M54 22h12' : shape === 'Ronde' ? 'M53 32q7 -6 14 0' : 'M56 30q4 -4 8 0';
-  const sw = rimless ? 2 : 5;
+  const bridge = shape === 'Aviateur' ? 'M54 27q6 -4 12 0M55 22.5h10' : shape === 'Ronde' ? 'M53.5 31q6.5 -5 13 0' : 'M56 29.5q4 -3.5 8 0';
+  const rim = rimless ? INK : color;
+  const sw = rimless ? 1.4 : 3.4;
   return (
     <g strokeLinecap="round" strokeLinejoin="round">
-      {/* Verres teintés, avec un reflet. */}
-      <path d={L} fill="#ffffff" fillOpacity=".55" />
-      <path d={R} fill="#ffffff" fillOpacity=".55" />
-      {/* Contour sombre sous la couleur claire (or, argent, transparent…). */}
+      <defs>
+        {/* Verre : dégradé clair vers la teinte du fond, comme un verre traité. */}
+        <linearGradient id={`${gid}-l`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".95" />
+          <stop offset="1" stopColor={tint} stopOpacity=".25" />
+        </linearGradient>
+      </defs>
+      {/* Ombre portée douce sous la monture. */}
+      <ellipse cx="60" cy="57" rx="40" ry="3.2" fill={INK} opacity=".10" />
+      {/* Branches repliées, légèrement galbées, en arrière-plan. */}
+      <g fill="none" stroke={light ? INK : rim} strokeWidth="2.6" strokeOpacity=".55">
+        <path d="M20 27q-7 -2 -11 -7" />
+        <path d="M100 27q7 -2 11 -7" />
+      </g>
+      <path d={L} fill={`url(#${gid}-l)`} />
+      <path d={R} fill={`url(#${gid}-l)`} />
       {light && !rimless && (
-        <g fill="none" stroke={INK} strokeWidth={sw + 3}>
+        <g fill="none" stroke={INK} strokeWidth={sw + 1.6} strokeOpacity=".75">
           <path d={L} />
           <path d={R} />
         </g>
       )}
-      <g fill="none" stroke={rimless ? INK : color} strokeWidth={sw} strokeDasharray={rimless ? '3 3' : undefined}>
+      <g fill="none" stroke={rim} strokeWidth={sw} strokeDasharray={rimless ? '2.5 2.5' : undefined}>
         <path d={L} />
         <path d={R} />
+        <path d={bridge} strokeWidth={rimless ? 2.2 : 3} stroke={light ? INK : rim} />
       </g>
-      <g fill="none" stroke={light ? INK : color} strokeWidth={4}>
-        <path d={bridge} />
-        <path d="M20 28l-12 -6M100 28l12 -6" />
-      </g>
-      <g fill="none" stroke="#fff" strokeWidth="2.6" strokeOpacity=".9">
-        <path d="M27 30q4 -5 10 -5" />
-        <path d="M71 30q4 -5 10 -5" />
+      {/* Liseré lumineux sur le cerclage : relief de l'acétate. */}
+      {!rimless && (
+        <g fill="none" stroke="#fff" strokeWidth=".8" strokeOpacity=".45">
+          <path d={L} />
+          <path d={R} />
+        </g>
+      )}
+      {/* Reflets : un trait diagonal et un point sur chaque verre. */}
+      <g stroke="#fff" strokeOpacity=".95" fill="none">
+        <path d="M29 39l9 -12" strokeWidth="2" />
+        <path d="M73 39l9 -12" strokeWidth="2" />
+        <path d="M34 41l3.5 -4.5" strokeWidth="1.2" strokeOpacity=".7" />
+        <path d="M78 41l3.5 -4.5" strokeWidth="1.2" strokeOpacity=".7" />
       </g>
     </g>
   );
@@ -199,7 +219,7 @@ export function ProductSymbol({
   const h = hash(`${seed ?? ''}|${name ?? ''}|${family}`);
   const pal = PALETTE[h % PALETTE.length]!;
   const pattern = PATTERNS[(h >>> 3) % PATTERNS.length]!;
-  const tilt = ((h >>> 6) % 11) - 5; // -5° à +5°
+  const tilt = ((h >>> 6) % 7) - 3; // -3° à +3°
   const pid = `ps-${h.toString(36)}`;
   const mono = initials(brand, name);
 
@@ -214,24 +234,24 @@ export function ProductSymbol({
     <div aria-hidden className={clsx('relative overflow-hidden', className)} style={{ background: pal.bg }}>
       <svg viewBox="0 0 120 68" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
         <Pattern id={pid} kind={pattern} color={pal.deep} />
-        <rect width="120" height="68" fill={`url(#${pid})`} opacity=".14" />
-        {/* Pastille de couleur décalée derrière l'objet, façon autocollant. */}
-        <ellipse cx={60 + (tilt > 0 ? 6 : -6)} cy="38" rx="44" ry="20" fill={pal.deep} opacity=".12" />
+        <rect width="120" height="68" fill={`url(#${pid})`} opacity=".10" />
+        {/* Halo doux derrière l'objet. */}
+        <radialGradient id={`${pid}-h`} cx=".5" cy=".55" r=".5">
+          <stop offset="0" stopColor="#fff" stopOpacity=".75" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <ellipse cx="60" cy="36" rx="46" ry="26" fill={`url(#${pid}-h)`} />
         {mono && (
-          <text
-            x="114"
-            y="58"
-            textAnchor="end"
-            fontFamily="Bungee, Oxanium, sans-serif"
-            fontSize="19"
-            fill={pal.deep}
-            opacity=".22"
-          >
-            {mono}
-          </text>
+          <g>
+            <rect x="5" y="5" width={mono.length * 6.4 + 7} height="11" rx="5.5" fill="#fff" fillOpacity=".75" />
+            <text x={8.5} y="13" fontFamily="Bungee, Oxanium, sans-serif" fontSize="7" fill={pal.deep} letterSpacing=".4">
+              {mono}
+            </text>
+          </g>
         )}
-        <g transform={`rotate(${tilt} 60 34)`} style={{ color: INK }}>
-          {family === 'MONTURE' ? <Frame shape={frameShape} color={frameColor} /> : GLYPHS[family]}
+        {/* Objet réduit (≈ 68 %) et centré : plus d'air autour, plus élégant. */}
+        <g transform={`translate(60 35) scale(.68) rotate(${tilt}) translate(-60 -34)`} style={{ color: INK }}>
+          {family === 'MONTURE' ? <Frame shape={frameShape} color={frameColor} gid={pid} tint={pal.deep} /> : GLYPHS[family]}
         </g>
       </svg>
     </div>

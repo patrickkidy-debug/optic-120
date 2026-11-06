@@ -273,7 +273,7 @@ export function PosPage() {
                   className="card p-3 text-left transition hover:border-primary hover:shadow-card-lg"
                 >
                   {/* Symbole de la famille du produit (monture, verre, entretien…). */}
-                  <ProductSymbol category={p.category} seed={p.sku || p.productId} name={p.name} brand={p.brand} className="mb-2 aspect-[16/9] w-full rounded-lg" />
+                  <ProductSymbol category={p.category} seed={p.sku || p.productId} name={p.name} brand={p.brand} className="mb-2 aspect-[2/1] w-full rounded-lg" />
                   <div className="flex items-start justify-between">
                     <span className="line-clamp-2 text-sm font-semibold text-content">{p.name}</span>
                     {!p.unlimited && p.quantity <= p.minAlert && <Badge tone="danger">{p.quantity}</Badge>}
