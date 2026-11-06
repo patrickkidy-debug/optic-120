@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { FRAME_COLORS, FRAME_SHAPES } from '@oculo/shared-types';
+import { FRAME_COLORS } from '@oculo/shared-types';
+import { FRAME_SILHOUETTES, SHAPE_TO_SILHOUETTE, SILHOUETTE_KEYS } from './frameSilhouettes';
 
 /**
  * Vignette d'un produit, sans photo : une illustration « sticker » propre à
@@ -13,7 +14,6 @@ import { FRAME_COLORS, FRAME_SHAPES } from '@oculo/shared-types';
  * - Autres familles : pictogramme à l'encre sur fond pastel, même principe.
  */
 type Family = 'MONTURE' | 'VERRE' | 'LENTILLE' | 'ACCESSOIRE' | 'ENTRETIEN' | 'SERVICE' | 'AUTRE';
-type Shape = (typeof FRAME_SHAPES)[number];
 
 const INK = '#1a1033';
 /** Pastels des modules Arcade Pro (fond) et leur teinte soutenue (motif, monogramme). */
@@ -25,7 +25,6 @@ const PALETTE = [
   { bg: '#d1fae5', deep: '#059669' },
   { bg: '#fef3c7', deep: '#d97706' },
 ];
-const PATTERNS = ['dots', 'stripes', 'grid', 'waves'] as const;
 /** Couleurs de monture tirées au hasard quand aucune n'est renseignée. */
 const FALLBACK_FRAME_COLORS = ['#111827', '#8b5e34', '#2563eb', '#dc2626', '#7c3aed', '#16a34a', '#d4af37', '#ec4899'];
 
@@ -52,92 +51,6 @@ function isLight(hex: string): boolean {
   const n = parseInt(hex.slice(1), 16);
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b > 190;
-}
-
-/** Contour d'un verre (centre cx, cy) selon la forme de la monture. */
-function lens(shape: Shape, cx: number, cy: number, left: boolean): string {
-  const s = left ? -1 : 1; // côté extérieur : -1 à gauche, +1 à droite
-  switch (shape) {
-    case 'Ronde':
-      return `M${cx - 15} ${cy}a15 15 0 1 0 30 0a15 15 0 1 0 -30 0z`;
-    case 'Ovale':
-      return `M${cx - 18} ${cy}a18 12 0 1 0 36 0a18 12 0 1 0 -36 0z`;
-    case 'Carrée':
-      return `M${cx - 15} ${cy - 13}h30q3 0 3 3v20q0 6 -6 6h-24q-6 0 -6 -6v-20q0 -3 3 -3z`;
-    case 'Papillon': {
-      const o = cx + s * 19, i = cx - s * 15;
-      return `M${i} ${cy - 11}L${o} ${cy - 14}Q${o + s * 2} ${cy + 2} ${cx + s * 8} ${cy + 13}Q${cx} ${cy + 15} ${i} ${cy + 5}Z`;
-    }
-    case 'Aviateur': {
-      const o = cx + s * 18, i = cx - s * 15;
-      return `M${i} ${cy - 11}L${o} ${cy - 11}Q${o + s * 1} ${cy + 8} ${cx + s * 4} ${cy + 15}Q${i - s * 3} ${cy + 12} ${i} ${cy - 11}Z`;
-    }
-    case 'Pantos':
-      return `M${cx - 16} ${cy - 10}h32q1 0 1 3q0 20 -17 20q-17 0 -17 -20q0 -3 1 -3z`;
-    case 'Cat-eye': {
-      const o = cx + s * 19, i = cx - s * 15;
-      return `M${i} ${cy - 6}Q${cx} ${cy - 12} ${o} ${cy - 15}Q${o - s * 1} ${cy + 6} ${cx + s * 6} ${cy + 12}Q${i - s * 1} ${cy + 12} ${i} ${cy - 6}Z`;
-    }
-    case 'Sans monture':
-    case 'Rectangulaire':
-    default:
-      return `M${cx - 18} ${cy - 10}h36q3 0 3 3v12q0 7 -7 7h-28q-7 0 -7 -7v-12q0 -3 3 -3z`;
-  }
-}
-
-function Frame({ shape, color, gid, tint }: { shape: Shape; color: string; gid: string; tint: string }) {
-  const light = isLight(color);
-  const rimless = shape === 'Sans monture';
-  const L = lens(shape, 38, 34, true);
-  const R = lens(shape, 82, 34, false);
-  const bridge = shape === 'Aviateur' ? 'M54 27q6 -4 12 0M55 22.5h10' : shape === 'Ronde' ? 'M53.5 31q6.5 -5 13 0' : 'M56 29.5q4 -3.5 8 0';
-  const rim = rimless ? INK : color;
-  const sw = rimless ? 1.4 : 3.4;
-  return (
-    <g strokeLinecap="round" strokeLinejoin="round">
-      <defs>
-        {/* Verre : dégradé clair vers la teinte du fond, comme un verre traité. */}
-        <linearGradient id={`${gid}-l`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity=".95" />
-          <stop offset="1" stopColor={tint} stopOpacity=".25" />
-        </linearGradient>
-      </defs>
-      {/* Ombre portée douce sous la monture. */}
-      <ellipse cx="60" cy="57" rx="40" ry="3.2" fill={INK} opacity=".10" />
-      {/* Branches repliées, légèrement galbées, en arrière-plan. */}
-      <g fill="none" stroke={light ? INK : rim} strokeWidth="2.6" strokeOpacity=".55">
-        <path d="M20 27q-7 -2 -11 -7" />
-        <path d="M100 27q7 -2 11 -7" />
-      </g>
-      <path d={L} fill={`url(#${gid}-l)`} />
-      <path d={R} fill={`url(#${gid}-l)`} />
-      {light && !rimless && (
-        <g fill="none" stroke={INK} strokeWidth={sw + 1.6} strokeOpacity=".75">
-          <path d={L} />
-          <path d={R} />
-        </g>
-      )}
-      <g fill="none" stroke={rim} strokeWidth={sw} strokeDasharray={rimless ? '2.5 2.5' : undefined}>
-        <path d={L} />
-        <path d={R} />
-        <path d={bridge} strokeWidth={rimless ? 2.2 : 3} stroke={light ? INK : rim} />
-      </g>
-      {/* Liseré lumineux sur le cerclage : relief de l'acétate. */}
-      {!rimless && (
-        <g fill="none" stroke="#fff" strokeWidth=".8" strokeOpacity=".45">
-          <path d={L} />
-          <path d={R} />
-        </g>
-      )}
-      {/* Reflets : un trait diagonal et un point sur chaque verre. */}
-      <g stroke="#fff" strokeOpacity=".95" fill="none">
-        <path d="M29 39l9 -12" strokeWidth="2" />
-        <path d="M73 39l9 -12" strokeWidth="2" />
-        <path d="M34 41l3.5 -4.5" strokeWidth="1.2" strokeOpacity=".7" />
-        <path d="M78 41l3.5 -4.5" strokeWidth="1.2" strokeOpacity=".7" />
-      </g>
-    </g>
-  );
 }
 
 const GLYPHS: Record<Exclude<Family, 'MONTURE'>, JSX.Element> = {
@@ -182,19 +95,6 @@ const GLYPHS: Record<Exclude<Family, 'MONTURE'>, JSX.Element> = {
   ),
 };
 
-function Pattern({ id, kind, color }: { id: string; kind: (typeof PATTERNS)[number]; color: string }) {
-  return (
-    <defs>
-      <pattern id={id} width="10" height="10" patternUnits="userSpaceOnUse" patternTransform={kind === 'stripes' ? 'rotate(35)' : undefined}>
-        {kind === 'dots' && <circle cx="2" cy="2" r="1.1" fill={color} />}
-        {kind === 'stripes' && <rect width="3" height="10" fill={color} />}
-        {kind === 'grid' && <path d="M10 0H0V10" fill="none" stroke={color} strokeWidth="0.8" />}
-        {kind === 'waves' && <path d="M0 5q2.5 -3 5 0t5 0" fill="none" stroke={color} strokeWidth="0.9" />}
-      </pattern>
-    </defs>
-  );
-}
-
 export function ProductSymbol({
   category,
   className,
@@ -218,41 +118,52 @@ export function ProductSymbol({
   const family: Family = (category as Family) && ['MONTURE', 'VERRE', 'LENTILLE', 'ACCESSOIRE', 'ENTRETIEN', 'SERVICE'].includes(category as string) ? (category as Family) : 'AUTRE';
   const h = hash(`${seed ?? ''}|${name ?? ''}|${family}`);
   const pal = PALETTE[h % PALETTE.length]!;
-  const pattern = PATTERNS[(h >>> 3) % PATTERNS.length]!;
-  const tilt = ((h >>> 6) % 7) - 3; // -3° à +3°
   const pid = `ps-${h.toString(36)}`;
   const mono = initials(brand, name);
 
-  const frameShape: Shape = (FRAME_SHAPES as readonly string[]).includes(shape ?? '')
-    ? (shape as Shape)
-    : FRAME_SHAPES.filter((s) => s !== 'Sans monture')[(h >>> 9) % (FRAME_SHAPES.length - 1)]!;
+  // Silhouette : celle de la forme enregistrée, sinon tirée de la référence.
+  const silKey = SHAPE_TO_SILHOUETTE[shape ?? ''] ?? SILHOUETTE_KEYS[(h >>> 9) % SILHOUETTE_KEYS.length]!;
+  const sil = FRAME_SILHOUETTES[silKey]!;
   const frameColor =
     (color?.startsWith('#') ? color : FRAME_COLORS.find((c) => c.name === color)?.hex) ??
     FALLBACK_FRAME_COLORS[(h >>> 12) % FALLBACK_FRAME_COLORS.length]!;
+  const light = isLight(frameColor);
+  // Monture à ~78 % de la largeur, centrée.
+  const k = Math.min(94 / sil.w, 40 / sil.h);
+  const fx = 60 - (sil.w * k) / 2;
+  const fy = 36 - (sil.h * k) / 2;
 
   return (
-    <div aria-hidden className={clsx('relative overflow-hidden', className)} style={{ background: pal.bg }}>
-      <svg viewBox="0 0 120 68" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
-        <Pattern id={pid} kind={pattern} color={pal.deep} />
-        <rect width="120" height="68" fill={`url(#${pid})`} opacity=".10" />
-        {/* Halo doux derrière l'objet. */}
-        <radialGradient id={`${pid}-h`} cx=".5" cy=".55" r=".5">
-          <stop offset="0" stopColor="#fff" stopOpacity=".75" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </radialGradient>
-        <ellipse cx="60" cy="36" rx="46" ry="26" fill={`url(#${pid}-h)`} />
+    <div aria-hidden className={clsx('relative overflow-hidden bg-white', className)}>
+      <svg viewBox="0 0 120 68" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full">
         {mono && (
           <g>
-            <rect x="5" y="5" width={mono.length * 6.4 + 7} height="11" rx="5.5" fill="#fff" fillOpacity=".75" />
+            <rect x="5" y="5" width={mono.length * 6.4 + 7} height="11" rx="5.5" fill={pal.bg} />
             <text x={8.5} y="13" fontFamily="Bungee, Oxanium, sans-serif" fontSize="7" fill={pal.deep} letterSpacing=".4">
               {mono}
             </text>
           </g>
         )}
-        {/* Objet réduit (≈ 68 %) et centré : plus d'air autour, plus élégant. */}
-        <g transform={`translate(60 35) scale(.68) rotate(${tilt}) translate(-60 -34)`} style={{ color: INK }}>
-          {family === 'MONTURE' ? <Frame shape={frameShape} color={frameColor} gid={pid} tint={pal.deep} /> : GLYPHS[family]}
-        </g>
+        {family === 'MONTURE' ? (
+          <g>
+            {/* Ombre douce sous la monture. */}
+            <ellipse cx="60" cy={fy + sil.h * k + 5} rx={sil.w * k * 0.42} ry="2.2" fill={INK} opacity=".07" />
+            <path
+              d={sil.d}
+              transform={`translate(${fx} ${fy}) scale(${k})`}
+              fill={frameColor}
+              fillRule="evenodd"
+              stroke={light ? INK : 'none'}
+              strokeOpacity=".55"
+              strokeWidth={light ? 0.9 / k : 0}
+              strokeLinejoin="round"
+            />
+          </g>
+        ) : (
+          <g transform="translate(60 35) scale(.68) translate(-60 -34)" style={{ color: pal.deep }}>
+            {GLYPHS[family]}
+          </g>
+        )}
       </svg>
     </div>
   );
