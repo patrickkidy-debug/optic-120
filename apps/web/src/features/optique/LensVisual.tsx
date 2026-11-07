@@ -22,10 +22,10 @@ function guess(family: string | null | undefined, name = '', treatments: string[
     if (v !== 'single') return v;
   }
   if (/d[ée]gressif|office|bureau|ordinateur|computer/.test(txt)) return 'computer';
-  if (/progress/.test(txt)) return 'progressive';
+  if (/progress|prg/.test(txt)) return 'progressive';
   if (/bifocal|double foyer/.test(txt)) return 'bifocal';
   if (/mi-distance|interm/.test(txt)) return 'mid';
-  if (/photo|transition|sensity|teinte variable/.test(txt)) return 'photochromic';
+  if (/photochrom|unifocaux photo|transition|sensity|teinte variable/.test(txt)) return 'photochromic';
   if (/solaire|polaris/.test(txt)) return 'sun';
   if (/bleu|blue/.test(txt)) return 'blue';
   return family ? lensVisualFor(family) : 'single';

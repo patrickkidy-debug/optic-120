@@ -4,6 +4,7 @@ import { brandingUpdateSchema } from '@oculo/shared-types';
 import { requireAuth } from '../../middlewares/auth-guard.js';
 import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { prisma } from '../../lib/prisma.js';
+import { syncLensTypeProducts } from '../../lib/lens-types-sync.js';
 
 /** Image de marque de l'établissement (nom + logo). Préfixe /settings. */
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {
@@ -84,6 +85,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         opticalSettings: true,
       },
     });
+    // Types de verres : publiés comme fiches produit (Stock, Produits, caisse).
+    if (input.lensPricing && req.db) await syncLensTypeProducts(req.db, req.auth!.tenantId, input.lensPricing);
     return reply.send({
       branding: {
         name: tenant.name,

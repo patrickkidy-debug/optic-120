@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus, SlidersHorizontal } from 'lucide-react';
+import { Sun, Moon, Monitor, Globe, ImagePlus, Trash2, Building2, Save, ShieldCheck, FileText, Eye, User, Contact, LifeBuoy, Glasses, MessageCircle, Plus, SlidersHorizontal, Download, Upload } from 'lucide-react';
+import { invalidateProductViews } from '../../lib/invalidate';
 import { DevicePreferences, SettingsHub } from './DevicePreferences';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
@@ -877,6 +878,78 @@ function LensPricingCard() {
     setP((prev) => ({ ...prev, customTypes: (prev.customTypes ?? []).filter((c) => c.id !== id) }));
   }
 
+  /* ---------- Export / import Excel des tarifs et des types de verres ---------- */
+  const BASE_ROWS: { key: Exclude<keyof LensPricing, 'customTypes'>; cat: string; label: string }[] = [
+    { key: 'unifocal', cat: 'Base', label: 'Unifocal' },
+    { key: 'progressif', cat: 'Base', label: 'Progressif' },
+    { key: 'degressif', cat: 'Base', label: 'Dégressif (bureau)' },
+    { key: 'ar', cat: 'Traitement', label: 'Anti-reflet' },
+    { key: 'blue', cat: 'Traitement', label: 'Anti-lumière bleue' },
+    { key: 'photo', cat: 'Traitement', label: 'Photochromique' },
+    { key: 'hard', cat: 'Traitement', label: 'Durci anti-rayures' },
+  ];
+  const [ioMsg, setIoMsg] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const norm = (x: unknown) => String(x ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  async function exportXlsx() {
+    const XLSX = await import('xlsx');
+    const rows = [
+      ...BASE_ROWS.map((r) => ({ Catégorie: r.cat, Nom: r.label, 'Prix par verre': p[r.key] })),
+      ...custom.filter((c) => c.name.trim()).map((c) => ({ Catégorie: 'Type', Nom: c.name, 'Prix par verre': c.price })),
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 14 }, { wch: 36 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Types de verres');
+    XLSX.writeFile(wb, 'types-de-verres.xlsx');
+  }
+
+  async function importXlsx(f: File) {
+    setIoMsg('');
+    try {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(await f.arrayBuffer());
+      const ws = wb.Sheets[wb.SheetNames[0]!]!;
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
+      const pick = (r: Record<string, unknown>, ...keys: string[]) => {
+        const k = Object.keys(r).find((h) => keys.some((x) => norm(h).includes(x)));
+        return k ? r[k] : '';
+      };
+      let bases = 0;
+      let added = 0;
+      let updated = 0;
+      setP((prev) => {
+        const next: LensPricing = { ...prev, customTypes: [...(prev.customTypes ?? [])] };
+        for (const r of rows) {
+          const name = String(pick(r, 'nom', 'type', 'designation', 'libelle')).trim();
+          const price = Number(String(pick(r, 'prix', 'tarif', 'price')).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+          if (!name) continue;
+          const cat = norm(pick(r, 'categ'));
+          const base = BASE_ROWS.find((b) => norm(b.label) === norm(name));
+          if (base && cat !== 'type') {
+            (next as Record<string, unknown>)[base.key] = price;
+            bases += 1;
+            continue;
+          }
+          const list = next.customTypes!;
+          const existing = list.find((c) => norm(c.name) === norm(name));
+          if (existing) {
+            existing.price = price;
+            updated += 1;
+          } else if (list.length < 50) {
+            list.push({ id: `custom-${Math.random().toString(36).slice(2, 8)}`, name, price });
+            added += 1;
+          }
+        }
+        return next;
+      });
+      setIoMsg(`Fichier lu : ${added} type(s) ajouté(s), ${updated} mis à jour, ${bases} tarif(s) de base. Vérifiez puis cliquez sur « Enregistrer ».`);
+    } catch {
+      setIoMsg('Fichier illisible : utilisez un fichier Excel (.xlsx) ou CSV avec les colonnes Nom et Prix.');
+    }
+  }
+
   async function save() {
     setBusy(true);
     try {
@@ -889,6 +962,8 @@ function LensPricingCard() {
       };
       await updateBranding({ lensPricing: clean });
       qc.invalidateQueries({ queryKey: ['branding'] });
+      // Les types de verres deviennent des fiches produit (Stock, Produits, caisse).
+      invalidateProductViews(qc);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -923,10 +998,33 @@ function LensPricingCard() {
           <p className="text-xs font-semibold uppercase tracking-wide text-content-faint">
             {tr('ui.ProfilePage.vosTypesDeVerres')}
           </p>
-          <Button variant="outline" onClick={addCustom} className="h-8 px-2.5 text-xs">
-            <Plus className="h-3.5 w-3.5" /> {tr('ui.ProfilePage.ajouterUnType')}
-          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            <Button variant="outline" onClick={() => void exportXlsx()} className="h-8 px-2.5 text-xs">
+              <Download className="h-3.5 w-3.5" /> Exporter Excel
+            </Button>
+            <Button variant="outline" onClick={() => fileRef.current?.click()} className="h-8 px-2.5 text-xs">
+              <Upload className="h-3.5 w-3.5" /> Importer Excel
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importXlsx(f);
+                e.target.value = '';
+              }}
+            />
+            <Button variant="outline" onClick={addCustom} className="h-8 px-2.5 text-xs">
+              <Plus className="h-3.5 w-3.5" /> {tr('ui.ProfilePage.ajouterUnType')}
+            </Button>
+          </div>
         </div>
+        {ioMsg && <p className="mb-2 rounded-lg bg-primary-soft px-3 py-2 text-xs text-primary">{ioMsg}</p>}
+        <p className="mb-2 text-[11px] text-content-faint">
+          Chaque type enregistré apparaît dans Produits, dans Stock et dans la caisse (grille et « Verre sur mesure »).
+        </p>
         {custom.length === 0 ? (
           <p className="text-xs text-content-faint">
             {tr('ui.ProfilePage.ajoutezVosPropresTypesDe')}
