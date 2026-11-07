@@ -2393,7 +2393,7 @@ model DemoVideoProgress {
   tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId              String
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// "1".."4" — identifiant de la vidéo dans le parcours.
+  /// "a1".."a8" — identifiant du tutoriel vidéo (anciennes clés "1".."4" ignorées).
   videoKey            String
   /// Position exacte de reprise (secondes).
   lastPositionSeconds Int       @default(0)

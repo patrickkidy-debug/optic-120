@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 
-/** Clés des 4 vidéos du parcours de démonstration. */
-export const DEMO_VIDEO_KEYS = ['1', '2', '3', '4'] as const;
+/** Clés des 8 tutoriels vidéo (série « a », novembre 2026 : nouvelle progression). */
+export const DEMO_VIDEO_KEYS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'] as const;
 export type DemoVideoKey = (typeof DEMO_VIDEO_KEYS)[number];
 
 /** Un lecteur atteint rarement 100 % pile (dernière frame, arrondis) : 95 % = vue. */
@@ -11,7 +11,7 @@ export function isValidVideoKey(key: string): key is DemoVideoKey {
   return (DEMO_VIDEO_KEYS as readonly string[]).includes(key);
 }
 
-/** Progression de l'utilisateur sur les 4 vidéos (lignes manquantes = jamais ouvertes). */
+/** Progression de l'utilisateur sur les tutoriels (lignes manquantes = jamais ouvertes). */
 export async function getMyProgress(tenantId: string, userId: string) {
   const rows = await prisma.demoVideoProgress.findMany({
     where: { tenantId, userId },
