@@ -42,7 +42,29 @@ export async function previewProductImport(
 export async function commitProductImport(
   branchId: string,
   rows: ImportPreviewRow[],
+  fileName?: string,
 ): Promise<{ created: number; updated: number; errors: string[] }> {
-  const { data } = await api.post('/products/import/commit', { branchId, rows });
+  const { data } = await api.post('/products/import/commit', { branchId, rows, fileName });
+  return data;
+}
+
+/** Import encore présent au catalogue (fichier, date, nombre de produits). */
+export interface ImportBatch {
+  id: string;
+  file: string | null;
+  importedAt: string;
+  count: number;
+  categories: Record<string, number>;
+  sample: string[];
+  legacy: boolean;
+}
+
+export async function listImportBatches(): Promise<ImportBatch[]> {
+  const { data } = await api.get<{ batches: ImportBatch[] }>('/products/import/batches');
+  return data.batches;
+}
+
+export async function deleteImportBatch(id: string): Promise<{ deleted: number; deactivated: number }> {
+  const { data } = await api.delete(`/products/import/batches/${encodeURIComponent(id)}`);
   return data;
 }

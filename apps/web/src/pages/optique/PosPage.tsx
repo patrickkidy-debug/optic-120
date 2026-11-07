@@ -77,7 +77,21 @@ function methodsFor(countryCode?: string | null) {
   ];
 }
 
+/** Familles proposées en filtre rapide à la caisse. */
+const POS_FAMILIES = [
+  { key: 'MONTURE', label: 'Montures' },
+  { key: 'VERRE', label: 'Verres' },
+  { key: 'LENTILLE', label: 'Lentilles' },
+  { key: 'ACCESSOIRE', label: 'Accessoires' },
+  { key: 'ENTRETIEN', label: 'Entretien' },
+  { key: 'SERVICE', label: 'Services' },
+  { key: 'AUTRE', label: 'Autres' },
+];
+const POS_PAGE = 24;
+
 export function PosPage() {
+  const [posCat, setPosCat] = useState<string>('ALL');
+  const [shown, setShown] = useState(POS_PAGE);
   const { t } = useTranslation();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
@@ -188,8 +202,14 @@ export function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInsurer?.id, decision.amount]);
 
+  // Familles présentes dans le stock : filtres rapides au-dessus de la grille.
+  // Sans eux, seuls les 10 premiers produits (ordre alphabétique) étaient
+  // visibles, et les verres, rangés après les montures, n'apparaissaient jamais.
+  const families = POS_FAMILIES.filter((f) => (stock ?? []).some((p) => p.category === f.key));
   const products = (stock ?? []).filter(
-    (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()),
+    (p) =>
+      (posCat === 'ALL' || p.category === posCat) &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())),
   );
 
   const createMut = useMutation({
@@ -263,8 +283,31 @@ export function PosPage() {
           <PageLoader />
         ) : (
           <>
+            {families.length > 1 && (
+              <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                {[{ key: 'ALL', label: 'Tous' }, ...families].map((f) => {
+                  const count = f.key === 'ALL' ? (stock ?? []).length : (stock ?? []).filter((p) => p.category === f.key).length;
+                  return (
+                    <button
+                      key={f.key}
+                      type="button"
+                      onClick={() => {
+                        setPosCat(f.key);
+                        setShown(POS_PAGE);
+                      }}
+                      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                        posCat === f.key ? 'border-transparent bg-primary text-white' : 'border-line bg-surface text-content-muted hover:border-primary/40'
+                      }`}
+                    >
+                      {f.label}
+                      <span className={`rounded-full px-1.5 text-[11px] ${posCat === f.key ? 'bg-white/20' : 'bg-surface-2'}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {products.slice(0, 10).map((p) => (
+              {products.slice(0, shown).map((p) => (
                 <button
                   key={p.productId}
                   onClick={() =>
@@ -290,11 +333,18 @@ export function PosPage() {
                 </button>
               ))}
             </div>
-            {products.length > 10 && (
-              <p className="mt-3 text-xs text-center text-content-muted font-medium">
-                {t('pos.firstResults')}
-              </p>
+            {products.length > shown && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShown((v) => v + POS_PAGE)}
+                  className="btn-outline h-10 rounded-xl px-4 text-sm"
+                >
+                  Voir plus ({products.length - shown} autres)
+                </button>
+              </div>
             )}
+            {products.length === 0 && <p className="py-6 text-center text-sm text-content-muted">Aucun produit dans cette famille.</p>}
           </>
         )}
       </div>

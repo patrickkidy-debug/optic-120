@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { isMadeToOrderCategory } from '@oculo/shared-types';
 import * as XLSX from 'xlsx';
 import { ProductCategory } from '@prisma/client';
 import type { TenantPrisma } from '../../lib/prisma-tenant.js';
@@ -388,7 +390,11 @@ export async function commitImport(
   tenantId: string,
   branchId: string,
   rows: CommitRow[],
+  fileName?: string,
 ): Promise<{ created: number; updated: number; errors: string[] }> {
+  // Lot d'import : chaque produit créé garde la trace de son fichier, pour
+  // pouvoir supprimer d'un coup un ancien import (« Imports précédents »).
+  const batch = { importBatch: randomUUID(), importFile: (fileName || '').slice(0, 160) || null, importedAt: new Date().toISOString() };
   let created = 0;
   let updated = 0;
   const errors: string[] = [];
@@ -417,7 +423,8 @@ export async function commitImport(
               },
             });
             if (result.count === 0) throw new Error('Produit à mettre à jour introuvable');
-            if (row.stock != null) {
+            // Verres et services : fabriqués sur commande, stock illimité.
+            if (row.stock != null && !isMadeToOrderCategory(row.category)) {
               await tx.stockItem.upsert({
                 where: { productId_branchId: { productId: row.existingProductId, branchId } },
                 create: {
@@ -441,17 +448,21 @@ export async function commitImport(
                 name: row.name,
                 buyPrice: row.buyPrice,
                 sellPrice: row.sellPrice,
+                attributes: batch,
               },
             });
-            await tx.stockItem.create({
-              data: {
-                tenantId,
-                productId: product.id,
-                branchId,
-                quantity: row.stock ?? 0,
-                minAlert: 0,
-              },
-            });
+            // Verres et services : pas de ligne de stock, la quantité est illimitée.
+            if (!isMadeToOrderCategory(row.category)) {
+              await tx.stockItem.create({
+                data: {
+                  tenantId,
+                  productId: product.id,
+                  branchId,
+                  quantity: row.stock ?? 0,
+                  minAlert: 0,
+                },
+              });
+            }
           }
         },
         { timeout: 30000 },
@@ -471,4 +482,87 @@ export async function commitImport(
   }
 
   return { created, updated, errors };
+}
+
+
+/* ------------------------- Imports précédents ------------------------- */
+
+export interface ImportBatch {
+  id: string;
+  file: string | null;
+  importedAt: string;
+  count: number;
+  categories: Record<string, number>;
+  sample: string[];
+  /** Import antérieur au suivi des fichiers : regroupé par minute de création. */
+  legacy: boolean;
+}
+
+/**
+ * Lots d'import encore présents au catalogue. Les imports récents portent leur
+ * identifiant ; les plus anciens (avant ce suivi) sont regroupés par minute de
+ * création, à partir de 3 produits créés ensemble (une saisie à la main ne
+ * produit pas ce schéma).
+ */
+export async function listImportBatches(db: TenantPrisma): Promise<ImportBatch[]> {
+  const products = await db.product.findMany({
+    where: { isActive: true },
+    select: { name: true, category: true, attributes: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  const map = new Map<string, ImportBatch>();
+  for (const p of products) {
+    const a = (p.attributes ?? {}) as Record<string, unknown>;
+    const tagged = typeof a.importBatch === 'string';
+    const id = tagged ? (a.importBatch as string) : `legacy-${p.createdAt.toISOString().slice(0, 16)}`;
+    let b = map.get(id);
+    if (!b) {
+      b = {
+        id,
+        file: tagged ? ((a.importFile as string) ?? null) : null,
+        importedAt: tagged ? String(a.importedAt ?? p.createdAt.toISOString()) : p.createdAt.toISOString(),
+        count: 0,
+        categories: {},
+        sample: [],
+        legacy: !tagged,
+      };
+      map.set(id, b);
+    }
+    b.count += 1;
+    b.categories[p.category] = (b.categories[p.category] ?? 0) + 1;
+    if (b.sample.length < 3) b.sample.push(p.name);
+  }
+  return [...map.values()].filter((b) => !b.legacy || b.count >= 3).sort((x, y) => y.importedAt.localeCompare(x.importedAt));
+}
+
+/** Produits d'un lot (identifiant suivi ou minute de création pour les anciens). */
+async function batchProductIds(db: TenantPrisma, id: string): Promise<string[]> {
+  if (id.startsWith('legacy-')) {
+    const start = new Date(`${id.slice(7)}:00.000Z`);
+    if (Number.isNaN(start.getTime())) return [];
+    const end = new Date(start.getTime() + 60_000);
+    const rows = await db.product.findMany({ where: { isActive: true, createdAt: { gte: start, lt: end } }, select: { id: true } });
+    return rows.map((r) => r.id);
+  }
+  const rows = await db.product.findMany({
+    where: { isActive: true, attributes: { path: ['importBatch'], equals: id } },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Supprime un lot : produits jamais vendus supprimés, produits déjà vendus
+ * seulement retirés du catalogue (l'historique des ventes reste intact).
+ */
+export async function deleteImportBatch(db: TenantPrisma, id: string): Promise<{ deleted: number; deactivated: number }> {
+  const ids = await batchProductIds(db, id);
+  if (!ids.length) return { deleted: 0, deactivated: 0 };
+  const sold = await db.saleItem.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ['productId'] });
+  const soldIds = new Set(sold.map((s) => s.productId));
+  const keep = ids.filter((x) => soldIds.has(x));
+  const drop = ids.filter((x) => !soldIds.has(x));
+  if (keep.length) await db.product.updateMany({ where: { id: { in: keep } }, data: { isActive: false } });
+  if (drop.length) await db.product.deleteMany({ where: { id: { in: drop } } });
+  return { deleted: drop.length, deactivated: keep.length };
 }

@@ -1,12 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requireAnyPermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
+import { requireAnyPermission, requirePermission, assertBranchAccess } from '../../middlewares/rbac-guard.js';
 import { badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
 import {
   parseImportFile,
   previewImportRows,
   commitImport,
+  listImportBatches,
+  deleteImportBatch,
   CANONICAL_FIELDS,
   type CanonicalField,
   type CommitRow,
@@ -49,18 +51,37 @@ export async function productsImportRoutes(app: FastifyInstance): Promise<void> 
   });
 
   app.post('/commit', { preHandler: CAN_IMPORT }, async (req, reply) => {
-    const body = req.body as { branchId?: string; rows?: CommitRow[] };
+    const body = req.body as { branchId?: string; rows?: CommitRow[]; fileName?: string };
     if (!body.branchId) throw badRequest('branchId requis');
     if (!body.rows || body.rows.length === 0) throw badRequest('Aucune ligne à importer');
     assertBranchAccess(req, body.branchId);
 
-    const result = await commitImport(req.db!, req.auth!.tenantId, body.branchId, body.rows);
+    const result = await commitImport(req.db!, req.auth!.tenantId, body.branchId, body.rows, body.fileName);
     await recordAudit({
       tenantId: req.auth!.tenantId,
       userId: req.auth!.userId,
       action: 'PRODUCTS_IMPORTED',
       entity: 'Product',
       metadata: { created: result.created, updated: result.updated, errorCount: result.errors.length },
+      ...requestMeta(req),
+    });
+    return reply.send(result);
+  });
+
+  // Imports précédents : liste et suppression d'un lot entier.
+  app.get('/batches', { preHandler: CAN_IMPORT }, async (req, reply) => {
+    return reply.send({ batches: await listImportBatches(req.db!) });
+  });
+
+  app.delete('/batches/:id', { preHandler: requirePermission('optique.products.delete') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const result = await deleteImportBatch(req.db!, id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'PRODUCTS_IMPORT_DELETED',
+      entity: 'Product',
+      metadata: { batch: id, ...result },
       ...requestMeta(req),
     });
     return reply.send(result);

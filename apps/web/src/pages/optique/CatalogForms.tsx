@@ -34,6 +34,7 @@ import { Button, Field, Modal } from '../../components/ui';
 import { NumberInput } from '../../components/NumberInput';
 import { FramePreview, frameAttrs } from './FrameCatalog';
 import { LensPreview, lensAttrs } from './LensCatalog';
+import { LensVisual } from '../../features/optique/LensVisual';
 import { tr } from '../../lib/tr';
 import { trFr } from '../../lib/sharedLabels';
 import { ProductSymbol } from '../../components/brand/ProductSymbol';
@@ -101,6 +102,8 @@ function useSaveProduct({
     }: {
       base: BaseState;
       attributes: Record<string, unknown>;
+      /** Saisie en série : la fenêtre reste ouverte après l'enregistrement. */
+      keepOpen?: boolean;
     }) => {
       const payload = {
         category: category as (typeof ProductCategory)[keyof typeof ProductCategory],
@@ -129,9 +132,9 @@ function useSaveProduct({
       }
       return saved;
     },
-    onSuccess: () => {
+    onSuccess: (_saved, vars) => {
       invalidateProductViews(qc);
-      onClose();
+      if (!vars.keepOpen) onClose();
     },
     onError: (e) => setError(apiErrorMessage(e)),
   });
@@ -452,6 +455,16 @@ const LENS_STEPS = [
  * Saisie d'un verre en sept étapes, avec l'aperçu de la carte mis à jour à
  * chaque choix : on voit ce que verra le vendeur avant d'enregistrer.
  */
+/** Indices proposés en pastilles (le catalogue n'utilise pas le polycarbonate). */
+const QUICK_INDICES = ['1.5', '1.56', '1.6', '1.67', '1.74'];
+
+/**
+ * Fiche verre en un seul écran : type (vignettes illustrées), indice et
+ * traitements en pastilles, prix et marge, nom généré automatiquement. Les
+ * détails techniques facultatifs sont repliés. « Enregistrer et ajouter un
+ * autre » garde le type, l'indice et les traitements pour saisir une gamme
+ * entière rapidement.
+ */
 export function LensFormModal({
   product,
   branchId,
@@ -462,7 +475,6 @@ export function LensFormModal({
   onClose: () => void;
 }) {
   const existing = product ? lensAttrs(product) : ({} as LensAttributes);
-  const [step, setStep] = useState(0);
   const [base, setBase] = useState<BaseState>(() => baseFrom(product));
   const [a, setA] = useState<LensAttributes>({
     family: existing.family ?? '',
@@ -475,8 +487,12 @@ export function LensFormModal({
     usage: existing.usage ?? '',
     premium: existing.premium ?? false,
   });
+  const [more, setMore] = useState(
+    Boolean(existing.range || existing.material || existing.design || existing.usage || existing.tint || product?.brand),
+  );
+  const [nameTouched, setNameTouched] = useState(Boolean(product));
+  const [saved, setSaved] = useState(0);
 
-  // Les verres sont fabriqués sur commande : pas de stock à gérer ici.
   const { mut, error } = useSaveProduct({
     product,
     branchId,
@@ -495,285 +511,219 @@ export function LensFormModal({
     });
 
   const familyLabel = LENS_FAMILIES.find((f) => f.key === a.family)?.label ?? '';
-  const effectiveName =
-    base.name.trim() || [familyLabel, a.index ? `${a.index}` : '', a.range].filter(Boolean).join(' ').trim();
-  const canSave = Boolean(effectiveName);
+  // Nom proposé : « Progressif 1.67 · Anti-reflet, Anti-lumière bleue ».
+  const autoName = [[familyLabel, a.index, a.range].filter(Boolean).join(' '), (a.treatments ?? []).join(', ')]
+    .filter(Boolean)
+    .join(' · ');
+  const effectiveName = (nameTouched ? base.name : '').trim() || autoName;
+  const canSave = Boolean(effectiveName) && Boolean(a.family) && Number(base.sellPrice) > 0;
+  const buy = Number(base.buyPrice) || 0;
+  const sell = Number(base.sellPrice) || 0;
+  const margin = sell > 0 && buy > 0 ? Math.round(((sell - buy) / sell) * 100) : null;
 
-  const summary = useMemo(
-    () =>
-      [
-        [tr('ui.CatalogForms.marque'), base.brand],
-        [tr('ui.CatalogForms.gamme'), a.range],
-        [tr('ui.CatalogForms.type'), familyLabel],
-        [tr('ui.CatalogForms.indice'), a.index],
-        [tr('ui.CatalogForms.materiau'), a.material],
-        [tr('ui.CatalogForms.traitements'), (a.treatments ?? []).join(', ')],
-        [tr('ui.CatalogForms.teinte'), a.tint],
-        [tr('ui.CatalogForms.design'), a.design],
-        [tr('ui.CatalogForms.usage'), a.usage],
-      ].filter(([, v]) => Boolean(v)) as [string, string][],
-    [base.brand, a, familyLabel],
-  );
+  function save(keepOpen: boolean) {
+    mut.mutate(
+      {
+        base: { ...base, name: effectiveName },
+        attributes: Object.fromEntries(
+          Object.entries(a).filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0)),
+        ),
+        keepOpen,
+      },
+      {
+        onSuccess: () => {
+          if (!keepOpen) return;
+          // Série : on garde type / indice / traitements / marque, on vide le reste.
+          setSaved((n) => n + 1);
+          setNameTouched(false);
+          setBase((b) => ({ ...b, name: '', sku: '', buyPrice: '', sellPrice: '' }));
+        },
+      },
+    );
+  }
+
+  const chip = (on: boolean) =>
+    `inline-flex min-h-[38px] items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+      on ? 'border-transparent bg-primary text-white' : 'border-line bg-surface-2 text-content-muted hover:border-primary/40'
+    }`;
+  const marginTone =
+    margin == null ? 'bg-surface-2 text-content-faint' : margin < 0 ? 'bg-[color:var(--danger)]/15 text-danger' : 'bg-[color:var(--success)]/15 text-success';
+  const marginText =
+    margin == null ? 'Marge : —' : margin < 0 ? `Vente à perte (${margin} %)` : `Marge : ${formatCurrency(sell - buy)} (${margin} %)`;
 
   return (
     <Modal open onClose={onClose} title={product ? tr('ui.CatalogForms.modifierLeVerre') : tr('ui.CatalogForms.nouveauVerre')} size="lg">
-      {/* Progression */}
-      <div className="mb-4 flex flex-wrap gap-1">
-        {LENS_STEPS.map((s, i) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStep(i)}
-            className={`badge px-2.5 py-1 text-[11px] transition ${
-              i === step
-                ? 'bg-primary text-white'
-                : i < step
-                  ? 'bg-primary-soft text-primary'
-                  : 'bg-surface-2 text-content-faint'
-            }`}
-          >
-            {i < step && <Check className="h-3 w-3" />} {i + 1}. {tr(s)}
-          </button>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_16rem]">
-        <div className="min-h-[18rem] space-y-4">
-          {step === 0 && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={tr('ui.CatalogForms.marque')}>
-                  <input className="input" value={base.brand} onChange={(e) => set({ brand: e.target.value })} placeholder={tr('ui.CatalogForms.essilor')} />
-                </Field>
-                <Field label={tr('ui.CatalogForms.gamme')}>
-                  <input className="input" value={a.range ?? ''} onChange={(e) => setAttr({ range: e.target.value })} placeholder={tr('ui.CatalogForms.variluxComfort')} />
-                </Field>
-              </div>
-              <Field label={tr('ui.CatalogForms.designationLaissezVidePourLa')}>
-                <input className="input" value={base.name} onChange={(e) => set({ name: e.target.value })} placeholder={effectiveName || tr('ui.CatalogForms.verre')} />
-              </Field>
-              <Field label={tr('ui.CatalogForms.referenceSku')}>
-                <input className="input" value={base.sku} onChange={(e) => set({ sku: e.target.value })} placeholder={tr('ui.CatalogForms.genereeSiVide')} />
-              </Field>
-            </>
-          )}
-
-          {step === 1 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {LENS_FAMILIES.map((f) => (
+        <div className="space-y-5">
+          <section>
+            <p className="label">1. Type de verre</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {LENS_FAMILIES.filter((f) => f.key !== 'PERSONNALISE').map((f) => (
                 <button
                   key={f.key}
                   type="button"
                   onClick={() => setAttr({ family: f.key })}
-                  className={`card p-3 text-left transition hover:border-primary ${
-                    a.family === f.key ? 'border-primary ring-2 ring-primary/25' : ''
+                  className={`overflow-hidden rounded-xl border text-left transition ${
+                    a.family === f.key ? 'border-primary ring-2 ring-primary/30' : 'border-line hover:border-primary/40'
                   }`}
                 >
-                  <span className="text-sm font-semibold text-content">{f.label}</span>
+                  <LensVisual family={f.key} className="block h-14 w-full" />
+                  <span className="block px-2 py-1.5 text-xs font-semibold text-content">{f.label}</span>
                 </button>
               ))}
             </div>
-          )}
+          </section>
 
-          {step === 2 && (
-            <>
-              <Field label={tr('ui.CatalogForms.materiau')}>
-                <select
-                  className="input"
-                  value={a.material ?? ''}
-                  onChange={(e) => {
-                    const material = e.target.value;
-                    const available = lensIndicesForMaterial(material);
-                    // Un matériau à indice unique (CR-39, Polycarbonate, Trivex) le
-                    // fixe automatiquement ; sinon on efface l'indice s'il n'est
-                    // plus valide pour le nouveau matériau (Minéral/Haut indice).
-                    const nextIndex =
-                      available.length === 1
-                        ? available[0].id
-                        : available.some((i) => i.id === a.index)
-                          ? a.index
-                          : '';
-                    setAttr({ material, index: nextIndex });
-                  }}
-                >
-                  <option value="">—</option>
-                  {LENS_MATERIALS.map((m) => (
-                    <option key={m} value={m}>{trFr(m)}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label={tr('ui.CatalogForms.indiceDeRefraction')}>
-                <select
-                  className="input"
-                  value={a.index ?? ''}
-                  disabled={lensIndicesForMaterial(a.material).length <= 1 && !!a.material}
-                  onChange={(e) => setAttr({ index: e.target.value })}
-                >
-                  <option value="">—</option>
-                  {lensIndicesForMaterial(a.material).map((i) => (
-                    <option key={i.id} value={i.id}>{i.label}</option>
-                  ))}
-                </select>
-                {!a.material && (
-                  <p className="mt-1 text-xs text-content-faint">{tr('ui.CatalogForms.choisissezDAbordLeMateriau')}</p>
-                )}
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={tr('ui.CatalogForms.design')}>
-                  <select className="input" value={a.design ?? ''} onChange={(e) => setAttr({ design: e.target.value })}>
-                    <option value="">—</option>
-                    {LENS_DESIGNS.map((d) => (
-                      <option key={d} value={d}>{trFr(d)}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={tr('ui.CatalogForms.usage')}>
-                  <select className="input" value={a.usage ?? ''} onChange={(e) => setAttr({ usage: e.target.value })}>
-                    <option value="">—</option>
-                    {LENS_USAGES.map((u) => (
-                      <option key={u} value={u}>{trFr(u)}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </>
-          )}
+          <section>
+            <p className="label">2. Indice</p>
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_INDICES.map((i) => (
+                <button key={i} type="button" onClick={() => setAttr({ index: a.index === i ? '' : i })} className={chip(a.index === i)}>
+                  {i}
+                </button>
+              ))}
+            </div>
+          </section>
 
-          {step === 3 && (
-            <>
-              <div>
-                <span className="label">{tr('ui.CatalogForms.traitements')}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {LENS_TREATMENTS.map((t) => {
-                    const on = (a.treatments ?? []).includes(t.label);
-                    return (
-                      <button
-                        key={t.key}
-                        type="button"
-                        onClick={() => toggleTreatment(t.label)}
-                        className={`badge px-3 py-1.5 text-xs transition ${
-                          on ? 'bg-primary text-white' : 'bg-surface-2 text-content-muted'
-                        }`}
-                      >
-                        {on && <Check className="h-3 w-3" />} {t.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <Field label={tr('ui.CatalogForms.teinte')}>
-                <select className="input" value={a.tint ?? ''} onChange={(e) => setAttr({ tint: e.target.value })}>
-                  <option value="">—</option>
-                  {LENS_TINTS.map((t) => (
-                    <option key={t} value={t}>{trFr(t)}</option>
-                  ))}
-                </select>
-              </Field>
-              <label className="flex items-center gap-2 text-sm text-content">
-                <input
-                  type="checkbox"
-                  checked={Boolean(a.premium)}
-                  onChange={(e) => setAttr({ premium: e.target.checked })}
-                />
-                <Sparkles className="h-4 w-4 text-warning" /> {tr('ui.CatalogForms.gammePremiumMiseEnAvant')}
-              </label>
-            </>
-          )}
+          <section>
+            <p className="label">3. Traitements</p>
+            <div className="flex flex-wrap gap-1.5">
+              {LENS_TREATMENTS.map((t) => {
+                const on = (a.treatments ?? []).includes(t.label);
+                return (
+                  <button key={t.key} type="button" onClick={() => toggleTreatment(t.label)} className={chip(on)}>
+                    {on && <Check className="h-3.5 w-3.5" />} {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-          {step === 4 && (
-            <div className="grid grid-cols-2 gap-3">
+          <section>
+            <p className="label">4. Prix</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Field label={tr('ui.CatalogForms.prixDAchat')}>
-                <input
-                  type="number"
-                  min={0}
-                  className="input text-right"
-                  value={base.buyPrice}
-                  onChange={(e) => set({ buyPrice: e.target.value })}
-                />
+                <input type="number" min={0} inputMode="numeric" className="input text-right" value={base.buyPrice} onChange={(e) => set({ buyPrice: e.target.value })} />
               </Field>
               <Field label={tr('ui.CatalogForms.prixDeVente')}>
-                <input
-                  type="number"
-                  min={0}
-                  className="input text-right"
-                  value={base.sellPrice}
-                  onChange={(e) => set({ sellPrice: e.target.value })}
-                />
+                <input type="number" min={0} inputMode="numeric" className="input text-right" value={base.sellPrice} onChange={(e) => set({ sellPrice: e.target.value })} />
               </Field>
+              <div className="col-span-2 flex items-end sm:col-span-1">
+                <p className={`w-full rounded-xl px-3 py-2.5 text-sm ${marginTone}`}>{marginText}</p>
+              </div>
             </div>
-          )}
+          </section>
 
-          {step === 5 && (
-            <>
-              <p className="text-sm text-content-muted">
-                {tr('ui.CatalogForms.facultatifSansPhotoLeCatalogue')}
-              </p>
-            </>
-          )}
+          <section>
+            <Field label="5. Nom affiché en caisse">
+              <input
+                className="input"
+                value={nameTouched ? base.name : autoName}
+                placeholder="Choisissez le type, l’indice et les traitements"
+                onChange={(e) => {
+                  setNameTouched(true);
+                  set({ name: e.target.value });
+                }}
+              />
+            </Field>
+            {nameTouched && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNameTouched(false);
+                  set({ name: '' });
+                }}
+                className="mt-1 text-xs font-medium text-primary"
+              >
+                Revenir au nom automatique
+              </button>
+            )}
+          </section>
 
-          {step === 6 && (
-            <div className="rounded-xl border p-4">
-              <p className="font-display text-lg font-bold text-content">{effectiveName || tr('ui.CatalogForms.verre')}</p>
-              <dl className="mt-3 space-y-1.5 text-sm">
-                {summary.map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-3 border-b pb-1 last:border-0">
-                    <dt className="text-content-muted">{k}</dt>
-                    <dd className="text-right font-medium text-content">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
+          <section className="rounded-xl border border-line">
+            <button type="button" onClick={() => setMore((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-content">
+              Plus de détails (marque, gamme, référence, matériau…)
+              <ChevronRight className={`h-4 w-4 transition ${more ? 'rotate-90' : ''}`} />
+            </button>
+            {more && (
+              <div className="space-y-3 border-t border-line px-4 py-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label={tr('ui.CatalogForms.marque')}>
+                    <input className="input" value={base.brand} onChange={(e) => set({ brand: e.target.value })} placeholder={tr('ui.CatalogForms.essilor')} />
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.gamme')}>
+                    <input className="input" value={a.range ?? ''} onChange={(e) => setAttr({ range: e.target.value })} placeholder={tr('ui.CatalogForms.variluxComfort')} />
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.referenceSku')}>
+                    <input className="input" value={base.sku} onChange={(e) => set({ sku: e.target.value })} placeholder={tr('ui.CatalogForms.genereeSiVide')} />
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.materiau')}>
+                    <select className="input" value={a.material ?? ''} onChange={(e) => setAttr({ material: e.target.value })}>
+                      <option value="">—</option>
+                      {LENS_MATERIALS.filter((m) => m !== 'Polycarbonate').map((m) => (
+                        <option key={m} value={m}>{trFr(m)}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.design')}>
+                    <select className="input" value={a.design ?? ''} onChange={(e) => setAttr({ design: e.target.value })}>
+                      <option value="">—</option>
+                      {LENS_DESIGNS.map((d) => (
+                        <option key={d} value={d}>{trFr(d)}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.usage')}>
+                    <select className="input" value={a.usage ?? ''} onChange={(e) => setAttr({ usage: e.target.value })}>
+                      <option value="">—</option>
+                      {LENS_USAGES.map((u) => (
+                        <option key={u} value={u}>{trFr(u)}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={tr('ui.CatalogForms.teinte')}>
+                    <select className="input" value={a.tint ?? ''} onChange={(e) => setAttr({ tint: e.target.value })}>
+                      <option value="">—</option>
+                      {LENS_TINTS.map((t) => (
+                        <option key={t} value={t}>{trFr(t)}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-content">
+                  <input type="checkbox" checked={Boolean(a.premium)} onChange={(e) => setAttr({ premium: e.target.checked })} />
+                  <Sparkles className="h-4 w-4 text-warning" /> {tr('ui.CatalogForms.gammePremiumMiseEnAvant')}
+                </label>
+              </div>
+            )}
+          </section>
         </div>
 
         <div className="lg:sticky lg:top-0 lg:self-start">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">
-            {tr('ui.CatalogForms.apercuAuCatalogue')}
-          </p>
-          <LensPreview
-            brand={base.brand}
-            range={a.range ?? ''}
-            name={effectiveName}
-            sku={base.sku}
-            price={Number(base.sellPrice) || 0}
-            attrs={a}
-            photoUrl={base.photoUrl}
-          />
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-faint">{tr('ui.CatalogForms.apercuAuCatalogue')}</p>
+          <LensPreview brand={base.brand} range={a.range ?? ''} name={effectiveName} sku={base.sku} price={sell} attrs={a} photoUrl={base.photoUrl} />
+          {saved > 0 && (
+            <p className="mt-3 rounded-lg bg-[color:var(--success)]/15 px-3 py-2 text-xs font-semibold text-success">
+              <Check className="mr-1 inline h-3.5 w-3.5" /> {saved} verre(s) ajouté(s), disponible(s) en caisse.
+            </p>
+          )}
         </div>
       </div>
 
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-      <div className="mt-4 flex items-center justify-between border-t pt-4">
-        <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
-          <ChevronLeft className="h-4 w-4" /> {tr('ui.CatalogForms.precedent')}
+      {!canSave && <p className="mt-3 text-xs text-content-faint">Pour enregistrer : choisissez le type de verre et indiquez un prix de vente.</p>}
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+        <Button variant="ghost" onClick={onClose}>
+          {tr('ui.CatalogForms.annuler')}
         </Button>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            {tr('ui.CatalogForms.annuler')}
+        {!product && (
+          <Button variant="outline" disabled={!canSave} loading={mut.isPending && Boolean(mut.variables?.keepOpen)} onClick={() => save(true)}>
+            Enregistrer et ajouter un autre
           </Button>
-          {step < LENS_STEPS.length - 1 ? (
-            <Button onClick={() => setStep((s) => Math.min(LENS_STEPS.length - 1, s + 1))}>
-              {tr('ui.CatalogForms.suivant')} <ChevronRight className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              disabled={!canSave}
-              loading={mut.isPending}
-              onClick={() =>
-                mut.mutate({
-                  base: { ...base, name: effectiveName },
-                  attributes: Object.fromEntries(
-                    Object.entries(a).filter(
-                      ([, v]) => v !== '' && v != null && !(Array.isArray(v) && v.length === 0),
-                    ),
-                  ),
-                })
-              }
-            >
-              <Check className="h-4 w-4" /> {product ? tr('ui.CatalogForms.enregistrer') : tr('ui.CatalogForms.ajouterLeVerre')}
-            </Button>
-          )}
-        </div>
+        )}
+        <Button disabled={!canSave} loading={mut.isPending && !mut.variables?.keepOpen} onClick={() => save(false)}>
+          <Check className="h-4 w-4" /> {product ? tr('ui.CatalogForms.enregistrer') : tr('ui.CatalogForms.ajouterLeVerre')}
+        </Button>
       </div>
     </Modal>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Columns3, FileUp, Trash2, Upload } from 'lucide-react';
-import { previewProductImport, commitProductImport, type ImportPreviewRow, type ImportColumns, type ImportField } from './api';
+import { previewProductImport, commitProductImport, listImportBatches, deleteImportBatch, type ImportPreviewRow, type ImportColumns, type ImportField } from './api';
 import { apiErrorMessage } from '../../../lib/api';
 import { invalidateProductViews } from '../../../lib/invalidate';
 import { Modal, Button, Badge, PageLoader } from '../../../components/ui';
@@ -25,6 +25,73 @@ const STATUS_BADGE: Record<ImportPreviewRow['status'], { label: string; tone: 's
 };
 
 type Phase = 'choose' | 'review' | 'confirm' | 'result';
+
+/** Catégories fabriquées sur commande : quantité illimitée, pas de stock importé. */
+const UNLIMITED = ['VERRE', 'SERVICE'];
+
+const CAT_LABEL: Record<string, string> = {
+  MONTURE: 'montures',
+  VERRE: 'verres',
+  LENTILLE: 'lentilles',
+  ACCESSOIRE: 'accessoires',
+  ENTRETIEN: 'entretien',
+  SERVICE: 'services',
+  AUTRE: 'autres',
+};
+
+/**
+ * Imports précédents : chaque fichier importé peut être supprimé d'un coup.
+ * Les produits déjà vendus sont seulement retirés du catalogue (l'historique
+ * des ventes reste intact), les autres sont supprimés.
+ */
+function PreviousImports() {
+  const qc = useQueryClient();
+  const { data: batches = [] } = useQuery({ queryKey: ['import-batches'], queryFn: listImportBatches });
+  const [msg, setMsg] = useState('');
+  const del = useMutation({
+    mutationFn: deleteImportBatch,
+    onSuccess: (r) => {
+      setMsg(`${r.deleted} produit(s) supprimé(s)${r.deactivated ? `, ${r.deactivated} déjà vendu(s) retiré(s) du catalogue` : ''}.`);
+      void qc.invalidateQueries({ queryKey: ['import-batches'] });
+      invalidateProductViews(qc);
+    },
+  });
+  if (!batches.length) return null;
+  return (
+    <div className="rounded-2xl border border-line p-3">
+      <p className="mb-2 text-sm font-semibold text-content">Imports précédents</p>
+      <ul className="max-h-56 space-y-1.5 overflow-y-auto">
+        {batches.map((b) => {
+          const cats = Object.entries(b.categories).map(([k, n]) => `${n} ${CAT_LABEL[k] ?? k.toLowerCase()}`).join(', ');
+          const when = new Date(b.importedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          return (
+            <li key={b.id} className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-content">{b.file || `Import du ${when}`}</p>
+                <p className="truncate text-[11px] text-content-faint">
+                  {when} · {cats}
+                  {b.sample.length ? ` · ex. ${b.sample[0]}` : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={del.isPending}
+                onClick={() => {
+                  if (window.confirm(`Supprimer cet import (${b.count} produit(s)) ? Les produits déjà vendus seront seulement retirés du catalogue.`)) del.mutate(b.id);
+                }}
+                className="btn-ghost h-9 shrink-0 rounded-lg px-2 text-danger"
+                aria-label="Supprimer cet import"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {msg && <p className="mt-2 text-xs text-success">{msg}</p>}
+    </div>
+  );
+}
 
 export function ProductImportModal({ branchId, onClose }: { branchId: string; onClose: () => void }) {
   const qc = useQueryClient();
@@ -109,7 +176,7 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
     setError('');
     setLoading(true);
     try {
-      const res = await commitProductImport(branchId, usable);
+      const res = await commitProductImport(branchId, usable.map((r) => (UNLIMITED.includes(r.category) ? { ...r, stock: null } : r)), file?.name);
       invalidateProductViews(qc);
       setResult(res);
       setPhase('result');
@@ -153,6 +220,12 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
           </label>
           {loading && <PageLoader />}
           {error && <p className="text-sm text-danger">{error}</p>}
+          {UNLIMITED.includes(defaultCategory) && (
+            <p className="rounded-xl bg-primary-soft px-3 py-2 text-xs text-primary">
+              Verres et services sont fabriqués sur commande : leur quantité est illimitée, la colonne stock du fichier est ignorée.
+            </p>
+          )}
+          <PreviousImports />
           <div className="flex justify-end border-t pt-3">
             <Button variant="ghost" onClick={onClose}>
               {tr('ui.ProductImportModal.annuler')}
@@ -250,13 +323,17 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                   </label>
                   <label className="block text-[11px] text-content-faint">
                     Stock
-                    <input
-                      type="number"
-                      className="input mt-0.5 h-10 text-center text-sm"
-                      value={r.stock ?? ''}
-                      placeholder="—"
-                      onChange={(e) => updateRow(i, { stock: e.target.value === '' ? null : Number(e.target.value) })}
-                    />
+                    {UNLIMITED.includes(r.category) ? (
+                      <span className="mt-0.5 flex h-10 items-center justify-center rounded-xl bg-surface-2 text-xs font-semibold text-content-muted">Illimité</span>
+                    ) : (
+                      <input
+                        type="number"
+                        className="input mt-0.5 h-10 text-center text-sm"
+                        value={r.stock ?? ''}
+                        placeholder="—"
+                        onChange={(e) => updateRow(i, { stock: e.target.value === '' ? null : Number(e.target.value) })}
+                      />
+                    )}
                   </label>
                 </div>
               </li>
@@ -330,15 +407,19 @@ export function ProductImportModal({ branchId, onClose }: { branchId: string; on
                       />
                     </td>
                     <td className="table-cell">
-                      <input
-                        type="number"
-                        className="input h-8 w-16 px-2 text-center text-xs"
-                        value={r.stock ?? ''}
-                        placeholder="—"
-                        onChange={(e) =>
-                          updateRow(i, { stock: e.target.value === '' ? null : Number(e.target.value) })
-                        }
-                      />
+                      {UNLIMITED.includes(r.category) ? (
+                        <span className="text-xs font-semibold text-content-muted">Illimité</span>
+                      ) : (
+                        <input
+                          type="number"
+                          className="input h-8 w-16 px-2 text-center text-xs"
+                          value={r.stock ?? ''}
+                          placeholder="—"
+                          onChange={(e) =>
+                            updateRow(i, { stock: e.target.value === '' ? null : Number(e.target.value) })
+                          }
+                        />
+                      )}
                     </td>
                     <td className="table-cell">
                       <Badge tone={STATUS_BADGE[r.status].tone}>
