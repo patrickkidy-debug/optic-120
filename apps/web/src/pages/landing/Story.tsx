@@ -209,7 +209,7 @@ function VisualTransit() {
 
 function VisualLabScan() {
   return (
-    <MiniPhone src="/images/landing/portail.webp" className="w-[190px] overflow-hidden">
+    <MiniPhone src="/images/landing/portail.webp" className="w-[150px] overflow-hidden sm:w-[190px]">
       <motion.div
         className="pointer-events-none absolute inset-x-1.5 h-1 rounded-full bg-primary shadow-[0_0_18px_4px_rgba(124,58,237,0.55)]"
         initial={{ top: '12%' }}
@@ -224,7 +224,7 @@ function VisualFitting() {
   const { t } = useTranslation();
   return (
     <div className="relative">
-      <MiniPhone src="/images/landing/portail-montage.webp" className="w-[190px]" />
+      <MiniPhone src="/images/landing/portail-montage.webp" className="w-[150px] sm:w-[190px]" />
       <motion.div
         className="absolute -left-24 top-10 flex items-center gap-2 rounded-2xl border border-line bg-surface px-3 py-2 shadow-card-lg"
         initial={{ scale: 0.6, opacity: 0 }}
@@ -253,7 +253,7 @@ function VisualCustomer() {
   const { t } = useTranslation();
   return (
     <div className="relative">
-      <MiniPhone src="/images/landing/suivi-client.webp" className="w-[190px]" />
+      <MiniPhone src="/images/landing/suivi-client.webp" className="w-[150px] sm:w-[190px]" />
       <motion.div
         className="absolute -left-28 top-6 w-[210px] rounded-2xl lg:-left-40 lg:w-[230px] rounded-tr-sm bg-[#dcf8c6] px-3.5 py-2.5 text-[13px] leading-snug text-[#111b21] shadow-card-lg"
         initial={{ scale: 0.5, opacity: 0, x: 30 }}
@@ -514,7 +514,7 @@ function StoryList() {
     <div className="relative mx-auto mt-14 max-w-xl pb-8">
       <div className="absolute bottom-8 left-[21px] top-0 w-[3px] rounded-full bg-line" aria-hidden />
       <motion.div className="absolute bottom-8 left-[21px] top-0 w-[3px] origin-top rounded-full bg-brand" style={{ scaleY: fill }} aria-hidden />
-      <ol ref={ref} className="relative flex flex-col gap-14">
+      <ol ref={ref} className="relative flex flex-col gap-10 sm:gap-14">
       {CHAPTERS.map((c, i) => {
         const Visual = VISUALS[i];
         return (
@@ -541,7 +541,7 @@ export function StorySection() {
   const reduce = useReducedMotion();
   const wide = useMediaQuery('(min-width: 1024px)');
   return (
-    <section id="histoire" className="relative scroll-mt-20 px-4 pt-24 sm:px-8">
+    <section id="histoire" className="relative scroll-mt-20 px-4 pt-16 sm:px-8 sm:pt-24">
       <div className="mx-auto max-w-[1280px] text-center">
         <span className="mb-4 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
           {t('landing.story.eyebrow')}

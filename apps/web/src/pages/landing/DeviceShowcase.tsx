@@ -102,7 +102,7 @@ export function Devices() {
     </div>
 
     {/* Repères : l'écran affiché, cliquable */}
-    <div className="mt-8 flex flex-wrap justify-center gap-2">
+    <div className="mt-8 hidden flex-wrap justify-center gap-2 sm:flex">
       {DESK.map((k, i) => (
         <button
           key={k}

@@ -37,7 +37,6 @@ import {
 import { StorySection, useScrollRoot } from './landing/Story';
 import { AllFeatures } from './landing/AllFeatures';
 import { HeroBold, DARK_BAND, NIGHT } from './landing/HeroBold';
-import { AdvisorLauncher } from '../features/advisor/AdvisorLauncher';
 import { PLAN_CATALOG, BILLING_CYCLE_MONTHS, BILLING_CYCLE_DISCOUNT, type BillingCycle } from '@oculo/shared-types';
 import { Logo } from '../components/Logo';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -273,6 +272,46 @@ function ScrollProgress() {
   const { scrollYProgress } = useScroll({ container: root });
   const scaleX = useSpring(scrollYProgress, { stiffness: 160, damping: 30, mass: 0.3 });
   return <motion.div className="fixed inset-x-0 top-0 z-[60] h-[3px] origin-left bg-brand" style={{ scaleX }} aria-hidden />;
+}
+
+/**
+ * Barre d'action fixe en bas de l'écran, sur téléphone uniquement : apparaît
+ * une fois le hero dépassé, pour que l'inscription reste à portée de pouce.
+ */
+function MobileCta() {
+  const { t } = useTranslation();
+  const root = useScrollRoot();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const on = () => setShow(el.scrollTop > 700);
+    on();
+    el.addEventListener('scroll', on, { passive: true });
+    return () => el.removeEventListener('scroll', on);
+  }, [root]);
+  return (
+    <div
+      className={clsx(
+        'fixed inset-x-0 bottom-0 z-[55] border-t border-white/10 bg-[#120a2b]/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-md transition-transform duration-300 lg:hidden',
+        show ? 'translate-y-0' : 'translate-y-full',
+      )}
+      aria-hidden={!show}
+    >
+      <div className="flex items-center gap-2">
+        <Link
+          to="/signup"
+          tabIndex={show ? 0 : -1}
+          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-base font-bold text-white shadow-[0_10px_30px_-10px_rgba(236,72,153,0.8)]"
+        >
+          {t('landing.useSoftware')}
+        </Link>
+        <Link to="/login" tabIndex={show ? 0 : -1} className="flex h-12 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white">
+          {t('landing.signIn')}
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 /** Chiffre clé qui compte jusqu'à sa valeur à l'entrée dans l'écran (« 100 % », « 10+ »). */
@@ -526,7 +565,7 @@ export function LandingPage() {
     // qui empêche la scène collante du récit de rester à l'écran.
     <div style={LANDING_THEME} className="relative min-h-screen overflow-x-clip bg-bg text-content">
       <ScrollProgress />
-      <AdvisorLauncher page="landing" />
+      <MobileCta />
       {/* Fond : grille fine + halos pastel animés */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="grid-overlay absolute inset-0" />
@@ -620,27 +659,29 @@ export function LandingPage() {
         <HeroBold />
 
         {/* Problèmes actuels — mise en contexte avant la solution */}
-        <section className="px-4 py-24 sm:px-8">
+        <section className="px-4 py-16 sm:px-8 sm:py-24">
           <div className="mx-auto max-w-[1280px]">
-            <Reveal className="mb-14 text-center">
-              <h2 className="mx-auto max-w-3xl font-display text-3xl font-extrabold text-content sm:text-4xl">
+            <Reveal className="mb-8 text-center sm:mb-14">
+              <h2 className="mx-auto max-w-3xl font-display text-2xl font-extrabold text-content sm:text-4xl">
                 {t('landing.probTitle')}
               </h2>
             </Reveal>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-3 sm:gap-6 md:grid-cols-3">
               {PROBLEMS.map((p, i) => (
                 <Reveal key={p.key} delay={i * 120} className="h-full">
-                  <div className="spotlight glass-card glass-hover flex h-full flex-col gap-4 rounded-3xl p-8">
+                  <div className="spotlight glass-card glass-hover flex h-full items-start gap-4 rounded-2xl p-4 sm:rounded-3xl md:flex-col md:p-8">
                     <div
                       className={clsx(
-                        'grid h-14 w-14 place-items-center rounded-2xl border',
+                        'grid h-11 w-11 shrink-0 place-items-center rounded-2xl border md:h-14 md:w-14',
                         TONE_SOFT[p.tone],
                       )}
                     >
-                      <p.icon className={clsx('h-7 w-7', TONE_TEXT[p.tone])} />
+                      <p.icon className={clsx('h-6 w-6 md:h-7 md:w-7', TONE_TEXT[p.tone])} />
                     </div>
-                    <h3 className="font-display text-lg font-bold text-content">{t(`landing.${p.key}`)}</h3>
-                    <p className="text-sm text-content-muted">{t(`landing.${p.key}Text`)}</p>
+                    <div>
+                      <h3 className="font-display text-base font-bold text-content sm:text-lg">{t(`landing.${p.key}`)}</h3>
+                      <p className="mt-1 text-sm text-content-muted md:mt-4">{t(`landing.${p.key}Text`)}</p>
+                    </div>
                   </div>
                 </Reveal>
               ))}
@@ -967,53 +1008,53 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-line bg-bg-subtle py-12">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-8 px-4 sm:px-8 md:grid-cols-4">
-          <div className="flex flex-col gap-5">
+      <footer className="relative z-10 border-t border-line bg-bg-subtle pb-28 pt-12 lg:pb-12">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-2 gap-8 px-4 sm:px-8 md:grid-cols-4">
+          <div className="col-span-2 flex flex-col gap-5 md:col-span-1">
             <Logo />
             <p className="text-sm text-content-muted">
               {t('landing.footerTagline')}
             </p>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             <h5 className="mb-1 font-bold text-content">{t('landing.footerProduct')}</h5>
-            <a href="#fonctionnalites" className="text-sm text-content-muted hover:text-primary">
+            <a href="#fonctionnalites" className="py-1 text-sm text-content-muted hover:text-primary">
               {tr('ui.LandingPage.fonctionnalites')}
             </a>
-            <a href="#tarifs" className="text-sm text-content-muted hover:text-primary">
+            <a href="#tarifs" className="py-1 text-sm text-content-muted hover:text-primary">
               {tr('ui.LandingPage.tarifs')}
             </a>
-            <a href="#apercu" className="text-sm text-content-muted hover:text-primary">
+            <a href="#apercu" className="py-1 text-sm text-content-muted hover:text-primary">
               {tr('ui.LandingPage.apercu')}
             </a>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             <h5 className="mb-1 font-bold text-content">{t('landing.footerAccount')}</h5>
-            <Link to="/login" className="text-sm text-content-muted hover:text-primary">
+            <Link to="/login" className="py-1 text-sm text-content-muted hover:text-primary">
               {t('landing.signIn')}
             </Link>
-            <Link to="/signup" className="text-sm text-content-muted hover:text-primary">
+            <Link to="/signup" className="py-1 text-sm text-content-muted hover:text-primary">
               {t('landing.footerCreate')}
             </Link>
-            <a href="#securite" className="text-sm text-content-muted hover:text-primary">
+            <a href="#securite" className="py-1 text-sm text-content-muted hover:text-primary">
               {tr('ui.LandingPage.securite')}
             </a>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             <h5 className="mb-1 font-bold text-content">{t('landing.footerSupport')}</h5>
             <a
               href="mailto:support@oculosaas.com"
-              className="text-sm text-content-muted hover:text-primary"
+              className="py-1 text-sm text-content-muted hover:text-primary"
             >
               {t('landing.footerContact')}
             </a>
-            <a href="#faq" className="text-sm text-content-muted hover:text-primary">
+            <a href="#faq" className="py-1 text-sm text-content-muted hover:text-primary">
               FAQ
             </a>
-            <Link to="/confidentialite" className="text-sm text-content-muted hover:text-primary">
+            <Link to="/confidentialite" className="py-1 text-sm text-content-muted hover:text-primary">
               Confidentialité
             </Link>
-            <Link to="/suppression-compte" className="text-sm text-content-muted hover:text-primary">
+            <Link to="/suppression-compte" className="py-1 text-sm text-content-muted hover:text-primary">
               Suppression du compte
             </Link>
             <button type="button" onClick={reopenConsent} className="text-left text-sm text-content-muted hover:text-primary">

@@ -178,7 +178,9 @@ function Ribbon({ items, reverse }: { items: Feature[]; reverse?: boolean }) {
 export function AllFeatures() {
   const { t } = useTranslation();
   const [cat, setCat] = useState(0);
-  const [auto, setAuto] = useState(true);
+  // Rotation automatique sur grand écran seulement : sur téléphone, le contenu
+  // ne doit pas changer (ni sauter) pendant qu'on le lit.
+  const [auto, setAuto] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 1024px)').matches);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
   const root = useScrollRoot();
@@ -208,7 +210,7 @@ export function AllFeatures() {
   const half = Math.ceil(ALL.length / 2);
 
   return (
-    <section ref={sectionRef} id="fonctionnalites" className="scroll-mt-20 py-24">
+    <section ref={sectionRef} id="fonctionnalites" className="scroll-mt-20 py-16 sm:py-24">
       <div className="mx-auto max-w-[1280px] px-4 text-center sm:px-8">
         <span className="mb-4 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
           {t('landing.all.eyebrow')}
@@ -229,7 +231,7 @@ export function AllFeatures() {
           role="tablist"
           aria-label={t('landing.all.title')}
           onKeyDown={onKeyDown}
-          className="mb-10 flex flex-wrap justify-center gap-2"
+          className="-mx-4 mb-6 flex snap-x gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:mb-10 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0"
         >
           {CATEGORIES.map((k, i) => (
             <button
@@ -245,7 +247,7 @@ export function AllFeatures() {
               tabIndex={i === cat ? 0 : -1}
               onClick={() => choose(i)}
               className={clsx(
-                'relative inline-flex min-h-[44px] cursor-pointer items-center gap-2 overflow-hidden rounded-full border px-4 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
+                'relative inline-flex min-h-[44px] shrink-0 snap-start cursor-pointer items-center gap-2 overflow-hidden whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
                 i === cat
                   ? 'border-transparent bg-brand text-white shadow-card'
                   : 'border-line bg-surface text-content-muted hover:border-primary/30 hover:text-content',
@@ -279,7 +281,7 @@ export function AllFeatures() {
           id="all-panel"
           role="tabpanel"
           aria-labelledby={`all-tab-${c.key}`}
-          className="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12"
+          className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-12"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -290,12 +292,12 @@ export function AllFeatures() {
               transition={{ duration: 0.4, ease: [0.16, 0.84, 0.3, 1] }}
               className="lg:pt-2"
             >
-              <span className={clsx('grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br text-white shadow-card-lg', c.tone)}>
+              <span className={clsx('hidden h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br text-white shadow-card-lg lg:grid', c.tone)}>
                 <c.icon className="h-8 w-8" aria-hidden />
               </span>
-              <h3 className="mt-5 font-display text-3xl font-extrabold text-content">{t(`landing.all.cat.${c.key}.label`)}</h3>
-              <p className="mt-3 text-lg leading-relaxed text-content-muted">{t(`landing.all.cat.${c.key}.lead`)}</p>
-              <p className="mt-5 font-display text-5xl font-extrabold text-content">
+              <h3 className="font-display text-2xl font-extrabold text-content sm:text-3xl lg:mt-5">{t(`landing.all.cat.${c.key}.label`)}</h3>
+              <p className="mt-2 text-base leading-relaxed text-content-muted sm:mt-3 sm:text-lg">{t(`landing.all.cat.${c.key}.lead`)}</p>
+              <p className="mt-5 hidden font-display text-5xl font-extrabold text-content lg:block">
                 {c.items.length}
                 <span className="ml-2 text-base font-semibold text-content-muted">{t('landing.all.tools')}</span>
               </p>
@@ -305,7 +307,7 @@ export function AllFeatures() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.ul
               key={c.key}
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              className="grid gap-2.5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
               initial="hidden"
               animate="show"
               exit="exit"
@@ -322,18 +324,20 @@ export function AllFeatures() {
                     hidden: reduce ? {} : { opacity: 0, y: 22, scale: 0.97 },
                     show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: [0.16, 0.84, 0.3, 1] } },
                   }}
-                  className="spotlight glass-card glass-hover relative flex h-full flex-col gap-3 rounded-3xl p-6"
+                  className="spotlight glass-card glass-hover relative flex h-full items-start gap-3 rounded-2xl p-4 sm:flex-col sm:rounded-3xl sm:p-6"
                 >
                   {f.isNew && (
                     <span className="absolute right-4 top-4 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
                       {t('landing.all.new')}
                     </span>
                   )}
-                  <span className={clsx('grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br text-white', c.tone)}>
+                  <span className={clsx('grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-white sm:h-11 sm:w-11', c.tone)}>
                     <f.icon className="h-5 w-5" aria-hidden />
                   </span>
-                  <h4 className="font-display text-lg font-bold text-content">{t(`landing.all.f.${f.key}.title`)}</h4>
-                  <p className="text-sm leading-relaxed text-content-muted">{t(`landing.all.f.${f.key}.text`)}</p>
+                  <div className="min-w-0 pr-10 sm:pr-0">
+                    <h4 className="font-display text-base font-bold text-content sm:text-lg">{t(`landing.all.f.${f.key}.title`)}</h4>
+                    <p className="mt-1 text-sm leading-relaxed text-content-muted sm:mt-3">{t(`landing.all.f.${f.key}.text`)}</p>
+                  </div>
                 </motion.li>
               ))}
             </motion.ul>
