@@ -36,6 +36,20 @@ export function AppShell() {
    */
   const isConsole = pathname === '/plateforme' || pathname.startsWith('/plateforme/');
 
+  // Garde-fou mobile : #root défile verticalement et masque le débordement
+  // horizontal, mais un scrollIntoView ou un focus peut quand même le décaler
+  // sur le côté (page coupée à gauche, bande vide à droite). On le recale.
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root) return;
+    const reset = () => {
+      if (root.scrollLeft !== 0) root.scrollLeft = 0;
+    };
+    reset();
+    root.addEventListener('scroll', reset, { passive: true });
+    return () => root.removeEventListener('scroll', reset);
+  }, [pathname]);
+
   // Préchargement en tâche de fond (quand le navigateur est libre) des pages les
   // plus consultées → premières navigations instantanées, sans gêner le rendu.
   useEffect(() => {

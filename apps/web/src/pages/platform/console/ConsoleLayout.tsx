@@ -72,8 +72,18 @@ export function ConsoleLayout({
   // La bande défile : l'onglet actif doit être visible même s'il est en bout de
   // course. Sans cela, ouvrir « Paramètres » par son URL laisserait la barre
   // calée à gauche, sur une section qui n'est pas celle affichée.
+  // On fait défiler la SEULE bande d'onglets : scrollIntoView ferait aussi
+  // glisser horizontalement les conteneurs parents (dont #root), ce qui
+  // décalait toute la page vers la gauche sur téléphone.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const strip = stripRef.current;
+    const tab = activeRef.current;
+    if (strip && tab) {
+      const s = strip.getBoundingClientRect();
+      const t = tab.getBoundingClientRect();
+      if (t.left < s.left) strip.scrollLeft += t.left - s.left - 12;
+      else if (t.right > s.right) strip.scrollLeft += t.right - s.right + 12;
+    }
     measure();
   }, [section, measure]);
 
