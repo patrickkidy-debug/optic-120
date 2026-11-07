@@ -884,6 +884,26 @@
         "pd": "DP",
         "height": "A"
       }
+    },
+    "showcase": {
+      "aria": "Pré-visualização do software no computador e no telemóvel",
+      "kicker": "O software real, ao vivo",
+      "titleA": "No computador",
+      "titleB": "e no telemóvel",
+      "computer": "Computador",
+      "phone": "Telemóvel",
+      "altDesk": "OculoSaaS no computador: {{screen}}",
+      "altPhone": "OculoSaaS no telemóvel: {{screen}}",
+      "screen": {
+        "dashboard": "Painel",
+        "caisse": "Caixa",
+        "produits": "Catálogo",
+        "clients": "Clientes",
+        "oculorx": "OculoRX",
+        "oculotrack": "OculoTrack",
+        "etiquettes": "Etiquetas",
+        "configuration": "Configuração"
+      }
     }
   },
   "planFeatures": {

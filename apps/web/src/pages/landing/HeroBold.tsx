@@ -1,10 +1,8 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Check, FileText, Glasses, ScanFace, ShieldCheck, ShoppingCart, type LucideIcon } from 'lucide-react';
-import { Mascot } from '../../components/brand/Mascot';
-import { CenteringCard, RxCard } from './OpticTiles';
+import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { Devices } from './DeviceShowcase';
 
 /** Fond de la bande sombre : nuit violette de la marque. */
 export const NIGHT = '#120a2b';
@@ -25,32 +23,11 @@ export const DARK_BAND = {
 const BOLD_FONT = 'https://fonts.googleapis.com/css2?family=Bungee&display=swap';
 const DISPLAY = { fontFamily: "'Bungee', 'Oxanium', sans-serif", letterSpacing: '-0.01em' } as CSSProperties;
 
-// Vignettes du hero : quatre rubriques du métier d'opticien, en teintes de la marque.
-// Montures et caisse sont de vraies captures recadrées ; ordonnance et centrage sont dessinés.
-type Tile = {
-  key: string;
-  bg: string;
-  icon: LucideIcon;
-  rot: number;
-  className: string;
-  img?: { src: string; w: number; h: number; cls: string };
-  body?: 'rx' | 'centering';
-};
-const TILES: Tile[] = [
-  { key: 'frames', bg: '#fed7aa', icon: Glasses, rot: -1.5, className: 'col-span-2', img: { src: 'hero-montures', w: 1114, h: 225, cls: 'h-[96px] sm:h-[130px]' } },
-  { key: 'pos', bg: '#fbcfe8', icon: ShoppingCart, rot: 2, className: 'row-span-2', img: { src: 'hero-caisse', w: 445, h: 570, cls: 'h-full min-h-[200px]' } },
-  { key: 'rx', bg: '#ddd6fe', icon: FileText, rot: -2, className: '', body: 'rx' },
-  { key: 'centering', bg: '#c7d2fe', icon: ScanFace, rot: 1.5, className: '', body: 'centering' },
-];
-
 const FACTS = ['stat1', 'stat2', 'stat3'] as const;
-const TOASTS = ['heroToast1', 'heroToast2', 'heroToast3'] as const;
 const SHADOWS = ['#7c3aed', '#ec4899', '#f97316'];
 
 export function HeroBold() {
   const { t } = useTranslation();
-  const reduce = useReducedMotion();
-  const [toast, setToast] = useState(0);
 
   // Police d'affichage chargée seulement sur la landing.
   useEffect(() => {
@@ -60,11 +37,6 @@ export function HeroBold() {
     l.href = BOLD_FONT;
     document.head.appendChild(l);
   }, []);
-  useEffect(() => {
-    if (reduce) return;
-    const id = window.setInterval(() => setToast((v) => (v + 1) % TOASTS.length), 2800);
-    return () => window.clearInterval(id);
-  }, [reduce]);
 
   return (
     <section style={{ ...DARK_BAND, background: NIGHT }} className="relative isolate overflow-hidden px-4 pb-20 pt-12 text-white sm:px-8 lg:pb-24 lg:pt-16">
@@ -73,7 +45,7 @@ export function HeroBold() {
       <div className="pointer-events-none absolute -right-32 top-24 -z-10 h-[460px] w-[460px] rounded-full bg-[#ec4899]/25 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-[-180px] left-1/3 -z-10 h-[420px] w-[420px] rounded-full bg-[#f97316]/20 blur-[120px]" />
 
-      <div className="mx-auto grid max-w-[1280px] items-center gap-14 xl:grid-cols-[1.12fr_0.88fr] xl:gap-8">
+      <div className="mx-auto grid max-w-[1280px] items-center gap-14 xl:grid-cols-[0.95fr_1.05fr] xl:gap-8">
         {/* Texte */}
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 backdrop-blur">
@@ -120,74 +92,9 @@ export function HeroBold() {
           </div>
         </div>
 
-        {/* Visuel : 4 rubriques du logiciel + Oculo, la mascotte */}
-        <div className="relative mx-auto w-full max-w-[540px] pt-24 sm:pt-[132px]">
-          <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
-            {TILES.map((tile, i) => (
-              <motion.div
-                key={tile.key}
-                className={`relative flex flex-col ${tile.className}`}
-                initial={{ opacity: 0, y: 24, rotate: 0 }}
-                animate={{ opacity: 1, y: 0, rotate: tile.rot }}
-                transition={{ delay: 0.15 + i * 0.12, type: 'spring', stiffness: 160, damping: 18 }}
-              >
-                <motion.div
-                  className="flex h-full flex-col rounded-[22px] p-1.5"
-                  style={{ background: tile.bg, boxShadow: `5px 5px 0 ${SHADOWS[i % 3]}` }}
-                  animate={reduce ? undefined : { y: [0, -6, 0] }}
-                  transition={reduce ? undefined : { duration: 4.5 + i * 0.7, delay: i * 0.5, repeat: Infinity, ease: 'easeInOut' }}
-                  whileHover={{ scale: 1.04, rotate: -tile.rot }}
-                >
-                  <div className="flex items-center gap-1.5 px-2 pb-1.5 pt-1 text-[#120a2b]">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#120a2b]">
-                      <tile.icon className="h-3.5 w-3.5 text-white" />
-                    </span>
-                    <span className="truncate text-sm font-extrabold tracking-tight">{t(`landing.bold.tile.${tile.key}`)}</span>
-                    <span className="ml-auto hidden truncate text-[11px] font-medium text-[#120a2b]/70 xl:inline">
-                      {t(`landing.bold.tile.${tile.key}Hint`)}
-                    </span>
-                  </div>
-                  <div className="min-h-[86px] flex-1 overflow-hidden rounded-[16px] bg-white sm:min-h-[112px]">
-                    {tile.img && (
-                      <img
-                        src={`/images/landing/${tile.img.src}.webp`}
-                        width={tile.img.w}
-                        height={tile.img.h}
-                        alt={t(`landing.bold.tile.${tile.key}`)}
-                        fetchPriority={i === 0 ? 'high' : undefined}
-                        className={`w-full object-cover object-left-top ${tile.img.cls}`}
-                      />
-                    )}
-                    {tile.body === 'rx' && <RxCard />}
-                    {tile.body === 'centering' && <CenteringCard />}
-                  </div>
-                </motion.div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Oculo salue au-dessus des cartes, avec la notification « en direct » */}
-          <Mascot className="absolute -right-2 -top-8 z-10 w-[112px] sm:-right-8 sm:-top-14 sm:w-[156px]" />
-          <div className="absolute right-[100px] top-2 h-[60px] w-[240px] sm:right-[136px] sm:top-4" aria-hidden>
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.div
-                key={toast}
-                className="absolute right-0 top-0 flex items-center gap-3 rounded-2xl rounded-br-sm bg-white px-4 py-2.5 text-[#120a2b] shadow-[6px_6px_0_#7c3aed]"
-                initial={{ opacity: 0, y: -14, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 12, scale: 0.95, transition: { duration: 0.2 } }}
-                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-              >
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand">
-                  <Check className="h-4 w-4 text-white" />
-                </span>
-                <span>
-                  <span className="block whitespace-nowrap text-sm font-bold">{t(`landing.${TOASTS[toast]}`)}</span>
-                  <span className="block text-xs text-[#120a2b]/60">{t('landing.heroToastSub')}</span>
-                </span>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        {/* Visuel : le vrai logiciel sur ordinateur et téléphone, Oculo assis sur l'écran */}
+        <div className="relative mx-auto w-full max-w-[640px]">
+          <Devices />
         </div>
       </div>
 

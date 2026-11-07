@@ -9,14 +9,16 @@ export type MascotFrame = { shape: FrameShape; color: string };
  * Pose du nounours :
  * - wave  : salue d'une patte, tient une mini échelle d'acuité de l'autre ;
  * - point : tient une baguette (angle réglable) pour faire lire un tableau ;
- * - try   : ajuste ses lunettes des deux pattes (essayage devant le miroir).
+ * - try   : ajuste ses lunettes des deux pattes (essayage devant le miroir) ;
+ * - sit   : assis sur un rebord (écran d'ordinateur), jambes pendantes, salue.
  */
-export type MascotPose = 'wave' | 'point' | 'try';
+export type MascotPose = 'wave' | 'point' | 'try' | 'sit';
 
 const VIEWBOX: Record<MascotPose, string> = {
   wave: '-6 0 212 236',
   point: '-140 0 346 236',
   try: '0 0 200 236',
+  sit: '-6 0 212 268',
 };
 
 const DEFAULT_FRAME: MascotFrame = { shape: 'round', color: '#7c3aed' };
@@ -127,13 +129,28 @@ export function Mascot({
         </clipPath>
       </defs>
 
-      <ellipse cx="100" cy="229" rx="54" ry="5" fill="#000" opacity="0.3" />
+      {pose === 'sit' ? (
+        /* Assis : les jambes pendent devant le rebord et se balancent. */
+        <>
+          {[76, 124].map((x, i) => (
+            <motion.g key={x} style={pivot(x, 212)} animate={reduce ? undefined : { rotate: i ? [6, -8, 6] : [-8, 6, -8] }} transition={loop(2.2)}>
+              <rect x={x - 12} y={204} width="24" height="48" rx="12" fill={FUR} />
+              <ellipse cx={x} cy={254} rx="15" ry="9" fill={FUR} />
+              <ellipse cx={x} cy={256} rx="8" ry="4.5" fill="#f6dcc0" />
+            </motion.g>
+          ))}
+        </>
+      ) : (
+        <>
+          <ellipse cx="100" cy="229" rx="54" ry="5" fill="#000" opacity="0.3" />
 
-      {/* Pieds */}
-      <ellipse cx="72" cy="216" rx="20" ry="11" fill={FUR} />
-      <ellipse cx="128" cy="216" rx="20" ry="11" fill={FUR} />
-      <ellipse cx="72" cy="219" rx="10" ry="5.5" fill="#f6dcc0" />
-      <ellipse cx="128" cy="219" rx="10" ry="5.5" fill="#f6dcc0" />
+          {/* Pieds */}
+          <ellipse cx="72" cy="216" rx="20" ry="11" fill={FUR} />
+          <ellipse cx="128" cy="216" rx="20" ry="11" fill={FUR} />
+          <ellipse cx="72" cy="219" rx="10" ry="5.5" fill="#f6dcc0" />
+          <ellipse cx="128" cy="219" rx="10" ry="5.5" fill="#f6dcc0" />
+        </>
+      )}
 
       {/* Corps + blouse d'opticien */}
       <ellipse cx="100" cy="182" rx="54" ry="44" fill={FUR} />
@@ -152,7 +169,7 @@ export function Mascot({
       <circle cx="100" cy="152" r="3.6" fill="#7c3aed" />
 
       {/* Bras selon la pose */}
-      {pose === 'wave' && (
+      {(pose === 'wave' || pose === 'sit') && (
         <>
           <motion.g style={pivot(56, 162)} animate={reduce ? undefined : { rotate: [0, -5, 0] }} transition={loop(2.6)}>
             <path d="M56 162 Q36 152 30 136" stroke={FUR} strokeWidth="18" strokeLinecap="round" fill="none" />

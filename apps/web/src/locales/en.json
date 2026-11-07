@@ -884,6 +884,26 @@
         "pd": "PD",
         "height": "H"
       }
+    },
+    "showcase": {
+      "aria": "Preview of the software on computer and phone",
+      "kicker": "The real software, live",
+      "titleA": "On computer",
+      "titleB": "and on phone",
+      "computer": "Computer",
+      "phone": "Phone",
+      "altDesk": "OculoSaaS on computer: {{screen}}",
+      "altPhone": "OculoSaaS on phone: {{screen}}",
+      "screen": {
+        "dashboard": "Dashboard",
+        "caisse": "Point of sale",
+        "produits": "Catalogue",
+        "clients": "Customers",
+        "oculorx": "OculoRX",
+        "oculotrack": "OculoTrack",
+        "etiquettes": "Labels",
+        "configuration": "Setup"
+      }
     }
   },
   "planFeatures": {

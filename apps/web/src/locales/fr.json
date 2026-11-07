@@ -884,6 +884,26 @@
         "pd": "EP",
         "height": "H"
       }
+    },
+    "showcase": {
+      "aria": "Aperçu du logiciel sur ordinateur et téléphone",
+      "kicker": "Le vrai logiciel, en direct",
+      "titleA": "Sur ordinateur",
+      "titleB": "et sur téléphone",
+      "computer": "Ordinateur",
+      "phone": "Téléphone",
+      "altDesk": "OculoSaaS sur ordinateur : {{screen}}",
+      "altPhone": "OculoSaaS sur téléphone : {{screen}}",
+      "screen": {
+        "dashboard": "Tableau de bord",
+        "caisse": "Caisse",
+        "produits": "Catalogue",
+        "clients": "Clients",
+        "oculorx": "OculoRX",
+        "oculotrack": "OculoTrack",
+        "etiquettes": "Étiquettes",
+        "configuration": "Configuration"
+      }
     }
   },
   "planFeatures": {
