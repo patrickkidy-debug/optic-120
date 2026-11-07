@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { FRAME_COLORS } from '@oculo/shared-types';
 import { FRAME_SILHOUETTES, SHAPE_TO_SILHOUETTE, SILHOUETTE_KEYS } from './frameSilhouettes';
+import { LensVisual } from '../../features/optique/LensVisual';
 
 /**
  * Vignette d'un produit, sans photo : une illustration « sticker » propre à
@@ -95,6 +96,52 @@ const GLYPHS: Record<Exclude<Family, 'MONTURE'>, JSX.Element> = {
   ),
 };
 
+/** Monture solaire reconnue à son nom (« Solaire », « Sun », « Polarisé »…). */
+const SUN_RE = /solaire|soleil|\bsun\b|sunglass|polaris/i;
+
+/** Octogone d'un verre solaire, centré sur (cx, cy). */
+function octagon(cx: number, cy: number, rx: number, ry: number): string {
+  const pts = Array.from({ length: 8 }, (_, i) => {
+    const a = ((22.5 + i * 45) * Math.PI) / 180;
+    return `${(cx + rx * Math.cos(a)).toFixed(2)},${(cy + ry * Math.sin(a)).toFixed(2)}`;
+  });
+  return `M${pts.join(' L')} Z`;
+}
+
+/**
+ * Icône de monture solaire : cerclage octogonal noir, pont métal double,
+ * branches fines et verres en dégradé brun → bleu, avec reflet.
+ */
+function SunFrame({ id }: { id: string }) {
+  const L = octagon(39, 35, 17, 16);
+  const R = octagon(81, 35, 17, 16);
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${id}-sun`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3a3330" />
+          <stop offset=".55" stopColor="#5b6670" />
+          <stop offset="1" stopColor="#8fb7cf" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="60" cy="58" rx="40" ry="2.2" fill={INK} opacity=".07" />
+      {/* Branches */}
+      <path d="M22 27 L8 25.5 M98 27 L112 25.5" stroke="#1a1a1a" strokeWidth="2.6" strokeLinecap="round" />
+      {/* Verres teintés */}
+      <path d={L} fill={`url(#${id}-sun)`} />
+      <path d={R} fill={`url(#${id}-sun)`} />
+      <path d="M28 27 L40 22" stroke="#fff" strokeOpacity=".35" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M70 27 L82 22" stroke="#fff" strokeOpacity=".35" strokeWidth="2.4" strokeLinecap="round" />
+      {/* Cerclage acétate noir */}
+      <path d={L} fill="none" stroke="#141414" strokeWidth="4.2" strokeLinejoin="round" />
+      <path d={R} fill="none" stroke="#141414" strokeWidth="4.2" strokeLinejoin="round" />
+      {/* Pont métal double */}
+      <path d="M55 26 Q60 23.5 65 26" fill="none" stroke="#2a2a2a" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M54.5 21.5 H65.5" stroke="#2a2a2a" strokeWidth="1.6" strokeLinecap="round" />
+    </g>
+  );
+}
+
 export function ProductSymbol({
   category,
   className,
@@ -116,6 +163,13 @@ export function ProductSymbol({
   color?: string | null;
 }) {
   const family: Family = (category as Family) && ['MONTURE', 'VERRE', 'LENTILLE', 'ACCESSOIRE', 'ENTRETIEN', 'SERVICE'].includes(category as string) ? (category as Family) : 'AUTRE';
+  if (family === 'VERRE') {
+    return (
+      <div aria-hidden className={clsx('relative overflow-hidden bg-white', className)}>
+        <LensVisual family={null} name={name ?? undefined} className="absolute inset-0 h-full w-full" />
+      </div>
+    );
+  }
   const h = hash(`${seed ?? ''}|${name ?? ''}|${family}`);
   const pal = PALETTE[h % PALETTE.length]!;
   const pid = `ps-${h.toString(36)}`;
@@ -124,10 +178,11 @@ export function ProductSymbol({
   // Silhouette : celle de la forme enregistrée, sinon tirée de la référence.
   const silKey = SHAPE_TO_SILHOUETTE[shape ?? ''] ?? SILHOUETTE_KEYS[(h >>> 9) % SILHOUETTE_KEYS.length]!;
   const sil = FRAME_SILHOUETTES[silKey]!;
-  const frameColor =
-    (color?.startsWith('#') ? color : FRAME_COLORS.find((c) => c.name === color)?.hex) ??
-    FALLBACK_FRAME_COLORS[(h >>> 12) % FALLBACK_FRAME_COLORS.length]!;
-  const light = isLight(frameColor);
+  // Montures toujours en noir : une seule couleur, plus sobre (demande boutique).
+  void color;
+  const frameColor = '#141414';
+  const light = false;
+  const sun = SUN_RE.test(`${name ?? ''} ${shape ?? ''}`);
   // Monture à ~78 % de la largeur, centrée.
   const k = Math.min(94 / sil.w, 40 / sil.h);
   const fx = 60 - (sil.w * k) / 2;
@@ -144,7 +199,9 @@ export function ProductSymbol({
             </text>
           </g>
         )}
-        {family === 'MONTURE' ? (
+        {family === 'MONTURE' && sun ? (
+          <SunFrame id={pid} />
+        ) : family === 'MONTURE' ? (
           <g>
             {/* Ombre douce sous la monture. */}
             <ellipse cx="60" cy={fy + sil.h * k + 5} rx={sil.w * k * 0.42} ry="2.2" fill={INK} opacity=".07" />

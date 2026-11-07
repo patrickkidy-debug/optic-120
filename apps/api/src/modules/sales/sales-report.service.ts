@@ -1,4 +1,4 @@
-import { SaleType } from '@oculo/shared-types';
+import { PaymentMethod, SaleType } from '@oculo/shared-types';
 import type { TenantPrisma } from '../../lib/prisma-tenant.js';
 
 /**
@@ -63,7 +63,12 @@ export function reportWhere(f: ReportFilter): Record<string, unknown> {
   if (f.customerId) where.customerId = f.customerId;
   // Un moyen de paiement ne qualifie une vente que s'il a réellement abouti :
   // un paiement annulé ou échoué ne doit pas la faire ressortir.
-  if (f.method) where.payments = { some: { method: f.method, status: 'SUCCESS' } };
+  // « Assurance » n'est pas un moyen de paiement (c'est la part prise en
+  // charge, portée par la vente) : filtrer les paiements sur cette valeur
+  // faisait échouer la requête (valeur hors énumération → erreur 500).
+  if (f.method === 'INSURANCE') where.insuranceAmount = { gt: 0 };
+  else if (f.method && (Object.values(PaymentMethod) as string[]).includes(f.method))
+    where.payments = { some: { method: f.method, status: 'SUCCESS' } };
 
   const search = f.search?.trim();
   if (search) {
