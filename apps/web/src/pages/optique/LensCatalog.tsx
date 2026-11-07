@@ -57,7 +57,7 @@ function LensCard({
     >
       <div className="relative overflow-hidden bg-white">
         {/* Illustration « vue à travers le verre », d'après la famille ou le nom */}
-        <LensVisual family={a.family} name={p.name} treatments={a.treatments} className="block h-28 w-full" />
+        <LensVisual family={a.family} name={p.name} treatments={a.treatments} index={a.index} tint={a.tint} className="block h-28 w-full" />
         {a.premium && (
           <span className="absolute right-2 top-2">
             <Badge tone="warning">
@@ -282,7 +282,7 @@ export function LensCatalog({
                   <th className="table-cell font-semibold">{tr('ui.LensCatalog.critere')}</th>
                   {compared.map((p) => (
                     <th key={p.id} className="table-cell text-center font-semibold">
-                      <LensVisual family={lensAttrs(p).family} name={p.name} treatments={lensAttrs(p).treatments} className="mx-auto h-14 w-full overflow-hidden rounded-lg" />
+                      <LensVisual family={lensAttrs(p).family} name={p.name} treatments={lensAttrs(p).treatments} index={lensAttrs(p).index} tint={lensAttrs(p).tint} className="mx-auto h-14 w-full overflow-hidden rounded-lg" />
                       <div className="mt-1 truncate text-content">{p.name}</div>
                     </th>
                   ))}
@@ -360,7 +360,7 @@ export function LensPreview({
   return (
     <div className="card w-full max-w-[16rem] overflow-hidden">
       <div className="overflow-hidden bg-white">
-        <LensVisual family={attrs.family} name={name} treatments={attrs.treatments} className="block h-28 w-full" />
+        <LensVisual family={attrs.family} name={name} treatments={attrs.treatments} index={attrs.index} tint={attrs.tint} className="block h-28 w-full" />
       </div>
       <div className="p-3">
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
