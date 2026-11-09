@@ -306,6 +306,9 @@ export async function getActivationStatus(
   const session = await require_(token);
   if (!session.tenantId) return { activated: false };
 
+  // Le webhook peut manquer : on vérifie aussi le paiement auprès de la passerelle.
+  await billing.reconcilePendingPayments(session.tenantId);
+
   const sub = await prisma.subscription.findUnique({
     where: { tenantId: session.tenantId },
     select: { status: true, currentPeriodEnd: true },

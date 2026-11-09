@@ -57,7 +57,15 @@ const REQUEST_TIMEOUT_MS = 20_000;
 
 function mapStatus(raw: string | undefined): PaymentStatus {
   switch ((raw ?? '').toLowerCase()) {
+    // GeniusPay renvoie « completed » ; on accepte aussi les variantes
+    // courantes pour ne jamais laisser un paiement réussi « en attente ».
     case 'completed':
+    case 'complete':
+    case 'success':
+    case 'successful':
+    case 'succeeded':
+    case 'paid':
+    case 'approved':
       return PaymentStatus.SUCCESS;
     case 'failed':
       return PaymentStatus.FAILED;

@@ -16,7 +16,7 @@ import { logger } from '../../lib/logger.js';
 import { INVOICE_PREFIX, nextPlatformNumber } from '../../lib/platform-number.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
-import { resolvePlatformProvider, isPlatformSimulation } from './platform-provider.js';
+import { resolvePlatformProvider, isPlatformSimulation, monerooVerifier } from './platform-provider.js';
 import { recordCommissionForPayment } from '../partners/partner.service.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
 import { appOrigin, env } from '../../config/env.js';
@@ -714,6 +714,9 @@ export async function findPaymentByProviderRef(providerRef: string) {
 }
 
 export async function getPaymentStatus(tenantId: string, paymentId: string) {
+  // Le webhook peut manquer (non déclaré, secret absent, retard) : on vérifie
+  // aussi directement auprès de la passerelle pendant que l'écran attend.
+  await reconcilePendingPayments(tenantId);
   const p = await prisma.subscriptionPayment.findFirst({ where: { id: paymentId, tenantId } });
   if (!p) throw notFound('Paiement introuvable');
   return { status: p.status, amount: Number(p.amount), invoiceId: p.invoiceId };
@@ -965,4 +968,51 @@ export async function runBillingCycle() {
     data: { status: SubscriptionStatus.SUSPENDED },
   });
   return { markedPastDue: pastDue.count, suspended: suspended.count };
+}
+
+
+/* ------------------ Rapprochement actif avec la passerelle ------------------ */
+
+/** Dernière vérification par paiement : on n'interroge pas la passerelle plus d'une fois toutes les 8 s. */
+const lastCheck = new Map<string, number>();
+
+/**
+ * Vérifie auprès de la passerelle les paiements d'abonnement encore « en
+ * attente » d'un établissement (créés depuis moins de 3 jours) et les solde
+ * s'ils ont abouti. Ne dépend pas du webhook : un paiement réussi active
+ * l'abonnement dès que l'écran de retour interroge son état, même si la
+ * notification de la passerelle n'est jamais arrivée. Le statut vient de
+ * l'API de la passerelle, appelée avec nos propres clés : rien de ce que
+ * renvoie le navigateur n'est cru.
+ */
+export async function reconcilePendingPayments(tenantId: string): Promise<void> {
+  const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const pending = await prisma.subscriptionPayment.findMany({
+    where: {
+      tenantId,
+      status: PaymentStatus.PENDING,
+      providerRef: { not: null },
+      provider: { in: ['geniuspay', 'moneroo'] },
+      createdAt: { gte: since },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  });
+  for (const p of pending) {
+    const last = lastCheck.get(p.id) ?? 0;
+    if (Date.now() - last < 8000) continue;
+    lastCheck.set(p.id, Date.now());
+    try {
+      const active = resolvePlatformProvider();
+      const verifier = p.provider === active.name ? active : p.provider === 'moneroo' ? monerooVerifier() : null;
+      if (!verifier) continue;
+      const v = await verifier.verifyPayment(p.providerRef!);
+      if (v.status !== PaymentStatus.PENDING) {
+        await settleSubscriptionPayment(p.id, v.status, v.raw);
+        logger.info({ paymentId: p.id, status: v.status, provider: p.provider }, 'Abonnement : paiement rapproché auprès de la passerelle');
+      }
+    } catch (err) {
+      logger.warn({ err, paymentId: p.id }, 'Abonnement : vérification passerelle impossible');
+    }
+  }
 }

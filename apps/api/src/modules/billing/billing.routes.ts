@@ -126,6 +126,8 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/subscription', { preHandler: requirePermission('billing.view') }, async (req, reply) => {
+    // Paiement réussi mais webhook absent : on rapproche avant d'afficher l'abonnement.
+    await billing.reconcilePendingPayments(req.auth!.tenantId);
     const subscription = await billing.getSubscription(req.auth!.tenantId);
     return reply.send({ subscription });
   });
