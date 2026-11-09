@@ -172,9 +172,9 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     articles: [
       {
         q: 'Comment payer mon abonnement ?',
-        a: 'Réglages → Abonnement : paiement en ligne sécurisé par GeniusPay (Mobile Money ou carte, l’opérateur se choisit sur la page de paiement) ou par virement bancaire.',
+        a: 'Réglages → Abonnement : paiement en ligne sécurisé par KkiaPay (Mobile Money ou carte, l’opérateur se choisit dans la fenêtre de paiement) ou par virement bancaire.',
         to: '/parametres/abonnement',
-        tags: 'geniuspay facture renouveler',
+        tags: 'kkiapay facture renouveler',
       },
       {
         q: 'Combien dure l’essai gratuit ?',

@@ -35,6 +35,14 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 /** 1440 -> « 24 heures », 4320 -> « 3 jours », 45 -> « 45 minutes ». */
+/** Nom affiché de la passerelle des paiements en ligne. */
+const GATEWAY_LABELS: Record<string, string> = {
+  kkiapay: 'KkiaPay',
+  dexpay: 'DexPay',
+  moneroo: 'Moneroo',
+  chariow: 'Chariow',
+};
+
 export function formatTrialDuration(minutes: number): string {
   // Pluriel géré par i18next (units.hours_one / units.hours_other…).
   if (minutes % 1440 === 0 && minutes > 1440) return tr('units.days', { count: minutes / 1440 });
@@ -61,7 +69,7 @@ function isOutsideCfa(country: string | null): boolean {
 /**
  * Étape 5 — choix libre : tester gratuitement ou activer l'abonnement.
  *
- * Deux façons d'activer : GeniusPay (page de paiement hébergée où le client
+ * Deux façons d'activer : KkiaPay (widget de paiement où le client
  * choisit son opérateur ; activation à la confirmation de la passerelle), ou
  * virement bancaire (facture en attente, activation par l'équipe à réception
  * du reçu envoyé sur WhatsApp). Hors zone FCFA : seul le virement est proposé.
@@ -78,6 +86,8 @@ export function PaymentStep({
   onTrial,
   bank,
   onBankTransfer,
+  waveDirect = false,
+  gatewayName = '',
   contact,
 }: {
   planCode: string | null;
@@ -92,6 +102,10 @@ export function PaymentStep({
   onTrial: () => void;
   /** Coordonnées bancaires de l'éditeur ; null = virement non proposé. */
   bank: BankDetails | null;
+  /** Wave en direct disponible : proposé à part, sans agrégateur. */
+  waveDirect?: boolean;
+  /** Passerelle des autres moyens (« kkiapay », « dexpay »…). */
+  gatewayName?: string;
   onBankTransfer: () => void;
   /** Coordonnées saisies à l'étape 4, reprises dans le message WhatsApp. */
   contact: { fullName?: string | null; establishment?: string | null; city?: string | null };
@@ -105,13 +119,24 @@ export function PaymentStep({
   const outsideCfa = isOutsideCfa(country);
 
   const mobile = paymentMethodsForCountry(country).filter((m) => m !== 'CASH' && m !== 'CHEQUE');
-  // Une seule entrée en ligne : GeniusPay affiche lui-même les opérateurs du
-  // pays (la méthode envoyée n'est qu'indicative, le checkout est hébergé).
+  // Une seule entrée en ligne : KkiaPay affiche lui-même les opérateurs du
+  // pays (la méthode envoyée n'est qu'indicative, le choix se fait dans le widget).
   const operators = mobile.filter((m) => m !== 'CARD');
-  const online: PaymentMethod[] = outsideCfa || operators.length === 0 ? [] : [operators[0]!];
+  // Wave en direct : choix « Wave » à part ; les autres opérateurs et la carte
+  // restent dans le widget KkiaPay.
+  const waveApart = waveDirect && !outsideCfa && operators.includes('WAVE');
+  const others = operators.filter((m) => m !== 'WAVE');
+  const online: PaymentMethod[] =
+    outsideCfa || operators.length === 0
+      ? []
+      : waveApart
+        ? ['WAVE', others[0] ?? 'CARD']
+        : [operators[0]!];
   const methods: PaymentMethod[] = [...online, ...(bank ? (['BANK_TRANSFER'] as PaymentMethod[]) : [])];
-  const operatorsHint = operators.map((m) => METHOD_LABELS[m] ?? m).join(' · ');
+  const operatorsHint = (waveApart ? others : operators).map((m) => METHOD_LABELS[m] ?? m).join(' · ');
   const [method, setMethod] = useState<PaymentMethod | null>(methods[0] ?? null);
+  const viaWave = waveApart && method === 'WAVE';
+  const gateway = GATEWAY_LABELS[gatewayName] ?? 'notre partenaire de paiement';
 
   const trial = trialMinutes > 0;
   const period = tr(cycle === 'MONTHLY' ? 'units.perMonth' : cycle === 'QUARTERLY' ? 'units.per3Months' : 'units.per6Months');
@@ -177,8 +202,22 @@ export function PaymentStep({
             {methods.map((m) => (
               <ChoiceCard
                 key={m}
-                label={m === 'BANK_TRANSFER' ? (METHOD_LABELS[m] ?? m) : 'Mobile Money ou carte — GeniusPay'}
-                hint={m === 'BANK_TRANSFER' ? undefined : operatorsHint}
+                label={
+                  m === 'BANK_TRANSFER'
+                    ? (METHOD_LABELS[m] ?? m)
+                    : waveApart && m === 'WAVE'
+                      ? 'Wave'
+                      : waveApart
+                        ? `Autre Mobile Money ou carte — ${gateway}`
+                        : `Mobile Money ou carte — ${gateway}`
+                }
+                hint={
+                  m === 'BANK_TRANSFER'
+                    ? undefined
+                    : waveApart && m === 'WAVE'
+                      ? "Paiement direct dans l'application Wave"
+                      : [operatorsHint, 'Carte bancaire'].filter(Boolean).join(' · ')
+                }
                 selected={method === m}
                 onSelect={() => setMethod(m)}
               />
@@ -204,10 +243,17 @@ export function PaymentStep({
       {!isTransfer && methods.length > 0 && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs text-content-muted ring-1 ring-line">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          <span>
-            Paiement sécurisé par <strong className="text-content">GeniusPay</strong> : vous choisirez votre
-            opérateur sur la page suivante. {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
-          </span>
+          {viaWave ? (
+            <span>
+              Paiement sécurisé par <strong className="text-content">Wave</strong> : l'application Wave s'ouvre (ou un
+              QR code à scanner). {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
+            </span>
+          ) : (
+            <span>
+              Paiement sécurisé par <strong className="text-content">{gateway}</strong> : vous choisirez votre
+              opérateur sur la page suivante. {tr('ui.PaymentStep.votreAbonnementSeraActiveApres')}
+            </span>
+          )}
         </p>
       )}
       {!isTransfer && methods.length > 0 && <PaymentMethodLogos className="mt-3 justify-center" />}

@@ -79,8 +79,8 @@ export interface BankDetails {
 }
 
 /** Options de fin de parcours : essai (minutes, 0 = désactivé) et virement (null = indisponible). */
-export async function getTrialOffer(): Promise<{ minutes: number; bank: BankDetails | null }> {
-  const { data } = await api.get<{ minutes: number; bank: BankDetails | null }>('/activation/trial-offer');
+export async function getTrialOffer(): Promise<{ minutes: number; bank: BankDetails | null; waveDirect?: boolean; gatewayName?: string }> {
+  const { data } = await api.get<{ minutes: number; bank: BankDetails | null; waveDirect?: boolean; gatewayName?: string }>('/activation/trial-offer');
   return data;
 }
 

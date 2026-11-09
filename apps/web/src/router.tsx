@@ -5,6 +5,7 @@ import { CookieBanner } from './components/CookieBanner';
 import { ToastProvider } from './components/Toast';
 import { ActivationPage } from './pages/activation/ActivationPage';
 import { ActivationReturnPage } from './pages/activation/ActivationReturnPage';
+const KkiapayCheckoutPage = lazy(() => named(import('./pages/payment/KkiapayCheckoutPage'), 'KkiapayCheckoutPage'));
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
@@ -181,6 +182,8 @@ export const router = createBrowserRouter([
       { path: '/activation', element: pub(<ActivationPage />) },
       // Retour du paiement : c'est le serveur qui tranche l'activation.
       { path: '/activation/retour', element: pub(<ActivationReturnPage />) },
+      // Widget KkiaPay : public, le tunnel d'activation n'a pas encore de session.
+      { path: '/paiement/kkiapay', element: pub(<KkiapayCheckoutPage />) },
       { path: '/forgot-password', element: <PublicOnly>{pub(<ForgotPasswordPage />)}</PublicOnly> },
       { path: '/reset-password', element: pub(<ResetPasswordPage />) },
       { path: '/verifier-email', element: pub(<VerifyEmailPage />) },

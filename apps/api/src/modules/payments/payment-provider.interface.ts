@@ -47,7 +47,7 @@ export interface WebhookResult {
 
 /**
  * Contexte brut d'un webhook. Nécessaire aux passerelles qui signent le corps
- * en HMAC (GeniusPay) : la signature porte sur les octets exacts reçus, et
+ * en HMAC (Wave, DexPay) : la signature porte sur les octets exacts reçus, et
  * ré-encoder l'objet parsé la ferait échouer dès qu'un caractère s'encode
  * différemment d'un langage à l'autre.
  */

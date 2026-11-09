@@ -17,6 +17,7 @@ import { appOrigin } from '../../config/env.js';
 import { createTenantWithAdmin, issueSession } from '../auth/auth.service.js';
 import { hashPassword } from '../../lib/password.js';
 import * as billing from '../billing/billing.service.js';
+import { resolvePlatformProvider, waveReady } from '../billing/platform-provider.js';
 
 /**
  * Tunnel d'activation : qualification, offre, coordonnées, paiement.
@@ -347,8 +348,23 @@ export async function getActivationStatus(
 export async function getTrialOffer(): Promise<{
   minutes: number;
   bank: billing.BankTransferDetails | null;
+  /** Wave en direct disponible : l'écran propose « Wave » à part. */
+  waveDirect: boolean;
+  /** Passerelle des autres moyens (« kkiapay », « dexpay »…), vide si aucune. */
+  gatewayName: string;
 }> {
-  return { minutes: await billing.getTrialDurationMinutes(), bank: billing.bankTransferDetails() };
+  let gatewayName = '';
+  try {
+    gatewayName = resolvePlatformProvider().name;
+  } catch {
+    gatewayName = '';
+  }
+  return {
+    minutes: await billing.getTrialDurationMinutes(),
+    bank: billing.bankTransferDetails(),
+    waveDirect: waveReady(),
+    gatewayName,
+  };
 }
 
 export interface BankTransferRequest {

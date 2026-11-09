@@ -3,7 +3,9 @@ import type { PaymentProvider } from '../payments/payment-provider.interface.js'
 import { SimulatedPaymentProvider } from '../payments/providers/simulated.provider.js';
 import { MonerooProvider } from '../payments/providers/moneroo.provider.js';
 import { ChariowProvider, parseChariowProducts } from '../payments/providers/chariow.provider.js';
-import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
+import { KkiapayProvider } from '../payments/providers/kkiapay.provider.js';
+import { WaveProvider } from '../payments/providers/wave.provider.js';
+import { DexPayProvider, dexpayEnvironment } from '../payments/providers/dexpay.provider.js';
 
 /**
  * Fournisseur de paiement de la PLATEFORME : l'editeur encaisse les
@@ -11,7 +13,8 @@ import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
  * d'un magasin.
  *
  * UNE SEULE passerelle a la fois, choisie par PLATFORM_PAYMENT_PROVIDER :
- * « geniuspay » (defaut depuis le 2026-11-06), « moneroo » ou « chariow ». La cascade d'autrefois (Moneroo, puis
+ * « kkiapay » (defaut depuis le 2026-11-09, a la place de GeniusPay), « dexpay »,
+ * « moneroo » ou « chariow ». La cascade d'autrefois (Moneroo, puis
  * GeniusPay, puis PayTech) faisait qu'une cle absente ou invalide basculait
  * silencieusement sur une autre passerelle : les paiements partaient ailleurs
  * sans que personne ne le remarque. Ici, la passerelle choisie sans ses cles
@@ -20,8 +23,41 @@ import { GeniusPayProvider } from '../payments/providers/geniuspay.provider.js';
  * Moneroo et PayTech restent dans le code : ils servent encore aux
  * encaissements des magasins, qui ne passent pas par ici.
  */
-function geniusPayReady(): boolean {
-  return Boolean(env.GENIUSPAY_API_KEY && env.GENIUSPAY_API_SECRET);
+export function kkiapayReady(): boolean {
+  return Boolean(env.KKIAPAY_PUBLIC_KEY && env.KKIAPAY_PRIVATE_KEY && env.KKIAPAY_SECRET_KEY);
+}
+
+/** Fournisseur KkiaPay, ou null sans ses trois clés. */
+export function kkiapayProvider(): KkiapayProvider | null {
+  if (!kkiapayReady()) return null;
+  return new KkiapayProvider({
+    publicKey: env.KKIAPAY_PUBLIC_KEY,
+    privateKey: env.KKIAPAY_PRIVATE_KEY,
+    secretKey: env.KKIAPAY_SECRET_KEY,
+    sandbox: env.KKIAPAY_SANDBOX,
+    webhookSecret: env.KKIAPAY_WEBHOOK_SECRET || undefined,
+    checkoutPageUrl: `${appOrigin}/paiement/kkiapay`,
+    returnUrl: `${appOrigin}/parametres/abonnement`,
+  });
+}
+
+export function dexpayReady(): boolean {
+  return Boolean(env.DEXPAY_PUBLIC_KEY && env.DEXPAY_SECRET_KEY);
+}
+
+/** Fournisseur DexPay, ou null sans ses clés. */
+export function dexpayProvider(): PaymentProvider | null {
+  if (!dexpayReady()) return null;
+  const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
+  return new DexPayProvider({
+    apiKey: env.DEXPAY_PUBLIC_KEY,
+    apiSecret: env.DEXPAY_SECRET_KEY,
+    baseUrl: env.DEXPAY_BASE_URL || undefined,
+    // DexPay prend l'URL de notification session par session.
+    webhookUrl: apiBase ? `${apiBase}/webhooks/dexpay-subscription` : undefined,
+    successUrl: `${appOrigin}/parametres/abonnement`,
+    failureUrl: `${appOrigin}/parametres/abonnement`,
+  });
 }
 
 function chariowReady(): boolean {
@@ -29,25 +65,25 @@ function chariowReady(): boolean {
 }
 
 export function resolvePlatformProvider(): PaymentProvider {
-  if (env.PLATFORM_PAYMENT_PROVIDER === 'geniuspay') {
-    if (geniusPayReady()) {
-      return new GeniusPayProvider({
-        apiKey: env.GENIUSPAY_API_KEY,
-        apiSecret: env.GENIUSPAY_API_SECRET,
-        baseUrl: env.GENIUSPAY_BASE_URL,
-        webhookSecret: env.GENIUSPAY_WEBHOOK_SECRET || undefined,
-        // Retour par defaut ; le tunnel d'activation impose le sien.
-        successUrl: `${appOrigin}/parametres/abonnement`,
-        errorUrl: `${appOrigin}/parametres/abonnement`,
-        // L'ecran d'abonnement envoie « WAVE » en dur : on laisse GeniusPay
-        // afficher sa page, seule a connaitre les operateurs du pays du client.
-        forceHostedCheckout: true,
-      });
-    }
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'kkiapay') {
+    const kkia = kkiapayProvider();
+    if (kkia) return kkia;
     if (isProd) {
       throw new Error(
-        'GeniusPay choisi (PLATFORM_PAYMENT_PROVIDER=geniuspay) mais non configure : ' +
-          'definissez GENIUSPAY_API_KEY et GENIUSPAY_API_SECRET.',
+        'KkiaPay choisi (PLATFORM_PAYMENT_PROVIDER=kkiapay) mais non configure : ' +
+          'definissez KKIAPAY_PUBLIC_KEY, KKIAPAY_PRIVATE_KEY et KKIAPAY_SECRET_KEY.',
+      );
+    }
+    return new SimulatedPaymentProvider();
+  }
+
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'dexpay') {
+    const dex = dexpayProvider();
+    if (dex) return dex;
+    if (isProd) {
+      throw new Error(
+        'DexPay choisi (PLATFORM_PAYMENT_PROVIDER=dexpay) mais non configure : ' +
+          'definissez DEXPAY_PUBLIC_KEY et DEXPAY_SECRET_KEY.',
       );
     }
     return new SimulatedPaymentProvider();
@@ -108,6 +144,59 @@ export function monerooVerifier(): PaymentProvider | null {
   });
 }
 
+/* ----------------------------- Wave en direct ----------------------------- */
+
+export function waveReady(): boolean {
+  return Boolean(env.WAVE_API_KEY);
+}
+
+/** Fournisseur Wave direct, ou null sans clé Wave. */
+export function waveProvider(): PaymentProvider | null {
+  if (!waveReady()) return null;
+  return new WaveProvider({
+    apiKey: env.WAVE_API_KEY,
+    baseUrl: env.WAVE_BASE_URL,
+    signingSecret: env.WAVE_SIGNING_SECRET || undefined,
+    webhookSecret: env.WAVE_WEBHOOK_SECRET || undefined,
+    successUrl: `${appOrigin}/parametres/abonnement`,
+    errorUrl: `${appOrigin}/parametres/abonnement`,
+  });
+}
+
+/**
+ * Passerelle d'un paiement d'abonnement selon le moyen choisi : Wave en direct
+ * quand le client choisit Wave, paie en XOF et que la clé Wave est posée ;
+ * sinon la passerelle de la plateforme (KkiaPay…), qui affiche les autres
+ * opérateurs et la carte.
+ */
+export function resolveProviderForPayment(method: string, currency: string): PaymentProvider {
+  if (method === 'WAVE' && currency.toUpperCase() === 'XOF') {
+    const wave = waveProvider();
+    if (wave) return wave;
+  }
+  return resolvePlatformProvider();
+}
+
+/**
+ * Passerelle capable de relire un paiement déjà lancé, d'après le nom
+ * enregistré sur le paiement (« wave », « kkiapay », « moneroo »…). Null si
+ * cette passerelle n'est plus configurée.
+ */
+export function verifierFor(name: string | null | undefined): PaymentProvider | null {
+  if (name === 'wave') return waveProvider();
+  // DexPay reste lisible même après le passage à une autre passerelle.
+  if (name === 'dexpay') return dexpayProvider();
+  if (name === 'kkiapay') return kkiapayProvider();
+  try {
+    const active = resolvePlatformProvider();
+    if (active.name === name) return active;
+  } catch {
+    // Passerelle de la plateforme non configurée : on tente les autres.
+  }
+  if (name === 'moneroo') return monerooVerifier();
+  return null;
+}
+
 /**
  * Etat de la passerelle d'encaissement des abonnements, pour la console
  * fondateur.
@@ -118,17 +207,30 @@ export function monerooVerifier(): PaymentProvider | null {
  * booleens et des URLs publiques.
  */
 export interface PaymentProviderStatus {
-  /** Passerelle retenue : « geniuspay », « moneroo », « chariow » ou « simulation ». */
+  /** Passerelle retenue : « kkiapay », « dexpay », « moneroo », « chariow » ou « simulation ». */
   active: string;
   /** Passerelle choisie dans la configuration, meme si ses cles manquent. */
-  selected: 'geniuspay' | 'moneroo' | 'chariow';
-  geniusPayConfigured: boolean;
-  /** Secret whsec_ du webhook GeniusPay renseigne (sans lui, webhooks refuses). */
-  geniusPayWebhookSecret: boolean;
-  /** Environnement lu dans le prefixe de la cle : « live », « sandbox » ou vide. */
-  geniusPayEnvironment: string;
-  /** URL a declarer chez GeniusPay (webhook). */
-  geniusPayWebhookUrl: string;
+  selected: 'kkiapay' | 'dexpay' | 'moneroo' | 'chariow';
+  dexpayConfigured: boolean;
+  /** Environnement lu dans le préfixe des clés : « live », « sandbox » ou vide. */
+  dexpayEnvironment: string;
+  /** URL de notification envoyée avec chaque session DexPay (vide sans PUBLIC_API_URL). */
+  dexpayWebhookUrl: string;
+  kkiapayConfigured: boolean;
+  /** « Secret hash » du webhook KkiaPay renseigne (sans lui, webhooks refuses). */
+  kkiapayWebhookSecret: boolean;
+  /** « sandbox » (KKIAPAY_SANDBOX=true) ou « live ». */
+  kkiapayEnvironment: string;
+  /** URL a declarer chez KkiaPay (webhook). */
+  kkiapayWebhookUrl: string;
+  /** Wave en direct : clé posée (les clients qui choisissent Wave paient chez Wave). */
+  waveConfigured: boolean;
+  /** Secret du webhook Wave renseigné (sans lui, webhooks refusés). */
+  waveWebhookSecret: boolean;
+  /** Signature des requêtes Wave activée. */
+  waveSigning: boolean;
+  /** URL à déclarer chez Wave Business (webhook). */
+  waveWebhookUrl: string;
   chariowConfigured: boolean;
   chariowPulseSecret: boolean;
   /** Offres couvertes par un produit Chariow, ex. ["STANDARD:1"]. */
@@ -155,10 +257,14 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
   const apiBase = env.PUBLIC_API_URL.replace(/\/$/, '');
   const selected = env.PLATFORM_PAYMENT_PROVIDER;
   const active =
-    selected === 'geniuspay'
-      ? geniusPayReady()
-        ? 'geniuspay'
+    selected === 'kkiapay'
+      ? kkiapayReady()
+        ? 'kkiapay'
         : 'simulation'
+      : selected === 'dexpay'
+        ? dexpayReady()
+          ? 'dexpay'
+          : 'simulation'
       : selected === 'chariow'
         ? chariowReady()
           ? 'chariow'
@@ -166,14 +272,20 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
         : monerooConfigured
           ? 'moneroo'
           : 'simulation';
-  const key = env.GENIUSPAY_API_KEY;
   return {
     active,
     selected,
-    geniusPayConfigured: geniusPayReady(),
-    geniusPayWebhookSecret: Boolean(env.GENIUSPAY_WEBHOOK_SECRET),
-    geniusPayEnvironment: key.startsWith('pk_live_') ? 'live' : key.startsWith('pk_sandbox_') ? 'sandbox' : '',
-    geniusPayWebhookUrl: apiBase ? `${apiBase}/webhooks/geniuspay-subscription` : '',
+    dexpayConfigured: dexpayReady(),
+    dexpayEnvironment: dexpayEnvironment(env.DEXPAY_PUBLIC_KEY, env.DEXPAY_SECRET_KEY),
+    dexpayWebhookUrl: apiBase ? `${apiBase}/webhooks/dexpay-subscription` : '',
+    kkiapayConfigured: kkiapayReady(),
+    kkiapayWebhookSecret: Boolean(env.KKIAPAY_WEBHOOK_SECRET),
+    kkiapayEnvironment: env.KKIAPAY_SANDBOX ? 'sandbox' : 'live',
+    kkiapayWebhookUrl: apiBase ? `${apiBase}/webhooks/kkiapay-subscription` : '',
+    waveConfigured: waveReady(),
+    waveWebhookSecret: Boolean(env.WAVE_WEBHOOK_SECRET),
+    waveSigning: Boolean(env.WAVE_SIGNING_SECRET),
+    waveWebhookUrl: apiBase ? `${apiBase}/webhooks/wave-subscription` : '',
     chariowConfigured: chariowReady(),
     chariowPulseSecret: Boolean(env.CHARIOW_PULSE_SECRET),
     chariowProducts: Object.keys(parseChariowProducts(env.CHARIOW_PRODUCTS)),
@@ -189,7 +301,8 @@ export function getPaymentProviderStatus(): PaymentProviderStatus {
 export function isPlatformSimulation(): boolean {
   // Jamais de simulation en production : seul un paiement reel active un abonnement.
   if (isProd) return false;
-  if (env.PLATFORM_PAYMENT_PROVIDER === 'geniuspay') return !geniusPayReady();
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'kkiapay') return !kkiapayReady();
+  if (env.PLATFORM_PAYMENT_PROVIDER === 'dexpay') return !dexpayReady();
   if (env.PLATFORM_PAYMENT_PROVIDER === 'chariow') return !chariowReady();
   return !env.MONEROO_SECRET_KEY;
 }

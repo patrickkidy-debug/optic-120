@@ -5,7 +5,9 @@ import { getPaymentProviderStatus } from '../../features/billing/api';
 import { Badge } from '../../components/ui';
 
 const LABELS: Record<string, string> = {
-  geniuspay: 'GeniusPay',
+  kkiapay: 'KkiaPay',
+  dexpay: 'DexPay',
+  wave: 'Wave',
   moneroo: 'Moneroo',
   chariow: 'Chariow',
   simulation: 'Simulation',
@@ -14,8 +16,8 @@ const LABELS: Record<string, string> = {
 /**
  * État de la passerelle d'encaissement des abonnements.
  *
- * GeniusPay est la passerelle retenue pour les abonnements (Moneroo reste
- * possible via PLATFORM_PAYMENT_PROVIDER). Sans cet écran,
+ * KkiaPay est la passerelle retenue pour les abonnements (DexPay, Moneroo et
+ * Chariow restent possibles via PLATFORM_PAYMENT_PROVIDER). Sans cet écran,
  * poser une clé revient à configurer à l'aveugle : rien n'indiquait si la
  * passerelle était réellement active, ni si l'adresse de notification était
  * joignable. Aucun secret n'est affiché.
@@ -40,7 +42,8 @@ export function PaymentProviderCard() {
   };
 
   const missingWebhookUrl = data.active !== 'simulation' && !data.subscriptionWebhookUrl;
-  const genius = (data.selected ?? 'geniuspay') === 'geniuspay';
+  const kkia = (data.selected ?? 'kkiapay') === 'kkiapay';
+  const dexpay = data.selected === 'dexpay';
 
   return (
     <div className="card mb-4 p-4">
@@ -57,16 +60,25 @@ export function PaymentProviderCard() {
       {data.simulation ? (
         <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
           Aucune passerelle réelle configurée : les paiements sont simulés.
-          {genius && ' Définissez GENIUSPAY_API_KEY et GENIUSPAY_API_SECRET sur l’API.'} En production,
+          {kkia && ' Définissez KKIAPAY_PUBLIC_KEY, KKIAPAY_PRIVATE_KEY et KKIAPAY_SECRET_KEY sur l’API.'}
+          {dexpay && ' Définissez DEXPAY_PUBLIC_KEY et DEXPAY_SECRET_KEY sur l’API.'} En production,
           aucun abonnement ne peut s'activer en ligne dans cet état.
         </p>
-      ) : genius ? (
+      ) : dexpay ? (
         <p className="text-sm text-content-muted">
-          Les abonnements sont encaissés par <strong>GeniusPay</strong>
-          {data.geniusPayEnvironment === 'sandbox' && (
-            <span className="text-warning"> en mode test (clé pk_sandbox_ : aucun argent réel)</span>
+          Les abonnements sont encaissés par <strong>DexPay</strong>
+          {data.dexpayEnvironment === 'sandbox' && (
+            <span className="text-warning"> en mode test (clé pk_test_ : aucun argent réel)</span>
           )}
-          . Le client choisit son opérateur sur la page GeniusPay.
+          . Le client choisit son opérateur (Wave, Orange, MTN, Moov…) ou la carte sur la page DexPay.
+        </p>
+      ) : kkia ? (
+        <p className="text-sm text-content-muted">
+          Les abonnements sont encaissés par <strong>KkiaPay</strong>
+          {data.kkiapayEnvironment === 'sandbox' && (
+            <span className="text-warning"> en mode test (KKIAPAY_SANDBOX=true : aucun argent réel)</span>
+          )}
+          . Le client choisit son opérateur ou la carte dans le widget KkiaPay.
         </p>
       ) : (
         <p className="text-sm text-content-muted">
@@ -76,33 +88,91 @@ export function PaymentProviderCard() {
         </p>
       )}
 
-      {genius && data.geniusPayConfigured && (
+      {kkia && data.kkiapayConfigured && (
         <div className="mt-3 rounded-xl border p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-muted">
-            Webhook à déclarer chez GeniusPay
+            Webhook à déclarer chez KkiaPay (Développeurs → Webhook)
           </p>
-          {!data.geniusPayWebhookUrl ? (
+          {!data.kkiapayWebhookUrl ? (
             <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
               <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />
-              PUBLIC_API_URL n'est pas défini sur l'API : GeniusPay n'a aucune adresse où notifier un
+              PUBLIC_API_URL n'est pas défini sur l'API : KkiaPay n'a aucune adresse où notifier un
               paiement.
             </p>
           ) : (
-            <WebhookRow label="Abonnements" url={data.geniusPayWebhookUrl} copied={copied} onCopy={copy} />
+            <WebhookRow label="Abonnements" url={data.kkiapayWebhookUrl} copied={copied} onCopy={copy} />
           )}
           <p className="mt-2 text-xs text-content-faint">
-            Événements : payment.success, payment.failed, payment.cancelled, payment.expired. Secret
-            whsec_ :{' '}
-            {data.geniusPayWebhookSecret ? (
+            Événement : transaction.success. Secret hash :{' '}
+            {data.kkiapayWebhookSecret ? (
               <span className="text-success">renseigné</span>
             ) : (
-              <span className="text-danger">absent — les webhooks sont refusés (GENIUSPAY_WEBHOOK_SECRET).</span>
+              <span className="text-danger">
+                absent — webhooks refusés (KKIAPAY_WEBHOOK_SECRET). Le widget confirme quand même le paiement.
+              </span>
             )}
           </p>
         </div>
       )}
 
-      {!genius && data.monerooConfigured && (
+      {dexpay && data.dexpayConfigured && (
+        <div className="mt-3 rounded-xl border p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Notifications DexPay</p>
+          {data.dexpayWebhookUrl ? (
+            <>
+              <WebhookRow label="Webhook" url={data.dexpayWebhookUrl} copied={copied} onCopy={copy} />
+              <p className="mt-2 text-xs text-content-faint">
+                Rien à déclarer chez DexPay : cette adresse est envoyée avec chaque paiement, et la signature
+                utilise la clé secrète (DEXPAY_SECRET_KEY).
+              </p>
+            </>
+          ) : (
+            <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+              <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />
+              PUBLIC_API_URL n'est pas défini sur l'API : DexPay ne peut pas notifier les paiements (ils seront
+              quand même vérifiés quand le client revient sur l'écran de paiement).
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 rounded-xl border p-3">
+        <p className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-content-muted">
+          Wave en direct
+          <Badge tone={data.waveConfigured ? 'success' : 'neutral'}>{data.waveConfigured ? 'actif' : 'non configuré'}</Badge>
+        </p>
+        {data.waveConfigured ? (
+          <>
+            <p className="mb-2 text-sm text-content-muted">
+              Les clients qui choisissent <strong>Wave</strong> paient directement chez Wave Business, sans
+              agrégateur. Les autres moyens restent sur la passerelle ci-dessus.
+            </p>
+            {data.waveWebhookUrl ? (
+              <WebhookRow label="Webhook Wave" url={data.waveWebhookUrl} copied={copied} onCopy={copy} />
+            ) : (
+              <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+                PUBLIC_API_URL n'est pas défini sur l'API : Wave n'a aucune adresse où notifier un paiement.
+              </p>
+            )}
+            <p className="mt-2 text-xs text-content-faint">
+              Événements : checkout.session.completed, checkout.session.payment_failed. Secret du webhook :{' '}
+              {data.waveWebhookSecret ? (
+                <span className="text-success">renseigné</span>
+              ) : (
+                <span className="text-danger">absent — les webhooks sont refusés (WAVE_WEBHOOK_SECRET).</span>
+              )}
+              {' · '}Signature des requêtes : {data.waveSigning ? 'activée' : 'non activée'}.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-content-muted">
+            Définissez WAVE_API_KEY (Wave Business → Développeurs) et WAVE_WEBHOOK_SECRET sur l'API pour
+            encaisser Wave sans agrégateur.
+          </p>
+        )}
+      </div>
+
+      {!kkia && !dexpay && data.monerooConfigured && (
         <div className="mt-3 rounded-xl border p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-muted">
             Adresses à déclarer chez Moneroo

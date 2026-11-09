@@ -139,6 +139,10 @@ export type ManualPaymentChannel = 'MOBILE_MONEY' | 'BANK_TRANSFER';
 export interface PayInfo {
   /** Une passerelle de paiement en ligne est configurée. */
   gateway: boolean;
+  /** Passerelle des paiements en ligne (« kkiapay », « dexpay »…). */
+  gatewayName?: string;
+  /** Wave en direct (sans agrégateur) disponible. */
+  waveDirect?: boolean;
   /** Coordonnées Mobile Money de l'éditeur pour un règlement direct. */
   manual: { number: string; name: string | null; network: string | null } | null;
   /** Coordonnées bancaires de l'éditeur pour un règlement par virement. */
@@ -536,12 +540,19 @@ export async function getDemoEngagement(): Promise<DemoEngagementRow[]> {
 
 export interface PaymentProviderStatus {
   active: string;
-  selected?: 'geniuspay' | 'moneroo' | 'chariow';
-  geniusPayConfigured?: boolean;
-  geniusPayWebhookSecret?: boolean;
-  /** « live », « sandbox » ou vide (lu dans le préfixe de la clé). */
-  geniusPayEnvironment?: string;
-  geniusPayWebhookUrl?: string;
+  selected?: 'kkiapay' | 'dexpay' | 'moneroo' | 'chariow';
+  kkiapayConfigured?: boolean;
+  waveConfigured?: boolean;
+  dexpayConfigured?: boolean;
+  dexpayEnvironment?: string;
+  dexpayWebhookUrl?: string;
+  waveWebhookSecret?: boolean;
+  waveSigning?: boolean;
+  waveWebhookUrl?: string;
+  kkiapayWebhookSecret?: boolean;
+  /** « live » ou « sandbox » (KKIAPAY_SANDBOX). */
+  kkiapayEnvironment?: string;
+  kkiapayWebhookUrl?: string;
   simulation: boolean;
   monerooConfigured: boolean;
   monerooWebhookSecret: boolean;

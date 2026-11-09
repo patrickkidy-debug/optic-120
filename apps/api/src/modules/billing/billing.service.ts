@@ -16,7 +16,8 @@ import { logger } from '../../lib/logger.js';
 import { INVOICE_PREFIX, nextPlatformNumber } from '../../lib/platform-number.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
-import { resolvePlatformProvider, isPlatformSimulation, monerooVerifier } from './platform-provider.js';
+import { resolveProviderForPayment, isPlatformSimulation, verifierFor, kkiapayProvider } from './platform-provider.js';
+import type { KkiapayTransaction } from '../payments/providers/kkiapay.provider.js';
 import { recordCommissionForPayment } from '../partners/partner.service.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
 import { appOrigin, env } from '../../config/env.js';
@@ -514,7 +515,9 @@ async function initiateInvoicePayment(
     },
   });
 
-  const provider = resolvePlatformProvider();
+  // Wave en direct quand le client choisit Wave (et que la clé est posée),
+  // sinon la passerelle de la plateforme.
+  const provider = resolveProviderForPayment(method, invoice.currency);
   const result = await provider.initiatePayment({
     paymentId: payment.id,
     amount: Number(invoice.amount),
@@ -992,7 +995,9 @@ export async function reconcilePendingPayments(tenantId: string): Promise<void> 
       tenantId,
       status: PaymentStatus.PENDING,
       providerRef: { not: null },
-      provider: { in: ['geniuspay', 'moneroo'] },
+      // KkiaPay n'y figure pas : sa référence d'attente n'est pas une transaction,
+      // il est confirmé par le widget (confirmKkiapayTransaction) ou son webhook.
+      provider: { in: ['moneroo', 'wave', 'dexpay'] },
       createdAt: { gte: since },
     },
     orderBy: { createdAt: 'desc' },
@@ -1003,8 +1008,7 @@ export async function reconcilePendingPayments(tenantId: string): Promise<void> 
     if (Date.now() - last < 8000) continue;
     lastCheck.set(p.id, Date.now());
     try {
-      const active = resolvePlatformProvider();
-      const verifier = p.provider === active.name ? active : p.provider === 'moneroo' ? monerooVerifier() : null;
+      const verifier = verifierFor(p.provider);
       if (!verifier) continue;
       const v = await verifier.verifyPayment(p.providerRef!);
       if (v.status !== PaymentStatus.PENDING) {
@@ -1015,4 +1019,53 @@ export async function reconcilePendingPayments(tenantId: string): Promise<void> 
       logger.warn({ err, paymentId: p.id }, 'Abonnement : vérification passerelle impossible');
     }
   }
+}
+
+/**
+ * Confirme un paiement KkiaPay à partir d'un identifiant de transaction, reçu
+ * du widget (navigateur, donc NON fiable) ou du webhook. Rien n'est crédité sur
+ * la parole de l'appelant : la transaction est relue chez KkiaPay avec nos
+ * clés, puis doit être réussie, porter NOTRE paiement en partnerId, couvrir le
+ * montant de la facture et n'avoir servi à aucun autre paiement. Un échec n'est
+ * jamais enregistré ici : le client peut réessayer dans le widget.
+ */
+export async function confirmKkiapayTransaction(
+  paymentId: string,
+  transactionId: string,
+): Promise<{ status: PaymentStatus; reason?: string }> {
+  const payment = await prisma.subscriptionPayment.findUnique({ where: { id: paymentId } });
+  if (!payment || payment.provider !== 'kkiapay') throw notFound('Paiement introuvable');
+  if (payment.status === PaymentStatus.SUCCESS) return { status: PaymentStatus.SUCCESS };
+
+  const provider = kkiapayProvider();
+  if (!provider) throw badRequest('KkiaPay non configuré');
+
+  const reused = await prisma.subscriptionPayment.findFirst({
+    where: { provider: 'kkiapay', providerRef: transactionId, NOT: { id: paymentId } },
+    select: { id: true },
+  });
+  if (reused) {
+    logger.error({ paymentId, transactionId, other: reused.id }, 'KkiaPay : transaction déjà utilisée par un autre paiement');
+    return { status: PaymentStatus.PENDING, reason: 'transaction déjà utilisée' };
+  }
+
+  const v = await provider.verifyPayment(transactionId);
+  if (v.status !== PaymentStatus.SUCCESS) return { status: PaymentStatus.PENDING, reason: 'transaction non réussie' };
+
+  const tx = (v.raw ?? {}) as KkiapayTransaction;
+  const state = typeof tx.state === 'string' ? tx.state : '';
+  if (tx.partnerId !== payment.id && state !== payment.id) {
+    logger.error({ paymentId, transactionId, partnerId: tx.partnerId }, 'KkiaPay : transaction rattachée à un autre paiement');
+    return { status: PaymentStatus.PENDING, reason: 'transaction non rattachée à ce paiement' };
+  }
+  const paid = Number(tx.amount);
+  if (!Number.isFinite(paid) || Math.round(paid) < Math.round(Number(payment.amount)) || payment.currency.toUpperCase() !== 'XOF') {
+    logger.error({ paymentId, transactionId, paid, expected: Number(payment.amount) }, 'Montant KkiaPay différent de la facture : abonnement NON activé');
+    return { status: PaymentStatus.PENDING, reason: 'montant non conforme' };
+  }
+
+  await prisma.subscriptionPayment.update({ where: { id: paymentId }, data: { providerRef: transactionId } });
+  const settled = await settleSubscriptionPayment(paymentId, PaymentStatus.SUCCESS, tx);
+  logger.info({ paymentId, transactionId }, 'Abonnement : paiement KkiaPay confirmé');
+  return { status: settled?.status ?? PaymentStatus.SUCCESS };
 }

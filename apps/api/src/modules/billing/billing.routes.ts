@@ -14,7 +14,7 @@ import { prisma } from '../../lib/prisma.js';
 import { isProd, env } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
-import { monerooVerifier, resolvePlatformProvider } from './platform-provider.js';
+import { dexpayProvider, kkiapayProvider, monerooVerifier, resolvePlatformProvider, waveProvider, waveReady } from './platform-provider.js';
 import { purgeDemoData } from '../demo/demo.service.js';
 
 /** Contexte Meta CAPI à partir de la requête : IP/UA + cookies posés par le Pixel navigateur. */
@@ -85,8 +85,9 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   // l'écran d'abonnement de toujours proposer une façon de payer.
   app.get('/pay-info', async (_req, reply) => {
     let gateway = false;
+    let gatewayName = '';
     try {
-      resolvePlatformProvider();
+      gatewayName = resolvePlatformProvider().name;
       gateway = true;
     } catch {
       // Aucune passerelle configurée : seul le règlement manuel reste possible.
@@ -94,6 +95,9 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     }
     return reply.send({
       gateway,
+      gatewayName,
+      // Wave en direct disponible : l'écran propose « Wave » à part.
+      waveDirect: waveReady(),
       manual: env.PLATFORM_PAY_NUMBER
         ? {
             number: env.PLATFORM_PAY_NUMBER,
@@ -211,7 +215,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
 /** Webhooks publics des paiements d'abonnement (prefixe /webhooks). */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
   /**
-   * GeniusPay signe le corps brut en HMAC : il faut donc les octets exacts
+   * Wave et DexPay signent le corps brut en HMAC : il faut donc les octets exacts
    * recus, avant tout parsing. Ce parser est declare DANS ce plugin, donc
    * encapsule par Fastify : le reste de l'API garde le parser JSON standard et
    * ne paie pas le cout de conserver une copie du corps a chaque requete.
@@ -229,38 +233,143 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
     },
   );
 
-  app.post('/geniuspay-subscription', async (req, reply) => {
-    const signature = req.headers['x-webhook-signature'];
-    const event = String(req.headers['x-webhook-event'] ?? '');
-
-    // Ping de configuration depuis le tableau de bord GeniusPay : on accuse
-    // reception sans rien crediter, sinon le test echoue cote GeniusPay.
-    if (event === 'webhook.test') return reply.send({ ok: true, test: true });
-
-    const provider = resolvePlatformProvider();
-    if (provider.name !== 'geniuspay') {
-      return reply.status(409).send({ error: "GeniusPay n'est pas la passerelle active" });
+  /**
+   * Webhook KkiaPay (Développeurs > Webhook du tableau de bord). KkiaPay
+   * réessaie 5 fois en quelques secondes : on répond 200 dès que la requête
+   * est authentique. Le statut, le montant et le rattachement au paiement sont
+   * relus chez KkiaPay (confirmKkiapayTransaction) : le corps ne fait pas foi.
+   */
+  app.post('/kkiapay-subscription', async (req, reply) => {
+    const provider = kkiapayProvider();
+    if (!provider) return reply.status(409).send({ error: 'KkiaPay non configuré' });
+    let advisory;
+    try {
+      advisory = await provider.handleWebhook(req.body, undefined, {
+        headers: req.headers as Record<string, string | string[] | undefined>,
+      });
+    } catch (err) {
+      req.log.warn({ err }, 'Webhook KkiaPay refusé');
+      return reply.status(401).send({ error: 'Webhook refusé' });
     }
-    // SECURITE : la signature HMAC est verifiee ici. Un webhook non signe, mal
-    // signe ou trop ancien leve une erreur et ne credite rien.
-    const advisory = await provider.handleWebhook(
-      req.body,
-      typeof signature === 'string' ? signature : undefined,
-      {
+    if (advisory.status !== PaymentStatus.SUCCESS) return reply.send({ ok: true, ignored: 'transaction non réussie' });
+
+    const body = (req.body ?? {}) as { partnerId?: string | null };
+    const payment =
+      (body.partnerId ? await prisma.subscriptionPayment.findUnique({ where: { id: body.partnerId } }) : null) ??
+      (await billing.findPaymentByProviderRef(advisory.providerRef));
+    if (!payment || payment.provider !== 'kkiapay') return reply.send({ ok: true, ignored: 'paiement inconnu' });
+
+    const result = await billing.confirmKkiapayTransaction(payment.id, advisory.providerRef);
+    return reply.send({ ok: true, status: result.status, ...(result.reason ? { ignored: result.reason } : {}) });
+  });
+
+  /**
+   * Confirmation envoyée par la page /paiement/kkiapay quand le widget annonce
+   * un succès. Publique (le tunnel d'activation n'a pas encore de session) et
+   * sans danger : seule une transaction réellement payée, rattachée à CE
+   * paiement et du bon montant, relue chez KkiaPay, active l'abonnement.
+   */
+  app.post('/kkiapay-confirm', async (req, reply) => {
+    const body = (req.body ?? {}) as { paymentId?: unknown; transactionId?: unknown };
+    const paymentId = typeof body.paymentId === 'string' ? body.paymentId.trim() : '';
+    const transactionId = typeof body.transactionId === 'string' ? body.transactionId.trim() : '';
+    if (!paymentId || !transactionId || paymentId.length > 64 || transactionId.length > 128) {
+      return reply.status(400).send({ error: 'Paramètres manquants' });
+    }
+    const result = await billing.confirmKkiapayTransaction(paymentId, transactionId);
+    return reply.send({ status: result.status });
+  });
+
+  /**
+   * Webhook Wave Business (Checkout en direct). Wave renvoie pendant plusieurs
+   * jours toute notification qui n'obtient pas un 2xx : on ne répond une erreur
+   * que si la requête n'est pas authentique ; le reste (test, événement sans
+   * rapport, session inconnue) reçoit 200.
+   */
+  app.post('/wave-subscription', async (req, reply) => {
+    const provider = waveProvider();
+    if (!provider) return reply.status(409).send({ error: 'Wave direct non configuré' });
+    const body = (req.body ?? {}) as { type?: string; data?: { client_reference?: string | null } };
+
+    let advisory;
+    try {
+      // SECURITE : signature HMAC (Wave-Signature) ou secret partagé vérifié ici.
+      advisory = await provider.handleWebhook(req.body, undefined, {
         rawBody: (req as FastifyRequest & { rawBody?: string }).rawBody,
         headers: req.headers as Record<string, string | string[] | undefined>,
-      },
-    );
+      });
+    } catch (err) {
+      if (body.type === 'test.test_event') return reply.send({ ok: true, test: true });
+      req.log.warn({ err }, 'Webhook Wave refusé');
+      return reply.status(401).send({ error: 'Webhook refusé' });
+    }
+    if (!String(body.type ?? '').startsWith('checkout.session.')) return reply.send({ ok: true, ignored: body.type });
 
     const payment = await billing.findPaymentByProviderRef(advisory.providerRef);
-    if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
+    if (!payment || payment.provider !== 'wave') return reply.send({ ok: true, ignored: 'session inconnue' });
+    // La session doit porter NOTRE référence de paiement.
+    const ref = body.data?.client_reference;
+    if (ref && ref !== payment.id) {
+      req.log.error({ paymentId: payment.id, ref }, 'Webhook Wave : référence différente du paiement');
+      return reply.send({ ok: true, ignored: 'référence non conforme' });
+    }
 
-    // SECURITE (deuxieme barriere) : meme signe, le corps du webhook reste une
-    // donnee entrante. Le statut qui debloque l'abonnement est relu aupres de
-    // GeniusPay avec nos propres cles.
+    // SECURITE (deuxième barrière) : le statut est relu chez Wave avec notre clé.
     const verified = await provider.verifyPayment(advisory.providerRef);
-    await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+    if (verified.status !== 'PENDING') {
+      const s = verified.raw as { amount?: string; currency?: string } | undefined;
+      const paid = Number(s?.amount ?? NaN);
+      if (
+        verified.status === 'SUCCESS' &&
+        (!Number.isFinite(paid) || Math.round(paid) < Math.round(Number(payment.amount)) || (s?.currency ?? 'XOF') !== 'XOF')
+      ) {
+        req.log.error({ paymentId: payment.id, wave: s }, 'Montant Wave différent de la facture : abonnement NON activé');
+        return reply.send({ ok: true, ignored: 'montant non conforme' });
+      }
+      await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+    }
+    return reply.send({ ok: true });
+  });
 
+  /**
+   * Webhook DexPay (URL envoyée avec chaque session). DexPay ne réessaie que
+   * 3 fois en quelques secondes : on répond 200 dès que la requête est
+   * authentique, et le rapprochement actif rattrape un webhook manqué.
+   */
+  app.post('/dexpay-subscription', async (req, reply) => {
+    const provider = dexpayProvider();
+    if (!provider) return reply.status(409).send({ error: 'DexPay non configuré' });
+    const signature = req.headers['x-webhook-signature'];
+    let advisory;
+    try {
+      // SECURITE : HMAC-SHA256 du corps brut avec notre clé secrète.
+      advisory = await provider.handleWebhook(req.body, typeof signature === 'string' ? signature : undefined, {
+        rawBody: (req as FastifyRequest & { rawBody?: string }).rawBody,
+        headers: req.headers as Record<string, string | string[] | undefined>,
+      });
+    } catch (err) {
+      req.log.warn({ err }, 'Webhook DexPay refusé');
+      return reply.status(401).send({ error: 'Webhook refusé' });
+    }
+
+    const payment = await billing.findPaymentByProviderRef(advisory.providerRef);
+    if (!payment || payment.provider !== 'dexpay') return reply.send({ ok: true, ignored: 'session inconnue' });
+
+    // SECURITE (deuxième barrière) : statut et montant relus chez DexPay.
+    const verified = await provider.verifyPayment(advisory.providerRef);
+    if (verified.status !== 'PENDING') {
+      const s = verified.raw as { amount?: number; currency?: string } | undefined;
+      if (
+        verified.status === 'SUCCESS' &&
+        (!Number.isFinite(Number(s?.amount)) ||
+          Math.round(Number(s?.amount)) < Math.round(Number(payment.amount)) ||
+          (s?.currency ?? payment.currency).toUpperCase() !== payment.currency.toUpperCase())
+      ) {
+        req.log.error({ paymentId: payment.id, dexpay: s }, 'Montant DexPay différent de la facture : abonnement NON activé');
+        return reply.send({ ok: true, ignored: 'montant non conforme' });
+      }
+      await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+    }
     return reply.send({ ok: true });
   });
 
@@ -338,7 +447,7 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
     const payment = await billing.findPaymentByProviderRef(providerRef);
     if (!payment) return reply.status(404).send({ error: 'Paiement inconnu' });
     // Statut authentique re-vérifié côté serveur (corps du webhook non fiable).
-    // Paiement lancé avant le passage à GeniusPay : relu chez Moneroo.
+    // Paiement lancé avant le changement de passerelle : relu chez Moneroo.
     const provider = monerooVerifier() ?? resolvePlatformProvider();
     const verified = await provider.verifyPayment(providerRef);
     await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);

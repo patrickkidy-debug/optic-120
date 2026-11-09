@@ -694,21 +694,44 @@ function BillingPaymentModal({
               Moneroo héberge lui-même le choix du moyen (Wave, Orange Money,
               carte…) sur sa page de checkout — un choix ici en plus était pure
               friction, sans le moindre effet sur le paiement réel. */}
+          {/* Wave en direct (sans agrégateur) : bouton à part, frais réduits. */}
+          {payInfo?.waveDirect && !outsideCfa && getActiveCurrency() === 'XOF' && (
+            <Button
+              className="mb-2 w-full"
+              loading={payMut.isPending && payMut.variables === 'WAVE'}
+              disabled={payMut.isPending || manualMut.isPending}
+              onClick={() => payMut.mutate('WAVE')}
+            >
+              Payer avec Wave
+            </Button>
+          )}
           {payInfo?.gateway !== false && !outsideCfa && (
             <>
-              <Button
-                className="w-full"
-                loading={payMut.isPending}
-                disabled={payMut.isPending || manualMut.isPending}
-                onClick={() => payMut.mutate('WAVE')}
-              >
-                {tr('ui.SubscriptionPage.sAbonnerMaintenant')}
-              </Button>
+              {payInfo?.waveDirect && getActiveCurrency() === 'XOF' ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  loading={payMut.isPending && payMut.variables !== 'WAVE'}
+                  disabled={payMut.isPending || manualMut.isPending}
+                  onClick={() => payMut.mutate('ORANGE_MONEY')}
+                >
+                  Orange Money, MTN, Moov ou carte
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  loading={payMut.isPending}
+                  disabled={payMut.isPending || manualMut.isPending}
+                  onClick={() => payMut.mutate('WAVE')}
+                >
+                  {tr('ui.SubscriptionPage.sAbonnerMaintenant')}
+                </Button>
+              )}
               <div className="mt-3 border-t pt-3">
                 {/* Pas de nom de passerelle : elle est choisie côté serveur
-                    selon les clés configurées (GeniusPay, Moneroo, PayTech).
-                    L'écrire en dur affichait « Moneroo » alors que GeniusPay
-                    encaissait déjà. */}
+                    selon les clés configurées (KkiaPay, DexPay, Moneroo).
+                    L'écrire en dur affichait une passerelle qui n'encaissait
+                    plus. */}
                 <p className="mb-2 text-center text-xs text-content-faint">
                   {tr('ui.SubscriptionPage.paiementSecuriseChoisissezVotreMoyen')}
                 </p>

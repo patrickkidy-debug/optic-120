@@ -56,11 +56,16 @@ const envSchema = z.object({
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
   /**
-   * Passerelle d'encaissement des ABONNEMENTS : « geniuspay » (defaut),
-   * « moneroo » ou « chariow ». Une seule a la fois : pas de bascule
+   * Passerelle d'encaissement des ABONNEMENTS : « kkiapay » (defaut),
+   * « dexpay », « moneroo » ou « chariow ». Une seule a la fois : pas de bascule
    * silencieuse de l'une a l'autre si une cle manque (voir platform-provider.ts).
+   * L'ancienne valeur « geniuspay » (passerelle retiree) est lue comme « kkiapay »
+   * pour qu'un serveur encore configure ainsi demarre.
    */
-  PLATFORM_PAYMENT_PROVIDER: z.enum(['geniuspay', 'moneroo', 'chariow']).default('geniuspay'),
+  PLATFORM_PAYMENT_PROVIDER: z.preprocess(
+    (v) => (v === 'geniuspay' ? 'kkiapay' : v),
+    z.enum(['kkiapay', 'dexpay', 'moneroo', 'chariow']).default('kkiapay'),
+  ),
   CHARIOW_API_KEY: z.string().optional().default(''),
   CHARIOW_BASE_URL: z.string().default('https://api.chariow.com/v1'),
   /** Secret de signature du Pulse (whsec_...), propre a chaque Pulse. */
@@ -97,14 +102,36 @@ const envSchema = z.object({
   PAYTECH_API_SECRET: z.string().optional().default(''),
   PAYTECH_ENV: z.enum(['test', 'prod']).default('prod'),
   PAYTECH_BASE_URL: z.string().default('https://paytech.sn/api'),
-  // GeniusPay — orchestrateur multi-passerelles, 23 pays africains. Le préfixe
-  // des clés (pk_sandbox_ / pk_live_) détermine seul l'environnement : il n'y a
-  // pas de variable ENV séparée côté GeniusPay.
-  GENIUSPAY_API_KEY: z.string().optional().default(''),
-  GENIUSPAY_API_SECRET: z.string().optional().default(''),
-  /** Secret `whsec_…` du webhook — distinct des clés d'API. */
-  GENIUSPAY_WEBHOOK_SECRET: z.string().optional().default(''),
-  GENIUSPAY_BASE_URL: z.string().default('https://geniuspay.ci/api/v1/merchant'),
+  // KkiaPay (kkiapay.me) : Mobile Money et cartes en XOF (BJ, CI, TG, SN, NE).
+  // Trois cles du tableau de bord (Developpeurs > Cles API) ; le paiement se
+  // fait dans le widget KkiaPay ouvert par la page /paiement/kkiapay du front.
+  KKIAPAY_PUBLIC_KEY: z.string().optional().default(''),
+  KKIAPAY_PRIVATE_KEY: z.string().optional().default(''),
+  KKIAPAY_SECRET_KEY: z.string().optional().default(''),
+  /** « Secret hash » du webhook KkiaPay (renvoye dans x-kkiapay-secret). */
+  KKIAPAY_WEBHOOK_SECRET: z.string().optional().default(''),
+  /** « true » = cles de test (api-sandbox.kkiapay.me et widget en sandbox). */
+  KKIAPAY_SANDBOX: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v === 'true'),
+  // Wave en DIRECT (API Checkout de Wave Business), sans agrégateur. Clé posée
+  // = les clients qui choisissent Wave paient chez Wave ; les autres moyens
+  // (Orange, MTN, Moov, carte) restent sur PLATFORM_PAYMENT_PROVIDER.
+  WAVE_API_KEY: z.string().optional().default(''),
+  /** Secret de signature des requêtes (…_AKS_…), seulement si activé sur la clé. */
+  WAVE_SIGNING_SECRET: z.string().optional().default(''),
+  /** Secret du webhook : de signature (…_WHS_…) ou partagé, selon la stratégie choisie. */
+  WAVE_WEBHOOK_SECRET: z.string().optional().default(''),
+  WAVE_BASE_URL: z.string().default('https://api.wave.com'),
+  // DexPay (dexpay.africa) : Wave, Orange, MTN, Moov, Mixx et cartes (SN, CI…).
+  // Le prefixe des cles (pk_test_ / pk_live_) choisit l'environnement. La cle
+  // secrete signe aussi les webhooks : pas de secret de webhook distinct.
+  DEXPAY_PUBLIC_KEY: z.string().optional().default(''),
+  DEXPAY_SECRET_KEY: z.string().optional().default(''),
+  /** Vide = deduit du prefixe des cles (sandbox ou production). */
+  DEXPAY_BASE_URL: z.string().optional().default(''),
   // URL publique de l'API (pour les IPN PayTech). Ex : https://oculosaas-api.onrender.com
   PUBLIC_API_URL: z.string().optional().default(''),
 
