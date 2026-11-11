@@ -1354,6 +1354,8 @@ export const opticalSettingsSchema = z.object({
   defaultWarrantyMonths: z.number().int().min(0).max(120).default(12),
   /** Valeur d'un point de fidélité, en unité monétaire. */
   loyaltyPointValue: z.number().min(0).max(10000).default(25),
+  /** Objectif de chiffre d'affaires mensuel affiché sur le tableau de bord (0 = masqué). */
+  monthlyRevenueTarget: z.number().min(0).max(10_000_000_000).default(0),
   /**
    * Convention de cylindre des ordonnances : telles que saisies, ou transposées
    * automatiquement en cylindre positif / négatif (enregistrement et documents).
@@ -1376,6 +1378,7 @@ export const DEFAULT_OPTICAL_SETTINGS: OpticalSettings = {
   purchaseReminderMonths: 12,
   defaultWarrantyMonths: 12,
   loyaltyPointValue: 25,
+  monthlyRevenueTarget: 0,
   cylinderConvention: 'AS_ENTERED',
   splitLensEyes: false,
   extraTaxes: [],

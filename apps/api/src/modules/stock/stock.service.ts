@@ -438,6 +438,12 @@ export async function getStockForBranch(tenantId: string, branchId: string, lowS
       sku: p.sku,
       name: p.name,
       brand: p.brand,
+      // Code-barres fabricant (attribut libre « ean ») : la caisse l'utilise
+      // pour ajouter un produit d'un coup de scanner, comme le SKU.
+      ean:
+        typeof (p.attributes as Record<string, unknown> | null)?.ean === 'string'
+          ? ((p.attributes as Record<string, unknown>).ean as string)
+          : null,
       category: p.category,
       sellPrice: Number(p.sellPrice),
       stockItemId: item?.id ?? null,

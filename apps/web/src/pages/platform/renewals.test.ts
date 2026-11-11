@@ -149,7 +149,9 @@ describe('renderRenewalMessage', () => {
   });
 
   it('remplace une variable inconnue par une chaîne vide plutôt que de la laisser brute', () => {
-    expect(renderRenewalMessage('Bonjour {inconnue}!', row(), url)).toBe('Bonjour !');
+    // L'espace qui précède la variable disparaît avec elle (même règle que
+    // « Bonjour {client}, » → « Bonjour, » — voir fillWaTemplate).
+    expect(renderRenewalMessage('Bonjour {inconnue}!', row(), url)).toBe('Bonjour!');
   });
 
   it('conserve les retours à la ligne du modèle', () => {

@@ -209,8 +209,23 @@ export function PosPage() {
   const products = (stock ?? []).filter(
     (p) =>
       (posCat === 'ALL' || p.category === posCat) &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())),
+      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.sku.toLowerCase().includes(search.toLowerCase()) ||
+        (p.ean ?? '').toLowerCase().includes(search.toLowerCase())),
   );
+
+  // Scan code-barres (lecteur USB = saisie rapide + Entrée) : SKU ou EAN exact
+  // ajoute le produit directement, sinon un résultat unique suffit. Le champ
+  // est vidé et garde le focus pour enchaîner les scans.
+  const addFromScan = () => {
+    const code = search.trim().toLowerCase();
+    if (!code) return;
+    const exact = (stock ?? []).find((p) => p.sku.toLowerCase() === code || (p.ean ?? '').toLowerCase() === code);
+    const hit = exact ?? (products.length === 1 ? products[0] : undefined);
+    if (!hit) return;
+    pos.addLine({ productId: hit.productId, name: hit.name, sku: hit.sku, unitPrice: hit.sellPrice, category: hit.category });
+    setSearch('');
+  };
 
   const createMut = useMutation({
     mutationFn: (type: 'SALE' | 'QUOTE') =>
@@ -271,6 +286,12 @@ export function PosPage() {
             placeholder={t('pos.searchProduct')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addFromScan();
+              }
+            }}
           />
         </div>
         <div className="mb-4">

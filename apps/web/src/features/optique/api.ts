@@ -130,6 +130,8 @@ export interface StockRow {
   sku: string;
   name: string;
   brand?: string | null;
+  /** Code-barres fabricant (attribut « ean ») : scanné en caisse. */
+  ean?: string | null;
   category: string;
   sellPrice: number;
   stockItemId: string | null;
@@ -806,6 +808,10 @@ export interface DashboardData {
   topProducts: { name: string; revenue: number; quantity: number }[];
   activeCustomers?: number;
   activeCustomersPrev?: number;
+  /** CA du mois précédent au même avancement (comparaison honnête en cours de mois). */
+  prevMonthToDateRevenue?: number;
+  /** Objectif de CA mensuel fixé dans les réglages (0 = masqué). */
+  monthlyTarget?: number;
 }
 
 export async function getDashboard(branchId?: string): Promise<DashboardData> {

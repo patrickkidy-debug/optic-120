@@ -1,5 +1,6 @@
 import { PaymentStatus, SaleStatus, SaleType, StockMovementType, isMadeToOrderCategory } from '@oculo/shared-types';
 import { prisma } from '../../lib/prisma.js';
+import { getOpticalSettings } from '../../lib/optical-settings.js';
 
 function startOfToday(): Date {
   const d = new Date();
@@ -10,6 +11,25 @@ function startOfMonth(): Date {
   const d = new Date();
   d.setDate(1);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Premier jour du mois précédent, à minuit. */
+function startOfPrevMonth(): Date {
+  const d = startOfMonth();
+  d.setMonth(d.getMonth() - 1);
+  return d;
+}
+/**
+ * Même instant le mois précédent (le 15 à 14 h → le 15 du mois d'avant à 14 h),
+ * borné au dernier jour du mois quand il est plus court (le 31 mars → le 28/29
+ * février). Sert à comparer le mois en cours « à avancement égal ».
+ */
+function sameMomentPrevMonth(): Date {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1, now.getHours(), now.getMinutes(), now.getSeconds());
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(now.getDate(), lastDay));
   return d;
 }
 
@@ -63,6 +83,9 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     activeCustomersRaw,
     activeCustomersPrevRaw,
     todayExpensesAgg,
+    prevMonthPaidAgg,
+    prevMonthInsAgg,
+    opticalSettings,
   ] = await Promise.all([
     // Part assurance : acquise a la vente (aucun Payment n'est cree pour elle).
     prisma.sale.aggregate({
@@ -157,6 +180,23 @@ export async function getDashboard(tenantId: string, branchId?: string) {
       where: { tenantId, ...branchFilter, date: { gte: startOfToday() }, cancelledAt: null },
       _sum: { amount: true },
     }),
+    // Mois précédent À AVANCEMENT ÉGAL (du 1er au même jour/heure) : la seule
+    // comparaison honnête en cours de mois — un mois entier écraserait toujours
+    // un mois entamé. Même formule de CA : encaissé réel + part assurance.
+    prisma.payment.aggregate({
+      where: paymentWhere(tenantId, branchId, startOfPrevMonth(), sameMomentPrevMonth()),
+      _sum: { amount: true },
+    }),
+    prisma.sale.aggregate({
+      where: {
+        ...saleBase,
+        status: { in: PAID_LIKE },
+        createdAt: { gte: startOfPrevMonth(), lt: sameMomentPrevMonth() },
+      },
+      _sum: { insuranceAmount: true },
+    }),
+    // Objectif mensuel de CA fixé dans les réglages du cabinet (0 = masqué).
+    getOpticalSettings(tenantId),
   ]);
 
   // Série des 7 derniers jours (CA encaissé + nombre de ventes, pour le mini
@@ -246,6 +286,10 @@ export async function getDashboard(tenantId: string, branchId?: string) {
     topProducts,
     activeCustomers,
     activeCustomersPrev,
+    // Mois précédent au même avancement (même formule que monthRevenue).
+    prevMonthToDateRevenue:
+      Number(prevMonthPaidAgg._sum.amount ?? 0) + Number(prevMonthInsAgg._sum.insuranceAmount ?? 0),
+    monthlyTarget: opticalSettings.monthlyRevenueTarget,
   };
 }
 

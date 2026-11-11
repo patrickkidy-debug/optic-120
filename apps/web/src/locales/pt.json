@@ -217,6 +217,12 @@
     "todayRevenueFull": "Volume de negócios do dia",
     "monthRevenueFull": "Volume de negócios do mês",
     "vsPrev7d": "vs 7 d ant.",
+    "vsPrevMonth": "vs mês passado até agora",
+    "monthTarget": "Meta do mês",
+    "monthTargetReached": "Meta atingida, parabéns!",
+    "monthTargetRemaining": "em falta",
+    "monthTargetOnTrack": "Bom ritmo",
+    "monthTargetBehind": "Ritmo a acelerar",
     "todaySales": "Vendas do dia",
     "avgBasket": "Cesto médio (mês)",
     "newCustomers": "Novos clientes (mês)",
@@ -276,7 +282,7 @@
     "simulate": "Simular a confirmação",
     "paid": "Pagamento confirmado",
     "newSale": "Nova venda",
-    "searchProduct": "Pesquisar um produto…",
+    "searchProduct": "Pesquisar ou digitalizar (SKU / código de barras)…",
     "unitPriceEditable": "Preço unitário (editável)",
     "pricePlaceholder": "Preço",
     "amountNow": "Montante cobrado agora",
@@ -1764,7 +1770,7 @@
       "illustrationDUneVitrineDe": "Ilustração de uma montra de ótica"
     },
     "Sidebar": {
-      "oculosaasV20PremiumDashboard": "OculoSaaS · v2.0 — Premium Dashboard"
+      "oculosaasV20PremiumDashboard": "OculoSaaS · v4.0 — Arcade Pro"
     },
     "Topbar": {
       "themeTheme": "Tema: {{theme}}",
@@ -5768,6 +5774,8 @@
     }
   },
   "optSettings": {
+    "monthlyTarget": "Meta de faturação mensal",
+    "monthlyTargetHint": "Mostrada como barra de progresso no painel (0 = oculta).",
     "cylinder": "Cilindro das receitas",
     "cylinderHint": "Transposição automática ao gravar e nos documentos.",
     "cylAsEntered": "Como introduzido",

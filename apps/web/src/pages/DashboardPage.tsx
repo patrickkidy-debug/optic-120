@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   HandCoins,
   ClipboardList,
+  Target,
   type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -201,6 +202,71 @@ function DeltaChip({ pct, label }: { pct: number | null; label?: string }) {
       {up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
       {Math.abs(pct)}%{label ? <span className="ml-1 font-normal text-content-faint">{label}</span> : null}
     </span>
+  );
+}
+
+/**
+ * Objectif mensuel de CA : progression vers l'objectif fixé dans les réglages
+ * du cabinet, avec le rythme attendu au prorata des jours écoulés (un repère
+ * fin sur la barre). Vert = objectif atteint ; sinon « bon rythme » quand le
+ * réalisé dépasse le prorata.
+ */
+function MonthTargetCard({ revenue, target }: { revenue: number; target: number }) {
+  const { t } = useTranslation();
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const expectedPct = Math.round((now.getDate() / daysInMonth) * 100);
+  const pct = Math.min(100, Math.round((revenue / target) * 100));
+  const reached = revenue >= target;
+  const onTrack = pct >= expectedPct;
+  return (
+    <div className="mt-6 card card-sticker p-5" style={{ '--sticker': reached ? '#22c55e' : '#7c3aed' } as CSSProperties}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 font-display font-bold text-content">
+          <Target className="h-4 w-4 text-primary" aria-hidden="true" />
+          {t('dashboard.monthTarget')}
+        </h3>
+        <Badge tone={reached ? 'success' : onTrack ? 'success' : 'warning'}>
+          {reached
+            ? t('dashboard.monthTargetReached')
+            : onTrack
+              ? t('dashboard.monthTargetOnTrack')
+              : t('dashboard.monthTargetBehind')}
+        </Badge>
+      </div>
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-arcade text-[22px] leading-tight text-content">
+          {formatCurrency(revenue)} <span className="text-sm text-content-faint">/ {formatCurrency(target)}</span>
+        </p>
+        {!reached && (
+          <p className="text-xs text-content-muted">
+            {formatCurrency(Math.max(0, target - revenue))} {t('dashboard.monthTargetRemaining')}
+          </p>
+        )}
+      </div>
+      <div
+        className="relative mt-3 h-3 overflow-hidden rounded-full bg-surface-2"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={t('dashboard.monthTarget')}
+      >
+        <div
+          className="h-full rounded-full transition-[width] duration-700"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#7c3aed,#ec4899,#f97316)' }}
+        />
+        {/* Repère du rythme attendu (prorata des jours écoulés). */}
+        {!reached && expectedPct > 2 && expectedPct < 98 && (
+          <span
+            aria-hidden
+            className="absolute inset-y-0 w-0.5 bg-content/40"
+            style={{ left: `${expectedPct}%` }}
+          />
+        )}
+      </div>
+      <p className="mt-1.5 text-right font-arcade text-sm text-content">{pct}%</p>
+    </div>
   );
 }
 
@@ -506,8 +572,8 @@ export function DashboardPage() {
           label={t('dashboard.monthRevenueFull')}
           value={<CurrencyDisplay amount={data.monthRevenue} />}
           tone="success"
-          delta={pctDelta(data.weekRevenue ?? 0, data.prevWeekRevenue ?? 0)}
-          deltaLabel={t('dashboard.vsPrev7d')}
+          delta={pctDelta(data.monthRevenue ?? 0, data.prevMonthToDateRevenue ?? 0)}
+          deltaLabel={t('dashboard.vsPrevMonth')}
           spark={(data.revenueByDay ?? []).map((d) => d.revenue)}
         />
         <KpiCard
@@ -534,6 +600,12 @@ export function DashboardPage() {
           <KpiCard icon={ClipboardList} label={tr('ui.DashboardPage.commandesEnCours')} value={String(ongoingOrders)} tone="success" />
         )}
       </div>
+
+      {/* Objectif mensuel de CA (réglages du cabinet) : barre de progression
+          et rythme attendu au prorata du mois écoulé. Masqué si aucun objectif. */}
+      {(data.monthlyTarget ?? 0) > 0 && (
+        <MonthTargetCard revenue={data.monthRevenue ?? 0} target={data.monthlyTarget ?? 0} />
+      )}
 
       {/* Workflow des commandes de verres, en un coup d'œil. */}
       <div className="mt-6">

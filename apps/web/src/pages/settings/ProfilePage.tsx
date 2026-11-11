@@ -616,6 +616,13 @@ function OpticalSettingsCard() {
         onChange={(n) => set({ loyaltyPointValue: n })}
         suffix={currencySymbol()}
       />
+      <Row
+        label={tr('optSettings.monthlyTarget')}
+        hint={tr('optSettings.monthlyTargetHint')}
+        value={values.monthlyRevenueTarget}
+        onChange={(n) => set({ monthlyRevenueTarget: n })}
+        suffix={currencySymbol()}
+      />
 
       {/* Ordonnances et documents de vente */}
       <div className="flex items-center justify-between gap-3 border-b py-2.5">

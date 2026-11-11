@@ -217,6 +217,12 @@
     "todayRevenueFull": "Today's revenue",
     "monthRevenueFull": "Monthly revenue",
     "vsPrev7d": "vs prev. 7 d",
+    "vsPrevMonth": "vs last month to date",
+    "monthTarget": "Monthly goal",
+    "monthTargetReached": "Goal reached, well done!",
+    "monthTargetRemaining": "to go",
+    "monthTargetOnTrack": "On track",
+    "monthTargetBehind": "Behind pace",
     "todaySales": "Today's sales",
     "avgBasket": "Average basket (month)",
     "newCustomers": "New customers (month)",
@@ -276,7 +282,7 @@
     "simulate": "Simulate confirmation",
     "paid": "Payment confirmed",
     "newSale": "New sale",
-    "searchProduct": "Search a product…",
+    "searchProduct": "Search or scan (SKU / barcode)…",
     "unitPriceEditable": "Unit price (editable)",
     "pricePlaceholder": "Price",
     "amountNow": "Amount collected now",
@@ -1764,7 +1770,7 @@
       "illustrationDUneVitrineDe": "Illustration of an optical store window"
     },
     "Sidebar": {
-      "oculosaasV20PremiumDashboard": "OculoSaaS · v2.0 — Premium Dashboard"
+      "oculosaasV20PremiumDashboard": "OculoSaaS · v4.0 — Arcade Pro"
     },
     "Topbar": {
       "themeTheme": "Theme: {{theme}}",
@@ -5768,6 +5774,8 @@
     }
   },
   "optSettings": {
+    "monthlyTarget": "Monthly revenue goal",
+    "monthlyTargetHint": "Shown as a progress bar on the dashboard (0 = hidden).",
     "cylinder": "Prescription cylinder",
     "cylinderHint": "Automatic transposition when saving and on documents.",
     "cylAsEntered": "As entered",

@@ -5,7 +5,6 @@ import { CookieBanner } from './components/CookieBanner';
 import { ToastProvider } from './components/Toast';
 import { ActivationPage } from './pages/activation/ActivationPage';
 import { ActivationReturnPage } from './pages/activation/ActivationReturnPage';
-const KkiapayCheckoutPage = lazy(() => named(import('./pages/payment/KkiapayCheckoutPage'), 'KkiapayCheckoutPage'));
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './components/RouteGuards';
@@ -28,6 +27,7 @@ import { RouteErrorPage } from './pages/RouteErrorPage';
 // leurs icônes) n'est chargée que pour les routes protégées : les pages
 // publiques (accueil, connexion) restent ainsi plus légères.
 const AppShell = lazy(() => named(import('./components/layout/AppShell'), 'AppShell'));
+const KkiapayCheckoutPage = lazy(() => named(import('./pages/payment/KkiapayCheckoutPage'), 'KkiapayCheckoutPage'));
 const LandingPage = lazy(() => named(import('./pages/LandingPage'), 'LandingPage'));
 const LoginPage = lazy(() => named(import('./pages/auth/LoginPage'), 'LoginPage'));
 const SignupPage = lazy(() => named(import('./pages/auth/SignupPage'), 'SignupPage'));

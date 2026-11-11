@@ -1,6 +1,6 @@
 {
   "name": "oculosaas",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "private": true,
   "description": "OculoSaaS — SaaS multi-tenant de gestion d'optique et d'ophtalmologie pour l'Afrique de l'Ouest",
   "workspaces": [
