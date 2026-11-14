@@ -1,5 +1,6 @@
 import {
   Ruler,
+  ScanLine,
   PackageSearch,
   FlaskConical,
   LayoutDashboard,
@@ -78,6 +79,7 @@ export const NAV: NavGroup[] = [
       { to: '/optique/devis', labelKey: 'nav.quotes', icon: FileText, permission: 'optique.quotes.view' },
       { to: '/optique/commandes-verres', labelKey: 'nav.lensOrders', icon: Glasses, permission: 'optique.sales.view', badge: 'lensOverdue' },
       { to: '/optique/mesures', labelKey: 'nav.measurements', icon: Ruler, permission: 'optique.prescriptions.view' },
+      { to: '/oculolab', labelKey: 'nav.oculolab', icon: ScanLine, permission: 'optique.prescriptions.view' },
       { to: '/optique/oculotrack', labelKey: 'nav.oculotrack', icon: PackageSearch, permission: 'oculotrack.view' },
       { to: '/oculorx', labelKey: 'nav.oculorx', icon: FlaskConical, permission: 'oculorx.view' },
       { to: '/optique/reparations', labelKey: 'nav.repairs', icon: Wrench, permission: 'optique.sales.view' },

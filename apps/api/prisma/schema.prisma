@@ -73,6 +73,7 @@ model Tenant {
   customers              Customer[]
   prescriptions          OpticalPrescription[]
   opticalMeasurements    OpticalMeasurement[]
+  frameTraces            FrameTrace[]
   trackPackages          TrackPackage[]
   trackPackageItems      TrackPackageItem[]
   trackEvents            TrackEvent[]
@@ -548,27 +549,27 @@ model InventoryCountLine {
  */
 
 model Customer {
-  id            String    @id @default(uuid())
-  tenantId      String
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// Magasin propriétaire de la fiche. Nullable : les clients antérieurs au
   /// cloisonnement qui n'ont aucune vente ne peuvent être rattachés à rien, et
   /// restent visibles partout jusqu'à leur première opération. Un magasin ne
   /// voit que ses propres clients, plus ceux qui ne sont rattachés à aucun.
-  branchId      String?
-  branch        Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  firstName     String
-  lastName      String
-  phone         String?
-  email         String?
+  branchId        String?
+  branch          Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  firstName       String
+  lastName        String
+  phone           String?
+  email           String?
   // Fiche client complète : indispensable pour les relances (anniversaire,
   // renouvellement) et les conseils liés à l'âge (presbytie).
-  dateOfBirth   DateTime?
-  gender        Gender?
-  address       String?
-  profession    String?
-  notes         String?
-  loyaltyPoints Int       @default(0)
+  dateOfBirth     DateTime?
+  gender          Gender?
+  address         String?
+  profession      String?
+  notes           String?
+  loyaltyPoints   Int       @default(0)
   // Fiche client enrichie (bêta) : civilité (dont « Enfant »), portable
   // distinct du fixe, regroupement familial, refus des messages, décès et
   // présence au magasin (liste « en cours »).
@@ -578,11 +579,12 @@ model Customer {
   messagingOptOut Boolean   @default(false)
   deceased        Boolean   @default(false)
   waitingSince    DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
 
   sales                  Sale[]
   prescriptions          OpticalPrescription[]
   opticalMeasurements    OpticalMeasurement[]
+  frameTraces            FrameTrace[]
   lensOrders             LensOrder[]
   repairs                Repair[]
   rxOrders               RxOrder[]
@@ -673,7 +675,7 @@ model OpticalPrescription {
   createdById       String?
   createdAt         DateTime  @default(now())
 
-  sales Sale[]
+  sales      Sale[]
   lensOrders LensOrder[]
 
   @@index([tenantId, customerId])
@@ -770,60 +772,60 @@ enum SaleStatus {
 }
 
 model Sale {
-  id                String               @id @default(uuid())
-  tenantId          String
-  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branchId          String
-  branch            Branch               @relation(fields: [branchId], references: [id])
-  customerId        String?
-  customer          Customer?            @relation(fields: [customerId], references: [id])
-  cashierId         String
-  cashier           User                 @relation(fields: [cashierId], references: [id])
-  number            String
-  type              SaleType             @default(SALE)
-  status            SaleStatus           @default(DRAFT)
-  subtotal          Decimal              @db.Decimal(12, 2)
-  discountAmount    Decimal              @default(0) @db.Decimal(12, 2)
-  taxAmount         Decimal              @default(0) @db.Decimal(12, 2)
+  id                  String               @id @default(uuid())
+  tenantId            String
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId            String
+  branch              Branch               @relation(fields: [branchId], references: [id])
+  customerId          String?
+  customer            Customer?            @relation(fields: [customerId], references: [id])
+  cashierId           String
+  cashier             User                 @relation(fields: [cashierId], references: [id])
+  number              String
+  type                SaleType             @default(SALE)
+  status              SaleStatus           @default(DRAFT)
+  subtotal            Decimal              @db.Decimal(12, 2)
+  discountAmount      Decimal              @default(0) @db.Decimal(12, 2)
+  taxAmount           Decimal              @default(0) @db.Decimal(12, 2)
   /// Détail des taxes figé à la vente : TVA + taxes supplémentaires (ex. CSS 1 %).
-  taxDetails        Json?
-  insuranceAmount   Decimal              @default(0) @db.Decimal(12, 2)
+  taxDetails          Json?
+  insuranceAmount     Decimal              @default(0) @db.Decimal(12, 2)
   // Assureur qui prend en charge insuranceAmount (suivi des paiements trimestriels).
-  insurerId         String?
-  insurer           Insurer?             @relation(fields: [insurerId], references: [id])
+  insurerId           String?
+  insurer             Insurer?             @relation(fields: [insurerId], references: [id])
   // Date à laquelle le remboursement de l'assureur a été effectivement reçu
   // (marqué manuellement) : distingue le "recouvré" du simplement "attendu"
   // dans le widget Assurances du tableau de bord.
-  insurerPaidAt     DateTime?
+  insurerPaidAt       DateTime?
   // Montant réellement reçu de l'assureur. Permet les remboursements partiels
   // avant le solde complet de la prise en charge.
-  insurerPaidAmount Decimal              @default(0) @db.Decimal(12, 2)
-  totalAmount       Decimal              @db.Decimal(12, 2)
-  paidAmount        Decimal              @default(0) @db.Decimal(12, 2)
-  currency          String               @default("XOF")
+  insurerPaidAmount   Decimal              @default(0) @db.Decimal(12, 2)
+  totalAmount         Decimal              @db.Decimal(12, 2)
+  paidAmount          Decimal              @default(0) @db.Decimal(12, 2)
+  currency            String               @default("XOF")
   // Garantie accordée sur l'équipement vendu (monture/verres) : durée en mois
   // et date d'échéance figée à la vente, pour trancher un litige en SAV.
-  warrantyMonths    Int?
-  warrantyEndsAt    DateTime?
+  warrantyMonths      Int?
+  warrantyEndsAt      DateTime?
   // Formule de garantie (avant-première) : échéances verres (6 mois offerts
   // ou 1 an) et protection monture (6 mois), figées à la vente.
   lensWarrantyEndsAt  DateTime?
   frameWarrantyEndsAt DateTime?
   // Remise accordée en points de fidélité (montant déjà inclus dans discountAmount).
-  loyaltyPointsUsed Int                  @default(0)
+  loyaltyPointsUsed   Int                  @default(0)
   // Ordonnance jointe au devis / à la vente (facultatif) : reprise sur le
   // document imprimé pour que le client ait tout sur une seule page.
-  prescriptionId    String?
-  prescription      OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
+  prescriptionId      String?
+  prescription        OpticalPrescription? @relation(fields: [prescriptionId], references: [id])
   // Motif de la visite et date de livraison prévue de l'équipement.
-  visitReason        String?  @db.VarChar(120)
-  expectedDeliveryAt DateTime?
+  visitReason         String?              @db.VarChar(120)
+  expectedDeliveryAt  DateTime?
   // Retour/avoir : référence la vente d'origine remboursée.
-  originalSaleId    String?
-  originalSale      Sale?                @relation("SaleReturns", fields: [originalSaleId], references: [id])
-  returns           Sale[]               @relation("SaleReturns")
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  originalSaleId      String?
+  originalSale        Sale?                @relation("SaleReturns", fields: [originalSaleId], references: [id])
+  returns             Sale[]               @relation("SaleReturns")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   items          SaleItem[]
   payments       Payment[]
@@ -902,7 +904,7 @@ model LensOrder {
   trackStartedAt   DateTime?
   /// Fournisseur / laboratoire relié (supplierName reste pour l'affichage historique).
   supplierId       String?
-  supplier         Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplier         Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   /// Référence de la monture du client (gravée sur la branche).
   frameRef         String?
   /// Prise de mesures (assistant de centrage) utilisée pour le montage.
@@ -911,7 +913,7 @@ model LensOrder {
   prescriptionId   String?
   prescription     OpticalPrescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
   /// Jeton opaque du lien de suivi public (jamais de donnée client dans l'URL).
-  publicToken      String?            @unique
+  publicToken      String?              @unique
   packageItems     TrackPackageItem[]
   trackEvents      TrackEvent[]
   trackAttachments TrackAttachment[]
@@ -925,6 +927,56 @@ model LensOrder {
   @@index([tenantId, customerId])
   @@index([frameProductId])
   @@index([prescriptionId])
+}
+
+/**
+ * OculoLab — tracé de forme de monture (photo de la monture ou du gabarit,
+ * gabarit type, ou fichier OMA) et fiche précal envoyée au laboratoire.
+ * Forme du verre DROIT vue de face : 360 rayons (mm) depuis le centre de
+ * boîte, angle 0 côté nasal (convention OMA) — voir shared-types/oculolab.
+ */
+model FrameTrace {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Numéro de fiche précal, ex. « PCL-2026-000012 ».
+  number         String
+  label          String?
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  lensOrderId    String?
+  measurementId  String?
+  prescriptionId String?
+  /// PHOTO | TEMPLATE | OMA
+  source         String
+  /// FULL_RIM | SEMI_RIMLESS | RIMLESS
+  frameType      String    @default("FULL_RIM")
+  frameRef       String?
+  radii          Json
+  /// Cotes calculées à l'enregistrement (liste et recherche sans recalcul).
+  boxA           Float
+  boxB           Float
+  dbl            Float
+  ed             Float
+  circumference  Float
+  confidence     Int?
+  /// Aperçu JPEG réduit de la photo scannée (data URL).
+  photoUrl       String?
+  /// Centrage, prescription et verres retenus (voir precalSchema).
+  precal         Json
+  /// DRAFT | SENT
+  status         String    @default("DRAFT")
+  sentAt         DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, customerId])
+  @@index([supplierId])
 }
 
 /**
@@ -1346,24 +1398,24 @@ model Employee {
 /// Compte bancaire de l'établissement : dépôts, retraits, virements et
 /// dépenses payées par la banque y sont rattachés (solde et relevé).
 model BankAccount {
-  id             String         @id @default(uuid())
-  tenantId       String
-  branchId       String?
+  id                String         @id @default(uuid())
+  tenantId          String
+  branchId          String?
   // Type de compte : banque, mobile money (Orange Money, Wave…), coffre, autre.
-  type           String         @default("BANK") @db.VarChar(20) // BANK | MOBILE_MONEY | SAFE | OTHER
-  provider       String?        @db.VarChar(30) // ORANGE_MONEY | WAVE | MTN_MOMO | MOOV_MONEY | AIRTEL_MONEY | FREE_MONEY…
-  phoneNumber    String?        @db.VarChar(40)
-  bankName       String
-  accountName    String
-  accountNumber  String?
-  iban           String?
-  swift          String?
-  openingBalance Decimal        @default(0) @db.Decimal(12, 2)
-  active         Boolean        @default(true)
-  notes          String?
-  createdById    String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  type              String         @default("BANK") @db.VarChar(20) // BANK | MOBILE_MONEY | SAFE | OTHER
+  provider          String?        @db.VarChar(30) // ORANGE_MONEY | WAVE | MTN_MOMO | MOOV_MONEY | AIRTEL_MONEY | FREE_MONEY…
+  phoneNumber       String?        @db.VarChar(40)
+  bankName          String
+  accountName       String
+  accountNumber     String?
+  iban              String?
+  swift             String?
+  openingBalance    Decimal        @default(0) @db.Decimal(12, 2)
+  active            Boolean        @default(true)
+  notes             String?
+  createdById       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   transfers         CashTransfer[] @relation("TransferFromAccount")
   incomingTransfers CashTransfer[] @relation("TransferToAccount")
   expenses          Expense[]
@@ -1432,15 +1484,16 @@ model Supplier {
 
   /// OculoRX : code court (relevés REL-CODE-AAAAMM), email de commande,
   /// coefficient de vente et TVA propres au fournisseur (sinon ceux du magasin).
-  code           String?
-  orderEmail     String?
-  rxCoefficient  Float?
-  rxVatRate      Float?
+  code          String?
+  orderEmail    String?
+  rxCoefficient Float?
+  rxVatRate     Float?
   /// Fournisseur fictif créé par « Charger la démo » d'OculoRX.
-  rxDemo         Boolean      @default(false)
+  rxDemo        Boolean @default(false)
 
   stockMovements StockMovement[]
   lensOrders     LensOrder[]
+  frameTraces    FrameTrace[]
   trackPackages  TrackPackage[]
   portalAccesses PortalAccess[]
   rxLenses       RxLens[]
@@ -2194,12 +2247,12 @@ model ActivationSession {
   /// Facture d'abonnement émise à l'étape 5.
   invoiceId String?
 
-  paidAt      DateTime?
-  abandoned   Boolean   @default(false)
+  paidAt               DateTime?
+  abandoned            Boolean               @default(false)
   /// Origine publicitaire, pour mesurer le rendement des campagnes.
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
+  utmSource            String?
+  utmMedium            String?
+  utmCampaign          String?
   advisorConversations AdvisorConversation[]
 
   lastSeenAt DateTime @default(now())
@@ -2229,26 +2282,26 @@ enum ActivationStepDb {
 /// AUCUNE transcription stockée : seulement un résumé anonyme du besoin, les
 /// préoccupations détectées et la consommation, pour les statistiques.
 model AdvisorConversation {
-  id                  String    @id @default(uuid())
+  id                  String             @id @default(uuid())
   /// Lien vers le tunnel d'activation : la conversion (paidAt) en découle.
   activationSessionId String?
   activationSession   ActivationSession? @relation(fields: [activationSessionId], references: [id], onDelete: SetNull)
-  page                String    @default("landing")
-  mode                String    @default("VOICE")
-  lang                String    @default("fr")
-  status              String    @default("OPEN")
-  turns               Int       @default(0)
-  inputTokens         Int       @default(0)
-  outputTokens        Int       @default(0)
+  page                String             @default("landing")
+  mode                String             @default("VOICE")
+  lang                String             @default("fr")
+  status              String             @default("OPEN")
+  turns               Int                @default(0)
+  inputTokens         Int                @default(0)
+  outputTokens        Int                @default(0)
   /// Coût estimé du modèle, en micro-dollars.
-  costMicroUsd        Int       @default(0)
+  costMicroUsd        Int                @default(0)
   summary             Json?
-  concerns            String[]  @default([])
-  unanswered          String[]  @default([])
+  concerns            String[]           @default([])
+  unanswered          String[]           @default([])
   planInterest        String?
   ipHash              String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   endedAt             DateTime?
   events              AdvisorEvent[]
 
@@ -2994,17 +3047,19 @@ model PortalSession {
   @@index([accountId])
 }
 
-/* ============================================================================
+/**
+ * ============================================================================
  * OculoRX — commande de verres auprès des fournisseurs
- * ========================================================================== */
+ * ==========================================================================
+ */
 
 /// Verre du catalogue d'un fournisseur (importé en CSV / Excel).
 model RxLens {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   tenantId       String
-  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   supplierId     String
-  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier       Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   reference      String
   designation    String
   /// UNIFOCAL | PROGRESSIF | BIFOCAL | DEGRESSIF
@@ -3027,12 +3082,12 @@ model RxLens {
   shopName       String?
   shopPrice      Int?
   /// Anciens prix : [{ price, until }] — le plus récent en dernier.
-  priceHistory   Json     @default("[]")
-  priceUpdatedAt DateTime @default(now())
-  isActive       Boolean  @default(true)
-  isDemo         Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  priceHistory   Json      @default("[]")
+  priceUpdatedAt DateTime  @default(now())
+  isActive       Boolean   @default(true)
+  isDemo         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   orders         RxOrder[]
 
   @@unique([tenantId, supplierId, reference])

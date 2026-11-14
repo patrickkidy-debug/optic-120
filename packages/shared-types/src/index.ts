@@ -4229,3 +4229,4 @@ export function tenantCurrencyInfo(tenant: {
 
 export * from './oculotrack.js';
 export * from './oculorx.js';
+export * from './oculolab.js';

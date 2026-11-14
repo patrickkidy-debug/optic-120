@@ -22,6 +22,7 @@ export const TENANT_MODELS = new Set<string>([
   'CustomerDocument',
   'OpticalPrescription',
   'OpticalMeasurement',
+  'FrameTrace',
   'TrackPackage',
   'TrackPackageItem',
   'TrackEvent',
