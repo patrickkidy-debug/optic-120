@@ -56,6 +56,9 @@ export interface UserDto {
   phone: string | null;
   isActive: boolean;
   lastLoginAt: string | null;
+  createdAt?: string;
+  /** Bloqué après trop d'essais de mot de passe (débloqué par une réinitialisation). */
+  locked?: boolean;
   role: { id: string; name: string; code: string; allBranches?: boolean };
   branches: { id: string; name: string }[];
 }
@@ -77,6 +80,10 @@ export async function updateUser(id: string, input: Partial<UserCreateInput>) {
 
 export async function deactivateUser(id: string) {
   await api.post(`/users/${id}/deactivate`);
+}
+
+export async function reactivateUser(id: string) {
+  await api.post(`/users/${id}/reactivate`);
 }
 
 /** Réinitialise le mot de passe sans email : renvoie un mot de passe temporaire à transmettre soi-même. */

@@ -64,4 +64,18 @@ export async function usersRoutes(app: FastifyInstance): Promise<void> {
     });
     return reply.send({ ok: true });
   });
+
+  app.post('/:id/reactivate', { preHandler: requirePermission('rbac.users.deactivate') }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    await usersService.reactivateUser(req.auth!.tenantId, id);
+    await recordAudit({
+      tenantId: req.auth!.tenantId,
+      userId: req.auth!.userId,
+      action: 'USER_REACTIVATED',
+      entity: 'User',
+      entityId: id,
+      ...requestMeta(req),
+    });
+    return reply.send({ ok: true });
+  });
 }

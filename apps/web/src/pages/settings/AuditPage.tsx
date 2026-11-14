@@ -14,6 +14,7 @@ const ACTION_TONE: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'n
   LOGIN_LOCKED: 'danger',
   SALE_CANCELLED: 'danger',
   USER_DEACTIVATED: 'danger',
+  USER_REACTIVATED: 'success',
   SECURITY_REFRESH_REUSE_DETECTED: 'danger',
   ANOMALY_DECLARED: 'info',
   ANOMALY_SUBMITTED: 'warning',

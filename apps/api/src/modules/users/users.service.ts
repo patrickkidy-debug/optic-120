@@ -19,6 +19,10 @@ export async function listUsers(tenantId: string) {
     phone: u.phone,
     isActive: u.isActive,
     lastLoginAt: u.lastLoginAt,
+    createdAt: u.createdAt,
+    // Compte bloqué après trop d'essais de mot de passe (se débloque seul,
+    // ou tout de suite par une réinitialisation du mot de passe).
+    locked: Boolean(u.lockedUntil && u.lockedUntil > new Date()),
     role: { id: u.role.id, name: u.role.name, code: u.role.code, allBranches: u.role.allBranches },
     branches: u.branches.map((b) => ({ id: b.branch.id, name: b.branch.name })),
   }));
@@ -128,6 +132,19 @@ export async function resetUserPassword(tenantId: string, id: string): Promise<{
     }),
   ]);
   return { tempPassword };
+}
+
+/**
+ * Réactive un compte désactivé (départ annulé, saisonnier qui revient…).
+ * Un compte désactivé occupe déjà sa place dans le quota de l'offre (getUsage
+ * compte tous les comptes) : la réactivation ne dépasse donc jamais la limite.
+ */
+export async function reactivateUser(tenantId: string, id: string) {
+  const result = await prisma.user.updateMany({
+    where: { id, tenantId },
+    data: { isActive: true, failedLoginCount: 0, lockedUntil: null },
+  });
+  if (result.count === 0) throw notFound('Utilisateur introuvable');
 }
 
 export async function deactivateUser(tenantId: string, id: string, currentUserId: string) {
