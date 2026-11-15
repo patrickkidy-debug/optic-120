@@ -286,8 +286,9 @@ export function OculoLabEditor() {
                 setBaseRadii(r.radii);
                 setConfidence(r.confidence);
                 setPhotoUrl(r.photoUrl);
-                // Photo d'une monture cerclée : le verre entre dans le drageoir (≈ 0,5 mm).
-                setBevel(frameType === 'FULL_RIM' ? 0.5 : 0);
+                // Bord intérieur d'un cercle mesuré : le verre entre dans le drageoir (≈ 0,5 mm).
+                setBevel(r.innerRim && frameType === 'FULL_RIM' ? 0.5 : 0);
+                if (r.dbl) setDbl(r.dbl);
                 setStep(2);
               }}
             />

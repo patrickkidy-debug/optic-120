@@ -153,6 +153,54 @@ export function traceContour(g: GrayImage, seed: Pt2, opts: TraceOptions): Trace
   return { radii: smoothCircular(radii, 2), confidence: Math.round((strong / n) * 100) };
 }
 
+export interface AutoTraceResult extends TraceResult {
+  /** Centre retenu (px de l'image de travail) : centre de boîte du contour. */
+  seed: Pt2;
+  background: 'light' | 'dark';
+}
+
+/** Centre de boîte du contour `radii` tracé autour de `seed`. */
+function boxCenter(radii: readonly number[], seed: Pt2): Pt2 {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  radii.forEach((r, i) => {
+    const t = (i * 2 * Math.PI) / radii.length;
+    const x = seed.x + r * Math.cos(t), y = seed.y - r * Math.sin(t);
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  });
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+}
+
+/**
+ * Détection sans clic : part de `start` (centre de la photo par défaut),
+ * essaie fond clair et fond foncé, puis recentre deux fois le point de départ
+ * sur le centre de boîte trouvé. Un départ décentré dans le verre suffit.
+ */
+export function autoTrace(
+  g: GrayImage,
+  opts: { start?: Pt2; minR?: number; maxR?: number; background?: 'light' | 'dark' } = {},
+): AutoTraceResult {
+  const side = Math.min(g.w, g.h);
+  const minR = opts.minR ?? side * 0.04;
+  const maxR = opts.maxR ?? side * 0.46;
+  const backgrounds = opts.background ? [opts.background] : (['light', 'dark'] as const);
+  let best: AutoTraceResult | null = null;
+  for (const background of backgrounds) {
+    let seed = opts.start ?? { x: g.w / 2, y: g.h / 2 };
+    let res = traceContour(g, seed, { minR, maxR, background });
+    for (let i = 0; i < 2; i++) {
+      const c = boxCenter(res.radii, seed);
+      if (Math.hypot(c.x - seed.x, c.y - seed.y) < 1) break;
+      seed = c;
+      res = traceContour(g, seed, { minR, maxR, background });
+    }
+    if (!best || res.confidence > best.confidence) best = { ...res, seed, background };
+  }
+  return best!;
+}
+
 function smoothCircular(v: number[], h: number): number[] {
   const n = v.length;
   return v.map((_, i) => {

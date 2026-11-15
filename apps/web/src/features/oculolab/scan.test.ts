@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shapeStats } from '@oculo/shared-types';
-import { boxBlur, pixelsToRadiiMm, pullContour, traceContour, type GrayImage } from './scan';
+import { autoTrace, boxBlur, pixelsToRadiiMm, pullContour, traceContour, type GrayImage } from './scan';
 
 /**
  * Photo synthétique : feuille blanche, cercle de monture ovale foncé
@@ -53,6 +53,28 @@ describe('détection de contour', () => {
     const st = shapeStats(pixelsToRadiiMm(res.radii, 4, false));
     expect(st.a).toBeCloseTo(60, 0);
     expect(st.b).toBeCloseTo(40, 0);
+  });
+});
+
+describe('détection automatique', () => {
+  it('sans clic, départ décentré : recentre et retrouve la forme', () => {
+    const g = syntheticFrame(120, 80, { noise: 20 });
+    const res = autoTrace(g, { start: { x: 250, y: 175 } });
+    expect(res.background).toBe('light');
+    expect(Math.abs(res.seed.x - 200)).toBeLessThan(3);
+    expect(Math.abs(res.seed.y - 150)).toBeLessThan(3);
+    const st = shapeStats(pixelsToRadiiMm(res.radii, 4, false));
+    expect(st.a).toBeCloseTo(60, 0);
+    expect(st.b).toBeCloseTo(40, 0);
+  });
+
+  it('calibre gravé seul : l’échelle vient de A, B garde la proportion de la photo', () => {
+    const g = syntheticFrame(120, 80);
+    const res = autoTrace(g);
+    const pxPerMm = shapeStats(res.radii).a / 52;
+    const st = shapeStats(pixelsToRadiiMm(res.radii, pxPerMm, false));
+    expect(st.a).toBeCloseTo(52, 1);
+    expect(st.b).toBeCloseTo((52 * 80) / 120, 0);
   });
 });
 
