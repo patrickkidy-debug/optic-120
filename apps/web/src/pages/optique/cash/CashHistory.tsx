@@ -309,8 +309,8 @@ function SessionReportModal({ id, onClose }: { id: string; onClose: () => void }
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi icon={Wallet} label={tr('cashHistory.collected')} value={formatCurrency(r.salesTotal)} sub={tr('cashHistory.salesAndPayments', { s: r.salesCount, p: r.paymentsCount })} />
             <Kpi icon={Receipt} label={tr('cashHistory.colExpenses')} value={r.expensesTotal ? `− ${formatCurrency(r.expensesTotal)}` : formatCurrency(0)} sub={tr('cashHistory.items', { n: r.expensesCount })} tone={r.expensesTotal ? 'danger' : undefined} />
-            <Kpi icon={ArrowDownLeft} label={tr('cashHistory.transfersNet')} value={`${r.transfersIn - r.transfersOut >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(r.transfersIn - r.transfersOut))}`} sub={`+${formatCurrency(r.transfersIn)} / −${formatCurrency(r.transfersOut)}`} />
             <Kpi icon={CheckCircle2} label={tr('cashHistory.colNet')} value={formatCurrency(r.netTotal)} sub={tr('cashHistory.netHint')} strong />
+            <Kpi icon={ArrowDownLeft} label={tr('cashHistory.transfersNet')} value={`${r.transfersIn - r.transfersOut >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(r.transfersIn - r.transfersOut))}`} sub={tr('cashHistory.transfersHint')} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -619,8 +619,8 @@ function printReport(r: CashSessionReport, tenant: ReportTenant) {
   <div class="kpis">
     ${kpi(tr('cashHistory.collected'), formatCurrency(r.salesTotal), tr('cashHistory.salesAndPayments', { s: r.salesCount, p: r.paymentsCount }))}
     ${kpi(tr('cashHistory.colExpenses'), r.expensesTotal ? `− ${formatCurrency(r.expensesTotal)}` : formatCurrency(0), tr('cashHistory.items', { n: r.expensesCount }), r.expensesTotal ? 'danger' : '')}
-    ${kpi(tr('cashHistory.transfersNet'), `${transfersNet >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(transfersNet))}`, `+${formatCurrency(r.transfersIn)} / −${formatCurrency(r.transfersOut)}`)}
     ${kpi(tr('cashHistory.colNet'), formatCurrency(r.netTotal), tr('cashHistory.netHint'), 'main')}
+    ${kpi(tr('cashHistory.transfersNet'), `${transfersNet >= 0 ? '+' : '−'} ${formatCurrency(Math.abs(transfersNet))}`, tr('cashHistory.transfersHint'))}
   </div>
 
   <div class="cols">

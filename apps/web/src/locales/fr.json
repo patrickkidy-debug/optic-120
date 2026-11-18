@@ -1056,7 +1056,7 @@
     "closedSuccess": "Caisse fermée avec succès",
     "dayTotal": "Total encaissé de la journée",
     "expenses": "Dépenses",
-    "netAfterExpenses": "Net après dépenses",
+    "netAfterExpenses": "Résultat du jour",
     "openingFloat": "Fond de caisse",
     "cashSales": "Ventes espèces",
     "netTransfers": "Versements nets",
@@ -1076,7 +1076,7 @@
     "cashed": "encaissé : {{amount}}",
     "cashedOnCancelled": "Encaissé sur ventes annulées",
     "cancelledHint": "Ce montant est inclus dans le total encaissé ci-dessus. S'il a été remboursé au client, retirez-le du montant compté.",
-    "expectedCash": "Espèces attendues (fond + ventes espèces - dépenses)",
+    "expectedCash": "Espèces attendues",
     "countedCash": "Montant compté en caisse (espèces)",
     "prefilledHint": "Pré-rempli avec les espèces attendues (fond + ventes - dépenses) — ajustez-le au comptage réel.",
     "closeRegister": "Fermer la caisse",
@@ -1094,7 +1094,9 @@
     "noteOptional": "Note / Justificatif (optionnel)",
     "notePlaceholder": "Détails supplémentaires...",
     "saveExpense": "Enregistrer la sortie",
-    "notFromDrawer": "hors caisse"
+    "notFromDrawer": "hors caisse",
+    "dayResultTitle": "Résultat du jour (ventes − dépenses)",
+    "drawerTitle": "Espèces en caisse"
   },
   "saleStatus": {
     "DRAFT": "Brouillon",
@@ -4849,7 +4851,7 @@
     "colStaff": "Caissier",
     "colCollected": "Encaissé",
     "colExpenses": "Dépenses",
-    "colNet": "Net de la session",
+    "colNet": "Résultat",
     "colVariance": "Écart de caisse",
     "now": "en cours",
     "closedBy": "fermée par {{name}}",
@@ -4868,7 +4870,7 @@
     "transfersNet": "Versements (net)",
     "transfersIn": "Apports",
     "transfersOut": "Retraits",
-    "netHint": "Encaissé + versements − dépenses",
+    "netHint": "Encaissé − dépenses",
     "byMethod": "Répartition par moyen de paiement",
     "reconciliation": "Rapprochement des espèces",
     "paymentsList": "Encaissements ({{n}})",
@@ -4890,7 +4892,8 @@
     "durationLabel": "Durée",
     "signCashier": "Signature du caissier",
     "signManager": "Signature du responsable",
-    "generatedOn": "Édité le {{date}}"
+    "generatedOn": "Édité le {{date}}",
+    "transfersHint": "Espèces seulement, hors résultat"
   },
   "bday": {
     "title": "Anniversaires",

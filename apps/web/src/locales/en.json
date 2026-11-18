@@ -1056,7 +1056,7 @@
     "closedSuccess": "Register closed successfully",
     "dayTotal": "Total collected today",
     "expenses": "Expenses",
-    "netAfterExpenses": "Net after expenses",
+    "netAfterExpenses": "Day result",
     "openingFloat": "Opening float",
     "cashSales": "Cash sales",
     "netTransfers": "Net transfers",
@@ -1076,7 +1076,7 @@
     "cashed": "collected: {{amount}}",
     "cashedOnCancelled": "Collected on cancelled sales",
     "cancelledHint": "This amount is included in the total collected above. If it was refunded to the customer, remove it from the counted amount.",
-    "expectedCash": "Expected cash (float + cash sales - expenses)",
+    "expectedCash": "Expected cash",
     "countedCash": "Cash counted in register",
     "prefilledHint": "Pre-filled with expected cash (float + sales - expenses) — adjust it to the actual count.",
     "closeRegister": "Close register",
@@ -1094,7 +1094,9 @@
     "noteOptional": "Note / Receipt (optional)",
     "notePlaceholder": "Additional details...",
     "saveExpense": "Save payout",
-    "notFromDrawer": "not from the drawer"
+    "notFromDrawer": "not from the drawer",
+    "dayResultTitle": "Day result (sales − expenses)",
+    "drawerTitle": "Cash in the drawer"
   },
   "saleStatus": {
     "DRAFT": "Draft",
@@ -4849,7 +4851,7 @@
     "colStaff": "Cashier",
     "colCollected": "Collected",
     "colExpenses": "Expenses",
-    "colNet": "Session net",
+    "colNet": "Result",
     "colVariance": "Cash variance",
     "now": "ongoing",
     "closedBy": "closed by {{name}}",
@@ -4868,7 +4870,7 @@
     "transfersNet": "Transfers (net)",
     "transfersIn": "Cash in",
     "transfersOut": "Cash out",
-    "netHint": "Collected + transfers − expenses",
+    "netHint": "Collected − expenses",
     "byMethod": "Breakdown by payment method",
     "reconciliation": "Cash reconciliation",
     "paymentsList": "Payments ({{n}})",
@@ -4890,7 +4892,8 @@
     "durationLabel": "Duration",
     "signCashier": "Cashier signature",
     "signManager": "Manager signature",
-    "generatedOn": "Printed on {{date}}"
+    "generatedOn": "Printed on {{date}}",
+    "transfersHint": "Cash only, not in the result"
   },
   "bday": {
     "title": "Birthdays",

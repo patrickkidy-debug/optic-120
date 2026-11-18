@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -150,14 +150,16 @@ export function CashRegisterPage() {
               </div>
               {closeResult.salesTotal !== undefined && closeResult.netTotal !== undefined && (
                 <>
+                  <SectionTitle>{t('cash.dayResultTitle')}</SectionTitle>
                   <SummaryRow label={t('cash.dayTotal')} value={formatCurrency(closeResult.salesTotal)} />
                   {closeResult.expenses > 0 && (
                     <SummaryRow label={t('cash.expenses')} value={`- ${formatCurrency(closeResult.expenses)}`} />
                   )}
                   <SummaryRow label={t('cash.netAfterExpenses')} value={formatCurrency(closeResult.netTotal)} />
-                  <div className="my-1 border-t" />
+                  <div className="my-2 border-t" />
                 </>
               )}
+              <SectionTitle>{t('cash.drawerTitle')}</SectionTitle>
               <SummaryRow label={t('cash.openingFloat')} value={formatCurrency(closeResult.opening)} />
               <SummaryRow label={t('cash.cashSales')} value={`+ ${formatCurrency(closeResult.cashSales)}`} />
               {closeResult.transfersNet !== undefined && closeResult.transfersNet !== 0 && (
@@ -235,15 +237,6 @@ export function CashRegisterPage() {
                       <span className="text-content-muted">{t('cash.expensesCount', { count: summary.expensesCount })}</span>
                       <span className="font-medium text-danger">- {formatCurrency(summary.expensesTotal)}</span>
                     </div>
-                    {summary.transfersNet !== undefined && summary.transfersNet !== 0 && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-content-muted">{t('cash.netTransfers')}</span>
-                        <span className={`font-medium ${summary.transfersNet >= 0 ? 'text-success' : 'text-danger'}`}>
-                          {summary.transfersNet > 0 ? '+' : ''}
-                          {formatCurrency(summary.transfersNet)}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-center justify-between border-t pt-1.5">
                       <span className="text-sm font-semibold text-content">{t('cash.netAfterExpenses')}</span>
                       <span className="font-display font-bold text-content">{formatCurrency(summary.netTotal)}</span>
@@ -334,10 +327,25 @@ export function CashRegisterPage() {
               {canClose ? (
                 <div className="mt-4 border-t pt-4">
                   {summary && (
-                    <SummaryRow
-                      label={t('cash.expectedCash')}
-                      value={formatCurrency(summary.expectedCash)}
-                    />
+                    <div className="mb-3">
+                      <SectionTitle>{t('cash.drawerTitle')}</SectionTitle>
+                      <SummaryRow label={t('cash.openingFloat')} value={formatCurrency(summary.openingAmount)} />
+                      <SummaryRow label={t('cash.cashSales')} value={`+ ${formatCurrency(summary.cash)}`} />
+                      {!!summary.transfersNet && (
+                        <SummaryRow
+                          label={t('cash.netTransfers')}
+                          value={`${summary.transfersNet > 0 ? '+' : '-'} ${formatCurrency(Math.abs(summary.transfersNet))}`}
+                        />
+                      )}
+                      {(summary.cashExpensesTotal ?? summary.expensesTotal) > 0 && (
+                        <SummaryRow
+                          label={t('cash.expensesDeducted')}
+                          value={`- ${formatCurrency(summary.cashExpensesTotal ?? summary.expensesTotal)}`}
+                        />
+                      )}
+                      <div className="my-1 border-t" />
+                      <SummaryRow label={t('cash.expectedCash')} value={formatCurrency(summary.expectedCash)} />
+                    </div>
                   )}
                   <Field label={t('cash.countedCash')}>
                     <input
@@ -508,4 +516,8 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-content">{value}</span>
     </div>
   );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <p className="mb-1 mt-1 text-xs font-semibold uppercase tracking-wide text-content-faint">{children}</p>;
 }

@@ -89,7 +89,8 @@ async function computeTotals(db: TenantPrisma, r: RegisterRow) {
     cashExpensesTotal,
     transfersIn,
     transfersOut,
-    netTotal: salesTotal + transfersIn - transfersOut - expensesTotal,
+    // Résultat : encaissé − dépenses ; les versements ne touchent que les espèces.
+    netTotal: salesTotal - expensesTotal,
     openingAmount: opening,
     expectedAmount: expected,
     countedAmount: counted,

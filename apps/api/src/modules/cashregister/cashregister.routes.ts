@@ -219,7 +219,10 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       transfersInTotal,
       transfersOutTotal,
       transfersNet,
-      netTotal: total + transfersNet - expensesTotal,
+      // Résultat du jour : encaissements − dépenses. Les versements (caisse ⇄
+      // banque, apports, retraits) déplacent l'argent sans rien rapporter ni
+      // coûter : ils ne pèsent que sur les espèces attendues.
+      netTotal: total - expensesTotal,
       cancelled,
       cancelledCount: cancelled.length,
       cancelledCashedTotal,
@@ -332,7 +335,10 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       openingAmount,
       transfersNet,
       salesTotal,
-      netTotal: salesTotal + transfersNet - expensesTotal,
+      // Résultat du jour : encaissements − dépenses. Les versements (caisse ⇄
+      // banque, apports, retraits) déplacent l'argent sans rien rapporter ni
+      // coûter : ils ne pèsent que sur les espèces attendues.
+      netTotal: salesTotal - expensesTotal,
     });
   });
 }

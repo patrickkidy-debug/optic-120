@@ -1056,7 +1056,7 @@
     "closedSuccess": "Caixa fechada com sucesso",
     "dayTotal": "Total recebido no dia",
     "expenses": "Despesas",
-    "netAfterExpenses": "Líquido após despesas",
+    "netAfterExpenses": "Resultado do dia",
     "openingFloat": "Fundo de caixa",
     "cashSales": "Vendas em dinheiro",
     "netTransfers": "Transferências líquidas",
@@ -1076,7 +1076,7 @@
     "cashed": "recebido: {{amount}}",
     "cashedOnCancelled": "Recebido em vendas canceladas",
     "cancelledHint": "Este valor está incluído no total recebido acima. Se foi reembolsado ao cliente, retire-o do valor contado.",
-    "expectedCash": "Dinheiro esperado (fundo + vendas em dinheiro - despesas)",
+    "expectedCash": "Dinheiro esperado",
     "countedCash": "Valor contado em caixa (dinheiro)",
     "prefilledHint": "Pré-preenchido com o dinheiro esperado (fundo + vendas - despesas) — ajuste à contagem real.",
     "closeRegister": "Fechar a caixa",
@@ -1094,7 +1094,9 @@
     "noteOptional": "Nota / Comprovativo (opcional)",
     "notePlaceholder": "Detalhes adicionais...",
     "saveExpense": "Registar a saída",
-    "notFromDrawer": "fora da caixa"
+    "notFromDrawer": "fora da caixa",
+    "dayResultTitle": "Resultado do dia (vendas − despesas)",
+    "drawerTitle": "Dinheiro na caixa"
   },
   "saleStatus": {
     "DRAFT": "Rascunho",
@@ -4849,7 +4851,7 @@
     "colStaff": "Operador",
     "colCollected": "Recebido",
     "colExpenses": "Despesas",
-    "colNet": "Líquido da sessão",
+    "colNet": "Resultado",
     "colVariance": "Diferença de caixa",
     "now": "em curso",
     "closedBy": "fechada por {{name}}",
@@ -4868,7 +4870,7 @@
     "transfersNet": "Movimentos (líquido)",
     "transfersIn": "Entradas",
     "transfersOut": "Saídas",
-    "netHint": "Recebido + movimentos − despesas",
+    "netHint": "Recebido − despesas",
     "byMethod": "Distribuição por meio de pagamento",
     "reconciliation": "Conferência de numerário",
     "paymentsList": "Pagamentos ({{n}})",
@@ -4890,7 +4892,8 @@
     "durationLabel": "Duração",
     "signCashier": "Assinatura do operador",
     "signManager": "Assinatura do responsável",
-    "generatedOn": "Emitido em {{date}}"
+    "generatedOn": "Emitido em {{date}}",
+    "transfersHint": "Só dinheiro, fora do resultado"
   },
   "bday": {
     "title": "Aniversários",
