@@ -208,7 +208,9 @@ export function PosPage() {
   const families = POS_FAMILIES.filter((f) => (stock ?? []).some((p) => p.category === f.key));
   const products = (stock ?? []).filter(
     (p) =>
-      (posCat === 'ALL' || p.category === posCat) &&
+      // Une recherche tapée porte sur tout le catalogue : un verre reste
+      // trouvable même si le filtre « Montures » est resté sélectionné.
+      (posCat === 'ALL' || search.trim() !== '' || p.category === posCat) &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase()) ||
         (p.ean ?? '').toLowerCase().includes(search.toLowerCase())),

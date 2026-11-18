@@ -11,6 +11,8 @@ import { requirePermission } from '../../middlewares/rbac-guard.js';
 import { assertBranchAccess, hasAllBranches } from '../../middlewares/rbac-guard.js';
 import { badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
+import { ensureLensTypeProducts } from '../../lib/lens-types-sync.js';
+import { logger } from '../../lib/logger.js';
 import * as stockService from './stock.service.js';
 
 const adjustBody = stockAdjustSchema.extend({
@@ -25,6 +27,13 @@ export async function stockRoutes(app: FastifyInstance): Promise<void> {
     const q = req.query as { branchId?: string; lowStockOnly?: string };
     if (!q.branchId) throw badRequest('branchId requis');
     assertBranchAccess(req, q.branchId);
+    // Types de verres des Réglages : fiche produit créée au besoin, pour qu'ils
+    // soient trouvables dans la caisse et les ventes sans import Excel.
+    if (req.db) {
+      await ensureLensTypeProducts(req.db, req.auth!.tenantId).catch((err) =>
+        logger.warn({ err }, 'Synchronisation des types de verres impossible'),
+      );
+    }
     const rows = await stockService.getStockForBranch(
       req.auth!.tenantId,
       q.branchId,

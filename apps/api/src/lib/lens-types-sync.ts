@@ -62,3 +62,27 @@ export async function syncLensTypeProducts(db: TenantPrisma, tenantId: string, p
     else await db.product.deleteMany({ where: { id: p.id } });
   }
 }
+
+/**
+ * Rattrapage sans action de l'opticien : types de verres enregistrés avant la
+ * publication automatique (ou jamais ré-enregistrés) sans fiche produit. Appelé
+ * quand la caisse ou une vente charge le catalogue : deux lectures légères, et
+ * la synchronisation complète seulement s'il manque une fiche ou un prix.
+ */
+export async function ensureLensTypeProducts(db: TenantPrisma, tenantId: string): Promise<void> {
+  const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { lensPricing: true } });
+  const pricing = tenant?.lensPricing as LensPricing | null;
+  const types = (pricing?.customTypes ?? []).filter((c) => c.name.trim());
+  if (!pricing || !types.length) return;
+  const skus = types.map((c) => skuOf(c.id));
+  const existing = await db.product.findMany({
+    where: { sku: { in: skus }, category: ProductCategory.VERRE, isActive: true },
+    select: { sku: true, name: true, sellPrice: true },
+  });
+  const bySku = new Map(existing.map((p) => [p.sku, p]));
+  const outdated = types.some((c) => {
+    const p = bySku.get(skuOf(c.id));
+    return !p || p.name !== c.name.trim() || Number(p.sellPrice) !== Number(c.price);
+  });
+  if (outdated) await syncLensTypeProducts(db, tenantId, pricing);
+}
