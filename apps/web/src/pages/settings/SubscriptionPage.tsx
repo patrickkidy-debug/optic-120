@@ -680,6 +680,17 @@ function BillingPaymentModal({
         </span>
         <span className="font-display text-lg font-bold text-content">{formatCurrency(target.amount, target.currency)}</span>
       </div>
+      {/* Frais d'hébergement : seulement pour un paiement en ligne par la
+          passerelle (Wave en direct et règlement manuel n'en ont pas). */}
+      {!!payInfo?.gatewayFee && payInfo.gateway && !outsideCfa && phase === 'choose' && (
+        <p className="-mt-2 mb-4 rounded-xl bg-surface-2 px-3.5 py-2 text-xs text-content-muted">
+          {tr('ui.SubscriptionPage.hostingFeeNote', {
+            fee: formatCurrency(payInfo.gatewayFee, 'XOF'),
+            total: formatCurrency(target.amount + payInfo.gatewayFee, target.currency),
+          })}
+          {payInfo.waveDirect && getActiveCurrency() === 'XOF' ? ` ${tr('ui.SubscriptionPage.hostingFeeWaveFree')}` : ''}
+        </p>
+      )}
       {/* Hors zone FCFA (Europe…) : réglé par virement, en francs CFA. */}
       {outsideCfa && (
         <p className="-mt-2 mb-4 text-xs text-content-muted">

@@ -5,6 +5,7 @@ import { getPaymentProviderStatus } from '../../features/billing/api';
 import { Badge } from '../../components/ui';
 
 const LABELS: Record<string, string> = {
+  geniuspay: 'GeniusPay',
   kkiapay: 'KkiaPay',
   dexpay: 'DexPay',
   wave: 'Wave',
@@ -42,7 +43,8 @@ export function PaymentProviderCard() {
   };
 
   const missingWebhookUrl = data.active !== 'simulation' && !data.subscriptionWebhookUrl;
-  const kkia = (data.selected ?? 'kkiapay') === 'kkiapay';
+  const genius = (data.selected ?? 'geniuspay') === 'geniuspay';
+  const kkia = data.selected === 'kkiapay';
   const dexpay = data.selected === 'dexpay';
 
   return (
@@ -60,9 +62,26 @@ export function PaymentProviderCard() {
       {data.simulation ? (
         <p className="rounded-lg bg-[color:var(--danger)]/10 px-3 py-2 text-sm text-danger">
           Aucune passerelle réelle configurée : les paiements sont simulés.
+          {genius && ' Définissez GENIUSPAY_API_KEY et GENIUSPAY_API_SECRET sur l’API.'}
           {kkia && ' Définissez KKIAPAY_PUBLIC_KEY, KKIAPAY_PRIVATE_KEY et KKIAPAY_SECRET_KEY sur l’API.'}
           {dexpay && ' Définissez DEXPAY_PUBLIC_KEY et DEXPAY_SECRET_KEY sur l’API.'} En production,
           aucun abonnement ne peut s'activer en ligne dans cet état.
+        </p>
+      ) : genius ? (
+        <p className="text-sm text-content-muted">
+          Les abonnements sont encaissés par <strong>GeniusPay</strong>
+          {data.geniusPayEnvironment === 'sandbox' && (
+            <span className="text-warning"> en mode test (clé pk_sandbox_ : aucun argent réel)</span>
+          )}
+          . Le client choisit son opérateur ou la carte sur la page GeniusPay.{' '}
+          {data.geniusPayHostingFee ? (
+            <>
+              Frais d'hébergement ajoutés à chaque paiement :{' '}
+              <strong>{data.geniusPayHostingFee.toLocaleString('fr-FR')} FCFA</strong> (GENIUSPAY_HOSTING_FEE).
+            </>
+          ) : (
+            "Aucun frais d'hébergement ajouté (GENIUSPAY_HOSTING_FEE=0)."
+          )}
         </p>
       ) : dexpay ? (
         <p className="text-sm text-content-muted">
@@ -86,6 +105,33 @@ export function PaymentProviderCard() {
           clé Moneroo, l'API refuse de démarrer en production : aucun abonnement ne peut s'activer
           sans paiement réel.
         </p>
+      )}
+
+      {genius && data.geniusPayConfigured && (
+        <div className="mt-3 rounded-xl border p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-content-muted">
+            Webhook à déclarer chez GeniusPay
+          </p>
+          {!data.geniusPayWebhookUrl ? (
+            <p className="rounded-lg bg-[color:var(--warning)]/10 px-3 py-2 text-sm text-warning">
+              <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden="true" />
+              PUBLIC_API_URL n'est pas défini sur l'API : GeniusPay n'a aucune adresse où notifier un paiement.
+            </p>
+          ) : (
+            <WebhookRow label="Abonnements" url={data.geniusPayWebhookUrl} copied={copied} onCopy={copy} />
+          )}
+          <p className="mt-2 text-xs text-content-faint">
+            Secret du webhook (whsec_) :{' '}
+            {data.geniusPayWebhookSecret ? (
+              <span className="text-success">renseigné</span>
+            ) : (
+              <span className="text-danger">
+                absent — webhooks refusés (GENIUSPAY_WEBHOOK_SECRET). Le paiement est quand même relu quand le
+                client revient sur l'écran d'abonnement.
+              </span>
+            )}
+          </p>
+        </div>
       )}
 
       {kkia && data.kkiapayConfigured && (

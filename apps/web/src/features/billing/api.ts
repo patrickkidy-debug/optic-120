@@ -143,6 +143,8 @@ export interface PayInfo {
   gatewayName?: string;
   /** Wave en direct (sans agrégateur) disponible. */
   waveDirect?: boolean;
+  /** Frais d'hébergement d'un paiement par la passerelle (FCFA, 0 = aucun). */
+  gatewayFee?: number;
   /** Coordonnées Mobile Money de l'éditeur pour un règlement direct. */
   manual: { number: string; name: string | null; network: string | null } | null;
   /** Coordonnées bancaires de l'éditeur pour un règlement par virement. */
@@ -540,7 +542,14 @@ export async function getDemoEngagement(): Promise<DemoEngagementRow[]> {
 
 export interface PaymentProviderStatus {
   active: string;
-  selected?: 'kkiapay' | 'dexpay' | 'moneroo' | 'chariow';
+  selected?: 'geniuspay' | 'kkiapay' | 'dexpay' | 'moneroo' | 'chariow';
+  geniusPayConfigured?: boolean;
+  geniusPayWebhookSecret?: boolean;
+  /** « live », « sandbox » ou vide (préfixe de la clé). */
+  geniusPayEnvironment?: string;
+  geniusPayWebhookUrl?: string;
+  /** Frais d'hébergement ajoutés aux paiements GeniusPay (FCFA). */
+  geniusPayHostingFee?: number;
   kkiapayConfigured?: boolean;
   waveConfigured?: boolean;
   dexpayConfigured?: boolean;

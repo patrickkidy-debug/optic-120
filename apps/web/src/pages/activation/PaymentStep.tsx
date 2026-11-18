@@ -37,6 +37,7 @@ const METHOD_LABELS: Record<string, string> = {
 /** 1440 -> « 24 heures », 4320 -> « 3 jours », 45 -> « 45 minutes ». */
 /** Nom affiché de la passerelle des paiements en ligne. */
 const GATEWAY_LABELS: Record<string, string> = {
+  geniuspay: 'GeniusPay',
   kkiapay: 'KkiaPay',
   dexpay: 'DexPay',
   moneroo: 'Moneroo',
@@ -88,6 +89,7 @@ export function PaymentStep({
   onBankTransfer,
   waveDirect = false,
   gatewayName = '',
+  gatewayFee = 0,
   contact,
 }: {
   planCode: string | null;
@@ -106,6 +108,8 @@ export function PaymentStep({
   waveDirect?: boolean;
   /** Passerelle des autres moyens (« kkiapay », « dexpay »…). */
   gatewayName?: string;
+  /** Frais d'hébergement d'un paiement par la passerelle (FCFA, 0 = aucun). */
+  gatewayFee?: number;
   onBankTransfer: () => void;
   /** Coordonnées saisies à l'étape 4, reprises dans le message WhatsApp. */
   contact: { fullName?: string | null; establishment?: string | null; city?: string | null };
@@ -141,6 +145,9 @@ export function PaymentStep({
   const trial = trialMinutes > 0;
   const period = tr(cycle === 'MONTHLY' ? 'units.perMonth' : cycle === 'QUARTERLY' ? 'units.per3Months' : 'units.per6Months');
   const isTransfer = method === 'BANK_TRANSFER';
+  // Frais d'hébergement : seulement pour un paiement en ligne par la passerelle
+  // (pas Wave en direct, pas le virement), et en FCFA.
+  const fee = !isTransfer && !viaWave && !outsideCfa && method ? gatewayFee : 0;
 
   return (
     <ActivationShell
@@ -182,6 +189,18 @@ export function PaymentStep({
           {money(total)} {currency === 'XOF' ? 'FCFA' : currency}
           <span className="ml-1 text-sm font-normal text-content-muted">{period}</span>
         </p>
+        {fee > 0 && (
+          <div className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+            <p className="flex justify-between text-content-muted">
+              <span>{tr('ui.PaymentStep.hostingFee')}</span>
+              <span>+ {money(fee)} FCFA</span>
+            </p>
+            <p className="flex justify-between font-semibold text-content">
+              <span>{tr('ui.PaymentStep.totalToPay')}</span>
+              <span>{money(total + fee)} FCFA</span>
+            </p>
+          </div>
+        )}
         {outsideCfa && (
           <p className="mt-2 text-xs text-content-muted">
             {tr('ui.PaymentStep.regleParVirementBancaireEn')} {xofLabel(billedXof, currency === 'EUR')} {period}.

@@ -2308,7 +2308,9 @@
       "envoyerMonRecuSurWhatsapp": "Enviar o meu comprovativo por WhatsApp",
       "rappelDesCoordonneesBancaires": "Lembrete dos dados bancários",
       "enAttendantLaVerification": "Enquanto aguarda a verificação",
-      "decouvrezLeLogicielGratuitementPendant": "Descubra o software gratuitamente durante"
+      "decouvrezLeLogicielGratuitementPendant": "Descubra o software gratuitamente durante",
+      "hostingFee": "Taxa de alojamento (pagamento online)",
+      "totalToPay": "Total a pagar"
     },
     "SoftwarePreview": {
       "tableauDeBord": "Painel",
@@ -3830,7 +3832,7 @@
       "n3Mois": "3 meses",
       "n6Mois": "6 meses",
       "economisez": "Poupe",
-      "redirectionVersLePaiementSecurise": "A redirecionar para o pagamento seguro KkiaPay…",
+      "redirectionVersLePaiementSecurise": "A redirecionar para o pagamento seguro…",
       "abonnement": "Subscrição",
       "votreOffreVotreConsommationEt": "O seu plano, consumo e faturas",
       "offre": "Plano",
@@ -3897,10 +3899,12 @@
       "desQueNousAuronsVerifie": "Assim que verificarmos o seu pagamento, a sua subscrição será ativada. Não precisa de fazer mais nada.",
       "envoyerMonRecuSurWhatsapp": "Enviar o meu comprovativo por WhatsApp",
       "fermer": "Fechar",
-      "finalisezLePaiementDansL": "Conclua o pagamento na janela KkiaPay e volte aqui. Confirmação automática em curso…",
+      "finalisezLePaiementDansL": "Conclua o pagamento na janela de pagamento e volte aqui. Confirmação automática em curso…",
       "simulerLaConfirmation": "Simular a confirmação",
       "abonnementActive": "Subscrição ativada",
-      "continuer": "Continuar"
+      "continuer": "Continuar",
+      "hostingFeeNote": "Pagamento online (Mobile Money ou cartão): + {{fee}} de taxa de alojamento, {{total}} no total.",
+      "hostingFeeWaveFree": "Sem taxa com Wave."
     },
     "UsersPage": {
       "utilisateurs": "Utilizadores",

@@ -90,6 +90,7 @@ export function ActivationPage() {
   // Coordonnées bancaires de l'éditeur (null = virement non proposé).
   const [bank, setBank] = useState<BankDetails | null>(null);
   const [waveDirect, setWaveDirect] = useState(false);
+  const [gatewayFee, setGatewayFee] = useState(0);
   const [gatewayName, setGatewayName] = useState('');
   // Virement déclaré : l'écran suivant demande le reçu par WhatsApp.
   const [transfer, setTransfer] = useState<BankTransferRequest | null>(null);
@@ -169,6 +170,7 @@ export function ActivationPage() {
         setBank(o.bank);
         setWaveDirect(Boolean(o.waveDirect));
         setGatewayName(o.gatewayName ?? '');
+        setGatewayFee(o.gatewayFee ?? 0);
       })
       .catch(() => setTrialMinutes(0));
   }, []);
@@ -449,6 +451,7 @@ export function ActivationPage() {
         bank={bank}
         waveDirect={waveDirect}
         gatewayName={gatewayName}
+        gatewayFee={gatewayFee}
         onBankTransfer={() => void declareTransfer()}
         contact={{ fullName: info.fullName, establishment: info.establishmentName, city: info.city }}
       />

@@ -172,9 +172,9 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     articles: [
       {
         q: 'Comment payer mon abonnement ?',
-        a: 'Réglages → Abonnement : paiement en ligne sécurisé par KkiaPay (Mobile Money ou carte, l’opérateur se choisit dans la fenêtre de paiement) ou par virement bancaire.',
+        a: 'Réglages → Abonnement : paiement en ligne sécurisé (Mobile Money ou carte, l’opérateur se choisit sur la page de paiement ; 500 FCFA de frais d’hébergement, sans frais avec Wave) ou par virement bancaire.',
         to: '/parametres/abonnement',
-        tags: 'kkiapay facture renouveler',
+        tags: 'geniuspay kkiapay facture renouveler frais hebergement',
       },
       {
         q: 'Combien dure l’essai gratuit ?',

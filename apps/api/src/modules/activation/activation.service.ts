@@ -17,7 +17,7 @@ import { appOrigin } from '../../config/env.js';
 import { createTenantWithAdmin, issueSession } from '../auth/auth.service.js';
 import { hashPassword } from '../../lib/password.js';
 import * as billing from '../billing/billing.service.js';
-import { resolvePlatformProvider, waveReady } from '../billing/platform-provider.js';
+import { activeHostingFee, resolvePlatformProvider, waveReady } from '../billing/platform-provider.js';
 
 /**
  * Tunnel d'activation : qualification, offre, coordonnées, paiement.
@@ -350,8 +350,10 @@ export async function getTrialOffer(): Promise<{
   bank: billing.BankTransferDetails | null;
   /** Wave en direct disponible : l'écran propose « Wave » à part. */
   waveDirect: boolean;
-  /** Passerelle des autres moyens (« kkiapay », « dexpay »…), vide si aucune. */
+  /** Passerelle des autres moyens (« geniuspay », « kkiapay »…), vide si aucune. */
   gatewayName: string;
+  /** Frais d'hébergement d'un paiement par la passerelle (FCFA, 0 = aucun). */
+  gatewayFee: number;
 }> {
   let gatewayName = '';
   try {
@@ -364,6 +366,7 @@ export async function getTrialOffer(): Promise<{
     bank: billing.bankTransferDetails(),
     waveDirect: waveReady(),
     gatewayName,
+    gatewayFee: gatewayName ? activeHostingFee() : 0,
   };
 }
 

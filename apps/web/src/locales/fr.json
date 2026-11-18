@@ -2308,7 +2308,9 @@
       "envoyerMonRecuSurWhatsapp": "Envoyer mon reçu sur WhatsApp",
       "rappelDesCoordonneesBancaires": "Rappel des coordonnées bancaires",
       "enAttendantLaVerification": "En attendant la vérification",
-      "decouvrezLeLogicielGratuitementPendant": "Découvrez le logiciel gratuitement pendant"
+      "decouvrezLeLogicielGratuitementPendant": "Découvrez le logiciel gratuitement pendant",
+      "hostingFee": "Frais d'hébergement (paiement en ligne)",
+      "totalToPay": "Total à payer"
     },
     "SoftwarePreview": {
       "tableauDeBord": "Tableau de bord",
@@ -3830,7 +3832,7 @@
       "n3Mois": "3 mois",
       "n6Mois": "6 mois",
       "economisez": "Économisez",
-      "redirectionVersLePaiementSecurise": "Redirection vers le paiement sécurisé KkiaPay…",
+      "redirectionVersLePaiementSecurise": "Redirection vers le paiement sécurisé…",
       "abonnement": "Abonnement",
       "votreOffreVotreConsommationEt": "Votre offre, votre consommation et vos factures",
       "offre": "Offre",
@@ -3897,10 +3899,12 @@
       "desQueNousAuronsVerifie": "Dès que nous aurons vérifié votre versement, votre abonnement sera activé. Vous n'avez rien d'autre à faire.",
       "envoyerMonRecuSurWhatsapp": "Envoyer mon reçu sur WhatsApp",
       "fermer": "Fermer",
-      "finalisezLePaiementDansL": "Finalisez le paiement dans la fenêtre KkiaPay, puis revenez ici. Confirmation automatique en cours…",
+      "finalisezLePaiementDansL": "Finalisez le paiement dans la fenêtre de paiement, puis revenez ici. Confirmation automatique en cours…",
       "simulerLaConfirmation": "Simuler la confirmation",
       "abonnementActive": "Abonnement activé",
-      "continuer": "Continuer"
+      "continuer": "Continuer",
+      "hostingFeeNote": "Paiement en ligne (Mobile Money ou carte) : + {{fee}} de frais d'hébergement, soit {{total}} au total.",
+      "hostingFeeWaveFree": "Sans frais avec Wave."
     },
     "UsersPage": {
       "utilisateurs": "Utilisateurs",

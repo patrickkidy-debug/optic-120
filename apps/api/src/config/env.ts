@@ -56,16 +56,12 @@ const envSchema = z.object({
   MONEROO_WEBHOOK_SECRET: z.string().optional().default(''),
 
   /**
-   * Passerelle d'encaissement des ABONNEMENTS : « kkiapay » (defaut),
-   * « dexpay », « moneroo » ou « chariow ». Une seule a la fois : pas de bascule
-   * silencieuse de l'une a l'autre si une cle manque (voir platform-provider.ts).
-   * L'ancienne valeur « geniuspay » (passerelle retiree) est lue comme « kkiapay »
-   * pour qu'un serveur encore configure ainsi demarre.
+   * Passerelle d'encaissement des ABONNEMENTS : « geniuspay » (defaut, de
+   * retour depuis le 2026-11-18), « kkiapay », « dexpay », « moneroo » ou
+   * « chariow ». Une seule a la fois : pas de bascule silencieuse de l'une a
+   * l'autre si une cle manque (voir platform-provider.ts).
    */
-  PLATFORM_PAYMENT_PROVIDER: z.preprocess(
-    (v) => (v === 'geniuspay' ? 'kkiapay' : v),
-    z.enum(['kkiapay', 'dexpay', 'moneroo', 'chariow']).default('kkiapay'),
-  ),
+  PLATFORM_PAYMENT_PROVIDER: z.enum(['geniuspay', 'kkiapay', 'dexpay', 'moneroo', 'chariow']).default('geniuspay'),
   CHARIOW_API_KEY: z.string().optional().default(''),
   CHARIOW_BASE_URL: z.string().default('https://api.chariow.com/v1'),
   /** Secret de signature du Pulse (whsec_...), propre a chaque Pulse. */
@@ -102,6 +98,18 @@ const envSchema = z.object({
   PAYTECH_API_SECRET: z.string().optional().default(''),
   PAYTECH_ENV: z.enum(['test', 'prod']).default('prod'),
   PAYTECH_BASE_URL: z.string().default('https://paytech.sn/api'),
+  // GeniusPay — orchestrateur multi-passerelles, 23 pays africains. Le préfixe
+  // des clés (pk_sandbox_ / pk_live_) détermine seul l'environnement.
+  GENIUSPAY_API_KEY: z.string().optional().default(''),
+  GENIUSPAY_API_SECRET: z.string().optional().default(''),
+  /** Secret `whsec_…` du webhook — distinct des clés d'API. */
+  GENIUSPAY_WEBHOOK_SECRET: z.string().optional().default(''),
+  GENIUSPAY_BASE_URL: z.string().default('https://geniuspay.ci/api/v1/merchant'),
+  /**
+   * Frais d'hébergement ajoutés à chaque paiement d'abonnement réglé par
+   * GeniusPay (FCFA, ligne à part sur la facture). 0 = aucun frais.
+   */
+  GENIUSPAY_HOSTING_FEE: z.coerce.number().int().min(0).default(500),
   // KkiaPay (kkiapay.me) : Mobile Money et cartes en XOF (BJ, CI, TG, SN, NE).
   // Trois cles du tableau de bord (Developpeurs > Cles API) ; le paiement se
   // fait dans le widget KkiaPay ouvert par la page /paiement/kkiapay du front.

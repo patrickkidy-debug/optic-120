@@ -14,7 +14,16 @@ import { prisma } from '../../lib/prisma.js';
 import { isProd, env } from '../../config/env.js';
 import * as billing from './billing.service.js';
 import type { CapiContext } from './billing.service.js';
-import { dexpayProvider, kkiapayProvider, monerooVerifier, resolvePlatformProvider, waveProvider, waveReady } from './platform-provider.js';
+import {
+  activeHostingFee,
+  dexpayProvider,
+  geniusPayProvider,
+  kkiapayProvider,
+  monerooVerifier,
+  resolvePlatformProvider,
+  waveProvider,
+  waveReady,
+} from './platform-provider.js';
 import { purgeDemoData } from '../demo/demo.service.js';
 
 /** Contexte Meta CAPI à partir de la requête : IP/UA + cookies posés par le Pixel navigateur. */
@@ -98,6 +107,8 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       gatewayName,
       // Wave en direct disponible : l'écran propose « Wave » à part.
       waveDirect: waveReady(),
+      // Frais d'hébergement d'un paiement par la passerelle (FCFA, 0 = aucun).
+      gatewayFee: gateway ? activeHostingFee() : 0,
       manual: env.PLATFORM_PAY_NUMBER
         ? {
             number: env.PLATFORM_PAY_NUMBER,
@@ -232,6 +243,44 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
       }
     },
   );
+
+  /**
+   * Webhook GeniusPay (signature HMAC du corps brut, horodatée). Le statut et
+   * le montant sont relus chez GeniusPay : le corps ne fait pas foi.
+   */
+  app.post('/geniuspay-subscription', async (req, reply) => {
+    const signature = req.headers['x-webhook-signature'];
+    const event = String(req.headers['x-webhook-event'] ?? '');
+    // Ping de configuration du tableau de bord GeniusPay : accusé de réception.
+    if (event === 'webhook.test') return reply.send({ ok: true, test: true });
+
+    const provider = geniusPayProvider();
+    if (!provider) return reply.status(409).send({ error: 'GeniusPay non configuré' });
+    let advisory;
+    try {
+      // SECURITE : signature HMAC et fenêtre anti-rejeu vérifiées ici.
+      advisory = await provider.handleWebhook(req.body, typeof signature === 'string' ? signature : undefined, {
+        rawBody: (req as FastifyRequest & { rawBody?: string }).rawBody,
+        headers: req.headers as Record<string, string | string[] | undefined>,
+      });
+    } catch (err) {
+      req.log.warn({ err }, 'Webhook GeniusPay refusé');
+      return reply.status(401).send({ error: 'Webhook refusé' });
+    }
+
+    const payment = await billing.findPaymentByProviderRef(advisory.providerRef);
+    if (!payment || payment.provider !== 'geniuspay') return reply.send({ ok: true, ignored: 'paiement inconnu' });
+
+    // SECURITE (deuxième barrière) : statut et montant relus avec nos clés.
+    const verified = await provider.verifyPayment(advisory.providerRef);
+    if (verified.status === 'PENDING') return reply.send({ ok: true });
+    if (verified.status === 'SUCCESS' && !billing.geniusPayAmountCovers(Number(payment.amount), verified.raw)) {
+      req.log.error({ paymentId: payment.id }, 'Montant GeniusPay inférieur au paiement : abonnement NON activé');
+      return reply.send({ ok: true, ignored: 'montant non conforme' });
+    }
+    await billing.settleSubscriptionPayment(payment.id, verified.status, verified.raw);
+    return reply.send({ ok: true });
+  });
 
   /**
    * Webhook KkiaPay (Développeurs > Webhook du tableau de bord). KkiaPay

@@ -16,7 +16,10 @@ import { logger } from '../../lib/logger.js';
 import { INVOICE_PREFIX, nextPlatformNumber } from '../../lib/platform-number.js';
 import { retryOnDuplicateNumber } from '../../lib/prisma-retry.js';
 import { badRequest, notFound, conflict } from '../../lib/http-error.js';
-import { resolveProviderForPayment, isPlatformSimulation, verifierFor, kkiapayProvider } from './platform-provider.js';
+import { resolveProviderForPayment, isPlatformSimulation, verifierFor, kkiapayProvider, hostingFeeFor } from './platform-provider.js';
+import { geniusPayAmountCovers } from '../payments/providers/geniuspay.provider.js';
+
+export { geniusPayAmountCovers };
 import type { KkiapayTransaction } from '../payments/providers/kkiapay.provider.js';
 import { recordCommissionForPayment } from '../partners/partner.service.js';
 import { sendConversionEvent } from '../../lib/meta-capi.js';
@@ -472,6 +475,41 @@ export async function confirmManualPayment(paymentId: string) {
   return settleSubscriptionPayment(paymentId, PaymentStatus.SUCCESS, { manual: true });
 }
 
+/** Libellé de la ligne de frais : sert aussi à ne l'ajouter qu'une fois. */
+export const HOSTING_FEE_LABEL = "Frais d'hébergement";
+
+/**
+ * Ajoute les frais d'hébergement à une facture (ligne dédiée, montant et
+ * sous-total relevés d'autant) s'ils n'y sont pas déjà. Renvoie le montant
+ * total de la facture, frais compris.
+ */
+async function addHostingFee(invoiceId: string, planName: string, fee: number): Promise<number> {
+  // La ligne d'abonnement d'abord, sinon elle ne serait plus créée ensuite.
+  if ((await prisma.subscriptionInvoiceItem.count({ where: { invoiceId } })) === 0) {
+    await enrichAutoInvoice(invoiceId, planName);
+  }
+  return prisma.$transaction(async (tx) => {
+    const has = await tx.subscriptionInvoiceItem.count({ where: { invoiceId, description: HOSTING_FEE_LABEL } });
+    if (has === 0) {
+      await tx.subscriptionInvoiceItem.create({
+        data: {
+          invoiceId,
+          description: HOSTING_FEE_LABEL,
+          quantity: new Prisma.Decimal(1),
+          unitPrice: new Prisma.Decimal(fee),
+          total: new Prisma.Decimal(fee),
+        },
+      });
+      await tx.subscriptionInvoice.update({
+        where: { id: invoiceId },
+        data: { amount: { increment: fee }, subtotal: { increment: fee } },
+      });
+    }
+    const inv = await tx.subscriptionInvoice.findUniqueOrThrow({ where: { id: invoiceId }, select: { amount: true } });
+    return Number(inv.amount);
+  });
+}
+
 async function initiateInvoicePayment(
   tenantId: string,
   invoiceId: string,
@@ -503,24 +541,29 @@ async function initiateInvoicePayment(
     select: { name: true, code: true },
   });
 
+  // Wave en direct quand le client choisit Wave (et que la clé est posée),
+  // sinon la passerelle de la plateforme.
+  const provider = resolveProviderForPayment(method, invoice.currency);
+  // Frais d'hébergement (GeniusPay) : ligne à part sur la facture, ajoutée une
+  // seule fois même si le client relance le paiement.
+  const fee = hostingFeeFor(provider.name, invoice.currency);
+  const amount = fee > 0 ? await addHostingFee(invoice.id, plan?.name ?? 'OculoSaaS', fee) : Number(invoice.amount);
+
   const payment = await prisma.subscriptionPayment.create({
     data: {
       tenantId,
       invoiceId: invoice.id,
       method,
-      amount: invoice.amount,
+      amount,
       currency: invoice.currency,
       status: PaymentStatus.PENDING,
       capiContext: capiContext ? (capiContext as object) : undefined,
     },
   });
 
-  // Wave en direct quand le client choisit Wave (et que la clé est posée),
-  // sinon la passerelle de la plateforme.
-  const provider = resolveProviderForPayment(method, invoice.currency);
   const result = await provider.initiatePayment({
     paymentId: payment.id,
-    amount: Number(invoice.amount),
+    amount,
     currency: invoice.currency,
     method,
     customerName: tenant?.name ?? 'Abonné OculoSaaS',
@@ -550,7 +593,7 @@ async function initiateInvoicePayment(
       fbp: capiContext?.fbp,
       fbc: capiContext?.fbc,
     },
-    customData: { value: Number(invoice.amount), currency: invoice.currency, content_name: plan?.name },
+    customData: { value: amount, currency: invoice.currency, content_name: plan?.name },
   });
 
   const isMobile = MOBILE_MONEY_METHODS.includes(method);
@@ -997,7 +1040,7 @@ export async function reconcilePendingPayments(tenantId: string): Promise<void> 
       providerRef: { not: null },
       // KkiaPay n'y figure pas : sa référence d'attente n'est pas une transaction,
       // il est confirmé par le widget (confirmKkiapayTransaction) ou son webhook.
-      provider: { in: ['moneroo', 'wave', 'dexpay'] },
+      provider: { in: ['moneroo', 'wave', 'dexpay', 'geniuspay'] },
       createdAt: { gte: since },
     },
     orderBy: { createdAt: 'desc' },
@@ -1011,6 +1054,10 @@ export async function reconcilePendingPayments(tenantId: string): Promise<void> 
       const verifier = verifierFor(p.provider);
       if (!verifier) continue;
       const v = await verifier.verifyPayment(p.providerRef!);
+      if (v.status === PaymentStatus.SUCCESS && p.provider === 'geniuspay' && !geniusPayAmountCovers(Number(p.amount), v.raw)) {
+        logger.error({ paymentId: p.id }, 'Montant GeniusPay inférieur au paiement : abonnement NON activé');
+        continue;
+      }
       if (v.status !== PaymentStatus.PENDING) {
         await settleSubscriptionPayment(p.id, v.status, v.raw);
         logger.info({ paymentId: p.id, status: v.status, provider: p.provider }, 'Abonnement : paiement rapproché auprès de la passerelle');
