@@ -139,3 +139,82 @@ export async function markAllRead(userId: string): Promise<number> {
   });
   return ids.length;
 }
+
+/* ------------------------- Fenêtre surgissante (rappel) ------------------------- */
+
+/**
+ * Tant qu'une annonce n'est pas lue, elle s'ouvre d'elle-même : au plus 2 fois
+ * par jour, à 4 h d'écart au moins, 6 fois en tout (3 jours d'utilisation).
+ * Au-delà de 30 jours après sa publication, elle ne reste que dans la cloche.
+ */
+export const POPUP_RULES = {
+  maxTotal: 6,
+  maxPerDay: 2,
+  minGapMs: 4 * 60 * 60 * 1000,
+  maxAgeDays: 30,
+} as const;
+
+/** Vrai si l'annonce peut encore s'ouvrir, d'après ses affichages passés. */
+export function popupEligible(shownAts: Date[], now: Date = new Date()): boolean {
+  if (shownAts.length >= POPUP_RULES.maxTotal) return false;
+  const dayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  if (shownAts.filter((d) => d.getTime() >= dayStart).length >= POPUP_RULES.maxPerDay) return false;
+  const last = Math.max(0, ...shownAts.map((d) => d.getTime()));
+  return now.getTime() - last >= POPUP_RULES.minGapMs;
+}
+
+async function popupCandidates(userId: string, now: Date) {
+  const since = new Date(now.getTime() - POPUP_RULES.maxAgeDays * 24 * 60 * 60 * 1000);
+  return prisma.announcement.findMany({
+    where: { publishedAt: { gte: since }, reads: { none: { userId } } },
+    orderBy: { publishedAt: 'desc' },
+    take: 10,
+    include: { impressions: { where: { userId }, select: { shownAt: true } } },
+  });
+}
+
+/** Annonce à ouvrir maintenant pour cet utilisateur, ou null. */
+export async function nextPopup(userId: string, now: Date = new Date()) {
+  const rows = await popupCandidates(userId, now);
+  const pick = rows.find((a) => popupEligible(a.impressions.map((i) => i.shownAt), now));
+  if (!pick) return null;
+  const { impressions, ...rest } = pick;
+  return { ...shape(rest), read: false, remaining: POPUP_RULES.maxTotal - impressions.length - 1 };
+}
+
+/**
+ * Consigne un affichage. Les règles sont revérifiées : deux onglets ouverts en
+ * même temps ne doivent pas compter double.
+ */
+export async function recordPopupShown(userId: string, announcementId: string, now: Date = new Date()) {
+  const rows = await popupCandidates(userId, now);
+  const a = rows.find((r) => r.id === announcementId);
+  if (!a || !popupEligible(a.impressions.map((i) => i.shownAt), now)) return false;
+  await prisma.announcementImpression.create({ data: { announcementId, userId, shownAt: now } });
+  return true;
+}
+
+/**
+ * Lecture d'une annonce, pour la console : qui l'a lue (« J'ai lu » ou dépliée
+ * dans la cloche), et combien l'ont vue s'ouvrir sans la lire.
+ */
+export async function readStats(announcementId: string) {
+  const existing = await prisma.announcement.findUnique({ where: { id: announcementId }, select: { id: true } });
+  if (!existing) throw notFound('Annonce introuvable');
+  const [reads, seen] = await Promise.all([
+    prisma.announcementRead.findMany({
+      where: { announcementId },
+      select: { user: { select: { tenantId: true } } },
+    }),
+    prisma.announcementImpression.findMany({
+      where: { announcementId },
+      select: { userId: true },
+      distinct: ['userId'],
+    }),
+  ]);
+  return {
+    readers: reads.length,
+    readTenantIds: [...new Set(reads.map((r) => r.user.tenantId))],
+    popupUsers: seen.length,
+  };
+}

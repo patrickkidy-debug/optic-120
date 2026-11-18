@@ -1175,7 +1175,10 @@
     "markAllRead": "Mark all as read",
     "noNews": "Nothing new for now.",
     "collapseMenu": "Collapse menu",
-    "expandMenu": "Expand menu"
+    "expandMenu": "Expand menu",
+    "popupRead": "Got it",
+    "popupLater": "Later",
+    "popupHint": "This message will come back until you click “Got it”."
   },
   "sync": {
     "offline": "Offline",

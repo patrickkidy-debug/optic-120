@@ -36,6 +36,18 @@ export async function markAllAnnouncementsRead(): Promise<void> {
   await api.post('/announcements/read-all');
 }
 
+/** Annonce à ouvrir en fenêtre surgissante maintenant, ou null. */
+export async function getAnnouncementPopup(): Promise<(Announcement & { remaining: number }) | null> {
+  const { data } = await api.get<{ announcement: (Announcement & { remaining: number }) | null }>(
+    '/announcements/popup',
+  );
+  return data.announcement;
+}
+
+export async function markAnnouncementPopupShown(id: string): Promise<void> {
+  await api.post(`/announcements/${id}/popup-shown`);
+}
+
 /* ------------------------------ Console fondateur ------------------------------ */
 
 export async function listAllAnnouncements(): Promise<Announcement[]> {
@@ -73,4 +85,18 @@ export async function getNotifiedTenants(id: string): Promise<string[]> {
 
 export async function markTenantNotified(id: string, tenantId: string): Promise<void> {
   await api.post(`/platform/announcements/${id}/notified/${tenantId}`);
+}
+
+export interface AnnouncementReadStats {
+  /** Utilisateurs qui l'ont lue. */
+  readers: number;
+  /** Établissements où au moins une personne l'a lue. */
+  readTenantIds: string[];
+  /** Utilisateurs qui l'ont vue s'ouvrir (lue ou non). */
+  popupUsers: number;
+}
+
+export async function getAnnouncementReadStats(id: string): Promise<AnnouncementReadStats> {
+  const { data } = await api.get<AnnouncementReadStats>(`/platform/announcements/${id}/reads`);
+  return data;
 }

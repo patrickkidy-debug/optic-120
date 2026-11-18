@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { TrialBanner } from '../TrialBanner';
 import { SupportChatWidget } from '../SupportChatWidget';
+import { AnnouncementPopup } from './AnnouncementPopup';
 import { PageLoader } from '../ui';
 import { useUIStore } from '../../store/ui';
 import { usePremiumUi } from './premium';
@@ -35,6 +36,8 @@ export function AppShell() {
    * manquait, et les colonnes de droite se faisaient couper.
    */
   const isConsole = pathname === '/plateforme' || pathname.startsWith('/plateforme/');
+  // Pas de fenêtre surgissante en pleine vente ni dans la console fondateur.
+  const showAnnouncementPopup = !isConsole && pathname !== '/optique/caisse';
 
   // Garde-fou mobile : #root défile verticalement et masque le débordement
   // horizontal, mais un scrollIntoView ou un focus peut quand même le décaler
@@ -134,6 +137,7 @@ export function AppShell() {
       </div>
 
       {showSupportChat && <SupportChatWidget />}
+      {showAnnouncementPopup && <AnnouncementPopup />}
     </div>
   );
 }

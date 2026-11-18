@@ -346,6 +346,12 @@ export async function platformRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  /** Lecture d'une annonce : lecteurs, établissements touchés, rappels vus. */
+  app.get('/announcements/:id/reads', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    return reply.send(await announcements.readStats(id));
+  });
+
   /** Établissements déjà prévenus pour cette annonce. */
   app.get('/announcements/:id/notified', async (req, reply) => {
     const { id } = req.params as { id: string };

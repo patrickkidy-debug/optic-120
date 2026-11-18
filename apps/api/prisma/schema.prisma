@@ -233,6 +233,7 @@ model User {
   refreshTokens            RefreshToken[]
   auditLogs                AuditLog[]
   announcementReads        AnnouncementRead[]
+  announcementImpressions  AnnouncementImpression[]
   sales                    Sale[]
   startedInventoryCounts   InventoryCount[]     @relation("InventoryCountStartedBy")
   completedInventoryCounts InventoryCount[]     @relation("InventoryCountCompletedBy")
@@ -2371,6 +2372,7 @@ model Announcement {
   updatedAt       DateTime  @updatedAt
 
   reads AnnouncementRead[]
+  impressions AnnouncementImpression[]
 
   @@index([publishedAt])
 }
@@ -2384,6 +2386,20 @@ model AnnouncementRead {
   readAt         DateTime     @default(now())
 
   @@id([announcementId, userId])
+  @@index([userId])
+}
+
+/// Affichage de l'annonce en fenêtre surgissante (une ligne par affichage) :
+/// sert à la limiter à 2 fois par jour, 6 fois en tout, tant qu'elle n'est pas lue.
+model AnnouncementImpression {
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shownAt        DateTime     @default(now())
+
+  @@index([announcementId, userId])
   @@index([userId])
 }
 

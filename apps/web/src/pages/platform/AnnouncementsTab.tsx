@@ -26,6 +26,7 @@ import {
 import {
   createAnnouncement,
   deleteAnnouncement,
+  getAnnouncementReadStats,
   getNotifiedTenants,
   listAllAnnouncements,
   markTenantNotified,
@@ -562,11 +563,18 @@ function Distribution({ announcement }: { announcement: Announcement }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [copied, setCopied] = useState<'wa' | 'li' | null>(null);
+  const [unreadOnly, setUnreadOnly] = useState(false);
 
   const { data: subs } = useQuery({ queryKey: ['platform-subs'], queryFn: listAllSubscriptions });
   const { data: notified } = useQuery({
     queryKey: ['platform-announcement-notified', announcement.id],
     queryFn: () => getNotifiedTenants(announcement.id),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['platform-announcement-reads', announcement.id],
+    queryFn: () => getAnnouncementReadStats(announcement.id),
+    enabled: Boolean(announcement.publishedAt),
   });
 
   const notifyMut = useMutation({
@@ -588,8 +596,11 @@ function Distribution({ announcement }: { announcement: Announcement }) {
     defaultAnnouncementLinkedin(announcement.kind, announcement.title, announcement.body);
 
   const done = useMemo(() => new Set(notified ?? []), [notified]);
-  const targets = (subs ?? [])
-    .filter((s) => !INACTIVE_STATUSES.includes(s.status))
+  const readBy = useMemo(() => new Set(stats?.readTenantIds ?? []), [stats]);
+  const active = (subs ?? []).filter((s) => !INACTIVE_STATUSES.includes(s.status));
+  const readTenants = active.filter((s) => readBy.has(s.tenantId)).length;
+  const targets = active
+    .filter((s) => !unreadOnly || !readBy.has(s.tenantId))
     .filter((s) => s.tenantName.toLowerCase().includes(search.trim().toLowerCase()));
 
   async function copy(text: string, which: 'wa' | 'li') {
@@ -614,6 +625,25 @@ function Distribution({ announcement }: { announcement: Announcement }) {
 
   return (
     <div className="space-y-4">
+      {announcement.publishedAt && stats && (
+        <div className="card p-4">
+          <h4 className="mb-1 font-display font-bold text-content">
+            <Eye className="mr-1.5 inline h-4 w-4 text-primary" aria-hidden="true" /> Lecture dans l'app
+          </h4>
+          <p className="text-sm text-content">
+            Lue dans <strong>{readTenants}</strong> établissement{readTenants > 1 ? 's' : ''} sur {active.length}
+            {' · '}
+            {stats.readers} utilisateur{stats.readers > 1 ? 's' : ''}
+          </p>
+          <p className="mt-1 text-xs text-content-faint">
+            Tant qu'elle n'est pas lue, l'annonce s'ouvre d'elle-même à chaque utilisateur : 2 fois par jour au
+            plus, 6 fois en tout, pendant 30 jours après sa publication (jamais en pleine vente).{' '}
+            {stats.popupUsers} utilisateur{stats.popupUsers > 1 ? 's' : ''} l'ont déjà vue s'ouvrir. Pour les
+            établissements où personne ne l'a lue, relancez sur WhatsApp ci-dessous (filtre « Pas encore lue »).
+          </p>
+        </div>
+      )}
+
       <div className="card p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h4 className="font-display font-bold text-content">
@@ -686,10 +716,18 @@ function Distribution({ announcement }: { announcement: Announcement }) {
           />
         </div>
 
-        <p className="mb-2 text-xs text-content-muted">
-          {done.size} sur {targets.length} établissement{targets.length > 1 ? 's' : ''} prévenu
-          {done.size > 1 ? 's' : ''}
-        </p>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-content-muted">
+            {done.size} sur {active.length} établissement{active.length > 1 ? 's' : ''} prévenu
+            {done.size > 1 ? 's' : ''}
+          </p>
+          {announcement.publishedAt && (
+            <label className="flex items-center gap-2 text-xs text-content-muted">
+              <input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} />
+              Pas encore lue
+            </label>
+          )}
+        </div>
 
         <div className="max-h-80 divide-y overflow-auto rounded-lg border">
           {targets.map((s) => {
@@ -698,7 +736,10 @@ function Distribution({ announcement }: { announcement: Announcement }) {
             return (
               <div key={s.tenantId} className="flex items-center justify-between gap-2 p-2.5">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-content">{s.tenantName}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-content">
+                    {s.tenantName}
+                    {readBy.has(s.tenantId) && <Badge tone="success">Lue</Badge>}
+                  </p>
                   <p className="text-xs text-content-faint">{s.whatsapp || 'Aucun numéro'}</p>
                 </div>
                 {hasPhone ? (
