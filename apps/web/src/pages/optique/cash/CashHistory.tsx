@@ -351,7 +351,7 @@ function SessionReportModal({ id, onClose }: { id: string; onClose: () => void }
               <Line label={tr('cash.cashSales')} value={`+ ${formatCurrency(r.cashSales)}`} />
               {r.transfersIn > 0 && <Line label={tr('cashHistory.transfersIn')} value={`+ ${formatCurrency(r.transfersIn)}`} />}
               {r.transfersOut > 0 && <Line label={tr('cashHistory.transfersOut')} value={`− ${formatCurrency(r.transfersOut)}`} />}
-              {r.expensesTotal > 0 && <Line label={tr('cash.expensesDeducted')} value={`− ${formatCurrency(r.expensesTotal)}`} />}
+              {(r.cashExpensesTotal ?? r.expensesTotal) > 0 && <Line label={tr('cash.expensesDeducted')} value={`− ${formatCurrency(r.cashExpensesTotal ?? r.expensesTotal)}`} />}
               <div className="my-1.5 border-t" />
               <Line label={tr('cash.expectedInRegister')} value={formatCurrency(r.expectedAmount)} strong />
               <Line label={tr('cash.countedAmount')} value={r.countedAmount != null ? formatCurrency(r.countedAmount) : '—'} />
@@ -404,7 +404,13 @@ function SessionReportModal({ id, onClose }: { id: string; onClose: () => void }
                 <p className="text-sm text-content-muted">{tr('cashHistory.noExpense')}</p>
               ) : (
                 r.expenses.map((e) => (
-                  <Row key={e.id} left={e.label} sub={`${expenseCategoryLabel(e.category)} · ${time(e.createdAt)}`} right={`− ${formatCurrency(e.amount)}`} tone="danger" />
+                  <Row
+                    key={e.id}
+                    left={e.label}
+                    sub={`${expenseCategoryLabel(e.category)} · ${time(e.createdAt)}${e.affectsCash === false ? ` · ${tr(`ui.CashFlowPage.source_${e.paymentSource ?? 'CASH'}`)}` : ''}`}
+                    right={`− ${formatCurrency(e.amount)}`}
+                    tone="danger"
+                  />
                 ))
               )}
             </Block>
@@ -626,7 +632,7 @@ function printReport(r: CashSessionReport, tenant: ReportTenant) {
       ${line(tr('cash.cashSales'), '+ ' + formatCurrency(r.cashSales))}
       ${r.transfersIn ? line(tr('cashHistory.transfersIn'), '+ ' + formatCurrency(r.transfersIn)) : ''}
       ${r.transfersOut ? line(tr('cashHistory.transfersOut'), '− ' + formatCurrency(r.transfersOut)) : ''}
-      ${r.expensesTotal ? line(tr('cash.expensesDeducted'), '− ' + formatCurrency(r.expensesTotal)) : ''}
+      ${(r.cashExpensesTotal ?? r.expensesTotal) ? line(tr('cash.expensesDeducted'), '− ' + formatCurrency(r.cashExpensesTotal ?? r.expensesTotal)) : ''}
       ${line(tr('cash.expectedInRegister'), formatCurrency(r.expectedAmount), 'total')}
       ${line(tr('cash.countedAmount'), r.countedAmount != null ? formatCurrency(r.countedAmount) : '—')}
       </table>
@@ -639,7 +645,7 @@ function printReport(r: CashSessionReport, tenant: ReportTenant) {
   ${
     r.expenses.length || r.transfers.length
       ? `<div class="cols">
-    ${section(tr('cashHistory.expensesList', { n: r.expenses.length }), r.expenses.length ? `<table class="rows">${r.expenses.map((e) => `<tr><td>${esc(e.label)}<small>${esc(expenseCategoryLabel(e.category))} · ${esc(time(e.createdAt))}</small></td><td class="num neg">− ${money(e.amount)}</td></tr>`).join('')}</table>` : `<p class="empty">${esc(tr('cashHistory.noExpense'))}</p>`)}
+    ${section(tr('cashHistory.expensesList', { n: r.expenses.length }), r.expenses.length ? `<table class="rows">${r.expenses.map((e) => `<tr><td>${esc(e.label)}<small>${esc(expenseCategoryLabel(e.category))} · ${esc(time(e.createdAt))}${e.affectsCash === false ? ' · ' + esc(tr(`ui.CashFlowPage.source_${e.paymentSource ?? 'CASH'}`)) : ''}</small></td><td class="num neg">− ${money(e.amount)}</td></tr>`).join('')}</table>` : `<p class="empty">${esc(tr('cashHistory.noExpense'))}</p>`)}
     ${section(tr('cashHistory.transfersList', { n: r.transfers.length }), r.transfers.length ? `<table class="rows">${r.transfers.map((t) => `<tr><td>${esc(t.label)}<small>${esc(t.direction === 'IN' ? tr('cashHistory.transfersIn') : tr('cashHistory.transfersOut'))} · ${esc(time(t.createdAt))}</small></td><td class="num ${t.direction === 'IN' ? 'pos' : 'neg'}">${t.direction === 'IN' ? '+' : '−'} ${money(t.amount)}</td></tr>`).join('')}</table>` : `<p class="empty">${esc(tr('cashHistory.noTransfer'))}</p>`)}
   </div>`
       : ''

@@ -1060,7 +1060,7 @@
     "openingFloat": "Fond de caisse",
     "cashSales": "Ventes espèces",
     "netTransfers": "Versements nets",
-    "expensesDeducted": "Dépenses déduites",
+    "expensesDeducted": "Dépenses en espèces déduites",
     "expectedInRegister": "Attendu théorique en caisse",
     "countedAmount": "Montant réel compté",
     "variance": "Écart",
@@ -1093,7 +1093,8 @@
     "amountWithdrawn": "Montant retiré",
     "noteOptional": "Note / Justificatif (optionnel)",
     "notePlaceholder": "Détails supplémentaires...",
-    "saveExpense": "Enregistrer la sortie"
+    "saveExpense": "Enregistrer la sortie",
+    "notFromDrawer": "hors caisse"
   },
   "saleStatus": {
     "DRAFT": "Brouillon",

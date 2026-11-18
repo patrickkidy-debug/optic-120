@@ -28,11 +28,14 @@ async function sessionStart(db: Db, register: { id: string; branchId: string; op
   return prevClose && prevClose > dayStart ? prevClose : dayStart;
 }
 
-/** Filtre « magasin de la caisse (ou sans magasin) » + « saisi ou daté depuis `since` ». */
-function sessionWhere(branchId: string, since: Date) {
+/**
+ * Filtre « magasin de la caisse (ou sans magasin) » + « saisi ou daté depuis `since` ».
+ * `cashOnly` : seules les opérations en espèces pèsent sur les espèces attendues ;
+ * sans lui, toutes les dépenses du jour (Orange Money, banque…) pour le net.
+ */
+function sessionWhere(branchId: string, since: Date, cashOnly = true) {
   return {
-    // Seules les opérations en espèces, non annulées, pèsent sur la caisse.
-    affectsCash: true,
+    ...(cashOnly ? { affectsCash: true } : {}),
     cancelledAt: null,
     AND: [
       { OR: [{ branchId }, { branchId: null }] },
@@ -120,8 +123,9 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
         _sum: { amount: true },
         _count: { _all: true },
       }),
+      // Toutes les dépenses du jour, quel que soit le moyen : le net en tient compte.
       req.db!.expense.findMany({
-        where: expenseWhere,
+        where: sessionWhere(register.branchId, since, false),
         select: {
           id: true,
           label: true,
@@ -129,6 +133,8 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
           category: true,
           date: true,
           createdAt: true,
+          paymentSource: true,
+          affectsCash: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -147,7 +153,8 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
         _sum: { amount: true },
       }),
     ]);
-    const expensesTotal = Number(expensesAgg._sum.amount ?? 0);
+    // Espèces : dépenses sorties du tiroir. Total : toutes les dépenses du jour.
+    const cashExpensesTotal = Number(expensesAgg._sum.amount ?? 0);
     const expenses = expensesList.map((e) => ({
       id: e.id,
       label: e.label,
@@ -155,7 +162,10 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       category: e.category,
       date: e.date,
       createdAt: e.createdAt,
+      paymentSource: e.paymentSource,
+      affectsCash: e.affectsCash,
     }));
+    const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
     const transfersInTotal = Number(transfersInAgg._sum.amount ?? 0);
     const transfersOutTotal = Number(transfersOutAgg._sum.amount ?? 0);
     const transfersNet = transfersInTotal - transfersOutTotal;
@@ -203,7 +213,9 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       total,
       expenses,
       expensesTotal,
-      expensesCount: expensesAgg._count._all,
+      expensesCount: expenses.length,
+      cashExpensesTotal,
+      cashExpensesCount: expensesAgg._count._all,
       transfersInTotal,
       transfersOutTotal,
       transfersNet,
@@ -212,7 +224,7 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       cancelledCount: cancelled.length,
       cancelledCashedTotal,
       openingAmount: Number(register.openingAmount),
-      expectedCash: Number(register.openingAmount) + cash + transfersNet - expensesTotal,
+      expectedCash: Number(register.openingAmount) + cash + transfersNet - cashExpensesTotal,
       openedAt: register.openedAt,
     });
   });
@@ -248,7 +260,7 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
     const expenseWhere = sessionWhere(register.branchId, since);
 
     // Espèces attendues : fond + ventes espèces + apports - retraits - dépenses de la session.
-    const [cashSales, expensesAgg, transfersInAgg, transfersOutAgg] = await Promise.all([
+    const [cashSales, expensesAgg, allExpensesAgg, transfersInAgg, transfersOutAgg] = await Promise.all([
       req.db!.payment.aggregate({
         where: {
           method: 'CASH',
@@ -260,6 +272,10 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       }),
       req.db!.expense.aggregate({
         where: expenseWhere,
+        _sum: { amount: true },
+      }),
+      req.db!.expense.aggregate({
+        where: sessionWhere(register.branchId, since, false),
         _sum: { amount: true },
       }),
       req.db!.cashTransfer.aggregate({
@@ -277,13 +293,16 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
         _sum: { amount: true },
       }),
     ]);
-    const expensesTotal = Number(expensesAgg._sum.amount ?? 0);
+    // Espèces attendues : seules les dépenses en espèces. Net du jour : toutes,
+    // car une dépense payée par Orange Money réduit aussi le résultat du jour.
+    const cashExpensesTotal = Number(expensesAgg._sum.amount ?? 0);
+    const expensesTotal = Number(allExpensesAgg._sum.amount ?? 0);
     const transfersInTotal = Number(transfersInAgg._sum.amount ?? 0);
     const transfersOutTotal = Number(transfersOutAgg._sum.amount ?? 0);
     const transfersNet = transfersInTotal - transfersOutTotal;
     const cashSalesTotal = Number(cashSales._sum.amount ?? 0);
     const openingAmount = Number(register.openingAmount);
-    const expected = openingAmount + cashSalesTotal + transfersNet - expensesTotal;
+    const expected = openingAmount + cashSalesTotal + transfersNet - cashExpensesTotal;
     // Total encaissé tous moyens confondus, et net après dépenses : ce que
     // l'opticien appelle « la vente de la journée ».
     const allSales = await req.db!.payment.aggregate({
@@ -308,6 +327,7 @@ export async function cashRegisterRoutes(app: FastifyInstance): Promise<void> {
       register: result,
       expectedAmount: expected,
       expensesTotal,
+      cashExpensesTotal,
       cashSalesTotal,
       openingAmount,
       transfersNet,

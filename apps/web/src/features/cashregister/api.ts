@@ -30,6 +30,10 @@ export interface RegisterExpenseSummary {
   category: string;
   date: string;
   createdAt: string;
+  /** CASH | MOBILE_MONEY | BANK | CARD | CHEQUE */
+  paymentSource?: string;
+  /** Vrai si la dépense est sortie du tiroir (espèces). */
+  affectsCash?: boolean;
 }
 
 export interface RegisterSummary {
@@ -37,8 +41,11 @@ export interface RegisterSummary {
   cash: number;
   total: number;
   expenses?: RegisterExpenseSummary[];
+  /** Toutes les dépenses du jour, tous moyens (net du jour). */
   expensesTotal: number;
   expensesCount: number;
+  /** Dépenses en espèces seules (déduites des espèces attendues). */
+  cashExpensesTotal?: number;
   transfersInTotal?: number;
   transfersOutTotal?: number;
   transfersNet?: number;
@@ -79,6 +86,7 @@ export async function closeRegister(
   register: CashRegister;
   expectedAmount: number;
   expensesTotal: number;
+  cashExpensesTotal?: number;
   cashSalesTotal?: number;
   openingAmount?: number;
   transfersNet?: number;
@@ -113,6 +121,7 @@ export interface CashSessionRow {
   paymentsCount: number;
   expensesTotal: number;
   expensesCount: number;
+  cashExpensesTotal?: number;
   transfersIn: number;
   transfersOut: number;
   netTotal: number;
@@ -141,7 +150,7 @@ export interface CashSessionReport extends Omit<CashSessionRow, 'methods'> {
   byMethod: { method: string; amount: number; count: number }[];
   salesCount: number;
   payments: { id: string; method: string; amount: number; at: string; saleId: string; saleNumber: string; saleType: string; cancelled: boolean; customerName: string | null }[];
-  expenses: { id: string; label: string; category: string; amount: number; createdAt: string; date: string }[];
+  expenses: { id: string; label: string; category: string; amount: number; createdAt: string; date: string; paymentSource?: string; affectsCash?: boolean }[];
   transfers: { id: string; direction: 'IN' | 'OUT'; label: string; amount: number; createdAt: string; date: string }[];
   cancelled: { id: string; number: string; total: number; at: string; customerName: string | null }[];
 }

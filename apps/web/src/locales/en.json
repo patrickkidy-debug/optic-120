@@ -1060,7 +1060,7 @@
     "openingFloat": "Opening float",
     "cashSales": "Cash sales",
     "netTransfers": "Net transfers",
-    "expensesDeducted": "Expenses deducted",
+    "expensesDeducted": "Cash expenses deducted",
     "expectedInRegister": "Expected in register",
     "countedAmount": "Actual amount counted",
     "variance": "Variance",
@@ -1093,7 +1093,8 @@
     "amountWithdrawn": "Amount withdrawn",
     "noteOptional": "Note / Receipt (optional)",
     "notePlaceholder": "Additional details...",
-    "saveExpense": "Save payout"
+    "saveExpense": "Save payout",
+    "notFromDrawer": "not from the drawer"
   },
   "saleStatus": {
     "DRAFT": "Draft",

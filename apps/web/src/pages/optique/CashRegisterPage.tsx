@@ -57,6 +57,7 @@ export function CashRegisterPage() {
     expected: number;
     counted: number;
     expenses: number;
+    cashExpenses: number;
     opening: number;
     cashSales: number;
     transfersNet?: number;
@@ -101,6 +102,7 @@ export function CashRegisterPage() {
         expected: res.expectedAmount,
         counted: Number(res.register.closingAmount ?? 0),
         expenses: res.expensesTotal,
+        cashExpenses: res.cashExpensesTotal ?? res.expensesTotal,
         opening: res.openingAmount ?? Number(register?.openingAmount ?? 0),
         cashSales: res.cashSalesTotal ?? (summary?.cash ?? 0),
         transfersNet: res.transfersNet,
@@ -164,8 +166,8 @@ export function CashRegisterPage() {
                   value={`${closeResult.transfersNet > 0 ? '+' : '-'} ${formatCurrency(Math.abs(closeResult.transfersNet))}`}
                 />
               )}
-              {closeResult.expenses > 0 && (
-                <SummaryRow label={t('cash.expensesDeducted')} value={`- ${formatCurrency(closeResult.expenses)}`} />
+              {closeResult.cashExpenses > 0 && (
+                <SummaryRow label={t('cash.expensesDeducted')} value={`- ${formatCurrency(closeResult.cashExpenses)}`} />
               )}
               <div className="my-1 border-t" />
               <SummaryRow label={t('cash.expectedInRegister')} value={formatCurrency(closeResult.expected)} />
@@ -269,6 +271,7 @@ export function CashRegisterPage() {
                           <span className="font-medium text-content">{exp.label}</span>
                           <span className="block text-xs text-content-faint">
                             {formatDateTime(exp.createdAt)}
+                            {exp.affectsCash === false && ` · ${t(`ui.CashFlowPage.source_${exp.paymentSource ?? 'CASH'}`)} · ${t('cash.notFromDrawer')}`}
                           </span>
                         </div>
                         <span className="font-medium text-danger">- {formatCurrency(exp.amount)}</span>

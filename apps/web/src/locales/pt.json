@@ -1060,7 +1060,7 @@
     "openingFloat": "Fundo de caixa",
     "cashSales": "Vendas em dinheiro",
     "netTransfers": "Transferências líquidas",
-    "expensesDeducted": "Despesas deduzidas",
+    "expensesDeducted": "Despesas em dinheiro deduzidas",
     "expectedInRegister": "Esperado em caixa",
     "countedAmount": "Valor real contado",
     "variance": "Diferença",
@@ -1093,7 +1093,8 @@
     "amountWithdrawn": "Valor retirado",
     "noteOptional": "Nota / Comprovativo (opcional)",
     "notePlaceholder": "Detalhes adicionais...",
-    "saveExpense": "Registar a saída"
+    "saveExpense": "Registar a saída",
+    "notFromDrawer": "fora da caixa"
   },
   "saleStatus": {
     "DRAFT": "Rascunho",

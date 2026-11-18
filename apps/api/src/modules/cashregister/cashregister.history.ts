@@ -35,10 +35,10 @@ async function periodStart(db: TenantPrisma, r: RegisterRow): Promise<Date> {
   return prev && prev > dayStart ? prev : dayStart;
 }
 
-function windowWhere(branchId: string, since: Date, until: Date) {
+/** `cashOnly` : opérations en espèces (espèces attendues) ; sinon toutes (net du jour). */
+function windowWhere(branchId: string, since: Date, until: Date, cashOnly = true) {
   return {
-    // Seules les opérations en espèces, non annulées, pèsent sur la caisse.
-    affectsCash: true,
+    ...(cashOnly ? { affectsCash: true } : {}),
     cancelledAt: null,
     AND: [
       { OR: [{ branchId }, { branchId: null }] },
@@ -53,9 +53,10 @@ async function computeTotals(db: TenantPrisma, r: RegisterRow) {
   const paymentWhere = { status: 'SUCCESS' as const, createdAt: { gte: r.openedAt, lte: until }, sale: { branchId: r.branchId } };
   const since = await periodStart(db, r);
   const ww = windowWhere(r.branchId, since, until);
-  const [groups, expenses, tIn, tOut] = await Promise.all([
+  const [groups, cashExpenses, expenses, tIn, tOut] = await Promise.all([
     db.payment.groupBy({ by: ['method'], where: paymentWhere, _sum: { amount: true }, _count: { _all: true } }),
-    db.expense.aggregate({ where: ww, _sum: { amount: true }, _count: { _all: true } }),
+    db.expense.aggregate({ where: ww, _sum: { amount: true } }),
+    db.expense.aggregate({ where: windowWhere(r.branchId, since, until, false), _sum: { amount: true }, _count: { _all: true } }),
     db.cashTransfer.aggregate({ where: { direction: 'IN', ...ww }, _sum: { amount: true } }),
     db.cashTransfer.aggregate({ where: { direction: 'OUT', ...ww }, _sum: { amount: true } }),
   ]);
@@ -66,13 +67,15 @@ async function computeTotals(db: TenantPrisma, r: RegisterRow) {
   const salesTotal = byMethod.reduce((s, m) => s + m.amount, 0);
   const cashSales = byMethod.find((m) => m.method === 'CASH')?.amount ?? 0;
   const paymentsCount = byMethod.reduce((s, m) => s + m.count, 0);
+  // Toutes les dépenses (net du jour) / dépenses en espèces (espèces attendues).
   const expensesTotal = Number(expenses._sum.amount ?? 0);
+  const cashExpensesTotal = Number(cashExpenses._sum.amount ?? 0);
   const transfersIn = Number(tIn._sum.amount ?? 0);
   const transfersOut = Number(tOut._sum.amount ?? 0);
   const opening = Number(r.openingAmount);
   // Attendu figé à la fermeture quand il existe : c'est le chiffre sur lequel
   // l'écart a été constaté. Sinon (session ouverte), calcul en direct.
-  const expected = r.expectedAmount != null ? Number(r.expectedAmount) : opening + cashSales + transfersIn - transfersOut - expensesTotal;
+  const expected = r.expectedAmount != null ? Number(r.expectedAmount) : opening + cashSales + transfersIn - transfersOut - cashExpensesTotal;
   const counted = r.closingAmount != null ? Number(r.closingAmount) : null;
   return {
     since,
@@ -83,6 +86,7 @@ async function computeTotals(db: TenantPrisma, r: RegisterRow) {
     paymentsCount,
     expensesTotal,
     expensesCount: expenses._count._all,
+    cashExpensesTotal,
     transfersIn,
     transfersOut,
     netTotal: salesTotal + transfersIn - transfersOut - expensesTotal,
@@ -193,7 +197,11 @@ export async function sessionReport(db: TenantPrisma, id: string) {
         sale: { select: { id: true, number: true, type: true, status: true, customer: { select: { firstName: true, lastName: true } } } },
       },
     }),
-    db.expense.findMany({ where: ww, orderBy: { createdAt: 'asc' }, select: { id: true, label: true, category: true, amount: true, createdAt: true, date: true } }),
+    db.expense.findMany({
+      where: windowWhere(r.branchId, t.since, t.until, false),
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, label: true, category: true, amount: true, createdAt: true, date: true, paymentSource: true, affectsCash: true },
+    }),
     db.cashTransfer.findMany({ where: ww, orderBy: { createdAt: 'asc' }, select: { id: true, direction: true, label: true, amount: true, createdAt: true, date: true } }),
     db.sale.findMany({
       where: { branchId: r.branchId, status: 'CANCELLED', updatedAt: { gte: r.openedAt, lte: t.until } },
