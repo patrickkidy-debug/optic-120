@@ -66,6 +66,14 @@ export function AppShell() {
     return () => window.cancelIdleCallback?.(id as number);
   }, []);
 
+  // Développement seulement : « ?verrou » dans l'adresse verrouille tout de
+  // suite, pour voir l'écran de veille sans attendre 10 min. Absent en ligne.
+  useEffect(() => {
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('verrou')) {
+      useAuthStore.getState().setLocked(true);
+    }
+  }, []);
+
   useEffect(() => {
     let timer: number;
     const reset = () => {

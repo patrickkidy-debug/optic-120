@@ -733,3 +733,34 @@ html.premium-ui .app-shell .card.card-modal {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* ---------- Écran « Session verrouillée » (components/LockScreen) ----------
+   Fond aux couleurs du thème actif : halos de la couleur principale et de
+   l'accent, fine grille par-dessus. */
+.lock-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(760px 520px at 12% -8%, rgb(var(--primary-rgb) / 0.24), transparent 62%),
+    radial-gradient(680px 520px at 105% 105%, rgb(var(--accent-rgb) / 0.18), transparent 62%);
+}
+.lock-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(var(--text-rgb) / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--text-rgb) / 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 100%);
+}
+.lock-shake {
+  animation: lockshake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes lockshake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}

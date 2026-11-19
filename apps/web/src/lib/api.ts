@@ -34,6 +34,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Routes /auth/ qui exigent d'être connecté : un 401 y signifie « jeton
+ * expiré », on rafraîchit puis on rejoue, comme partout ailleurs. Sans cela,
+ * l'écran « Session verrouillée » (affiché après inactivité, donc souvent
+ * jeton expiré) répondait « Erreur de vérification » avec le BON mot de passe.
+ * Les autres routes /auth/ (connexion, rafraîchissement, déconnexion…) ne
+ * rafraîchissent jamais : un 401 y est une vraie réponse.
+ */
+const AUTHENTICATED_AUTH_ROUTE = /\/auth\/(me|verify-password|change-password|resend-verification|2fa(\/(setup|enable|disable))?)(\?|$)/;
+
+function canRefreshFor(url: string): boolean {
+  return !url.includes('/auth/') || AUTHENTICATED_AUTH_ROUTE.test(url);
+}
+
 let refreshing: Promise<string | null> | null = null;
 
 /**
@@ -109,7 +123,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (status === 401 && original && !original._retry && !url.includes('/auth/')) {
+    if (status === 401 && original && !original._retry && canRefreshFor(url)) {
       original._retry = true;
       if (!refreshing) {
         refreshing = refreshSession().finally(() => {
