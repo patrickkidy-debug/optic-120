@@ -50,7 +50,7 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore, computeTotals } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateSalesViews } from '../../lib/queryInvalidation';
-import { matchesProductSearch } from '../../lib/productSearch';
+import { inProductFamily, matchesProductSearch } from '../../lib/productSearch';
 import { formatCurrency } from '../../lib/format';
 import { paymentMethodLabel } from '../../lib/labels';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
@@ -206,12 +206,12 @@ export function PosPage() {
   // Familles présentes dans le stock : filtres rapides au-dessus de la grille.
   // Sans eux, seuls les 10 premiers produits (ordre alphabétique) étaient
   // visibles, et les verres, rangés après les montures, n'apparaissaient jamais.
-  const families = POS_FAMILIES.filter((f) => (stock ?? []).some((p) => p.category === f.key));
+  const families = POS_FAMILIES.filter((f) => (stock ?? []).some((p) => inProductFamily(p, f.key)));
   const products = (stock ?? []).filter(
     (p) =>
       // Une recherche tapée porte sur tout le catalogue : un verre reste
       // trouvable même si le filtre « Montures » est resté sélectionné.
-      (posCat === 'ALL' || search.trim() !== '' || p.category === posCat) &&
+      (posCat === 'ALL' || search.trim() !== '' || inProductFamily(p, posCat)) &&
       matchesProductSearch(p, search),
   );
 
@@ -308,7 +308,7 @@ export function PosPage() {
             {families.length > 1 && (
               <div className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
                 {[{ key: 'ALL', label: 'Tous' }, ...families].map((f) => {
-                  const count = f.key === 'ALL' ? (stock ?? []).length : (stock ?? []).filter((p) => p.category === f.key).length;
+                  const count = f.key === 'ALL' ? (stock ?? []).length : (stock ?? []).filter((p) => inProductFamily(p, f.key)).length;
                   return (
                     <button
                       key={f.key}
