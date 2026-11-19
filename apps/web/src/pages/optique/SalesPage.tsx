@@ -52,6 +52,7 @@ import { openSaleTechnicalSheet } from '../../features/optique/lensOrderSheet';
 import { listMeasurements } from '../../features/optique/measurements';
 import { PaymentModal } from './PosPage';
 import { downloadCsv } from '../../lib/csv';
+import { matchesProductSearch } from '../../lib/productSearch';
 import { useAuthStore, usePermission } from '../../store/auth';
 import { useUIStore } from '../../store/ui';
 import { apiErrorMessage } from '../../lib/api';
@@ -1216,11 +1217,7 @@ function QuoteModal({
     enabled: canSeeInsurers,
   });
 
-  const products = (stock ?? []).filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()),
-  );
+  const products = (stock ?? []).filter((p) => matchesProductSearch(p, search));
 
   function addLine(p: { productId: string; name: string; sku: string; sellPrice: number; category?: string; label?: string }) {
     setLines((prev) =>

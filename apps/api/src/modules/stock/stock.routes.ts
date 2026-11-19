@@ -7,7 +7,7 @@ import {
 } from '@oculo/shared-types';
 import { z } from 'zod';
 import { requireAuth } from '../../middlewares/auth-guard.js';
-import { requirePermission } from '../../middlewares/rbac-guard.js';
+import { requireAnyPermission, requirePermission } from '../../middlewares/rbac-guard.js';
 import { assertBranchAccess, hasAllBranches } from '../../middlewares/rbac-guard.js';
 import { badRequest } from '../../lib/http-error.js';
 import { recordAudit, requestMeta } from '../../lib/audit.js';
@@ -23,7 +23,18 @@ const adjustBody = stockAdjustSchema.extend({
 export async function stockRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireAuth);
 
-  app.get('/', { preHandler: requirePermission('optique.stock.view') }, async (req, reply) => {
+  // Catalogue d'un magasin. La caisse, les devis et le comptage d'inventaire
+  // en dépendent : un caissier ou un commercial (qui vendent sans gérer le
+  // stock) doit pouvoir le lire, sinon sa caisse est vide. Aucun prix d'achat
+  // n'est renvoyé.
+  const catalogPermission = requireAnyPermission(
+    'optique.stock.view',
+    'optique.sales.create',
+    'optique.quotes.create',
+    'optique.inventory.count',
+  );
+
+  app.get('/', { preHandler: catalogPermission }, async (req, reply) => {
     const q = req.query as { branchId?: string; lowStockOnly?: string };
     if (!q.branchId) throw badRequest('branchId requis');
     assertBranchAccess(req, q.branchId);

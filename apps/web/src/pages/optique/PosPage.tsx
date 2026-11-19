@@ -50,6 +50,7 @@ import { usePermission, useAuthStore } from '../../store/auth';
 import { usePosStore, computeTotals } from '../../store/pos';
 import { apiErrorMessage } from '../../lib/api';
 import { invalidateSalesViews } from '../../lib/queryInvalidation';
+import { matchesProductSearch } from '../../lib/productSearch';
 import { formatCurrency } from '../../lib/format';
 import { paymentMethodLabel } from '../../lib/labels';
 import { Button, Modal, PageLoader, Badge } from '../../components/ui';
@@ -211,9 +212,7 @@ export function PosPage() {
       // Une recherche tapée porte sur tout le catalogue : un verre reste
       // trouvable même si le filtre « Montures » est resté sélectionné.
       (posCat === 'ALL' || search.trim() !== '' || p.category === posCat) &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase()) ||
-        (p.ean ?? '').toLowerCase().includes(search.toLowerCase())),
+      matchesProductSearch(p, search),
   );
 
   // Scan code-barres (lecteur USB = saisie rapide + Entrée) : SKU ou EAN exact
