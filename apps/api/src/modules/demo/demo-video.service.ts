@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 
 /** Clés des 8 tutoriels vidéo (série « a », novembre 2026 : nouvelle progression). */
-export const DEMO_VIDEO_KEYS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'] as const;
+export const DEMO_VIDEO_KEYS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9', 'a10'] as const;
 export type DemoVideoKey = (typeof DEMO_VIDEO_KEYS)[number];
 
 /** Un lecteur atteint rarement 100 % pile (dernière frame, arrondis) : 95 % = vue. */
