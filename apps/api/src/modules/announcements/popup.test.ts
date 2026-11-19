@@ -1,31 +1,49 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../lib/prisma.js', () => ({ prisma: {} }));
-const { popupEligible, POPUP_RULES } = await import('./announcements.service.js');
+const db = vi.hoisted(() => ({
+  announcement: { findMany: vi.fn(), findFirst: vi.fn() },
+  announcementImpression: { count: vi.fn(), create: vi.fn() },
+}));
+vi.mock('../../lib/prisma.js', () => ({ prisma: db }));
+const { popupQueue, recordPopupShown } = await import('./announcements.service.js');
 
-const at = (iso: string) => new Date(iso);
+const row = (id: string) => ({
+  id, kind: 'FEATURE', title: 't', body: 'b', images: ['https://x/1.jpg'], whatsappMessage: null, linkedinPost: null,
+  publishedAt: new Date(), createdAt: new Date(), updatedAt: new Date(),
+});
 
-describe('popupEligible', () => {
-  const now = at('2026-11-18T15:00:00Z');
+describe('popupQueue', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('s’ouvre la première fois', () => {
-    expect(popupEligible([], now)).toBe(true);
+  it('renvoie toutes les annonces publiées non lues, sans limite de fréquence', async () => {
+    db.announcement.findMany.mockResolvedValue([row('a'), row('b')]);
+    const q = await popupQueue('u1');
+    expect(q.map((a) => a.id)).toEqual(['a', 'b']);
+    expect(q[0].images).toEqual(['https://x/1.jpg']);
+    const where = db.announcement.findMany.mock.calls[0][0].where;
+    expect(where).toEqual({ publishedAt: { not: null }, reads: { none: { userId: 'u1' } } });
+  });
+});
+
+describe('recordPopupShown', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('ignore une annonce déjà lue ou non publiée', async () => {
+    db.announcement.findFirst.mockResolvedValue(null);
+    expect(await recordPopupShown('u1', 'a')).toBe(false);
+    expect(db.announcementImpression.create).not.toHaveBeenCalled();
   });
 
-  it('attend 4 h entre deux affichages', () => {
-    expect(popupEligible([at('2026-11-18T12:00:00Z')], now)).toBe(false);
-    expect(popupEligible([at('2026-11-18T10:30:00Z')], now)).toBe(true);
+  it('ne compte pas deux fois un affichage dans la même minute', async () => {
+    db.announcement.findFirst.mockResolvedValue({ id: 'a' });
+    db.announcementImpression.count.mockResolvedValue(1);
+    expect(await recordPopupShown('u1', 'a')).toBe(false);
   });
 
-  it('pas plus de 2 fois le même jour', () => {
-    const today = [at('2026-11-18T06:00:00Z'), at('2026-11-18T10:00:00Z')];
-    expect(popupEligible(today, at('2026-11-18T22:00:00Z'))).toBe(false);
-    // Le lendemain, ça reprend.
-    expect(popupEligible(today, at('2026-11-19T08:00:00Z'))).toBe(true);
-  });
-
-  it('s’arrête après 6 affichages (3 jours)', () => {
-    const six = Array.from({ length: POPUP_RULES.maxTotal }, (_, i) => at(`2026-11-1${i}T08:00:00Z`));
-    expect(popupEligible(six, at('2026-11-30T08:00:00Z'))).toBe(false);
+  it('consigne un nouvel affichage', async () => {
+    db.announcement.findFirst.mockResolvedValue({ id: 'a' });
+    db.announcementImpression.count.mockResolvedValue(0);
+    expect(await recordPopupShown('u1', 'a')).toBe(true);
+    expect(db.announcementImpression.create).toHaveBeenCalledOnce();
   });
 });

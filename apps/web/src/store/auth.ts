@@ -49,8 +49,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setStatus: (status) => set({ status }),
   setLocked: (locked) => set({ locked }),
   setSuspended: (suspended) => set({ suspended }),
-  clear: () =>
-    set({ accessToken: null, user: null, status: 'unauthenticated', locked: false, suspended: false, offline: false }),
+  clear: () => {
+    // Déconnexion : les annonces non lues se rouvriront à la prochaine connexion.
+    try {
+      sessionStorage.removeItem('oculo_popup_later');
+    } catch {
+      /* stockage indisponible : sans effet */
+    }
+    set({ accessToken: null, user: null, status: 'unauthenticated', locked: false, suspended: false, offline: false });
+  },
   // Le fondateur / opérateur plateforme n'a aucune restriction : toutes permissions accordées.
   hasPermission: (perm) => {
     const u = get().user;

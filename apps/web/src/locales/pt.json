@@ -1178,7 +1178,7 @@
     "expandMenu": "Expandir o menu",
     "popupRead": "Li",
     "popupLater": "Mais tarde",
-    "popupHint": "Esta mensagem voltará até clicar em «Li»."
+    "popupHint": "Esta mensagem voltará a cada início de sessão até clicar em «Li»."
   },
   "sync": {
     "offline": "Sem ligação",

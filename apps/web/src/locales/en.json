@@ -1178,7 +1178,7 @@
     "expandMenu": "Expand menu",
     "popupRead": "Got it",
     "popupLater": "Later",
-    "popupHint": "This message will come back until you click “Got it”."
+    "popupHint": "This message will come back at every sign-in until you click “Got it”."
   },
   "sync": {
     "offline": "Offline",

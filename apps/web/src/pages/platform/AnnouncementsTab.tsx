@@ -636,8 +636,8 @@ function Distribution({ announcement }: { announcement: Announcement }) {
             {stats.readers} utilisateur{stats.readers > 1 ? 's' : ''}
           </p>
           <p className="mt-1 text-xs text-content-faint">
-            Tant qu'elle n'est pas lue, l'annonce s'ouvre d'elle-même à chaque utilisateur : 2 fois par jour au
-            plus, 6 fois en tout, pendant 30 jours après sa publication (jamais en pleine vente).{' '}
+            Tant qu'elle n'est pas lue, l'annonce s'ouvre d'elle-même à chaque connexion de chaque utilisateur,
+            avec son image, jusqu'à ce qu'il clique « J'ai lu » (jamais en pleine vente).{' '}
             {stats.popupUsers} utilisateur{stats.popupUsers > 1 ? 's' : ''} l'ont déjà vue s'ouvrir. Pour les
             établissements où personne ne l'a lue, relancez sur WhatsApp ci-dessous (filtre « Pas encore lue »).
           </p>

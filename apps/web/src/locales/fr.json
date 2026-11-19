@@ -1178,7 +1178,7 @@
     "expandMenu": "Déplier le menu",
     "popupRead": "J'ai lu",
     "popupLater": "Plus tard",
-    "popupHint": "Ce message reviendra tant que vous n'aurez pas cliqué sur « J'ai lu »."
+    "popupHint": "Ce message reviendra à chaque connexion tant que vous n'aurez pas cliqué sur « J'ai lu »."
   },
   "sync": {
     "offline": "Hors connexion",

@@ -21,9 +21,9 @@ export async function announcementsRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ count: await service.unreadCount(req.auth!.userId) });
   });
 
-  /** Annonce non lue à ouvrir en fenêtre surgissante maintenant (ou null). */
+  /** Annonces non lues à ouvrir en fenêtre surgissante (à chaque connexion). */
   app.get('/popup', async (req, reply) => {
-    return reply.send({ announcement: await service.nextPopup(req.auth!.userId) });
+    return reply.send({ announcements: await service.popupQueue(req.auth!.userId) });
   });
 
   app.post('/:id/popup-shown', async (req, reply) => {

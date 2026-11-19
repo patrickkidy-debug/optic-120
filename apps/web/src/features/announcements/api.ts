@@ -36,12 +36,10 @@ export async function markAllAnnouncementsRead(): Promise<void> {
   await api.post('/announcements/read-all');
 }
 
-/** Annonce à ouvrir en fenêtre surgissante maintenant, ou null. */
-export async function getAnnouncementPopup(): Promise<(Announcement & { remaining: number }) | null> {
-  const { data } = await api.get<{ announcement: (Announcement & { remaining: number }) | null }>(
-    '/announcements/popup',
-  );
-  return data.announcement;
+/** Annonces publiées non lues, à ouvrir en fenêtre surgissante à la connexion. */
+export async function getAnnouncementPopups(): Promise<Announcement[]> {
+  const { data } = await api.get<{ announcements: Announcement[] }>('/announcements/popup');
+  return data.announcements;
 }
 
 export async function markAnnouncementPopupShown(id: string): Promise<void> {
